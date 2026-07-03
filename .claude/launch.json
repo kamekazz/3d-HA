@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "3d-ha-house",
+      "runtimeExecutable": "backend/.venv/Scripts/python.exe",
+      "runtimeArgs": ["backend/app.py"],
+      "port": 5000
+    },
+    {
+      "name": "3d-ha-5001",
+      "runtimeExecutable": "backend/.venv/Scripts/python.exe",
+      "runtimeArgs": ["C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\aacf3642-6bfb-42ba-9d6e-1a5e60c1560d\\scratchpad\\run_5001.py"],
+      "port": 5001
+    }
+  ]
+}

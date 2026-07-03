@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Home Assistant House</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="scene-container"></div>
+
+  <header id="topbar">
+    <h1>3D HA House</h1>
+    <span id="conn-status" class="status-dot" title="Realtime status"></span>
+    <span id="conn-label">connecting…</span>
+    <div class="spacer"></div>
+    <button id="btn-editor" type="button">Room editor</button>
+    <button id="btn-refresh" type="button" title="Re-read floors/areas/devices from HA">Refresh HA</button>
+  </header>
+
+  <nav id="levels"></nav>
+
+  <div id="banner" class="hidden"></div>
+  <div id="tooltip" class="hidden"></div>
+
+  <!-- Device detail / control side panel -->
+  <aside id="device-panel" class="panel hidden">
+    <button class="close" data-close="device-panel" type="button">&times;</button>
+    <h2 id="dp-name">Device</h2>
+    <p id="dp-entity" class="muted"></p>
+    <p class="state-line">State: <strong id="dp-state">—</strong></p>
+    <div id="dp-attrs" class="attrs"></div>
+    <div id="dp-controls" class="controls"></div>
+  </aside>
+
+  <!-- Room editor panel -->
+  <aside id="editor" class="panel hidden">
+    <button class="close" data-close="editor" type="button">&times;</button>
+    <h2>Room editor</h2>
+
+    <div class="btn-row">
+      <button id="btn-generate" type="button" class="secondary"
+              title="Create rooms and device markers for HA areas that aren't in the layout yet">
+        Generate from HA
+      </button>
+    </div>
+
+    <div id="room-list"></div>
+
+    <h3 id="room-form-title">Add room</h3>
+    <form id="room-form">
+      <input type="hidden" id="rf-id">
+      <label>Name <input id="rf-name" required></label>
+      <label>Floor <select id="rf-floor"></select></label>
+      <label>HA area <select id="rf-area"><option value="">— none —</option></select></label>
+      <div class="row3">
+        <label>Width <input id="rf-width" type="number" step="0.1" min="0.5" value="4"></label>
+        <label>Depth <input id="rf-depth" type="number" step="0.1" min="0.5" value="3"></label>
+        <label>Height <input id="rf-height" type="number" step="0.1" min="1" value="2.7"></label>
+      </div>
+      <div class="row3">
+        <label>X <input id="rf-x" type="number" step="0.1" value="0"></label>
+        <label>Z <input id="rf-z" type="number" step="0.1" value="0"></label>
+        <label>Color <input id="rf-color" type="color" value="#8fa8bf"></label>
+      </div>
+      <div class="btn-row">
+        <button type="submit" id="rf-save">Save room</button>
+        <button type="button" id="rf-cancel" class="secondary hidden">Cancel</button>
+      </div>
+    </form>
+
+    <section id="placement-section" class="hidden">
+      <h3>Devices in <span id="placement-room-name"></span></h3>
+      <div id="placed-list"></div>
+      <h4>Entities in linked HA area</h4>
+      <div id="entity-list" class="muted">Link the room to an HA area to list its entities.</div>
+    </section>
+  </aside>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
