@@ -140,6 +140,74 @@ class HouseStore:
             self._db.commit()
             return cur.rowcount
 
+    def reconcile_rooms_to_ha_floors(self, structure):
+        """Move each HA-linked room to the floor its area now lives on in HA.
+
+        Rooms whose area is unassigned in HA, no longer exists in HA, or that
+        aren't linked to an area at all are left where they are — we only ever
+        follow an explicit area->floor assignment. Returns the number moved.
+        """
+        area_floor = {}
+        for hf in structure.get("floors", []):
+            for a in hf.get("areas", []):
+                area_floor[a["area_id"]] = hf.get("floor_id")
+        moved = 0
+        with self._lock:
+            floor_rows = self._rows("SELECT id, ha_floor_id FROM floors")
+            by_ha_id = {f["ha_floor_id"]: f["id"]
+                        for f in floor_rows if f["ha_floor_id"]}
+            for r in self._rows("SELECT id, floor_id, ha_area_id FROM rooms"):
+                if not r["ha_area_id"]:
+                    continue
+                target_ha_floor = area_floor.get(r["ha_area_id"])
+                if not target_ha_floor:  # area gone or unassigned in HA
+                    continue
+                target_id = by_ha_id.get(target_ha_floor)
+                if target_id and target_id != r["floor_id"]:
+                    self._db.execute("UPDATE rooms SET floor_id=? WHERE id=?",
+                                     (target_id, r["id"]))
+                    moved += 1
+            self._db.commit()
+        return moved
+
+    def prune_stale_ha_floors(self, ha_floor_ids):
+        """Delete floors linked to an HA floor that no longer exists in HA, but
+        only when they hold no rooms — never silently drops user geometry."""
+        removed = 0
+        with self._lock:
+            for f in self._rows("SELECT id, ha_floor_id FROM floors"):
+                if f["ha_floor_id"] and f["ha_floor_id"] not in ha_floor_ids:
+                    has_room = self._db.execute(
+                        "SELECT 1 FROM rooms WHERE floor_id=? LIMIT 1",
+                        (f["id"],)).fetchone()
+                    if not has_room:
+                        self._db.execute("DELETE FROM floors WHERE id=?",
+                                         (f["id"],))
+                        removed += 1
+            self._db.commit()
+        return removed
+
+    def sync_from_ha(self, structure, ha_floors):
+        """Full one-shot reconcile between HA and the local layout, idempotent:
+          1. add floor rows for new HA floors
+          2. move rooms to match their HA area's current floor
+          3. add rooms/devices for HA areas not in the layout yet
+          4. drop HA-linked floors that no longer exist in HA and hold no rooms
+
+        Room geometry/colors and device positions are never touched."""
+        floors_added = self.sync_floors_from_ha(ha_floors)
+        rooms_moved = self.reconcile_rooms_to_ha_floors(structure)
+        generated = self.generate_from_ha(structure)
+        floors_removed = self.prune_stale_ha_floors(
+            {f["floor_id"] for f in ha_floors})
+        return {
+            "floors_added": floors_added,
+            "rooms_moved": rooms_moved,
+            "rooms_added": generated["rooms"],
+            "devices_added": generated["devices"],
+            "floors_removed": floors_removed,
+        }
+
     def generate_from_ha(self, structure):
         """Create a room for each HA area that isn't linked yet, laid out on a
         grid per floor, and place the area's entities inside it.

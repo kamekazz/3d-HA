@@ -29,6 +29,7 @@ export const api = {
 
   getHouse: () => get('/api/house'),
   generateHouse: () => post('/api/house/generate'),
+  syncHouse: () => post('/api/house/sync'),
   createRoom: (data) => post('/api/house/room', data),
   updateRoom: (id, data) => patch(`/api/house/room/${id}`, data),
   deleteRoom: (id) => del(`/api/house/room/${id}`),

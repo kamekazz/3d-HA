@@ -66,6 +66,15 @@ placements, so user edits in the room editor always survive a re-run or a "Refre
 `sync_floors_from_ha` (adds floor rows for new HA floors) and `prune_unlinked_empty_floors` (drops
 the placeholder floor seeded before HA was configured, once a real HA-linked floor exists).
 
+**Full reconcile on demand** (`HouseStore.sync_from_ha`, exposed as `POST /api/house/sync` and the
+"Sync with HA" topbar button): pulls HA changes into the layout in one shot — adds new HA floors,
+**re-parents rooms to the floor their HA area now lives on** (`reconcile_rooms_to_ha_floors`, keyed
+by `ha_area_id`), generates rooms/devices for new areas, and drops HA-linked floors that no longer
+exist in HA *and* hold no rooms (`prune_stale_ha_floors`). Still never deletes a room or moves its
+geometry — it only ever follows an explicit HA area→floor assignment; rooms whose area is
+unassigned/deleted in HA, or that aren't linked to an area, stay put. The frontend button issues a
+`refreshHA()` first, waits ~1.5s for the registry refresh to land, then calls sync.
+
 **Realtime path:** HA's `state_changed` events arrive on the `HARealtime` background thread, update
 `HACache`, and are relayed to all connected browsers via `realtime/socketio.py` (SocketIO event
 `state_changed`). The frontend (`js/socket.js`) falls back to 5s polling if the socket drops.
@@ -77,7 +86,8 @@ state changes.
 
 **Key endpoints:** `GET /api/ha/structure` (HA tree), `GET /api/ha/states`, `GET /api/ha/status`,
 `POST /api/ha/refresh` (re-fetch HA registries) — `GET/POST/PATCH/DELETE /api/house*` (floor/room/
-device-placement CRUD, backed by `HouseStore`) — `POST /api/control` — SocketIO event
+device-placement CRUD, backed by `HouseStore`), `POST /api/house/generate` (add missing rooms),
+`POST /api/house/sync` (full reconcile — see above) — `POST /api/control` — SocketIO event
 `state_changed`.
 
 **Frontend module layout** (`frontend/js/`, loaded as native ES modules, Three.js via CDN

@@ -42,6 +42,19 @@ def generate_from_ha():
     return jsonify(result)
 
 
+@bp.post("/sync")
+def sync_house():
+    """Reconcile the whole layout with HA in one shot: add new floors, move
+    rooms to the floor their HA area now lives on, add rooms/devices for new
+    areas, and drop empty floors that were deleted in HA. Existing room
+    geometry and device positions are preserved."""
+    cache = current_app.extensions["ha_cache"]
+    if not cache.ready or not cache.ha_floors():
+        return jsonify({"error": "Home Assistant structure not available yet"}), 503
+    result = _store().sync_from_ha(cache.structure(), cache.ha_floors())
+    return jsonify(result)
+
+
 @bp.post("/floor")
 def create_floor():
     data = request.get_json(force=True)

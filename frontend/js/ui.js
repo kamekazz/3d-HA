@@ -53,6 +53,32 @@ export function initUI({ structure: s, house: h, onReload }) {
     try { await api.refreshHA(); } catch { /* not configured */ }
     setTimeout(reloadHouse, 1500);
   };
+  $('btn-sync').onclick = async () => {
+    const btn = $('btn-sync');
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Syncing…';
+    try {
+      // Pull the latest registries first, then let the WS refresh land before
+      // reconciling against the cache.
+      try { await api.refreshHA(); } catch { /* HA not configured */ }
+      await new Promise((r) => setTimeout(r, 1500));
+      const res = await api.syncHouse();
+      await reloadHouse();
+      const parts = [];
+      if (res.floors_added) parts.push(`${res.floors_added} floor(s) added`);
+      if (res.rooms_moved) parts.push(`${res.rooms_moved} room(s) moved`);
+      if (res.rooms_added) parts.push(`${res.rooms_added} room(s) added`);
+      if (res.devices_added) parts.push(`${res.devices_added} device(s) added`);
+      if (res.floors_removed) parts.push(`${res.floors_removed} empty floor(s) removed`);
+      alert(parts.length ? `Synced with HA: ${parts.join(', ')}.`
+                         : 'Already in sync with Home Assistant.');
+    } catch (e) {
+      alert(`Sync failed: ${e.message}`);
+    }
+    btn.disabled = false;
+    btn.textContent = label;
+  };
   $('btn-generate').onclick = async () => {
     const btn = $('btn-generate');
     btn.disabled = true;
