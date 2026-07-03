@@ -68,12 +68,18 @@ the placeholder floor seeded before HA was configured, once a real HA-linked flo
 
 **Full reconcile on demand** (`HouseStore.sync_from_ha`, exposed as `POST /api/house/sync` and the
 "Sync with HA" topbar button): pulls HA changes into the layout in one shot — adds new HA floors,
-**re-parents rooms to the floor their HA area now lives on** (`reconcile_rooms_to_ha_floors`, keyed
-by `ha_area_id`), generates rooms/devices for new areas, and drops HA-linked floors that no longer
-exist in HA *and* hold no rooms (`prune_stale_ha_floors`). Still never deletes a room or moves its
-geometry — it only ever follows an explicit HA area→floor assignment; rooms whose area is
-unassigned/deleted in HA, or that aren't linked to an area, stay put. The frontend button issues a
-`refreshHA()` first, waits ~1.5s for the registry refresh to land, then calls sync.
+**re-levels HA-linked floors to their HA floor's level** (`reconcile_floor_levels_from_ha` — HA is
+the source of truth for floor ordering; floors not HA-linked or whose HA floor has no level keep
+their level, only shifted to dodge a collision; the `level` column is UNIQUE so all floors are
+parked at temp negative levels before finals are written), **re-parents rooms to the floor their HA
+area now lives on** (`reconcile_rooms_to_ha_floors`, keyed by `ha_area_id`), generates rooms/devices
+for new areas, and drops HA-linked floors that no longer exist in HA *and* hold no rooms
+(`prune_stale_ha_floors`). Still never deletes a room or moves its geometry — it only ever follows
+an explicit HA area→floor assignment; rooms whose area is unassigned/deleted in HA, or that aren't
+linked to an area, stay put. Note `sync_floors_from_ha` only sets a level when it *creates* a floor
+row; re-leveling an existing floor happens solely through `reconcile_floor_levels_from_ha` on sync.
+The frontend button issues a `refreshHA()` first, waits ~1.5s for the registry refresh to land, then
+calls sync.
 
 **Realtime path:** HA's `state_changed` events arrive on the `HARealtime` background thread, update
 `HACache`, and are relayed to all connected browsers via `realtime/socketio.py` (SocketIO event

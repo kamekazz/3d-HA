@@ -140,6 +140,54 @@ class HouseStore:
             self._db.commit()
             return cur.rowcount
 
+    def reconcile_floor_levels_from_ha(self, structure):
+        """Set each HA-linked floor's level to the level its floor has in HA —
+        HA is the source of truth for floor ordering.
+
+        Floors not linked to HA, or whose HA floor reports no level, keep their
+        current level (only shifted upward if it would collide with a level HA
+        assigned). The `level` column is UNIQUE, so every floor is first parked
+        at a temporary negative level before the final levels are written, to
+        avoid a mid-update collision. Returns the number of floors that moved.
+        """
+        ha_level = {}
+        for hf in structure.get("floors", []):
+            lvl = hf.get("level")
+            if hf.get("floor_id") is not None and lvl is not None:
+                ha_level[hf["floor_id"]] = int(lvl)
+        changed = 0
+        with self._lock:
+            floors = self._rows("SELECT id, level, ha_floor_id FROM floors")
+            current = {f["id"]: f["level"] for f in floors}
+            desired, priority = {}, set()
+            for f in floors:
+                if f["ha_floor_id"] in ha_level:
+                    desired[f["id"]] = ha_level[f["ha_floor_id"]]
+                    priority.add(f["id"])
+                else:
+                    desired[f["id"]] = f["level"]
+            # Assign HA-linked floors their HA level first; others yield to the
+            # next free slot if that level is already taken.
+            used = {}
+            for fid in sorted(desired, key=lambda i: (i not in priority, desired[i])):
+                lvl = desired[fid]
+                while lvl in used:
+                    lvl += 1
+                used[lvl] = fid
+                desired[fid] = lvl
+            if desired == current:
+                return 0
+            for f in floors:  # park at unique temp levels to dodge UNIQUE
+                self._db.execute("UPDATE floors SET level=? WHERE id=?",
+                                 (-1000 - f["id"], f["id"]))
+            for fid, lvl in desired.items():
+                self._db.execute("UPDATE floors SET level=? WHERE id=?",
+                                 (lvl, fid))
+                if current[fid] != lvl:
+                    changed += 1
+            self._db.commit()
+        return changed
+
     def reconcile_rooms_to_ha_floors(self, structure):
         """Move each HA-linked room to the floor its area now lives on in HA.
 
@@ -190,18 +238,21 @@ class HouseStore:
     def sync_from_ha(self, structure, ha_floors):
         """Full one-shot reconcile between HA and the local layout, idempotent:
           1. add floor rows for new HA floors
-          2. move rooms to match their HA area's current floor
-          3. add rooms/devices for HA areas not in the layout yet
-          4. drop HA-linked floors that no longer exist in HA and hold no rooms
+          2. re-level HA-linked floors to match their HA floor's level
+          3. move rooms to match their HA area's current floor
+          4. add rooms/devices for HA areas not in the layout yet
+          5. drop HA-linked floors that no longer exist in HA and hold no rooms
 
         Room geometry/colors and device positions are never touched."""
         floors_added = self.sync_floors_from_ha(ha_floors)
+        levels_changed = self.reconcile_floor_levels_from_ha(structure)
         rooms_moved = self.reconcile_rooms_to_ha_floors(structure)
         generated = self.generate_from_ha(structure)
         floors_removed = self.prune_stale_ha_floors(
             {f["floor_id"] for f in ha_floors})
         return {
             "floors_added": floors_added,
+            "levels_changed": levels_changed,
             "rooms_moved": rooms_moved,
             "rooms_added": generated["rooms"],
             "devices_added": generated["devices"],
