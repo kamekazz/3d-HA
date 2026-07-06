@@ -37,24 +37,53 @@ export function buildHouse(house) {
       const fp = room.footprint;
       if (!center) center = { x: fp.x + fp.width / 2, z: fp.z + fp.depth / 2 };
     }
-    y += floor.floor_height || 3.0;
+    y += floor.floor_height || 10.0;
   }
 
-  if (center) focusOn(center.x, 1.5, center.z);
+  if (center) focusOn(center.x, 5, center.z);
   setLevel(currentLevel);
 }
 
 function buildRoom(room, floor) {
   const fp = room.footprint;
   const color = new THREE.Color(room.color || '#8fa8bf');
+  const wallsMat = new THREE.MeshStandardMaterial({
+    color, transparent: true, opacity: 0.18,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const slabMat = new THREE.MeshStandardMaterial({
+    color: color.clone().multiplyScalar(0.55), roughness: 0.9,
+    transparent: true, opacity: 0.85,
+  });
 
-  const walls = new THREE.Mesh(
-    new THREE.BoxGeometry(fp.width, room.height, fp.depth),
-    new THREE.MeshStandardMaterial({
-      color, transparent: true, opacity: 0.18,
-      side: THREE.DoubleSide, depthWrite: false,
-    }));
-  walls.position.set(fp.x + fp.width / 2, room.height / 2, fp.z + fp.depth / 2);
+  let walls, slab;
+  if (fp.points && fp.points.length >= 3) {
+    // polygon footprint: Shape lives in XY, so map (x, z) -> (x, -z); after
+    // rotateX(-PI/2) the extrusion (+shape Z) rises along +Y and shape Y maps
+    // back onto +Z, putting the footprint flat on the XZ plane
+    const shape = new THREE.Shape(
+      fp.points.map(([px, pz]) => new THREE.Vector2(px, -pz)));
+    const geo = new THREE.ExtrudeGeometry(shape, {
+      depth: room.height, bevelEnabled: false,
+    });
+    geo.rotateX(-Math.PI / 2);
+    walls = new THREE.Mesh(geo, wallsMat);
+    walls.position.set(fp.x, 0, fp.z); // anchored at bbox min corner, not centered
+
+    const slabGeo = new THREE.ShapeGeometry(shape);
+    slabGeo.rotateX(-Math.PI / 2);
+    slab = new THREE.Mesh(slabGeo, slabMat);
+    slab.position.y = 0.01;
+  } else {
+    walls = new THREE.Mesh(
+      new THREE.BoxGeometry(fp.width, room.height, fp.depth), wallsMat);
+    walls.position.set(fp.x + fp.width / 2, room.height / 2, fp.z + fp.depth / 2);
+
+    slab = new THREE.Mesh(new THREE.PlaneGeometry(fp.width, fp.depth), slabMat);
+    slab.rotation.x = -Math.PI / 2;
+    slab.position.y = -room.height / 2 + 0.01;
+  }
+
   walls.userData = {
     kind: 'room', roomId: room.id, roomName: room.name,
     haAreaId: room.ha_area_id, level: floor.level,
@@ -67,14 +96,6 @@ function buildRoom(room, floor) {
   edges.userData.part = 'edges';
   walls.add(edges);
 
-  const slab = new THREE.Mesh(
-    new THREE.PlaneGeometry(fp.width, fp.depth),
-    new THREE.MeshStandardMaterial({
-      color: color.clone().multiplyScalar(0.55), roughness: 0.9,
-      transparent: true, opacity: 0.85,
-    }));
-  slab.rotation.x = -Math.PI / 2;
-  slab.position.y = -room.height / 2 + 0.01;
   slab.userData.part = 'slab';
   walls.add(slab);
 

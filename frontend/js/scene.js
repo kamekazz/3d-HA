@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export let scene, camera, renderer, controls;
 
-export const MIN_ZOOM = 3, MAX_ZOOM = 90;
+export const MIN_ZOOM = 10, MAX_ZOOM = 300;
 let zoomTarget = 0; // desired camera↔target distance; eased toward each frame
 let poseGoal = null; // {position, target} being flown to; suspends the zoom easing
 
@@ -12,11 +12,11 @@ export function initScene(container) {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x10141a);
   // fog must start beyond controls.maxDistance, or zooming out fades the whole house away
-  scene.fog = new THREE.Fog(0x10141a, 110, 320);
+  scene.fog = new THREE.Fog(0x10141a, 360, 1000);
 
   camera = new THREE.PerspectiveCamera(
-    55, container.clientWidth / container.clientHeight, 0.1, 500);
-  camera.position.set(14, 16, 14);
+    55, container.clientWidth / container.clientHeight, 0.1, 1600);
+  camera.position.set(45, 50, 45);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -26,7 +26,7 @@ export function initScene(container) {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.target.set(4, 1.5, 4);
+  controls.target.set(13, 5, 13);
   controls.maxPolarAngle = Math.PI / 2.05;
   controls.minDistance = MIN_ZOOM;
   controls.maxDistance = MAX_ZOOM;
@@ -44,15 +44,16 @@ export function initScene(container) {
 
   scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x30363f, 1.0));
   const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-  sun.position.set(20, 30, 12);
+  sun.position.set(60, 90, 36);
   scene.add(sun);
 
-  const grid = new THREE.GridHelper(60, 60, 0x2a3340, 0x1c232d);
+  // 1 ft grid cells — the world unit is one foot
+  const grid = new THREE.GridHelper(200, 200, 0x2a3340, 0x1c232d);
   grid.position.y = -0.01;
   scene.add(grid);
 
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 200),
+    new THREE.PlaneGeometry(650, 650),
     new THREE.MeshStandardMaterial({ color: 0x141a22, roughness: 1 }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.02;

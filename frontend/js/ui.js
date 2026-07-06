@@ -344,7 +344,7 @@ function resetRoomForm() {
   $('room-form-title').textContent = 'Add room';
   $('room-form').reset();
   $('rf-id').value = '';
-  $('rf-width').value = 4; $('rf-depth').value = 3; $('rf-height').value = 2.7;
+  $('rf-width').value = 13; $('rf-depth').value = 10; $('rf-height').value = 8;
   $('rf-x').value = 0; $('rf-z').value = 0; $('rf-color').value = '#8fa8bf';
   $('rf-save').textContent = 'Save room';
   $('rf-cancel').classList.add('hidden');
@@ -458,7 +458,7 @@ function renderPlacementSection() {
         position: {
           x: +(fp.width * (0.2 + 0.6 * Math.random())).toFixed(2),
           y: ['light', 'camera'].includes(ent.domain)
-            ? Math.max(room.height - 0.3, 0.5) : 1.2,
+            ? Math.max(room.height - 1.0, 1.5) : 4.0,
           z: +(fp.depth * (0.2 + 0.6 * Math.random())).toFixed(2),
         },
       });

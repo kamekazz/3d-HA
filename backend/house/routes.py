@@ -1,7 +1,24 @@
 """CRUD for our own 3D layout data (/api/house/*)."""
-from flask import Blueprint, current_app, jsonify, request
+import os
+
+from flask import Blueprint, current_app, jsonify, request, send_from_directory
 
 bp = Blueprint("house", __name__, url_prefix="/api/house")
+
+# floor-plan tracing images (served back verbatim — no SVG, to rule out
+# stored XSS from an uploaded file)
+PLAN_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+
+
+def _plans_dir():
+    return os.path.join(current_app.root_path, "uploads", "plans")
+
+
+def _remove_plan_files(floor_id):
+    for ext in PLAN_EXTENSIONS:
+        path = os.path.join(_plans_dir(), f"floor_{floor_id}{ext}")
+        if os.path.exists(path):
+            os.remove(path)
 
 
 def _store():
@@ -74,18 +91,61 @@ def update_floor(floor_id):
     return jsonify({"ok": True})
 
 
+@bp.post("/floor/<int:floor_id>/plan")
+def upload_floor_plan(floor_id):
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"error": "no file uploaded"}), 400
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in PLAN_EXTENSIONS:
+        return jsonify({"error": f"file type {ext or '?'} not allowed "
+                                 "(png, jpg, webp)"}), 400
+    if not _store().get_floor(floor_id):
+        return jsonify({"error": "floor not found"}), 404
+    os.makedirs(_plans_dir(), exist_ok=True)
+    _remove_plan_files(floor_id)  # drop a previous image with another ext
+    filename = f"floor_{floor_id}{ext}"
+    file.save(os.path.join(_plans_dir(), filename))
+    _store().set_floor_plan_image(floor_id, filename)
+    return jsonify({"ok": True, "plan_image": filename})
+
+
+@bp.get("/plan/<int:floor_id>")
+def get_floor_plan(floor_id):
+    floor = _store().get_floor(floor_id)
+    if not floor or not floor.get("plan_image"):
+        return jsonify({"error": "no plan image for this floor"}), 404
+    return send_from_directory(_plans_dir(), floor["plan_image"])
+
+
+@bp.delete("/floor/<int:floor_id>/plan")
+def delete_floor_plan(floor_id):
+    if not _store().get_floor(floor_id):
+        return jsonify({"error": "floor not found"}), 404
+    _remove_plan_files(floor_id)
+    _store().set_floor_plan_image(floor_id, None)
+    return jsonify({"ok": True})
+
+
 @bp.post("/room")
 def create_room():
     data = request.get_json(force=True)
     if not data.get("name") or data.get("floor_id") is None:
         return jsonify({"error": "name and floor_id are required"}), 400
-    room_id = _store().create_room(data)
+    try:
+        room_id = _store().create_room(data)
+    except ValueError as exc:  # invalid polygon
+        return jsonify({"error": str(exc)}), 400
     return jsonify({"id": room_id}), 201
 
 
 @bp.patch("/room/<int:room_id>")
 def update_room(room_id):
-    if not _store().update_room(room_id, request.get_json(force=True)):
+    try:
+        updated = _store().update_room(room_id, request.get_json(force=True))
+    except ValueError as exc:  # invalid polygon
+        return jsonify({"error": str(exc)}), 400
+    if not updated:
         return jsonify({"error": "room not found or nothing to update"}), 404
     return jsonify({"ok": True})
 

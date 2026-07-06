@@ -21,22 +21,22 @@ export function baseColor(type) {
   return BASE_COLORS[type] ?? BASE_COLORS.default;
 }
 
-// one shared geometry per domain so the shape says what a device is
-const sphere = new THREE.SphereGeometry(0.14, 20, 16);
-const smallBox = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+// one shared geometry per domain so the shape says what a device is (sizes in ft)
+const sphere = new THREE.SphereGeometry(0.45, 20, 16);
+const smallBox = new THREE.BoxGeometry(0.65, 0.65, 0.65);
 // 4-sided frustum laid on its side: reads as a wall-mounted camera/lens cone
-const cameraFrustum = new THREE.CylinderGeometry(0.06, 0.14, 0.26, 4, 1);
+const cameraFrustum = new THREE.CylinderGeometry(0.2, 0.45, 0.85, 4, 1);
 cameraFrustum.rotateZ(Math.PI / 2);
 const GEOMETRIES = {
   light: sphere,
   switch: smallBox,
   input_boolean: smallBox,
-  sensor: new THREE.OctahedronGeometry(0.15),
-  binary_sensor: new THREE.ConeGeometry(0.12, 0.24, 12),
-  climate: new THREE.CylinderGeometry(0.14, 0.14, 0.09, 20),
-  cover: new THREE.BoxGeometry(0.28, 0.2, 0.05),
-  media_player: new THREE.BoxGeometry(0.3, 0.18, 0.06),
-  lock: new THREE.TorusGeometry(0.1, 0.045, 10, 20),
+  sensor: new THREE.OctahedronGeometry(0.5),
+  binary_sensor: new THREE.ConeGeometry(0.4, 0.8, 12),
+  climate: new THREE.CylinderGeometry(0.45, 0.45, 0.3, 20),
+  cover: new THREE.BoxGeometry(0.9, 0.65, 0.16),
+  media_player: new THREE.BoxGeometry(1.0, 0.6, 0.2),
+  lock: new THREE.TorusGeometry(0.33, 0.15, 10, 20),
   camera: cameraFrustum,
   default: sphere,
 };

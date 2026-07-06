@@ -3,7 +3,7 @@
 // show. Exit with Esc, the "back" chip, or clicking empty space.
 import * as THREE from 'three';
 import { camera, controls, flyTo, getViewPose, MIN_ZOOM, MAX_ZOOM } from './scene.js';
-import { roomMeshes, floorBaseY, setLevel, getLevel, setRoomOpacity } from './house.js';
+import { roomMeshes, setLevel, getLevel, setRoomOpacity } from './house.js';
 import { markers } from './devices.js';
 import { hideAllLabels } from './labels.js';
 
@@ -88,13 +88,13 @@ export function enterFocus(roomId) {
   // no showRoomLabels here: the room panel carries the info; hover still
   // pops a single label
 
-  // frame the room: distance that fits its bounding sphere in the tighter FOV
-  const { width: w, height: h, depth: d } = mesh.geometry.parameters;
-  const center = new THREE.Vector3(
-    mesh.position.x,
-    (floorBaseY.get(level) || 0) + mesh.position.y,
-    mesh.position.z);
-  const radius = 0.5 * Math.sqrt(w * w + h * h + d * d);
+  // frame the room: distance that fits its bounding sphere in the tighter FOV.
+  // Box3 works for both BoxGeometry (rect) and ExtrudeGeometry (polygon)
+  // rooms and is world-space, so the floor's Y offset is already included.
+  const box = new THREE.Box3().setFromObject(mesh);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const radius = 0.5 * size.length();
   const vFov = THREE.MathUtils.degToRad(camera.fov);
   const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
   const fit = Math.min(vFov, hFov);

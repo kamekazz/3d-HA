@@ -54,12 +54,12 @@ function makeLabel(dev, room, floor) {
   }));
   sprite.renderOrder = 10;
   sprite.center.set(0.5, 0); // anchor at bottom so it floats above the marker
-  sprite.scale.set(1.8, 0.45, 1);
+  sprite.scale.set(6, 1.5, 1);
   sprite.raycast = () => {}; // labels must never steal picks
   const fp = room.footprint;
   sprite.position.set(
     fp.x + dev.position.x,
-    dev.position.y + 0.22,
+    dev.position.y + 0.7,
     fp.z + dev.position.z);
   sprite.visible = false;
   sprite.userData = {

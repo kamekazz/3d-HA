@@ -30,6 +30,17 @@ export const api = {
   getHouse: () => get('/api/house'),
   generateHouse: () => post('/api/house/generate'),
   syncHouse: () => post('/api/house/sync'),
+  updateFloor: (id, data) => patch(`/api/house/floor/${id}`, data),
+  uploadFloorPlan: async (floorId, file) => {
+    // multipart: browser sets the Content-Type (with boundary) itself
+    const body = new FormData();
+    body.append('file', file);
+    const res = await fetch(`/api/house/floor/${floorId}/plan`, { method: 'POST', body });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`);
+    return data;
+  },
+  deleteFloorPlan: (floorId) => del(`/api/house/floor/${floorId}/plan`),
   createRoom: (data) => post('/api/house/room', data),
   updateRoom: (id, data) => patch(`/api/house/room/${id}`, data),
   deleteRoom: (id) => del(`/api/house/room/${id}`),

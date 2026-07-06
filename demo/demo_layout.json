@@ -1,0 +1,81 @@
+{
+  "comment": "Hand-traced from Basement.png / First floor.png / Second floor.png. All units feet. Floors are matched to the running instance by level rank (0 = lowest). Rooms are matched by ha_area_id first, then by name; unmatched rooms are created. 'points' are relative to the room anchor (x, z).",
+  "floors": [
+    {
+      "key": "BA",
+      "name": "Basement",
+      "floor_height": 8,
+      "plan_image": "Basement.png",
+      "plan_scale": 0.0375,
+      "plan_x": -1.63,
+      "plan_z": -7.73,
+      "rooms": [
+        {
+          "name": "Arcade Room",
+          "ha_area_id": "game_room",
+          "x": 4, "z": 0, "width": 28, "depth": 26,
+          "height": 8, "color": "#b98fbf"
+        },
+        {
+          "name": "Movie Room",
+          "ha_area_id": "movie_room",
+          "x": 4, "z": 26,
+          "points": [[0, 0], [28, 0], [28, 20], [23, 20], [23, 26], [0, 26]],
+          "height": 8, "color": "#8fa8bf"
+        }
+      ]
+    },
+    {
+      "key": "M",
+      "name": "First floor",
+      "floor_height": 10,
+      "plan_image": "First floor.png",
+      "plan_scale": 0.041,
+      "plan_x": -2.0,
+      "plan_z": -22.4,
+      "rooms": [
+        { "name": "Garage", "ha_area_id": "garage",
+          "x": 0, "z": 0, "width": 14, "depth": 20, "height": 9, "color": "#a3bf8f" },
+        { "name": "Living Room", "ha_area_id": "living_room",
+          "x": 0, "z": 20, "width": 14, "depth": 14, "height": 9, "color": "#bf8f8f" },
+        { "name": "Office", "ha_area_id": "office",
+          "x": 20, "z": 0, "width": 12, "depth": 12, "height": 9, "color": "#9a8fbf" },
+        { "name": "First floor hallway", "ha_area_id": "first_floor_hallway",
+          "x": 14, "z": 12, "width": 6, "depth": 22, "height": 9, "color": "#bfae8f" },
+        { "name": "Kitchen", "ha_area_id": "kitchen",
+          "x": 20, "z": 12, "width": 12, "depth": 12, "height": 9, "color": "#8fbfbd" },
+        { "name": "Dining", "ha_area_id": "dining_room",
+          "x": 32, "z": 12, "width": 8, "depth": 12, "height": 9, "color": "#bfae8f" },
+        { "name": "Laundry", "ha_area_id": "laundry_room",
+          "x": 20, "z": 24, "width": 6, "depth": 10, "height": 9, "color": "#8fa8bf" },
+        { "name": "Pantry", "ha_area_id": "pantry",
+          "x": 26, "z": 24, "width": 6, "depth": 10, "height": 9, "color": "#b98fbf" },
+        { "name": "Frontyard", "ha_area_id": "front_house",
+          "x": 0, "z": 34, "width": 40, "depth": 8, "height": 1, "color": "#8fbf9c" },
+        { "name": "Backyard", "ha_area_id": "backyard",
+          "x": 0, "z": -10, "width": 40, "depth": 10, "height": 1, "color": "#8fbf9c" }
+      ]
+    },
+    {
+      "key": "2F",
+      "name": "Second floor",
+      "floor_height": 10,
+      "plan_image": "Second floor.png",
+      "plan_scale": 0.0366,
+      "plan_x": -1.76,
+      "plan_z": -15.5,
+      "rooms": [
+        { "name": "Guest Room", "ha_area_id": "guest_room",
+          "x": 22, "z": 0, "width": 14, "depth": 14, "height": 8, "color": "#bf8f8f" },
+        { "name": "Hallway", "ha_area_id": "hallway",
+          "x": 14, "z": 8, "width": 8, "depth": 22, "height": 8, "color": "#8fa8bf" },
+        { "name": "Master Bed", "ha_area_id": "master_bedroom",
+          "x": 0, "z": 10, "width": 14, "depth": 16, "height": 8, "color": "#8fbfbd" },
+        { "name": "Master Bath.", "ha_area_id": "master_bathroom_2",
+          "x": 0, "z": 26, "width": 14, "depth": 8, "height": 8, "color": "#9a8fbf" },
+        { "name": "Rios Room", "ha_area_id": "rios_room",
+          "x": 22, "z": 22, "width": 14, "depth": 16, "height": 8, "color": "#a3bf8f" }
+      ]
+    }
+  ]
+}

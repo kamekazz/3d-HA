@@ -93,8 +93,34 @@ state changes.
 **Key endpoints:** `GET /api/ha/structure` (HA tree), `GET /api/ha/states`, `GET /api/ha/status`,
 `POST /api/ha/refresh` (re-fetch HA registries) — `GET/POST/PATCH/DELETE /api/house*` (floor/room/
 device-placement CRUD, backed by `HouseStore`), `POST /api/house/generate` (add missing rooms),
-`POST /api/house/sync` (full reconcile — see above) — `POST /api/control` — SocketIO event
-`state_changed`.
+`POST /api/house/sync` (full reconcile — see above) — `POST/GET/DELETE /api/house/floor/<id>/plan`
++ `GET /api/house/plan/<id>` (floor-plan tracing images, saved under gitignored `backend/uploads/`;
+png/jpg/webp only, never SVG — files are served back verbatim) — `POST /api/control` — SocketIO
+event `state_changed`.
+
+**Units are FEET everywhere** (world unit = 1 ft; grid cells are 1 ft). Databases from before the
+feet switch stored meters and are converted ×3.28084 once on boot, gated by `PRAGMA user_version`
+(0 = meters, 1 = feet) in `HouseStore._migrate_meters_to_feet`.
+
+**Room footprints can be rectilinear polygons**, not just rectangles: `rooms.points` (TEXT, JSON
+`[[dx,dz],…]`, nullable) holds vertices **relative to the room's `x/z` anchor**, which always stays
+the polygon's bbox min corner (so device positions, `generate_from_ha`'s layout math, and whole-room
+moves keep working). `normalize_points` in `house/store.py` validates (≥3 points, no
+self-intersection, non-zero area), forces CCW winding, and folds the bbox shift into the anchor on
+every write; invalid polygons → HTTP 400. `points: null` reverts a room to its bbox rectangle.
+`points` is NULL for all generated rooms. In 3D, `house.js buildRoom` extrudes polygon rooms with
+`THREE.Shape`/`ExtrudeGeometry` (map `(x,z) → (x,-z)` then `rotateX(-π/2)`); rect rooms keep the
+centered-BoxGeometry path. `focus.js` frames rooms via world-space `Box3`, never
+`geometry.parameters` (BoxGeometry-only API).
+
+**The 2D floor-plan editor** (`frontend/js/planner.js`, "Floor plan" topbar button) is a full-screen
+canvas overlay: per-floor tabs, draw rooms as rectangles, drag vertices/edge-midpoints (edges stay
+rectilinear), Alt+click an edge to insert a vertex, drag whole rooms, snap in ft (Shift bypasses),
+assign HA area/name/color/height, and trace over an uploaded floor-plan image (per-floor
+`plan_image`/`plan_scale` (ft/px)/`plan_x`/`plan_z` columns). It edits its own fetched copy of the
+house, PATCHes per gesture through the normal room endpoints, and triggers exactly one 3D rebuild
+when closed. `demo/seed_demo.py` + `demo/demo_layout.json` seed this instance's real layout (traced
+from the screenshots in `demo/`) — idempotent keyed upserts, re-runnable.
 
 **Frontend module layout** (`frontend/js/`, loaded as native ES modules, Three.js via CDN
 importmap — no npm/bundler):
@@ -108,6 +134,8 @@ importmap — no npm/bundler):
   encode on/off/unavailable).
 - `socket.js` — SocketIO client wrapper with polling fallback.
 - `ui.js` — room editor panel, device detail/control panel, level selector, connection banner.
+- `planner.js` — the 2D per-floor floor-plan editor (canvas overlay, feet grid, polygon editing,
+  plan-image tracing).
 - `api.js` — thin fetch wrapper for the Flask endpoints above.
 
 ## Conventions worth knowing
@@ -118,6 +146,6 @@ importmap — no npm/bundler):
   `ha/client.py`/`ha/ws_client.py` — never send it to the frontend.
 - Windows dev environment (PowerShell). Default port is 5000; if that's in use, an alternate
   `3d-ha-5001` launch config exists (see `.claude/launch.json`).
-- Not yet implemented (see `3d-home-assistant-house-spec.md` phases 8-9): drag-to-position on a
-  top-down grid (positions are numeric inputs for now), non-rectangular room footprints, app-level
-  login (needed before hosting this anywhere public).
+- Not yet implemented (see `3d-home-assistant-house-spec.md` phases 8-9): drag-to-position for
+  *devices* in the 2D planner (rooms drag there already; device positions are numeric inputs),
+  app-level login (needed before hosting this anywhere public).

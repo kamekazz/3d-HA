@@ -10,6 +10,7 @@ import { initFocus, enterFocus, exitFocus } from './focus.js';
 import { connectRealtime } from './socket.js';
 import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, selectRoom } from './ui.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
+import { initPlanner } from './planner.js';
 
 let structure = null;
 
@@ -205,6 +206,7 @@ async function main() {
   initFocus();
   initUI({ structure, house, onReload: reloadHouse });
   initRoomPanel({ house });
+  initPlanner({ getStructure: () => structure, onClose: reloadHouse });
   await loadStates();
   updateData({ structure, house });
 

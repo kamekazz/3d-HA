@@ -23,6 +23,7 @@
     <span id="conn-status" class="status-dot" title="Realtime status"></span>
     <span id="conn-label">connecting…</span>
     <div class="spacer"></div>
+    <button id="btn-planner" type="button" title="Edit each floor's layout on a top-down plan (feet)">Floor plan</button>
     <button id="btn-editor" type="button">Room editor</button>
     <button id="btn-sync" type="button" title="Re-read HA and update the layout: move rooms to match their HA floor, add new areas, drop empty floors deleted in HA">Sync with HA</button>
     <button id="btn-refresh" type="button" title="Re-read floors/areas/devices from HA">Refresh HA</button>
@@ -80,9 +81,9 @@
       <label>Floor <select id="rf-floor"></select></label>
       <label>HA area <select id="rf-area"><option value="">— none —</option></select></label>
       <div class="row3">
-        <label>Width <input id="rf-width" type="number" step="0.1" min="0.5" value="4"></label>
-        <label>Depth <input id="rf-depth" type="number" step="0.1" min="0.5" value="3"></label>
-        <label>Height <input id="rf-height" type="number" step="0.1" min="1" value="2.7"></label>
+        <label>Width (ft) <input id="rf-width" type="number" step="0.5" min="1.5" value="13"></label>
+        <label>Depth (ft) <input id="rf-depth" type="number" step="0.5" min="1.5" value="10"></label>
+        <label>Height (ft) <input id="rf-height" type="number" step="0.5" min="3" value="8"></label>
       </div>
       <div class="row3">
         <label>X <input id="rf-x" type="number" step="0.1" value="0"></label>
@@ -102,6 +103,49 @@
       <div id="entity-list" class="muted">Link the room to an HA area to list its entities.</div>
     </section>
   </aside>
+
+  <!-- 2D per-floor floor-plan editor (feet) -->
+  <div id="planner" class="hidden">
+    <div id="pl-topbar">
+      <nav id="pl-floors"></nav>
+      <div class="spacer"></div>
+      <input type="file" id="pl-img-file" accept=".png,.jpg,.jpeg,.webp" hidden>
+      <button id="pl-img-btn" type="button" class="secondary"
+              title="Show a floor-plan photo under the grid to trace over">Plan image…</button>
+      <label class="pl-inline pl-img-ctl hidden">Opacity
+        <input id="pl-img-opacity" type="range" min="0" max="100" value="40">
+      </label>
+      <label class="pl-inline pl-img-ctl hidden" title="Feet per image pixel — tune until a known wall matches the grid">ft/px
+        <input id="pl-img-scale" type="number" step="0.005" min="0.005">
+      </label>
+      <button id="pl-img-move" type="button" class="secondary pl-img-ctl hidden"
+              title="Drag the empty canvas to slide the image, then click again to stop">Move image</button>
+      <button id="pl-img-del" type="button" class="secondary pl-img-ctl hidden">✕ image</button>
+      <label class="pl-inline">Snap
+        <select id="pl-snap">
+          <option value="0.25">3 in</option>
+          <option value="0.5" selected>6 in</option>
+          <option value="1">1 ft</option>
+        </select>
+      </label>
+      <button id="pl-draw" type="button" class="secondary">+ Draw room</button>
+      <button id="pl-close" type="button">Done</button>
+    </div>
+    <canvas id="pl-canvas"></canvas>
+    <aside id="pl-props" class="hidden">
+      <label>Name <input id="pl-name"></label>
+      <label>HA area <select id="pl-area"><option value="">— no HA area —</option></select></label>
+      <div class="row3">
+        <label>Color <input id="pl-color" type="color"></label>
+        <label>Height (ft) <input id="pl-height" type="number" step="0.5" min="3"></label>
+      </div>
+      <div class="btn-row">
+        <button id="pl-rect" type="button" class="secondary" title="Replace the shape with its bounding rectangle">Make rectangular</button>
+        <button id="pl-delete" type="button" class="danger">Delete</button>
+      </div>
+    </aside>
+    <div id="pl-status"></div>
+  </div>
 
   <script type="module" src="js/main.js"></script>
 </body>

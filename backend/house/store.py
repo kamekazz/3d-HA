@@ -1,7 +1,15 @@
-"""SQLite persistence for the house model (floors, rooms, device placements)."""
+"""SQLite persistence for the house model (floors, rooms, device placements).
+
+All lengths/positions are in FEET (world unit = 1 ft). Databases created
+before the feet switch stored meters; they are converted once, gated by
+PRAGMA user_version (0 = meters, 1 = feet).
+"""
+import json
 import math
 import sqlite3
 import threading
+
+FEET_PER_METER = 3.28084
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS floors (
@@ -9,7 +17,11 @@ CREATE TABLE IF NOT EXISTS floors (
     name TEXT NOT NULL,
     level INTEGER NOT NULL UNIQUE,
     ha_floor_id TEXT,
-    floor_height REAL NOT NULL DEFAULT 3.0
+    floor_height REAL NOT NULL DEFAULT 10.0,
+    plan_image TEXT,
+    plan_scale REAL NOT NULL DEFAULT 0.05,
+    plan_x REAL NOT NULL DEFAULT 0,
+    plan_z REAL NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS rooms (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,35 +30,93 @@ CREATE TABLE IF NOT EXISTS rooms (
     ha_area_id TEXT,
     x REAL NOT NULL DEFAULT 0,
     z REAL NOT NULL DEFAULT 0,
-    width REAL NOT NULL DEFAULT 4,
-    depth REAL NOT NULL DEFAULT 3,
-    height REAL NOT NULL DEFAULT 2.7,
-    color TEXT NOT NULL DEFAULT '#e8e8e8'
+    width REAL NOT NULL DEFAULT 13,
+    depth REAL NOT NULL DEFAULT 10,
+    height REAL NOT NULL DEFAULT 8.0,
+    color TEXT NOT NULL DEFAULT '#e8e8e8',
+    points TEXT
 );
 CREATE TABLE IF NOT EXISTS placements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     entity_id TEXT NOT NULL,
     x REAL NOT NULL DEFAULT 0,
-    y REAL NOT NULL DEFAULT 1.5,
+    y REAL NOT NULL DEFAULT 5.0,
     z REAL NOT NULL DEFAULT 0,
     type TEXT NOT NULL DEFAULT 'sensor',
     visible INTEGER NOT NULL DEFAULT 1
 );
 """
 
-ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height", "color")
+ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height",
+               "color", "points")
 PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible")
 
-# Defaults for rooms generated from HA areas (editable afterwards).
-GEN_ROOM = {"width": 5.0, "depth": 4.0, "height": 2.7, "gap": 1.0}
+# Defaults for rooms generated from HA areas (editable afterwards). Feet.
+GEN_ROOM = {"width": 16.0, "depth": 13.0, "height": 8.0, "gap": 3.0}
 GEN_PALETTE = ("#8fa8bf", "#b98fbf", "#8fbf9c", "#bfae8f",
                "#bf8f8f", "#8fbfbd", "#a3bf8f", "#9a8fbf")
 GEN_DOMAINS = {"light", "switch", "sensor", "binary_sensor", "climate",
                "cover", "media_player", "lock", "fan", "camera",
                "vacuum", "humidifier"}
-GEN_HEIGHTS = {"light": 2.3, "camera": 2.2, "cover": 2.0, "switch": 1.2,
-               "media_player": 0.9, "vacuum": 0.15}  # default 1.5
+GEN_HEIGHTS = {"light": 7.5, "camera": 7.2, "cover": 6.5, "switch": 4.0,
+               "media_player": 3.0, "vacuum": 0.5}  # default 5.0
+
+
+def _segments_cross(a, b, c, d):
+    """True when segment a-b properly crosses segment c-d (not just touches)."""
+    def orient(p, q, r):
+        v = (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+        return 0 if abs(v) < 1e-12 else (1 if v > 0 else -1)
+    o1, o2 = orient(a, b, c), orient(a, b, d)
+    o3, o4 = orient(c, d, a), orient(c, d, b)
+    return o1 != o2 and o3 != o4 and 0 not in (o1, o2, o3, o4)
+
+
+def _self_intersects(pts):
+    n = len(pts)
+    for i in range(n):
+        a, b = pts[i], pts[(i + 1) % n]
+        for j in range(i + 1, n):
+            if (j + 1) % n == i or (i + 1) % n == j:
+                continue  # adjacent segments share a vertex
+            if _segments_cross(a, b, pts[j], pts[(j + 1) % n]):
+                return True
+    return False
+
+
+def normalize_points(points):
+    """Validate + normalize a room polygon (list of [x, z] pairs, feet).
+
+    Returns (points_json, dx, dz, width, depth) where dx/dz is the bbox-min
+    shift to fold into the room's x/z anchor; the JSON polygon has its bbox
+    min at (0, 0) and CCW winding (shoelace > 0). Raises ValueError on
+    malformed, zero-area, or self-intersecting input.
+    """
+    if not isinstance(points, (list, tuple)) or len(points) < 3:
+        raise ValueError("polygon needs at least 3 [x, z] points")
+    pts = []
+    for p in points:
+        ok = (isinstance(p, (list, tuple)) and len(p) == 2
+              and all(isinstance(c, (int, float)) and not isinstance(c, bool)
+                      and math.isfinite(c) for c in p))
+        if not ok:
+            raise ValueError("each point must be an [x, z] pair of finite numbers")
+        pts.append((float(p[0]), float(p[1])))
+    area2 = sum(x1 * z2 - x2 * z1
+                for (x1, z1), (x2, z2) in zip(pts, pts[1:] + pts[:1]))
+    if abs(area2) < 1e-9:
+        raise ValueError("polygon has zero area")
+    if area2 < 0:
+        pts.reverse()
+    if _self_intersects(pts):
+        raise ValueError("polygon edges must not cross")
+    min_x = min(p[0] for p in pts)
+    min_z = min(p[1] for p in pts)
+    width = round(max(p[0] for p in pts) - min_x, 4)
+    depth = round(max(p[1] for p in pts) - min_z, 4)
+    norm = [[round(p[0] - min_x, 4), round(p[1] - min_z, 4)] for p in pts]
+    return json.dumps(norm), min_x, min_z, width, depth
 
 
 class HouseStore:
@@ -57,12 +127,36 @@ class HouseStore:
         self._db.execute("PRAGMA foreign_keys = ON")
         self._db.executescript(SCHEMA)
         # CREATE TABLE IF NOT EXISTS won't add columns to a pre-existing table
-        try:
-            self._db.execute(
-                "ALTER TABLE placements ADD COLUMN visible INTEGER NOT NULL DEFAULT 1")
-        except sqlite3.OperationalError:
-            pass  # column already exists
+        for ddl in (
+            "ALTER TABLE placements ADD COLUMN visible INTEGER NOT NULL DEFAULT 1",
+            "ALTER TABLE rooms ADD COLUMN points TEXT",
+            "ALTER TABLE floors ADD COLUMN plan_image TEXT",
+            "ALTER TABLE floors ADD COLUMN plan_scale REAL NOT NULL DEFAULT 0.05",
+            "ALTER TABLE floors ADD COLUMN plan_x REAL NOT NULL DEFAULT 0",
+            "ALTER TABLE floors ADD COLUMN plan_z REAL NOT NULL DEFAULT 0",
+        ):
+            try:
+                self._db.execute(ddl)
+            except sqlite3.OperationalError:
+                pass  # column already exists
+        self._migrate_meters_to_feet()
         self._db.commit()
+
+    def _migrate_meters_to_feet(self):
+        """user_version 0 databases stored meters; scale them to feet once.
+        A brand-new DB is also version 0 but has no rows, so this is a no-op
+        for it beyond stamping the version."""
+        if self._db.execute("PRAGMA user_version").fetchone()[0] >= 1:
+            return
+        f = FEET_PER_METER
+        self._db.execute(
+            "UPDATE floors SET floor_height = floor_height * ?", (f,))
+        self._db.execute(
+            "UPDATE rooms SET x=x*?, z=z*?, width=width*?, depth=depth*?,"
+            " height=height*?", (f, f, f, f, f))
+        self._db.execute(
+            "UPDATE placements SET x=x*?, y=y*?, z=z*?", (f, f, f))
+        self._db.execute("PRAGMA user_version = 1")
 
     def _rows(self, sql, params=()):
         return [dict(r) for r in self._db.execute(sql, params).fetchall()]
@@ -78,7 +172,10 @@ class HouseStore:
         rooms_by_floor = {}
         for room in rooms:
             room["footprint"] = {"x": room["x"], "z": room["z"],
-                                 "width": room["width"], "depth": room["depth"]}
+                                 "width": room["width"], "depth": room["depth"],
+                                 "points": json.loads(room["points"])
+                                 if room.get("points") else None}
+            del room["points"]  # footprint is the API surface for geometry
             room["devices"] = []
             rooms_by_floor.setdefault(room["floor_id"], []).append(room)
         room_by_id = {r["id"]: r for r in rooms}
@@ -338,14 +435,14 @@ class HouseStore:
         entities = picked
         if not entities:
             return 0
-        margin = 0.6
+        margin = 2.0
         cols = max(1, math.ceil(math.sqrt(len(entities))))
         n_rows = math.ceil(len(entities) / cols)
         cell_w = (GEN_ROOM["width"] - 2 * margin) / cols
         cell_d = (GEN_ROOM["depth"] - 2 * margin) / n_rows
         for i, e in enumerate(entities):
-            y = min(GEN_HEIGHTS.get(e["domain"], 1.5),
-                    GEN_ROOM["height"] - 0.3)
+            y = min(GEN_HEIGHTS.get(e["domain"], 5.0),
+                    GEN_ROOM["height"] - 1.0)
             self._db.execute(
                 "INSERT INTO placements (room_id, entity_id, x, y, z, type) "
                 "VALUES (?,?,?,?,?,?)",
@@ -362,12 +459,13 @@ class HouseStore:
                 "INSERT INTO floors (name, level, ha_floor_id, floor_height) "
                 "VALUES (?,?,?,?)",
                 (data["name"], int(data["level"]), data.get("ha_floor_id"),
-                 float(data.get("floor_height", 3.0))))
+                 float(data.get("floor_height", 10.0))))
             self._db.commit()
             return cur.lastrowid
 
     def update_floor(self, floor_id, data):
-        allowed = {k: data[k] for k in ("name", "level", "ha_floor_id", "floor_height")
+        allowed = {k: data[k] for k in ("name", "level", "ha_floor_id", "floor_height",
+                                        "plan_scale", "plan_x", "plan_z")
                    if k in data}
         if not allowed:
             return False
@@ -379,21 +477,42 @@ class HouseStore:
             self._db.commit()
             return cur.rowcount > 0
 
+    def get_floor(self, floor_id):
+        with self._lock:
+            row = self._db.execute("SELECT * FROM floors WHERE id=?",
+                                   (floor_id,)).fetchone()
+            return dict(row) if row else None
+
+    def set_floor_plan_image(self, floor_id, filename):
+        with self._lock:
+            cur = self._db.execute("UPDATE floors SET plan_image=? WHERE id=?",
+                                   (filename, floor_id))
+            self._db.commit()
+            return cur.rowcount > 0
+
     # ---- rooms ------------------------------------------------------------
 
     def create_room(self, data):
         footprint = data.get("footprint") or {}
+        x = float(footprint.get("x", data.get("x", 0)))
+        z = float(footprint.get("z", data.get("z", 0)))
+        width = float(footprint.get("width", data.get("width", 13)))
+        depth = float(footprint.get("depth", data.get("depth", 10)))
+        points = footprint.get("points", data.get("points"))
+        points_json = None
+        if points is not None:
+            points_json, dx, dz, width, depth = normalize_points(points)
+            x += dx
+            z += dz
         with self._lock:
             cur = self._db.execute(
                 "INSERT INTO rooms (floor_id, name, ha_area_id, x, z, width, depth,"
-                " height, color) VALUES (?,?,?,?,?,?,?,?,?)",
+                " height, color, points) VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (int(data["floor_id"]), data["name"], data.get("ha_area_id"),
-                 float(footprint.get("x", data.get("x", 0))),
-                 float(footprint.get("z", data.get("z", 0))),
-                 float(footprint.get("width", data.get("width", 4))),
-                 float(footprint.get("depth", data.get("depth", 3))),
-                 float(data.get("height", 2.7)),
-                 data.get("color", "#e8e8e8")))
+                 x, z, width, depth,
+                 float(data.get("height", 8.0)),
+                 data.get("color", "#e8e8e8"),
+                 points_json))
             self._db.commit()
             return cur.lastrowid
 
@@ -401,11 +520,22 @@ class HouseStore:
         flat = dict(data)
         for k, v in (data.get("footprint") or {}).items():
             flat[k] = v
-        allowed = {k: flat[k] for k in (*ROOM_FIELDS, "floor_id") if k in flat}
-        if not allowed:
-            return False
-        sets = ", ".join(f"{k}=?" for k in allowed)
         with self._lock:
+            if flat.get("points") is not None:
+                # normalize: bbox min folds into the anchor, width/depth follow
+                points_json, dx, dz, w, d = normalize_points(flat["points"])
+                row = self._db.execute("SELECT x, z FROM rooms WHERE id=?",
+                                       (room_id,)).fetchone()
+                if row is None:
+                    return False
+                flat["x"] = (float(flat["x"]) if "x" in flat else row["x"]) + dx
+                flat["z"] = (float(flat["z"]) if "z" in flat else row["z"]) + dz
+                flat["width"], flat["depth"] = w, d
+                flat["points"] = points_json
+            allowed = {k: flat[k] for k in (*ROOM_FIELDS, "floor_id") if k in flat}
+            if not allowed:
+                return False
+            sets = ", ".join(f"{k}=?" for k in allowed)
             cur = self._db.execute(
                 f"UPDATE rooms SET {sets} WHERE id=?",
                 (*allowed.values(), room_id))
@@ -431,7 +561,7 @@ class HouseStore:
                 "VALUES (?,?,?,?,?,?)",
                 (room_id, data["entity_id"],
                  float(pos.get("x", data.get("x", 0))),
-                 float(pos.get("y", data.get("y", 1.5))),
+                 float(pos.get("y", data.get("y", 5.0))),
                  float(pos.get("z", data.get("z", 0))),
                  data.get("type") or data["entity_id"].split(".", 1)[0]))
             self._db.commit()
