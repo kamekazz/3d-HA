@@ -8,6 +8,7 @@ import logging
 from flask import Flask, send_from_directory
 
 import config
+from api.camera_routes import bp as camera_bp
 from api.control_routes import bp as control_bp
 from api.ha_routes import bp as ha_bp
 from ha.cache import HACache
@@ -34,6 +35,7 @@ def create_app():
 
     app.register_blueprint(ha_bp)
     app.register_blueprint(control_bp)
+    app.register_blueprint(camera_bp)
     app.register_blueprint(house_bp)
     socketio.init_app(app)
 

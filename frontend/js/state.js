@@ -5,7 +5,8 @@ const states = new Map(); // entity_id -> HA state object
 const listeners = new Set();
 
 const ON_STATES = new Set(['on', 'open', 'playing', 'home', 'unlocked', 'heat',
-                           'cool', 'heat_cool', 'auto', 'cleaning']);
+                           'cool', 'heat_cool', 'auto', 'cleaning',
+                           'recording', 'streaming']);
 
 export function getState(entityId) {
   return states.get(entityId);
@@ -84,6 +85,17 @@ export function styleMarker(entityId) {
     marker.material.color.setHex(0x3a4149);
     marker.material.emissive.setHex(0x000000);
     marker.scale.setScalar(0.8);
+    return;
+  }
+
+  // camera: keep the type color even when idle (so cams stay findable),
+  // glow + grow while recording/streaming
+  if (type === 'camera') {
+    const active = s.state === 'recording' || s.state === 'streaming';
+    marker.material.color.setHex(base);
+    marker.material.emissive.setHex(base);
+    marker.material.emissiveIntensity = active ? 0.9 : 0.15;
+    marker.scale.setScalar(active ? 1.3 : 1.0);
     return;
   }
 

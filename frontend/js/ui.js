@@ -104,7 +104,13 @@ export function initUI({ structure: s, house: h, onReload }) {
     btn.disabled = false;
   };
   document.querySelectorAll('.close').forEach((btn) => {
-    btn.onclick = () => $(btn.dataset.close).classList.add('hidden');
+    btn.onclick = () => {
+      $(btn.dataset.close).classList.add('hidden');
+      if (btn.dataset.close === 'device-panel') {
+        panelEntityId = null;
+        stopCameraView(); // drop the MJPEG connection, don't stream unseen
+      }
+    };
   });
 
   $('room-form').onsubmit = onRoomFormSubmit;
@@ -173,6 +179,60 @@ function buildLevelButtons() {
   }
 }
 
+// ---------------------------------------------------------------- camera view
+
+const SNAPSHOT_REFRESH_MS = 10000;
+let camLive = false;  // current mode while a camera panel is open
+let camKey = null;    // `${entityId}|${camLive}` applied to the <img>
+let camTimer = null;  // snapshot refresh interval
+
+// Idempotent per (entity, mode): panel re-renders from live state echoes must
+// not touch the <img>, or the MJPEG stream would reconnect on every echo.
+function applyCameraView(entityId) {
+  $('dp-camera').classList.remove('hidden');
+  const key = `${entityId}|${camLive}`;
+  if (camKey === key) return;
+  camKey = key;
+  clearInterval(camTimer);
+  camTimer = null;
+  const img = $('dp-cam-img');
+  const hint = $('dp-cam-hint');
+  const snap = () => { img.src = `/api/camera/${entityId}/snapshot?t=${Date.now()}`; };
+  img.onload = () => hint.classList.add('hidden');
+  img.onerror = () => {
+    hint.classList.add('hidden');
+    if (camLive) {
+      showBanner(`Camera stream failed for ${friendlyName(entityId)}`, 4000);
+    } else {
+      // Nabu Casa drops connections in short bursts — retry sooner than
+      // the regular interval, but only while this view is still current
+      setTimeout(() => { if (camKey === key && !camLive) snap(); }, 2500);
+    }
+  };
+  if (camLive) {
+    hint.classList.remove('hidden'); // HA spins up ffmpeg — first frame takes a few seconds
+    img.src = `/api/camera/${entityId}/stream?t=${Date.now()}`;
+  } else {
+    hint.classList.add('hidden');
+    snap();
+    camTimer = setInterval(snap, SNAPSHOT_REFRESH_MS);
+  }
+}
+
+function stopCameraView() {
+  clearInterval(camTimer);
+  camTimer = null;
+  camKey = null;
+  camLive = false;
+  const img = $('dp-cam-img');
+  img.onload = null;
+  img.onerror = null;
+  img.src = ''; // aborts an in-flight MJPEG connection
+  img.removeAttribute('src');
+  $('dp-cam-hint').classList.add('hidden');
+  $('dp-camera').classList.add('hidden');
+}
+
 // ---------------------------------------------------------------- device panel
 
 export function openDevicePanel(entityId) {
@@ -209,6 +269,7 @@ function renderDevicePanel(entityId) {
   const controls = $('dp-controls');
   controls.innerHTML = '';
   const domain = entityId.split('.')[0];
+  if (domain !== 'camera') stopCameraView();
 
   const call = (service, data) =>
     api.control({ entity_id: entityId, domain, service, ...(data ? { data } : {}) })
@@ -352,6 +413,18 @@ function renderDevicePanel(entityId) {
     }
   } else if (domain === 'script' || domain === 'scene') {
     svc('Run', 'turn_on');
+  } else if (domain === 'camera') {
+    applyCameraView(entityId);
+    const live = document.createElement('button');
+    live.textContent = camLive ? 'Stop live view' : 'Live view';
+    if (camLive) live.className = 'secondary';
+    live.onclick = () => {
+      camLive = !camLive;
+      applyCameraView(entityId);
+      live.textContent = camLive ? 'Stop live view' : 'Live view';
+      live.className = camLive ? 'secondary' : '';
+    };
+    controls.appendChild(live);
   }
 }
 
@@ -558,7 +631,8 @@ function renderPlacementSection() {
         type: ent.domain,
         position: {
           x: +(fp.width * (0.2 + 0.6 * Math.random())).toFixed(2),
-          y: ent.domain === 'light' ? Math.max(room.height - 0.3, 0.5) : 1.2,
+          y: ['light', 'camera'].includes(ent.domain)
+            ? Math.max(room.height - 0.3, 0.5) : 1.2,
           z: +(fp.depth * (0.2 + 0.6 * Math.random())).toFixed(2),
         },
       });

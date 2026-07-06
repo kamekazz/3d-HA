@@ -13,6 +13,7 @@ const BASE_COLORS = {
   cover: 0x80cbc4,
   media_player: 0xf06292,
   lock: 0xffab40,
+  camera: 0x26c6da,
   default: 0x9e9e9e,
 };
 
@@ -23,6 +24,9 @@ export function baseColor(type) {
 // one shared geometry per domain so the shape says what a device is
 const sphere = new THREE.SphereGeometry(0.14, 20, 16);
 const smallBox = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+// 4-sided frustum laid on its side: reads as a wall-mounted camera/lens cone
+const cameraFrustum = new THREE.CylinderGeometry(0.06, 0.14, 0.26, 4, 1);
+cameraFrustum.rotateZ(Math.PI / 2);
 const GEOMETRIES = {
   light: sphere,
   switch: smallBox,
@@ -33,6 +37,7 @@ const GEOMETRIES = {
   cover: new THREE.BoxGeometry(0.28, 0.2, 0.05),
   media_player: new THREE.BoxGeometry(0.3, 0.18, 0.06),
   lock: new THREE.TorusGeometry(0.1, 0.045, 10, 20),
+  camera: cameraFrustum,
   default: sphere,
 };
 
