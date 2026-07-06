@@ -32,6 +32,14 @@ Open http://127.0.0.1:5000
 The app also starts without `.env` — you can build rooms, but no HA data or
 live states until it's configured.
 
+> **Demo data ships with the repo (for now):** `backend/house.db` and
+> `backend/uploads/` are committed, so a fresh clone already contains the whole
+> house — every floor, room, device placement, stairs, uploaded 3D models and
+> floor-plan images. Clone, install, `python app.py`, and the full layout
+> renders even with no `.env`. Live device states and controls only work once
+> `.env` points at the team's Home Assistant instance. The DB will be removed
+> from the repo later; don't build anything that depends on it being here.
+
 ## Using it
 
 1. **Room editor** (top-right button): create a room — name, floor, the HA area
@@ -68,6 +76,6 @@ Key endpoints: `GET /api/ha/structure`, `GET /api/ha/states`, `GET /api/house`
 
 ## Not yet implemented (spec phases 8–9)
 
-- Drag-to-position on a top-down grid (positions are numeric inputs for now)
-- Non-rectangular room footprints
+- Drag-to-position for devices in the 2D floor-plan editor (rooms drag there
+  already; devices drag in the 3D view once their panel is open)
 - App-level login (add before hosting this anywhere public)

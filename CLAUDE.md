@@ -94,7 +94,8 @@ state changes.
 `POST /api/ha/refresh` (re-fetch HA registries) — `GET/POST/PATCH/DELETE /api/house*` (floor/room/
 device-placement CRUD, backed by `HouseStore`), `POST /api/house/generate` (add missing rooms),
 `POST /api/house/sync` (full reconcile — see above) — `POST/GET/DELETE /api/house/floor/<id>/plan`
-+ `GET /api/house/plan/<id>` (floor-plan tracing images, saved under gitignored `backend/uploads/`;
++ `GET /api/house/plan/<id>` (floor-plan tracing images, saved under `backend/uploads/` — tracked
+in git for now so clones ship the demo data, to be re-ignored later;
 png/jpg/webp only, never SVG — files are served back verbatim) — `POST /api/control` — SocketIO
 event `state_changed`.
 
@@ -114,8 +115,9 @@ centered-BoxGeometry path. `focus.js` frames rooms via world-space `Box3`, never
 `geometry.parameters` (BoxGeometry-only API).
 
 **3D model library** ("Models" topbar button): uploaded `.glb`/`.gltf` files live in a `models`
-table + gitignored `backend/uploads/models/model_<id>.<ext>` (same deterministic-filename pattern as
-floor plans; `MODEL_EXTENSIONS` whitelist). A model can (a) **replace a device marker** —
+table + `backend/uploads/models/model_<id>.<ext>` (same deterministic-filename pattern as
+floor plans; `MODEL_EXTENSIONS` whitelist). Note: `backend/house.db` and `backend/uploads/` are
+currently **tracked in git** on purpose (teammates clone the demo house); re-ignore when that ends. A model can (a) **replace a device marker** —
 `placements.model_id` (FK, `ON DELETE SET NULL` so deleting a model reverts the primitive), plus
 `rot_y` (radians) and `scale` — or (b) be placed as **standalone furniture**: an `objects` row
 (room-anchored like placements, `model_id ON DELETE CASCADE`). `frontend/js/models.js` owns the

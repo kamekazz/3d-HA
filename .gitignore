@@ -3,5 +3,6 @@
 __pycache__/
 .venv/
 venv/
-backend/house.db
-backend/uploads/
+# backend/house.db and backend/uploads/ are intentionally TRACKED for now:
+# the repo ships the demo house (rooms, placements, models, plan images) so
+# teammates can clone and run. Re-ignore them when the demo phase ends.
