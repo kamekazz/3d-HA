@@ -70,6 +70,7 @@ function makeMarker(dev, room, floor) {
     fp.x + dev.position.x,
     dev.position.y,
     fp.z + dev.position.z);
+  marker.visible = dev.visible !== 0;
   marker.userData = {
     kind: 'device',
     entityId: dev.entity_id,
@@ -78,6 +79,15 @@ function makeMarker(dev, room, floor) {
     roomId: room.id,
     roomName: room.name,
     level: floor.level,
+    hiddenByUser: dev.visible === 0,
   };
   return marker;
+}
+
+// Flip an entity's user-hidden flag without rebuilding (room panel edit mode).
+export function setMarkerHidden(entityId, hidden) {
+  const marker = markers.get(entityId);
+  if (!marker) return;
+  marker.userData.hiddenByUser = hidden;
+  marker.visible = !hidden;
 }

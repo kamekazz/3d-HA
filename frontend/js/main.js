@@ -6,9 +6,10 @@ import { buildHouse, roomMeshes } from './house.js';
 import { buildDevices, markers } from './devices.js';
 import { setAllStates, applyState, friendlyName, stateLabel, styleMarker } from './state.js';
 import { buildLabels, showLabel, hideLabel } from './labels.js';
-import { initFocus, enterFocus, exitFocus, getFocusedRoomId } from './focus.js';
+import { initFocus, enterFocus, exitFocus } from './focus.js';
 import { connectRealtime } from './socket.js';
 import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, selectRoom } from './ui.js';
+import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 
 let structure = null;
 
@@ -40,6 +41,7 @@ async function reloadHouse() {
   buildLabels(house);
   await loadStates();
   updateData({ structure, house });
+  updateRoomPanelData(house);
   return house;
 }
 
@@ -97,7 +99,7 @@ function setupPicking() {
       hovered.material.opacity = ud.baseOpacity ?? 0.18;
     } else if (ud.kind === 'device') {
       styleMarker(ud.entityId); // state-driven restore, can't desync
-      if (getFocusedRoomId() !== ud.roomId) hideLabel(ud.entityId);
+      hideLabel(ud.entityId); // labels are hover-only now, even in focus mode
     }
     hovered = null;
   }
@@ -202,6 +204,7 @@ async function main() {
   buildLabels(house);
   initFocus();
   initUI({ structure, house, onReload: reloadHouse });
+  initRoomPanel({ house });
   await loadStates();
   updateData({ structure, house });
 

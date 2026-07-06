@@ -1,8 +1,9 @@
 // Level selector, device side panel, room editor.
 import { api } from './api.js';
 import { floorGroups, setLevel, getLevel, highlightRoom } from './house.js';
-import { getState, friendlyName, stateLabel, isOn, onStateApplied } from './state.js';
+import { getState, friendlyName, stateLabel, onStateApplied } from './state.js';
 import { exitFocus, getFocusedRoomId } from './focus.js';
+import { renderControls, createCameraView, isSliderActive } from './controls.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -11,15 +12,6 @@ let house = null;       // our layout from /api/house
 let reloadHouse = null; // callback from main.js: refetch + rebuild scene
 let selectedRoomId = null;
 let panelEntityId = null;
-let sliderActive = false; // block panel re-renders while a slider is being dragged
-
-function debounce(fn, ms) {
-  let t = null;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}
 
 // ---------------------------------------------------------------- helpers
 
@@ -103,12 +95,12 @@ export function initUI({ structure: s, house: h, onReload }) {
     }
     btn.disabled = false;
   };
-  document.querySelectorAll('.close').forEach((btn) => {
+  document.querySelectorAll('.close[data-close]').forEach((btn) => {
     btn.onclick = () => {
       $(btn.dataset.close).classList.add('hidden');
       if (btn.dataset.close === 'device-panel') {
         panelEntityId = null;
-        stopCameraView(); // drop the MJPEG connection, don't stream unseen
+        stopDeviceCamera(); // drop the MJPEG connection, don't stream unseen
       }
     };
   });
@@ -117,7 +109,7 @@ export function initUI({ structure: s, house: h, onReload }) {
   $('rf-cancel').onclick = resetRoomForm;
 
   onStateApplied((entityId) => {
-    if (sliderActive) return; // HA echoes mid-drag must not rebuild the slider
+    if (isSliderActive()) return; // HA echoes mid-drag must not rebuild the slider
     if (panelEntityId && (entityId === null || entityId === panelEntityId)) {
       renderDevicePanel(panelEntityId);
     }
@@ -181,55 +173,25 @@ function buildLevelButtons() {
 
 // ---------------------------------------------------------------- camera view
 
-const SNAPSHOT_REFRESH_MS = 10000;
-let camLive = false;  // current mode while a camera panel is open
-let camKey = null;    // `${entityId}|${camLive}` applied to the <img>
-let camTimer = null;  // snapshot refresh interval
+// The device panel shows at most one camera; the view is only recreated when
+// the entity changes, so panel re-renders from live state echoes never touch
+// the <img> (an MJPEG stream would reconnect on every echo otherwise).
+let dpCam = null;
 
-// Idempotent per (entity, mode): panel re-renders from live state echoes must
-// not touch the <img>, or the MJPEG stream would reconnect on every echo.
-function applyCameraView(entityId) {
-  $('dp-camera').classList.remove('hidden');
-  const key = `${entityId}|${camLive}`;
-  if (camKey === key) return;
-  camKey = key;
-  clearInterval(camTimer);
-  camTimer = null;
-  const img = $('dp-cam-img');
-  const hint = $('dp-cam-hint');
-  const snap = () => { img.src = `/api/camera/${entityId}/snapshot?t=${Date.now()}`; };
-  img.onload = () => hint.classList.add('hidden');
-  img.onerror = () => {
-    hint.classList.add('hidden');
-    if (camLive) {
-      showBanner(`Camera stream failed for ${friendlyName(entityId)}`, 4000);
-    } else {
-      // Nabu Casa drops connections in short bursts — retry sooner than
-      // the regular interval, but only while this view is still current
-      setTimeout(() => { if (camKey === key && !camLive) snap(); }, 2500);
-    }
-  };
-  if (camLive) {
-    hint.classList.remove('hidden'); // HA spins up ffmpeg — first frame takes a few seconds
-    img.src = `/api/camera/${entityId}/stream?t=${Date.now()}`;
-  } else {
-    hint.classList.add('hidden');
-    snap();
-    camTimer = setInterval(snap, SNAPSHOT_REFRESH_MS);
+function applyDeviceCamera(entityId) {
+  if (!dpCam || dpCam.entityId !== entityId) {
+    stopDeviceCamera();
+    dpCam = createCameraView(entityId, {
+      onError: (m) => showBanner(m, 4000),
+    });
+    $('dp-camera').replaceChildren(dpCam.el);
   }
+  $('dp-camera').classList.remove('hidden');
 }
 
-function stopCameraView() {
-  clearInterval(camTimer);
-  camTimer = null;
-  camKey = null;
-  camLive = false;
-  const img = $('dp-cam-img');
-  img.onload = null;
-  img.onerror = null;
-  img.src = ''; // aborts an in-flight MJPEG connection
-  img.removeAttribute('src');
-  $('dp-cam-hint').classList.add('hidden');
+function stopDeviceCamera() {
+  dpCam?.destroy();
+  dpCam = null;
   $('dp-camera').classList.add('hidden');
 }
 
@@ -269,162 +231,26 @@ function renderDevicePanel(entityId) {
   const controls = $('dp-controls');
   controls.innerHTML = '';
   const domain = entityId.split('.')[0];
-  if (domain !== 'camera') stopCameraView();
 
-  const call = (service, data) =>
-    api.control({ entity_id: entityId, domain, service, ...(data ? { data } : {}) })
-      .catch((e) => showBanner(`Control failed: ${e.message}`, 4000));
-
-  const svc = (label, service, cls = '') => {
-    const btn = document.createElement('button');
-    btn.textContent = label;
-    if (cls) btn.className = cls;
-    btn.onclick = async () => {
-      btn.disabled = true;
-      await call(service);
-      btn.disabled = false;
-    };
-    controls.appendChild(btn);
-  };
-
-  // labeled range input; keeps sliderActive true while dragging so live HA
-  // echoes don't rebuild the panel under the user's thumb
-  const slider = ({ label, min, max, step = 1, value, format, onCommit }) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'dp-slider';
-    const head = document.createElement('div');
-    head.className = 'dp-slider-head';
-    const lab = document.createElement('span');
-    lab.textContent = label;
-    const val = document.createElement('span');
-    val.className = 'val';
-    val.textContent = format(Number(value));
-    head.append(lab, val);
-    const inp = document.createElement('input');
-    inp.type = 'range';
-    inp.min = min; inp.max = max; inp.step = step; inp.value = value;
-    const send = debounce(onCommit, 250);
-    inp.addEventListener('pointerdown', () => { sliderActive = true; });
-    inp.addEventListener('input', () => {
-      const v = Number(inp.value);
-      val.textContent = format(v);
-      send(v);
-    });
-    const release = () => { sliderActive = false; };
-    inp.addEventListener('pointerup', release);
-    inp.addEventListener('pointercancel', release);
-    inp.addEventListener('change', release);
-    wrap.append(head, inp);
-    controls.appendChild(wrap);
-  };
-
-  // big live readout for pure data entities
-  if (domain === 'sensor' || domain === 'binary_sensor') {
-    const big = document.createElement('div');
-    big.className = 'dp-bigvalue';
-    big.textContent = stateLabel(entityId);
-    if (a.device_class) {
-      const sub = document.createElement('span');
-      sub.textContent = a.device_class.replaceAll('_', ' ');
-      big.appendChild(sub);
-    }
-    controls.appendChild(big);
-  }
-
-  if (['light', 'switch', 'fan', 'input_boolean'].includes(domain)) {
-    svc(isOn(entityId) ? 'Turn off' : 'Turn on', 'toggle');
-    svc('On', 'turn_on', 'secondary');
-    svc('Off', 'turn_off', 'secondary');
-    if (domain === 'light' && isOn(entityId) && a.brightness != null) {
-      slider({
-        label: 'Brightness', min: 1, max: 255, value: a.brightness,
-        format: (v) => `${Math.round((v / 255) * 100)}%`,
-        onCommit: (v) => call('turn_on', { brightness: v }),
-      });
-    }
-    if (domain === 'light' && isOn(entityId) && a.color_temp_kelvin != null &&
-        a.min_color_temp_kelvin != null && a.max_color_temp_kelvin != null) {
-      slider({
-        label: 'Color temp', min: a.min_color_temp_kelvin, max: a.max_color_temp_kelvin,
-        step: 50, value: a.color_temp_kelvin,
-        format: (v) => `${v} K`,
-        onCommit: (v) => call('turn_on', { color_temp_kelvin: v }),
-      });
-    }
-  } else if (domain === 'cover') {
-    svc('Open', 'open_cover');
-    svc('Close', 'close_cover', 'secondary');
-    svc('Stop', 'stop_cover', 'secondary');
-    if (a.current_position != null) {
-      slider({
-        label: 'Position', min: 0, max: 100, value: a.current_position,
-        format: (v) => `${v}%`,
-        onCommit: (v) => call('set_cover_position', { position: v }),
-      });
-    }
-  } else if (domain === 'lock') {
-    svc('Lock', 'lock');
-    svc('Unlock', 'unlock', 'secondary');
-  } else if (domain === 'media_player') {
-    svc('Play/Pause', 'media_play_pause');
-    svc('⏮', 'media_previous_track', 'secondary');
-    svc('⏭', 'media_next_track', 'secondary');
-    if (a.volume_level != null) {
-      slider({
-        label: 'Volume', min: 0, max: 1, step: 0.01, value: a.volume_level,
-        format: (v) => `${Math.round(v * 100)}%`,
-        onCommit: (v) => call('volume_set', { volume_level: v }),
-      });
-    }
-  } else if (domain === 'climate') {
-    if (a.temperature != null) {
-      const row = document.createElement('div');
-      row.className = 'dp-temp';
-      const step = a.target_temp_step || 0.5;
-      const mkStep = (label, dir) => {
-        const btn = document.createElement('button');
-        btn.className = 'secondary';
-        btn.textContent = label;
-        btn.onclick = () => {
-          let next = a.temperature + dir * step;
-          if (a.min_temp != null) next = Math.max(a.min_temp, next);
-          if (a.max_temp != null) next = Math.min(a.max_temp, next);
-          call('set_temperature', { temperature: Math.round(next * 10) / 10 });
-        };
-        return btn;
-      };
-      const readout = document.createElement('span');
-      readout.className = 'dp-temp-value';
-      readout.textContent = `${a.temperature}°`;
-      row.append(mkStep('−', -1), readout, mkStep('+', 1));
-      controls.appendChild(row);
-    }
-    if (Array.isArray(a.hvac_modes)) {
-      const chips = document.createElement('div');
-      chips.className = 'dp-chips';
-      for (const mode of a.hvac_modes) {
-        const chip = document.createElement('button');
-        chip.className = 'chip' + (s?.state === mode ? ' active' : '');
-        chip.textContent = mode.replaceAll('_', '/');
-        chip.onclick = () => call('set_hvac_mode', { hvac_mode: mode });
-        chips.appendChild(chip);
-      }
-      controls.appendChild(chips);
-    }
-  } else if (domain === 'script' || domain === 'scene') {
-    svc('Run', 'turn_on');
-  } else if (domain === 'camera') {
-    applyCameraView(entityId);
+  if (domain === 'camera') {
+    applyDeviceCamera(entityId);
     const live = document.createElement('button');
-    live.textContent = camLive ? 'Stop live view' : 'Live view';
-    if (camLive) live.className = 'secondary';
-    live.onclick = () => {
-      camLive = !camLive;
-      applyCameraView(entityId);
-      live.textContent = camLive ? 'Stop live view' : 'Live view';
-      live.className = camLive ? 'secondary' : '';
+    const paint = () => {
+      live.textContent = dpCam.isLive() ? 'Stop live view' : 'Live view';
+      live.className = dpCam.isLive() ? 'secondary' : '';
     };
+    live.onclick = () => {
+      dpCam.setLive(!dpCam.isLive());
+      paint();
+    };
+    dpCam.onModeChange = paint; // stream failure falls back to snapshots
+    paint();
     controls.appendChild(live);
+  } else {
+    stopDeviceCamera();
+    renderControls(controls, entityId, {
+      onError: (m) => showBanner(m, 4000),
+    });
   }
 }
 

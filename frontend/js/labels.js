@@ -66,10 +66,19 @@ function makeLabel(dev, room, floor) {
     entityId: dev.entity_id,
     roomId: room.id,
     level: floor.level,
+    hiddenByUser: dev.visible === 0,
     canvas,
     ctx: canvas.getContext('2d'),
   };
   return sprite;
+}
+
+// Flip an entity's user-hidden flag without rebuilding (room panel edit mode).
+export function setLabelHidden(entityId, hidden) {
+  const sprite = labels.get(entityId);
+  if (!sprite) return;
+  sprite.userData.hiddenByUser = hidden;
+  if (hidden) sprite.visible = false;
 }
 
 export function buildLabels(house) {
@@ -107,7 +116,7 @@ export function hideLabel(entityId) {
 
 export function showRoomLabels(roomId) {
   for (const sprite of labels.values()) {
-    if (sprite.userData.roomId === roomId) {
+    if (sprite.userData.roomId === roomId && !sprite.userData.hiddenByUser) {
       drawLabel(sprite);
       sprite.visible = true;
     }

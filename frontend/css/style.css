@@ -62,22 +62,97 @@ button.small { padding: 3px 8px; font-size: 12px; }
   font-size: 18px; color: #8b95a5; padding: 2px 8px;
 }
 .panel .close:hover { color: #fff; background: #2a3340; }
-#editor { right: auto; left: 14px; top: 100px; }
+#editor { right: auto; left: 14px; top: 100px; z-index: 35; }
+
+/* room focus panel — left, ~30% of the screen */
+#room-panel {
+  right: auto; left: 14px;
+  width: min(30vw, 460px); min-width: 300px;
+}
+body.room-panel-open #levels { display: none; } /* focus pins the level anyway */
+
+#rp-header {
+  display: flex; align-items: center; gap: 8px;
+  margin: -16px -16px 12px; padding: 14px 12px 8px 16px;
+  position: sticky; top: -16px; z-index: 2; /* stay visible while tiles scroll */
+  background: rgba(22, 27, 35, 0.98);
+  border-bottom: 1px solid #232b36;
+}
+#rp-header .close { position: static; }
+#rp-header h2 {
+  flex: 1; margin: 0; padding: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#rp-count { white-space: nowrap; }
+
+#rp-tiles {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px; align-items: stretch;
+}
+.rp-section {
+  grid-column: 1 / -1; font-size: 11px; color: #8b95a5;
+  text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px;
+}
+#rp-tiles > p.muted { grid-column: 1 / -1; }
+
+.tile {
+  background: #1a212b; border: 1px solid #232b36; border-radius: 10px;
+  padding: 10px; min-height: 72px;
+}
+.tile.tappable { cursor: pointer; }
+.tile.tappable:hover { border-color: #3a4453; background: #20242e; }
+.tile.on { background: #20304a; border-color: #2b6cb0; }
+.tile.wide, .tile.camera { grid-column: 1 / -1; }
+.tile .t-name {
+  font-size: 12px; color: #aab4c4;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tile .t-value { font-size: 19px; font-weight: 600; margin-top: 4px; }
+.tile .t-sub {
+  font-size: 10px; color: #8b95a5; margin-top: 2px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.tile .t-more { float: right; background: transparent; color: #8b95a5; padding: 0 6px; }
+.tile .t-more:hover { color: #fff; background: #2a3340; }
+.tile.wide .controls { margin-top: 8px; }
+.tile.wide .t-name { font-size: 13px; color: #e6e9ee; }
+
+.tile.camera { padding: 0; overflow: hidden; position: relative; min-height: 0; }
+.tile.camera .cam-view img {
+  border: 0; border-radius: 0; min-height: 0;
+  aspect-ratio: 16 / 9; object-fit: cover;
+}
+.tile.camera .t-name {
+  position: absolute; left: 10px; bottom: 8px; max-width: 60%;
+  color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+.tile.camera .cam-toggle { position: absolute; right: 8px; bottom: 8px; }
+
+.rp-editrow {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+  background: #1a212b; border-radius: 6px; padding: 7px 10px;
+  font-size: 13px; cursor: pointer;
+}
+.rp-editrow input[type="checkbox"] { width: auto; margin: 0; accent-color: #2b6cb0; }
+.rp-editrow .name {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* device panel */
 .state-line { margin: 8px 0; font-size: 14px; }
 
-#dp-camera { position: relative; margin: 8px 0 12px; }
-#dp-camera img {
+#dp-camera { margin: 8px 0 12px; }
+.cam-view { position: relative; }
+.cam-view img {
   display: block; width: 100%; min-height: 150px; object-fit: contain;
   background: #0b0e12; border: 1px solid #232b36; border-radius: 8px;
 }
-#dp-cam-hint {
+.cam-view .cam-hint {
   position: absolute; inset: 0; display: flex;
   align-items: center; justify-content: center;
   font-size: 12px; pointer-events: none;
 }
-#dp-cam-hint.hidden { display: none; }
+.cam-view .cam-hint.hidden { display: none; }
 
 .attrs { font-size: 12px; color: #aab4c4; margin-bottom: 12px; }
 .attrs div { padding: 2px 0; border-bottom: 1px solid #1d242e; display: flex; justify-content: space-between; gap: 8px; }

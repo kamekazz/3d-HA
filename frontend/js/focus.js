@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { camera, controls, flyTo, getViewPose, MIN_ZOOM, MAX_ZOOM } from './scene.js';
 import { roomMeshes, floorBaseY, setLevel, getLevel, setRoomOpacity } from './house.js';
 import { markers } from './devices.js';
-import { showRoomLabels, hideAllLabels } from './labels.js';
+import { hideAllLabels } from './labels.js';
 
 let focusedRoomId = null;
 let savedPose = null;  // camera pose before the first enterFocus
@@ -13,6 +13,18 @@ let savedLevel = null; // level selector value before the first enterFocus
 
 export function getFocusedRoomId() {
   return focusedRoomId;
+}
+
+// Fired with the room id on enter/switch and null on exit. Lets the room
+// panel follow focus without focus.js importing any UI module.
+const focusListeners = new Set();
+
+export function onFocusChanged(fn) {
+  focusListeners.add(fn);
+}
+
+function emitFocus(roomId) {
+  for (const fn of focusListeners) fn(roomId);
 }
 
 // focus.js deliberately never imports ui.js (ui.js imports us) — the level
@@ -36,7 +48,9 @@ function restoreLevelVisuals(level) {
     const edges = roomEdges(mesh);
     if (edges) edges.visible = true;
   }
-  for (const marker of markers.values()) marker.visible = true;
+  for (const marker of markers.values()) {
+    marker.visible = !marker.userData.hiddenByUser;
+  }
 }
 
 export function enterFocus(roomId) {
@@ -71,7 +85,8 @@ export function enterFocus(roomId) {
       marker.visible = false;
     }
   }
-  showRoomLabels(roomId);
+  // no showRoomLabels here: the room panel carries the info; hover still
+  // pops a single label
 
   // frame the room: distance that fits its bounding sphere in the tighter FOV
   const { width: w, height: h, depth: d } = mesh.geometry.parameters;
@@ -97,6 +112,7 @@ export function enterFocus(roomId) {
   const chip = document.getElementById('focus-exit');
   chip.textContent = `← ${mesh.userData.roomName}`;
   chip.classList.remove('hidden');
+  emitFocus(roomId);
 }
 
 export function exitFocus({ flyBack = true } = {}) {
@@ -113,6 +129,7 @@ export function exitFocus({ flyBack = true } = {}) {
   if (flyBack && savedPose) flyTo(savedPose.position, savedPose.target);
   savedPose = null;
   savedLevel = null;
+  emitFocus(null);
 }
 
 export function initFocus() {

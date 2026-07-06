@@ -30,12 +30,13 @@ CREATE TABLE IF NOT EXISTS placements (
     x REAL NOT NULL DEFAULT 0,
     y REAL NOT NULL DEFAULT 1.5,
     z REAL NOT NULL DEFAULT 0,
-    type TEXT NOT NULL DEFAULT 'sensor'
+    type TEXT NOT NULL DEFAULT 'sensor',
+    visible INTEGER NOT NULL DEFAULT 1
 );
 """
 
 ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height", "color")
-PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type")
+PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible")
 
 # Defaults for rooms generated from HA areas (editable afterwards).
 GEN_ROOM = {"width": 5.0, "depth": 4.0, "height": 2.7, "gap": 1.0}
@@ -55,6 +56,12 @@ class HouseStore:
         self._db.row_factory = sqlite3.Row
         self._db.execute("PRAGMA foreign_keys = ON")
         self._db.executescript(SCHEMA)
+        # CREATE TABLE IF NOT EXISTS won't add columns to a pre-existing table
+        try:
+            self._db.execute(
+                "ALTER TABLE placements ADD COLUMN visible INTEGER NOT NULL DEFAULT 1")
+        except sqlite3.OperationalError:
+            pass  # column already exists
         self._db.commit()
 
     def _rows(self, sql, params=()):
@@ -80,6 +87,7 @@ class HouseStore:
             if room:
                 room["devices"].append({
                     "id": p["id"], "entity_id": p["entity_id"], "type": p["type"],
+                    "visible": int(p["visible"]),
                     "position": {"x": p["x"], "y": p["y"], "z": p["z"]},
                 })
         for floor in floors:
@@ -436,6 +444,8 @@ class HouseStore:
         allowed = {k: flat[k] for k in PLACEMENT_FIELDS if k in flat}
         if not allowed:
             return False
+        if "visible" in allowed:
+            allowed["visible"] = int(bool(allowed["visible"]))
         sets = ", ".join(f"{k}=?" for k in allowed)
         with self._lock:
             cur = self._db.execute(

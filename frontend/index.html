@@ -36,16 +36,25 @@
   <!-- shown in room-focus mode: click (or Esc) to fly back out -->
   <button id="focus-exit" class="hidden" type="button" title="Exit room focus (Esc)"></button>
 
+  <!-- Room focus panel: entity tiles for the focused room -->
+  <aside id="room-panel" class="panel hidden">
+    <div id="rp-header">
+      <h2 id="rp-name">Room</h2>
+      <span id="rp-count" class="muted"></span>
+      <button id="rp-edit" class="small secondary" type="button"
+              title="Choose which entities appear in this panel">Edit</button>
+      <button id="rp-close" class="close" type="button">&times;</button>
+    </div>
+    <div id="rp-tiles"></div>
+  </aside>
+
   <!-- Device detail / control side panel -->
   <aside id="device-panel" class="panel hidden">
     <button class="close" data-close="device-panel" type="button">&times;</button>
     <h2 id="dp-name">Device</h2>
     <p id="dp-entity" class="muted"></p>
     <p class="state-line">State: <strong id="dp-state">—</strong></p>
-    <div id="dp-camera" class="hidden">
-      <img id="dp-cam-img" alt="Camera view">
-      <span id="dp-cam-hint" class="muted hidden">starting live stream…</span>
-    </div>
+    <div id="dp-camera" class="hidden"></div>
     <div id="dp-attrs" class="attrs"></div>
     <div id="dp-controls" class="controls"></div>
   </aside>
