@@ -36,6 +36,16 @@ CREATE TABLE IF NOT EXISTS rooms (
     color TEXT NOT NULL DEFAULT '#e8e8e8',
     points TEXT
 );
+CREATE TABLE IF NOT EXISTS stairs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    floor_id INTEGER NOT NULL REFERENCES floors(id) ON DELETE CASCADE,
+    name TEXT NOT NULL DEFAULT 'Stairs',
+    x REAL NOT NULL DEFAULT 0,
+    z REAL NOT NULL DEFAULT 0,
+    width REAL NOT NULL DEFAULT 3.5,
+    depth REAL NOT NULL DEFAULT 10,
+    direction TEXT NOT NULL DEFAULT 'n'
+);
 CREATE TABLE IF NOT EXISTS placements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
@@ -51,6 +61,10 @@ CREATE TABLE IF NOT EXISTS placements (
 ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height",
                "color", "points")
 PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible")
+# stairs.floor_id is the LOWER of the two floors they connect; they rise that
+# floor's full floor_height. direction = which way they ascend on the plan.
+STAIR_FIELDS = ("name", "x", "z", "width", "depth", "direction", "floor_id")
+STAIR_DIRECTIONS = ("n", "s", "e", "w")
 
 # Defaults for rooms generated from HA areas (editable afterwards). Feet.
 GEN_ROOM = {"width": 16.0, "depth": 13.0, "height": 8.0, "gap": 3.0}
@@ -168,6 +182,7 @@ class HouseStore:
             floors = self._rows("SELECT * FROM floors ORDER BY level")
             rooms = self._rows("SELECT * FROM rooms ORDER BY id")
             placements = self._rows("SELECT * FROM placements ORDER BY id")
+            stairs = self._rows("SELECT * FROM stairs ORDER BY id")
 
         rooms_by_floor = {}
         for room in rooms:
@@ -187,8 +202,12 @@ class HouseStore:
                     "visible": int(p["visible"]),
                     "position": {"x": p["x"], "y": p["y"], "z": p["z"]},
                 })
+        stairs_by_floor = {}
+        for st in stairs:
+            stairs_by_floor.setdefault(st["floor_id"], []).append(st)
         for floor in floors:
             floor["rooms"] = rooms_by_floor.get(floor["id"], [])
+            floor["stairs"] = stairs_by_floor.get(floor["id"], [])
         return {"floors": floors}
 
     def has_floors(self):
@@ -545,6 +564,46 @@ class HouseStore:
     def delete_room(self, room_id):
         with self._lock:
             cur = self._db.execute("DELETE FROM rooms WHERE id=?", (room_id,))
+            self._db.commit()
+            return cur.rowcount > 0
+
+    # ---- stairs ------------------------------------------------------------
+
+    def create_stairs(self, data):
+        direction = data.get("direction", "n")
+        if direction not in STAIR_DIRECTIONS:
+            raise ValueError("direction must be one of n/s/e/w")
+        with self._lock:
+            if not self._db.execute("SELECT 1 FROM floors WHERE id=?",
+                                    (int(data["floor_id"]),)).fetchone():
+                return None
+            cur = self._db.execute(
+                "INSERT INTO stairs (floor_id, name, x, z, width, depth,"
+                " direction) VALUES (?,?,?,?,?,?,?)",
+                (int(data["floor_id"]), data.get("name") or "Stairs",
+                 float(data.get("x", 0)), float(data.get("z", 0)),
+                 float(data.get("width", 3.5)), float(data.get("depth", 10)),
+                 direction))
+            self._db.commit()
+            return cur.lastrowid
+
+    def update_stairs(self, stair_id, data):
+        if "direction" in data and data["direction"] not in STAIR_DIRECTIONS:
+            raise ValueError("direction must be one of n/s/e/w")
+        allowed = {k: data[k] for k in STAIR_FIELDS if k in data}
+        if not allowed:
+            return False
+        sets = ", ".join(f"{k}=?" for k in allowed)
+        with self._lock:
+            cur = self._db.execute(
+                f"UPDATE stairs SET {sets} WHERE id=?",
+                (*allowed.values(), stair_id))
+            self._db.commit()
+            return cur.rowcount > 0
+
+    def delete_stairs(self, stair_id):
+        with self._lock:
+            cur = self._db.execute("DELETE FROM stairs WHERE id=?", (stair_id,))
             self._db.commit()
             return cur.rowcount > 0
 

@@ -5,6 +5,8 @@ import { scene, focusOn } from './scene.js';
 export const floorGroups = new Map();  // level -> THREE.Group
 export const roomMeshes = new Map();   // roomId -> mesh
 export const floorBaseY = new Map();   // level -> world Y of the floor slab
+const stairGroups = [];                // stairs span two levels, so they live
+                                       // outside the floor groups
 
 let houseRoot = null;
 let currentLevel = 'all';
@@ -14,6 +16,7 @@ export function buildHouse(house) {
   floorGroups.clear();
   roomMeshes.clear();
   floorBaseY.clear();
+  stairGroups.length = 0;
 
   houseRoot = new THREE.Group();
   scene.add(houseRoot);
@@ -22,7 +25,7 @@ export function buildHouse(house) {
   let y = 0;
   let center = null;
 
-  for (const floor of floors) {
+  floors.forEach((floor, i) => {
     floorBaseY.set(floor.level, y);
     const group = new THREE.Group();
     group.position.y = y;
@@ -37,11 +40,56 @@ export function buildHouse(house) {
       const fp = room.footprint;
       if (!center) center = { x: fp.x + fp.width / 2, z: fp.z + fp.depth / 2 };
     }
+
+    // stairs rise from this floor's base up to the next floor's base; they
+    // belong to both levels, so they sit on the root, not in a floor group
+    const upperLevel = floors[i + 1] ? floors[i + 1].level : floor.level;
+    for (const st of floor.stairs || []) {
+      const stairs = buildStairs(st, floor, upperLevel, y);
+      houseRoot.add(stairs);
+      stairGroups.push(stairs);
+    }
+
     y += floor.floor_height || 10.0;
-  }
+  });
 
   if (center) focusOn(center.x, 5, center.z);
   setLevel(currentLevel);
+}
+
+function buildStairs(st, floor, upperLevel, baseY) {
+  const rise = floor.floor_height || 10.0;
+  const group = new THREE.Group();
+  group.position.set(st.x, baseY, st.z);
+  group.userData = { levels: [floor.level, upperLevel] };
+
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8b95a5, roughness: 0.8 });
+  const shared = { kind: 'stairs', roomName: st.name || 'Stairs', level: floor.level };
+  const alongX = st.direction === 'e' || st.direction === 'w';
+  const run = alongX ? st.width : st.depth;   // length in the ascent axis
+  const across = alongX ? st.depth : st.width;
+  const steps = Math.max(2, Math.round(rise / 0.6)); // ~7 in per riser
+  const tread = run / steps;
+
+  for (let i = 0; i < steps; i++) {
+    const h = (rise * (i + 1)) / steps;
+    const geo = alongX
+      ? new THREE.BoxGeometry(tread, h, across)
+      : new THREE.BoxGeometry(across, h, tread);
+    const step = new THREE.Mesh(geo, mat);
+    // step 0 (lowest) sits at the start of the run, ascending toward the
+    // direction the arrow points: n = -Z, s = +Z, e = +X, w = -X
+    const along = st.direction === 'n' || st.direction === 'w'
+      ? run - (i + 0.5) * tread   // ascending toward the min edge
+      : (i + 0.5) * tread;        // ascending toward the max edge
+    step.position.set(
+      alongX ? along : across / 2,
+      h / 2,
+      alongX ? across / 2 : along);
+    step.userData = shared;
+    group.add(step);
+  }
+  return group;
 }
 
 function buildRoom(room, floor) {
@@ -106,6 +154,9 @@ export function setLevel(level) {
   currentLevel = level;
   for (const [lvl, group] of floorGroups) {
     group.visible = level === 'all' || lvl === level;
+  }
+  for (const g of stairGroups) { // stairs show on both levels they connect
+    g.visible = level === 'all' || g.userData.levels.includes(level);
   }
 }
 

@@ -9,6 +9,9 @@
       "plan_scale": 0.0375,
       "plan_x": -1.63,
       "plan_z": -7.73,
+      "stairs": [
+        { "x": 4.5, "z": 0.5, "width": 3.5, "depth": 11, "direction": "n" }
+      ],
       "rooms": [
         {
           "name": "Arcade Room",
@@ -33,6 +36,9 @@
       "plan_scale": 0.041,
       "plan_x": -2.0,
       "plan_z": -22.4,
+      "stairs": [
+        { "x": 16, "z": 12, "width": 3.5, "depth": 10, "direction": "n" }
+      ],
       "rooms": [
         { "name": "Garage", "ha_area_id": "garage",
           "x": 0, "z": 0, "width": 14, "depth": 20, "height": 9, "color": "#a3bf8f" },

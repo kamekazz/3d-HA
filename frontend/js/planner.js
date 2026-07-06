@@ -21,8 +21,9 @@ let canvas, ctx;
 let isOpen = false;
 let house = null;          // planner's own copy of /api/house
 let activeFloorId = null;
-let mode = 'select';       // 'select' | 'draw'
+let mode = 'select';       // 'select' | 'draw' | 'draw-stairs'
 let selectedRoomId = null;
+let selectedStairId = null;
 let selectedVertex = null; // vertex index in the selected room's polygon
 let drag = null;           // transient gesture state
 let spaceHeld = false;
@@ -57,6 +58,29 @@ function activeRooms() {
 }
 function selectedRoom() {
   return activeRooms().find((r) => r.id === selectedRoomId) || null;
+}
+
+function floorBelowActive() {
+  const sorted = floorsSorted();
+  const i = sorted.findIndex((f) => f.id === activeFloorId);
+  return i > 0 ? sorted[i - 1] : null;
+}
+
+// stairs visible on this tab: ones starting here (going up) and ones coming
+// up from the floor below (going down from here)
+function activeStairs() {
+  const own = (activeFloor()?.stairs || []).map((st) => ({ st, up: true }));
+  const below = (floorBelowActive()?.stairs || []).map((st) => ({ st, up: false }));
+  return [...own, ...below];
+}
+
+function selectedStair() {
+  return activeStairs().find(({ st }) => st.id === selectedStairId)?.st || null;
+}
+
+function stairRect(st) {
+  return [[st.x, st.z], [st.x + st.width, st.z],
+          [st.x + st.width, st.z + st.depth], [st.x, st.z + st.depth]];
 }
 
 // working polygon: absolute world [x, z] vertices, derived once per load
@@ -151,12 +175,32 @@ function renderStatus(cursor) {
   const msg = $('pl-status').dataset.msg;
   if (msg) parts.push(msg);
   else if (mode === 'draw') parts.push('Drag to draw a room · Esc to cancel');
+  else if (mode === 'draw-stairs') parts.push('Drag out the stairwell — stairs connect down to the floor below · Esc to cancel');
+  else if (selectedStair()) parts.push('Drag to move · corners resize · arrow select sets which way they go up · Del removes');
   else if (selectedRoom()) parts.push('Drag corners/edges to reshape · Alt+click an edge to add a corner · Del removes a corner');
   else parts.push('Click a room to edit · "+ Draw room" to add one · drag to pan, wheel to zoom');
   $('pl-status').textContent = parts.join('  ·  ');
 }
 
 // ------------------------------------------------------------------ persist
+
+async function persistStair(st) {
+  const payload = { floor_id: st.floor_id, name: st.name || 'Stairs',
+                    x: round2(st.x), z: round2(st.z),
+                    width: round2(st.width), depth: round2(st.depth),
+                    direction: st.direction };
+  try {
+    if (st.id) {
+      await api.updateStairs(st.id, payload);
+    } else {
+      const res = await api.createStairs(payload);
+      st.id = res.id;
+    }
+    setStatus('');
+  } catch (err) {
+    setStatus(`Save failed: ${err.message}`);
+  }
+}
 
 async function persistRoom(room) {
   const pts = room._poly;
@@ -311,6 +355,81 @@ function drawPlanImage() {
   ctx.globalAlpha = 1;
 }
 
+function drawStair({ st, up }, isSel) {
+  const a = worldToScreen(st.x, st.z);
+  const b = worldToScreen(st.x + st.width, st.z + st.depth);
+  ctx.fillStyle = '#aab4c4';
+  ctx.globalAlpha = 0.18;
+  ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = isSel ? '#e0b100' : '#aab4c4';
+  ctx.lineWidth = isSel ? 2.5 : 1.5;
+  ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+
+  // treads perpendicular to the ascent axis
+  const alongX = st.direction === 'e' || st.direction === 'w';
+  const run = alongX ? st.width : st.depth;
+  const treads = Math.max(2, Math.round(run / 1)); // ~1 ft per tread line
+  ctx.strokeStyle = '#8b95a5';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 1; i < treads; i++) {
+    const t = i / treads;
+    if (alongX) {
+      const x = a.x + (b.x - a.x) * t;
+      ctx.moveTo(x, a.y); ctx.lineTo(x, b.y);
+    } else {
+      const y = a.y + (b.y - a.y) * t;
+      ctx.moveTo(a.x, y); ctx.lineTo(b.x, y);
+    }
+  }
+  ctx.stroke();
+
+  // ascent arrow through the middle of the run
+  const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+  const half = { n: [0, 1, 0, -1], s: [0, -1, 0, 1],
+                 e: [-1, 0, 1, 0], w: [1, 0, -1, 0] }[st.direction] || [0, 1, 0, -1];
+  const lenX = Math.abs(b.x - a.x) / 2 - 6, lenY = Math.abs(b.y - a.y) / 2 - 6;
+  const sx = cx + half[0] * lenX, sy = cy + half[1] * lenY;
+  const ex = cx + half[2] * lenX, ey = cy + half[3] * lenY;
+  ctx.strokeStyle = isSel ? '#e0b100' : '#e6e9ee';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+  const ang = Math.atan2(ey - sy, ex - sx);
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - 7 * Math.cos(ang - 0.45), ey - 7 * Math.sin(ang - 0.45));
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - 7 * Math.cos(ang + 0.45), ey - 7 * Math.sin(ang + 0.45));
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e6e9ee';
+  ctx.font = '600 11px system-ui, sans-serif';
+  ctx.fillText(up ? '▲ up' : '▼ down', cx, cy + 4);
+
+  if (!isSel) return;
+  const pts = stairRect(st);
+  for (const [px, pz] of pts) {
+    const s = worldToScreen(px, pz);
+    ctx.fillStyle = '#e6e9ee';
+    ctx.strokeStyle = '#e0b100';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(s.x - HANDLE_PX / 2, s.y - HANDLE_PX / 2, HANDLE_PX, HANDLE_PX);
+    ctx.strokeRect(s.x - HANDLE_PX / 2, s.y - HANDLE_PX / 2, HANDLE_PX, HANDLE_PX);
+  }
+  for (let i = 0; i < 4; i++) {
+    const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % 4];
+    const s = worldToScreen((ax + bx) / 2, (az + bz) / 2);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, MID_PX / 2 + 1, 0, Math.PI * 2);
+    ctx.fillStyle = '#161b23';
+    ctx.fill();
+    ctx.strokeStyle = '#e0b100';
+    ctx.stroke();
+  }
+}
+
 function redraw() {
   if (!isOpen) return;
   const cw = canvas.clientWidth, ch = canvas.clientHeight;
@@ -324,6 +443,10 @@ function redraw() {
     if (room !== sel) drawRoom(room, false);
   }
   if (sel) drawRoom(sel, true); // selected on top
+
+  for (const entry of activeStairs()) {
+    drawStair(entry, entry.st.id === selectedStairId);
+  }
 
   if (drag?.type === 'draw' && drag.moved) {
     const a = worldToScreen(Math.min(drag.ax, drag.bx), Math.min(drag.az, drag.bz));
@@ -346,6 +469,21 @@ function redraw() {
 
 function hitTest(w) {
   const tol = HIT_PX / view.pxPerFt;
+  const selSt = selectedStair();
+  if (selSt) {
+    const pts = stairRect(selSt);
+    for (let i = 0; i < 4; i++) {
+      if (Math.hypot(w.x - pts[i][0], w.z - pts[i][1]) <= (HANDLE_PX + 2) / view.pxPerFt) {
+        return { kind: 'stair-corner', st: selSt, i };
+      }
+    }
+    for (let i = 0; i < 4; i++) {
+      const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % 4];
+      if (Math.hypot(w.x - (ax + bx) / 2, w.z - (az + bz) / 2) <= (MID_PX + 3) / view.pxPerFt) {
+        return { kind: 'stair-edge', st: selSt, i };
+      }
+    }
+  }
   const sel = selectedRoom();
   if (sel) {
     const pts = sel._poly;
@@ -363,6 +501,13 @@ function hitTest(w) {
     for (let i = 0; i < pts.length; i++) { // then edge bodies (for Alt+insert)
       const hit = distToSegment([w.x, w.z], pts[i], pts[(i + 1) % pts.length]);
       if (hit.d <= tol) return { kind: 'segment', room: sel, i, at: hit };
+    }
+  }
+  // stairs sit on top of rooms, so test them first
+  for (const { st } of activeStairs()) {
+    if (w.x >= st.x && w.x <= st.x + st.width
+        && w.z >= st.z && w.z <= st.z + st.depth) {
+      return { kind: 'stair', st };
     }
   }
   const rooms = activeRooms();
@@ -389,14 +534,31 @@ function onPointerDown(e) {
   }
   if (e.button !== 0) return;
 
-  if (mode === 'draw') {
+  if (mode === 'draw' || mode === 'draw-stairs') {
     const ax = snap(w.x, e.shiftKey), az = snap(w.z, e.shiftKey);
-    drag = { type: 'draw', ax, az, bx: ax, bz: az, moved: false };
+    drag = { type: 'draw', stairs: mode === 'draw-stairs',
+             ax, az, bx: ax, bz: az, moved: false };
     return;
   }
 
   const hit = hitTest(w);
-  if (hit?.kind === 'vertex') {
+  if (hit?.kind === 'stair-corner') {
+    drag = { type: 'stair-corner', st: hit.st, i: hit.i,
+             before: { ...hit.st }, moved: false };
+  } else if (hit?.kind === 'stair-edge') {
+    drag = { type: 'stair-edge', st: hit.st, i: hit.i,
+             before: { ...hit.st }, orig: { ...hit.st }, startW: w, moved: false };
+  } else if (hit?.kind === 'stair') {
+    if (selectedStairId !== hit.st.id) {
+      selectedStairId = hit.st.id;
+      selectedRoomId = null;
+      selectedVertex = null;
+      updatePropsPanel();
+    }
+    drag = { type: 'stair-move', st: hit.st, before: { ...hit.st },
+             orig: { ...hit.st }, startW: w, moved: false };
+    redraw();
+  } else if (hit?.kind === 'vertex') {
     selectedVertex = hit.i;
     drag = { type: 'vertex', room: hit.room, i: hit.i,
              before: hit.room._poly.map((p) => [...p]), moved: false };
@@ -417,6 +579,7 @@ function onPointerDown(e) {
   } else if (hit?.kind === 'segment' || hit?.kind === 'room') {
     if (selectedRoomId !== hit.room.id) {
       selectedRoomId = hit.room.id;
+      selectedStairId = null;
       selectedVertex = null;
       updatePropsPanel();
     }
@@ -427,8 +590,9 @@ function onPointerDown(e) {
              origMin: { x: bb.minX, z: bb.minZ }, startW: w, moved: false };
     redraw();
   } else {
-    if (selectedRoomId !== null) {
+    if (selectedRoomId !== null || selectedStairId !== null) {
       selectedRoomId = null;
+      selectedStairId = null;
       selectedVertex = null;
       updatePropsPanel();
       redraw();
@@ -470,6 +634,35 @@ function onPointerMove(e) {
   if (drag.type === 'draw') {
     drag.bx = snap(w.x, e.shiftKey);
     drag.bz = snap(w.z, e.shiftKey);
+  } else if (drag.type === 'stair-corner') {
+    // resize keeping the opposite corner fixed
+    const st = drag.st;
+    const opp = stairRect(drag.before)[(drag.i + 2) % 4];
+    const nx = snap(w.x, e.shiftKey), nz = snap(w.z, e.shiftKey);
+    st.x = Math.min(nx, opp[0]);
+    st.z = Math.min(nz, opp[1]);
+    st.width = Math.max(2, Math.abs(nx - opp[0]));
+    st.depth = Math.max(2, Math.abs(nz - opp[1]));
+  } else if (drag.type === 'stair-edge') {
+    // edges in stairRect order: 0 top, 1 right, 2 bottom, 3 left
+    const st = drag.st, o = drag.orig;
+    const nx = snap(w.x, e.shiftKey), nz = snap(w.z, e.shiftKey);
+    if (drag.i === 0) {
+      st.z = Math.min(nz, o.z + o.depth - 2);
+      st.depth = o.z + o.depth - st.z;
+    } else if (drag.i === 2) {
+      st.depth = Math.max(2, nz - o.z);
+    } else if (drag.i === 3) {
+      st.x = Math.min(nx, o.x + o.width - 2);
+      st.width = o.x + o.width - st.x;
+    } else {
+      st.width = Math.max(2, nx - o.x);
+    }
+  } else if (drag.type === 'stair-move') {
+    const dx = snap(drag.orig.x + (w.x - drag.startW.x), e.shiftKey) - drag.orig.x;
+    const dz = snap(drag.orig.z + (w.z - drag.startW.z), e.shiftKey) - drag.orig.z;
+    drag.st.x = drag.orig.x + dx;
+    drag.st.z = drag.orig.z + dz;
   } else if (drag.type === 'vertex') {
     drag.room._poly[drag.i] = [snap(w.x, e.shiftKey), snap(w.z, e.shiftKey)];
     drag.invalid = isSelfIntersecting(drag.room._poly);
@@ -523,26 +716,49 @@ async function onPointerUp(e) {
   if (d.type === 'draw') {
     mode = 'select';
     $('pl-draw').classList.remove('active');
+    $('pl-stairs').classList.remove('active');
     canvas.style.cursor = '';
     const wFt = Math.abs(d.bx - d.ax), hFt = Math.abs(d.bz - d.az);
     if (d.moved && wFt >= MIN_ROOM_FT && hFt >= MIN_ROOM_FT) {
       const floor = activeFloor();
       const x = Math.min(d.ax, d.bx), z = Math.min(d.az, d.bz);
-      const room = {
-        id: null, floor_id: floor.id,
-        name: `Room ${(floor.rooms?.length || 0) + 1}`,
-        ha_area_id: null, height: 8,
-        color: PALETTE[(floor.rooms?.length || 0) % PALETTE.length],
-        devices: [],
-        footprint: { x, z, width: wFt, depth: hFt, points: null },
-      };
-      room._poly = [[x, z], [x + wFt, z], [x + wFt, z + hFt], [x, z + hFt]];
-      floor.rooms.push(room);
-      await persistRoom(room);
-      selectedRoomId = room.id;
+      if (d.stairs) {
+        // stairs descend: they connect this floor to the one below (unless
+        // this is the lowest floor, which can only connect upward)
+        const lower = floorBelowActive() || floor;
+        const st = {
+          id: null, floor_id: lower.id, name: 'Stairs',
+          x, z, width: wFt, depth: hFt,
+          direction: hFt >= wFt ? 'n' : 'e',
+        };
+        (lower.stairs ||= []).push(st);
+        await persistStair(st);
+        selectedStairId = st.id;
+        selectedRoomId = null;
+      } else {
+        const room = {
+          id: null, floor_id: floor.id,
+          name: `Room ${(floor.rooms?.length || 0) + 1}`,
+          ha_area_id: null, height: 8,
+          color: PALETTE[(floor.rooms?.length || 0) % PALETTE.length],
+          devices: [],
+          footprint: { x, z, width: wFt, depth: hFt, points: null },
+        };
+        room._poly = [[x, z], [x + wFt, z], [x + wFt, z + hFt], [x, z + hFt]];
+        floor.rooms.push(room);
+        await persistRoom(room);
+        selectedRoomId = room.id;
+        selectedStairId = null;
+      }
       selectedVertex = null;
       updatePropsPanel();
     }
+    redraw();
+    return;
+  }
+
+  if (d.type.startsWith('stair-')) {
+    if (d.moved) await persistStair(d.st);
     redraw();
     return;
   }
@@ -580,17 +796,20 @@ async function onKeyDown(e) {
 
   if (e.key === 'Escape') {
     if (drag && drag.type !== 'pan' && drag.before) {
-      drag.room._poly = drag.before;
+      if (drag.type.startsWith('stair-')) Object.assign(drag.st, drag.before);
+      else drag.room._poly = drag.before;
       drag = null;
       redraw();
-    } else if (mode === 'draw') {
+    } else if (mode === 'draw' || mode === 'draw-stairs') {
       mode = 'select';
       $('pl-draw').classList.remove('active');
+      $('pl-stairs').classList.remove('active');
       canvas.style.cursor = '';
       drag = null;
       redraw();
-    } else if (selectedRoomId !== null) {
+    } else if (selectedRoomId !== null || selectedStairId !== null) {
       selectedRoomId = null;
+      selectedStairId = null;
       selectedVertex = null;
       updatePropsPanel();
       redraw();
@@ -603,6 +822,10 @@ async function onKeyDown(e) {
   if (typing) return;
 
   if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedStair()) {
+      await deleteSelectedStair();
+      return;
+    }
     const room = selectedRoom();
     if (!room) return;
     if (selectedVertex !== null && room._poly.length > 3) {
@@ -645,12 +868,33 @@ function fillAreaOptions() {
 function updatePropsPanel() {
   const room = selectedRoom();
   const panel = $('pl-props');
-  if (!room) { panel.classList.add('hidden'); return; }
-  panel.classList.remove('hidden');
-  $('pl-name').value = room.name;
-  $('pl-area').value = room.ha_area_id || '';
-  $('pl-color').value = room.color || '#8fa8bf';
-  $('pl-height').value = room.height;
+  panel.classList.toggle('hidden', !room);
+  if (room) {
+    $('pl-name').value = room.name;
+    $('pl-area').value = room.ha_area_id || '';
+    $('pl-color').value = room.color || '#8fa8bf';
+    $('pl-height').value = room.height;
+  }
+  const st = selectedStair();
+  const spanel = $('pl-sprops');
+  spanel.classList.toggle('hidden', !st);
+  if (st) $('pl-sdir').value = st.direction;
+}
+
+async function deleteSelectedStair() {
+  const st = selectedStair();
+  if (!st) return;
+  try {
+    if (st.id) await api.deleteStairs(st.id);
+    for (const f of house.floors || []) {
+      if (f.stairs) f.stairs = f.stairs.filter((s) => s !== st);
+    }
+    selectedStairId = null;
+    updatePropsPanel();
+    redraw();
+  } catch (err) {
+    setStatus(`Delete failed: ${err.message}`);
+  }
 }
 
 async function deleteSelectedRoom() {
@@ -709,6 +953,7 @@ function updateImgControls() {
 function setActiveFloor(floorId) {
   activeFloorId = floorId;
   selectedRoomId = null;
+  selectedStairId = null;
   selectedVertex = null;
   drag = null;
   buildFloorTabs();
@@ -811,9 +1056,25 @@ export function initPlanner({ getStructure: gs, onClose }) {
   $('pl-draw').onclick = () => {
     mode = mode === 'draw' ? 'select' : 'draw';
     $('pl-draw').classList.toggle('active', mode === 'draw');
+    $('pl-stairs').classList.remove('active');
     canvas.style.cursor = mode === 'draw' ? 'crosshair' : '';
     renderStatus();
   };
+  $('pl-stairs').onclick = () => {
+    mode = mode === 'draw-stairs' ? 'select' : 'draw-stairs';
+    $('pl-stairs').classList.toggle('active', mode === 'draw-stairs');
+    $('pl-draw').classList.remove('active');
+    canvas.style.cursor = mode === 'draw-stairs' ? 'crosshair' : '';
+    renderStatus();
+  };
+  $('pl-sdir').onchange = async () => {
+    const st = selectedStair();
+    if (!st) return;
+    st.direction = $('pl-sdir').value;
+    await persistStair(st);
+    redraw();
+  };
+  $('pl-sdelete').onclick = deleteSelectedStair;
 
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointermove', onPointerMove);

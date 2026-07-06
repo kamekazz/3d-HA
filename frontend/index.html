@@ -129,9 +129,24 @@
         </select>
       </label>
       <button id="pl-draw" type="button" class="secondary">+ Draw room</button>
+      <button id="pl-stairs" type="button" class="secondary"
+              title="Draw a stairwell — it connects this floor to the one below and shows on both">+ Stairs</button>
       <button id="pl-close" type="button">Done</button>
     </div>
     <canvas id="pl-canvas"></canvas>
+    <aside id="pl-sprops" class="hidden">
+      <label>Goes up toward
+        <select id="pl-sdir">
+          <option value="n">↑ top of plan</option>
+          <option value="s">↓ bottom of plan</option>
+          <option value="e">→ right</option>
+          <option value="w">← left</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button id="pl-sdelete" type="button" class="danger">Delete stairs</button>
+      </div>
+    </aside>
     <aside id="pl-props" class="hidden">
       <label>Name <input id="pl-name"></label>
       <label>HA area <select id="pl-area"><option value="">— no HA area —</option></select></label>

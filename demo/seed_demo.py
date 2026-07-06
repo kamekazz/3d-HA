@@ -120,6 +120,7 @@ def main():
 
     stats = {"floors_created": 0, "floors_updated": 0, "rooms_created": 0,
              "rooms_updated": 0, "rooms_unchanged": 0, "devices_moved": 0,
+             "stairs_created": 0, "stairs_updated": 0, "stairs_unchanged": 0,
              "images_uploaded": 0}
 
     for rank, ffix in enumerate(fixture["floors"]):
@@ -194,6 +195,28 @@ def main():
                 requests.patch(f"{base}/api/house/device/{dev['id']}",
                                json={"x": nx, "z": nz}, timeout=30)
                 stats["devices_moved"] += 1
+
+        # ---- stairs: floor_id is the LOWER floor; upsert by position on it
+        existing_stairs = floor.get("stairs", [])
+        for i, sfix in enumerate(ffix.get("stairs", [])):
+            payload = {"floor_id": floor["id"], "x": sfix["x"], "z": sfix["z"],
+                       "width": sfix["width"], "depth": sfix["depth"],
+                       "direction": sfix.get("direction", "n")}
+            if i < len(existing_stairs):
+                st = existing_stairs[i]
+                if (approx(st["x"], payload["x"]) and approx(st["z"], payload["z"])
+                        and approx(st["width"], payload["width"])
+                        and approx(st["depth"], payload["depth"])
+                        and st["direction"] == payload["direction"]):
+                    stats["stairs_unchanged"] += 1
+                else:
+                    requests.patch(f"{base}/api/house/stairs/{st['id']}",
+                                   json=payload, timeout=30).raise_for_status()
+                    stats["stairs_updated"] += 1
+            else:
+                requests.post(f"{base}/api/house/stairs",
+                              json=payload, timeout=30).raise_for_status()
+                stats["stairs_created"] += 1
 
         # ---- tracing image
         if not args.no_images and ffix.get("plan_image"):

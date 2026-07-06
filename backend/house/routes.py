@@ -157,6 +157,38 @@ def delete_room(room_id):
     return jsonify({"ok": True})
 
 
+@bp.post("/stairs")
+def create_stairs():
+    data = request.get_json(force=True)
+    if data.get("floor_id") is None:
+        return jsonify({"error": "floor_id (the lower floor) is required"}), 400
+    try:
+        stair_id = _store().create_stairs(data)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    if stair_id is None:
+        return jsonify({"error": "floor not found"}), 404
+    return jsonify({"id": stair_id}), 201
+
+
+@bp.patch("/stairs/<int:stair_id>")
+def update_stairs(stair_id):
+    try:
+        updated = _store().update_stairs(stair_id, request.get_json(force=True))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    if not updated:
+        return jsonify({"error": "stairs not found or nothing to update"}), 404
+    return jsonify({"ok": True})
+
+
+@bp.delete("/stairs/<int:stair_id>")
+def delete_stairs(stair_id):
+    if not _store().delete_stairs(stair_id):
+        return jsonify({"error": "stairs not found"}), 404
+    return jsonify({"ok": True})
+
+
 @bp.post("/room/<int:room_id>/device")
 def place_device(room_id):
     data = request.get_json(force=True)

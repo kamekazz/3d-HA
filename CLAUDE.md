@@ -113,6 +113,13 @@ every write; invalid polygons → HTTP 400. `points: null` reverts a room to its
 centered-BoxGeometry path. `focus.js` frames rooms via world-space `Box3`, never
 `geometry.parameters` (BoxGeometry-only API).
 
+**Stairs** connect two floors: a `stairs` row (rect footprint + `direction` of ascent, n/s/e/w)
+belongs to the LOWER floor (`floor_id`) and rises that floor's full `floor_height`. In 3D they're
+stepped meshes added to the house root (not a floor group) so `setLevel` can show them on **both**
+levels they connect (`userData.levels`). In the planner they appear on both floors' tabs ("▲ up" /
+"▼ down"), drawn with "+ Stairs" (they connect the active floor down to the one below), moved/
+resized as rects, direction set in the side panel. Endpoints: `POST/PATCH/DELETE /api/house/stairs*`.
+
 **The 2D floor-plan editor** (`frontend/js/planner.js`, "Floor plan" topbar button) is a full-screen
 canvas overlay: per-floor tabs, draw rooms as rectangles, drag vertices/edge-midpoints (edges stay
 rectilinear), Alt+click an edge to insert a vertex, drag whole rooms, snap in ft (Shift bypasses),
