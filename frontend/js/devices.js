@@ -20,6 +20,22 @@ export function baseColor(type) {
   return BASE_COLORS[type] ?? BASE_COLORS.default;
 }
 
+// one shared geometry per domain so the shape says what a device is
+const sphere = new THREE.SphereGeometry(0.14, 20, 16);
+const smallBox = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+const GEOMETRIES = {
+  light: sphere,
+  switch: smallBox,
+  input_boolean: smallBox,
+  sensor: new THREE.OctahedronGeometry(0.15),
+  binary_sensor: new THREE.ConeGeometry(0.12, 0.24, 12),
+  climate: new THREE.CylinderGeometry(0.14, 0.14, 0.09, 20),
+  cover: new THREE.BoxGeometry(0.28, 0.2, 0.05),
+  media_player: new THREE.BoxGeometry(0.3, 0.18, 0.06),
+  lock: new THREE.TorusGeometry(0.1, 0.045, 10, 20),
+  default: sphere,
+};
+
 export function buildDevices(house) {
   for (const marker of markers.values()) marker.parent?.remove(marker);
   markers.clear();
@@ -43,7 +59,7 @@ function makeMarker(dev, room, floor) {
     emissive: 0x000000,
     roughness: 0.4,
   });
-  const marker = new THREE.Mesh(new THREE.SphereGeometry(0.14, 20, 16), mat);
+  const marker = new THREE.Mesh(GEOMETRIES[dev.type] ?? GEOMETRIES.default, mat);
   const fp = room.footprint;
   marker.position.set(
     fp.x + dev.position.x,

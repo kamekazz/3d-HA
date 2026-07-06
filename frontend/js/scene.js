@@ -4,8 +4,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export let scene, camera, renderer, controls;
 
-const MIN_ZOOM = 3, MAX_ZOOM = 90;
+export const MIN_ZOOM = 3, MAX_ZOOM = 90;
 let zoomTarget = 0; // desired camera↔target distance; eased toward each frame
+let poseGoal = null; // {position, target} being flown to; suspends the zoom easing
 
 export function initScene(container) {
   scene = new THREE.Scene();
@@ -64,12 +65,30 @@ export function initScene(container) {
   });
 
   renderer.setAnimationLoop(() => {
-    const dist = camera.position.distanceTo(controls.target);
-    const next = THREE.MathUtils.lerp(dist, zoomTarget, 0.15);
-    if (Math.abs(next - dist) > 1e-4) {
-      camera.position.sub(controls.target).multiplyScalar(next / dist).add(controls.target);
+    if (poseGoal) {
+      // fly-to tween: drive camera + target ourselves; controls are disabled so
+      // damping momentum can't fight the flight path
+      camera.position.lerp(poseGoal.position, 0.12);
+      controls.target.lerp(poseGoal.target, 0.12);
+      camera.lookAt(controls.target);
+      zoomTarget = camera.position.distanceTo(controls.target);
+      if (camera.position.distanceTo(poseGoal.position) < 0.05 &&
+          controls.target.distanceTo(poseGoal.target) < 0.05) {
+        camera.position.copy(poseGoal.position);
+        controls.target.copy(poseGoal.target);
+        zoomTarget = camera.position.distanceTo(controls.target);
+        poseGoal = null;
+        controls.enabled = true;
+        controls.update();
+      }
+    } else {
+      const dist = camera.position.distanceTo(controls.target);
+      const next = THREE.MathUtils.lerp(dist, zoomTarget, 0.15);
+      if (Math.abs(next - dist) > 1e-4) {
+        camera.position.sub(controls.target).multiplyScalar(next / dist).add(controls.target);
+      }
+      controls.update();
     }
-    controls.update();
     renderer.render(scene, camera);
   });
 
@@ -80,4 +99,17 @@ export function initScene(container) {
 export function focusOn(x, y, z) {
   controls.target.set(x, y, z);
   zoomTarget = camera.position.distanceTo(controls.target);
+}
+
+// Smoothly fly the camera to a new pose (eased in the render loop above).
+export function flyTo(position, target) {
+  poseGoal = {
+    position: new THREE.Vector3(position.x, position.y, position.z),
+    target: new THREE.Vector3(target.x, target.y, target.z),
+  };
+  controls.enabled = false;
+}
+
+export function getViewPose() {
+  return { position: camera.position.clone(), target: controls.target.clone() };
 }

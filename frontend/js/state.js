@@ -39,14 +39,41 @@ export function friendlyName(entityId) {
   return states.get(entityId)?.attributes?.friendly_name || entityId;
 }
 
+// binary_sensor device_class -> [label when on, label when off]
+const BINARY_LABELS = {
+  door: ['Open', 'Closed'],
+  window: ['Open', 'Closed'],
+  garage_door: ['Open', 'Closed'],
+  opening: ['Open', 'Closed'],
+  motion: ['Motion', 'Clear'],
+  occupancy: ['Occupied', 'Clear'],
+  presence: ['Present', 'Away'],
+  moisture: ['Wet', 'Dry'],
+  lock: ['Unlocked', 'Locked'],
+  battery: ['Low', 'OK'],
+  battery_charging: ['Charging', 'Not charging'],
+  connectivity: ['Connected', 'Disconnected'],
+  smoke: ['Smoke!', 'Clear'],
+  gas: ['Gas!', 'Clear'],
+  problem: ['Problem', 'OK'],
+  plug: ['Plugged in', 'Unplugged'],
+  vibration: ['Vibration', 'Clear'],
+  running: ['Running', 'Idle'],
+};
+
 export function stateLabel(entityId) {
   const s = states.get(entityId);
   if (!s) return 'unknown';
+  if (entityId.startsWith('binary_sensor.') && (s.state === 'on' || s.state === 'off')) {
+    const pair = BINARY_LABELS[s.attributes?.device_class];
+    if (pair) return s.state === 'on' ? pair[0] : pair[1];
+    return s.state === 'on' ? 'On' : 'Off';
+  }
   const unit = s.attributes?.unit_of_measurement;
   return unit ? `${s.state} ${unit}` : s.state;
 }
 
-function styleMarker(entityId) {
+export function styleMarker(entityId) {
   const marker = markers.get(entityId);
   if (!marker) return;
   const s = states.get(entityId);

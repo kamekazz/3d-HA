@@ -58,11 +58,13 @@ function buildRoom(room, floor) {
   walls.userData = {
     kind: 'room', roomId: room.id, roomName: room.name,
     haAreaId: room.ha_area_id, level: floor.level,
+    baseOpacity: 0.18,
   };
 
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(walls.geometry),
     new THREE.LineBasicMaterial({ color: color.clone().multiplyScalar(1.4) }));
+  edges.userData.part = 'edges';
   walls.add(edges);
 
   const slab = new THREE.Mesh(
@@ -73,6 +75,7 @@ function buildRoom(room, floor) {
     }));
   slab.rotation.x = -Math.PI / 2;
   slab.position.y = -room.height / 2 + 0.01;
+  slab.userData.part = 'slab';
   walls.add(slab);
 
   return walls;
@@ -89,8 +92,16 @@ export function getLevel() {
   return currentLevel;
 }
 
+// Single writer for room wall opacity: keeps userData.baseOpacity in sync so
+// hover (which brightens then restores baseOpacity) never clobbers the
+// editor highlight or focus-mode fades.
+export function setRoomOpacity(mesh, value) {
+  mesh.material.opacity = value;
+  mesh.userData.baseOpacity = value;
+}
+
 export function highlightRoom(roomId) {
   for (const [id, mesh] of roomMeshes) {
-    mesh.material.opacity = id === roomId ? 0.38 : 0.18;
+    setRoomOpacity(mesh, id === roomId ? 0.38 : 0.18);
   }
 }

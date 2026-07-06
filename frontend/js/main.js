@@ -4,7 +4,9 @@ import { api } from './api.js';
 import { initScene, scene, camera, renderer } from './scene.js';
 import { buildHouse, roomMeshes } from './house.js';
 import { buildDevices, markers } from './devices.js';
-import { setAllStates, applyState, friendlyName, stateLabel } from './state.js';
+import { setAllStates, applyState, friendlyName, stateLabel, styleMarker } from './state.js';
+import { buildLabels, showLabel, hideLabel } from './labels.js';
+import { initFocus, enterFocus, exitFocus, getFocusedRoomId } from './focus.js';
 import { connectRealtime } from './socket.js';
 import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, selectRoom } from './ui.js';
 
@@ -30,9 +32,12 @@ async function loadStates() {
 }
 
 async function reloadHouse() {
+  // rebuild disposes the meshes focus mode holds references to
+  exitFocus({ flyBack: false });
   const house = await api.getHouse();
   buildHouse(house);
   buildDevices(house);
+  buildLabels(house);
   await loadStates();
   updateData({ structure, house });
   return house;
@@ -40,31 +45,81 @@ async function reloadHouse() {
 
 // ------------------------------------------------------------- picking
 
+// domains where a single click on the marker toggles the device directly
+const QUICK_TOGGLE_DOMAINS = new Set(['light', 'switch', 'fan', 'input_boolean']);
+
 function setupPicking() {
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const tooltip = document.getElementById('tooltip');
   let downAt = null;
+  let hovered = null;
+  let toggleTimer = null;
+  // manual double-click detection: e.detail is 0 on pointerup in some
+  // browsers/input paths, so track same-object clicks ourselves
+  const DOUBLE_MS = 300;
+  let lastClick = { obj: null, time: 0 };
+
+  function isShown(obj) {
+    // walk ancestors: skips rooms/devices on hidden floors and hidden markers
+    let node = obj;
+    while (node) { if (!node.visible) return false; node = node.parent; }
+    return true;
+  }
 
   function pick(event) {
     pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
+
+    // device markers first: room walls are translucent, so a marker must win
+    // even when a wall face sits between it and the camera
+    const deviceHits = raycaster.intersectObjects([...markers.values()], false);
+    for (const hit of deviceHits) {
+      if (isShown(hit.object)) return hit.object;
+    }
+
     const hits = raycaster.intersectObjects(scene.children, true);
     for (const hit of hits) {
       const ud = hit.object.userData;
-      if (ud?.kind && hit.object.parent?.visible !== false) {
-        // skip rooms/devices on hidden floors
-        let node = hit.object, visible = true;
-        while (node) { if (!node.visible) { visible = false; break; } node = node.parent; }
-        if (visible) return hit.object;
+      // pickable === false: ghosted sibling rooms while a room is focused
+      if (ud?.kind && ud.pickable !== false && isShown(hit.object)) {
+        return hit.object;
       }
     }
     return null;
   }
 
+  function clearHover() {
+    if (!hovered) return;
+    const ud = hovered.userData;
+    if (ud.kind === 'room') {
+      hovered.material.opacity = ud.baseOpacity ?? 0.18;
+    } else if (ud.kind === 'device') {
+      styleMarker(ud.entityId); // state-driven restore, can't desync
+      if (getFocusedRoomId() !== ud.roomId) hideLabel(ud.entityId);
+    }
+    hovered = null;
+  }
+
+  function applyHover(obj) {
+    hovered = obj;
+    const ud = obj.userData;
+    if (ud.kind === 'room') {
+      obj.material.opacity = Math.min((ud.baseOpacity ?? 0.18) + 0.1, 1);
+    } else if (ud.kind === 'device') {
+      obj.scale.multiplyScalar(1.25);
+      showLabel(ud.entityId);
+    }
+  }
+
   renderer.domElement.addEventListener('pointermove', (e) => {
     const obj = pick(e);
+    if (obj !== hovered) {
+      clearHover();
+      if (obj) applyHover(obj);
+      renderer.domElement.style.cursor = obj ? 'pointer' : '';
+    }
     if (!obj) { tooltip.classList.add('hidden'); return; }
     const ud = obj.userData;
     if (ud.kind === 'device') {
@@ -79,6 +134,12 @@ function setupPicking() {
     tooltip.classList.remove('hidden');
   });
 
+  renderer.domElement.addEventListener('pointerleave', () => {
+    clearHover();
+    tooltip.classList.add('hidden');
+    renderer.domElement.style.cursor = '';
+  });
+
   renderer.domElement.addEventListener('pointerdown', (e) => {
     downAt = { x: e.clientX, y: e.clientY };
   });
@@ -89,10 +150,42 @@ function setupPicking() {
     downAt = null;
     if (moved > 5) return; // it was an orbit drag, not a click
     const obj = pick(e);
-    if (!obj) return;
+
+    const now = performance.now();
+    const isDouble = obj !== null && obj === lastClick.obj &&
+                     (now - lastClick.time) < DOUBLE_MS;
+    lastClick = { obj, time: now };
+
+    if (!obj) {
+      // clicking empty space leaves focus mode
+      if (!isDouble) exitFocus();
+      return;
+    }
+
     const ud = obj.userData;
-    if (ud.kind === 'device') openDevicePanel(ud.entityId);
-    else if (ud.kind === 'room' && e.detail === 2) selectRoom(ud.roomId);
+    if (ud.kind === 'device') {
+      const domain = ud.entityId.split('.')[0];
+      if (QUICK_TOGGLE_DOMAINS.has(domain)) {
+        // click = toggle (like a real switch), double-click = detail panel;
+        // the short window keeps a double-click from also toggling
+        if (!isDouble) {
+          if (toggleTimer) clearTimeout(toggleTimer);
+          toggleTimer = setTimeout(() => {
+            toggleTimer = null;
+            api.control({ entity_id: ud.entityId, domain, service: 'toggle' })
+              .catch((err) => showBanner(`Control failed: ${err.message}`, 4000));
+          }, DOUBLE_MS);
+        } else {
+          if (toggleTimer) { clearTimeout(toggleTimer); toggleTimer = null; }
+          openDevicePanel(ud.entityId);
+        }
+      } else {
+        openDevicePanel(ud.entityId);
+      }
+    } else if (ud.kind === 'room') {
+      if (isDouble) selectRoom(ud.roomId);
+      else enterFocus(ud.roomId);
+    }
   });
 }
 
@@ -106,6 +199,8 @@ async function main() {
   const house = await api.getHouse();
   buildHouse(house);
   buildDevices(house);
+  buildLabels(house);
+  initFocus();
   initUI({ structure, house, onReload: reloadHouse });
   await loadStates();
   updateData({ structure, house });
