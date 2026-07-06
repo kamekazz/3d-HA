@@ -1,5 +1,6 @@
 """CRUD for our own 3D layout data (/api/house/*)."""
 import os
+import sqlite3
 
 from flask import Blueprint, current_app, jsonify, request, send_from_directory
 
@@ -8,10 +9,18 @@ bp = Blueprint("house", __name__, url_prefix="/api/house")
 # floor-plan tracing images (served back verbatim — no SVG, to rule out
 # stored XSS from an uploaded file)
 PLAN_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+# 3D model library files: parsed by three.js, never rendered as a document,
+# so serving them verbatim is safe. .glb strongly preferred (.gltf must have
+# embedded buffers/textures — external references can't resolve).
+MODEL_EXTENSIONS = {".glb", ".gltf"}
 
 
 def _plans_dir():
     return os.path.join(current_app.root_path, "uploads", "plans")
+
+
+def _models_dir():
+    return os.path.join(current_app.root_path, "uploads", "models")
 
 
 def _remove_plan_files(floor_id):
@@ -202,7 +211,12 @@ def place_device(room_id):
 
 @bp.patch("/device/<int:placement_id>")
 def update_placement(placement_id):
-    if not _store().update_placement(placement_id, request.get_json(force=True)):
+    try:
+        updated = _store().update_placement(placement_id,
+                                            request.get_json(force=True))
+    except sqlite3.IntegrityError:  # model_id referencing a missing model
+        return jsonify({"error": "model not found"}), 400
+    if not updated:
         return jsonify({"error": "placement not found or nothing to update"}), 404
     return jsonify({"ok": True})
 
@@ -211,4 +225,100 @@ def update_placement(placement_id):
 def delete_placement(placement_id):
     if not _store().delete_placement(placement_id):
         return jsonify({"error": "placement not found"}), 404
+    return jsonify({"ok": True})
+
+
+# ---- model library (uploaded .glb/.gltf files) ------------------------------
+
+@bp.post("/model")
+def upload_model():
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"error": "no file uploaded"}), 400
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in MODEL_EXTENSIONS:
+        return jsonify({"error": f"file type {ext or '?'} not allowed "
+                                 "(glb, gltf)"}), 400
+    # display name: explicit form field, else the uploaded file's stem
+    name = (request.form.get("name") or "").strip() \
+        or os.path.splitext(os.path.basename(file.filename))[0]
+    store = _store()
+    model_id = store.create_model(name)
+    filename = f"model_{model_id}{ext}"
+    os.makedirs(_models_dir(), exist_ok=True)
+    try:
+        file.save(os.path.join(_models_dir(), filename))
+    except OSError as exc:
+        store.delete_model(model_id)
+        return jsonify({"error": f"could not save file: {exc}"}), 500
+    store.set_model_filename(model_id, filename)
+    return jsonify({"id": model_id, "name": name, "filename": filename}), 201
+
+
+@bp.get("/models")
+def list_models():
+    return jsonify(_store().list_models())
+
+
+@bp.get("/model/<int:model_id>/file")
+def get_model_file(model_id):
+    model = _store().get_model(model_id)
+    if not model or not model.get("filename"):
+        return jsonify({"error": "model not found"}), 404
+    mimetype = ("model/gltf-binary" if model["filename"].endswith(".glb")
+                else "model/gltf+json")
+    return send_from_directory(_models_dir(), model["filename"],
+                               mimetype=mimetype)
+
+
+@bp.patch("/model/<int:model_id>")
+def update_model(model_id):
+    if not _store().update_model(model_id, request.get_json(force=True)):
+        return jsonify({"error": "model not found or nothing to update"}), 404
+    return jsonify({"ok": True})
+
+
+@bp.delete("/model/<int:model_id>")
+def delete_model(model_id):
+    model = _store().delete_model(model_id)
+    if model is None:
+        return jsonify({"error": "model not found"}), 404
+    if model.get("filename"):
+        path = os.path.join(_models_dir(), model["filename"])
+        if os.path.exists(path):
+            os.remove(path)
+    return jsonify({"ok": True})
+
+
+# ---- objects (standalone furniture/decor placed in rooms) -------------------
+
+@bp.post("/room/<int:room_id>/object")
+def place_object(room_id):
+    data = request.get_json(force=True)
+    if data.get("model_id") is None:
+        return jsonify({"error": "model_id is required"}), 400
+    try:
+        object_id = _store().add_object(room_id, data)
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "model not found"}), 400
+    if object_id is None:
+        return jsonify({"error": "room not found"}), 404
+    return jsonify({"id": object_id}), 201
+
+
+@bp.patch("/object/<int:object_id>")
+def update_object(object_id):
+    try:
+        updated = _store().update_object(object_id, request.get_json(force=True))
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "model not found"}), 400
+    if not updated:
+        return jsonify({"error": "object not found or nothing to update"}), 404
+    return jsonify({"ok": True})
+
+
+@bp.delete("/object/<int:object_id>")
+def delete_object(object_id):
+    if not _store().delete_object(object_id):
+        return jsonify({"error": "object not found"}), 404
     return jsonify({"ok": True})

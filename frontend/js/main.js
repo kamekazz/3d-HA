@@ -4,11 +4,13 @@ import { api } from './api.js';
 import { initScene, scene, camera, renderer } from './scene.js';
 import { buildHouse, roomMeshes } from './house.js';
 import { buildDevices, markers } from './devices.js';
+import { buildObjects, objects3d } from './objects.js';
 import { setAllStates, applyState, friendlyName, stateLabel, styleMarker } from './state.js';
 import { buildLabels, showLabel, hideLabel } from './labels.js';
 import { initFocus, enterFocus, exitFocus } from './focus.js';
 import { connectRealtime } from './socket.js';
-import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, selectRoom } from './ui.js';
+import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, openObjectPanel, selectRoom } from './ui.js';
+import { initDrag } from './drag.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
 
@@ -39,6 +41,7 @@ async function reloadHouse() {
   const house = await api.getHouse();
   buildHouse(house);
   buildDevices(house);
+  buildObjects(house);
   buildLabels(house);
   await loadStates();
   updateData({ structure, house });
@@ -70,24 +73,36 @@ function setupPicking() {
     return true;
   }
 
+  function ownerOf(obj) {
+    // model-backed markers/objects are Groups: hits land on child meshes, so
+    // walk up to the ancestor that carries the pick metadata
+    let node = obj;
+    while (node && !node.userData?.kind) node = node.parent;
+    return node;
+  }
+
   function pick(event) {
     pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
 
-    // device markers first: room walls are translucent, so a marker must win
-    // even when a wall face sits between it and the camera
-    const deviceHits = raycaster.intersectObjects([...markers.values()], false);
-    for (const hit of deviceHits) {
-      if (isShown(hit.object)) return hit.object;
+    // device markers + objects first: room walls are translucent, so they must
+    // win even when a wall face sits between them and the camera (recursive:
+    // GLB groups only register through their children)
+    const priorityHits = raycaster.intersectObjects(
+      [...markers.values(), ...objects3d.values()], true);
+    for (const hit of priorityHits) {
+      const owner = ownerOf(hit.object);
+      if (owner && isShown(hit.object)) return owner;
     }
 
     const hits = raycaster.intersectObjects(scene.children, true);
     for (const hit of hits) {
-      const ud = hit.object.userData;
+      const owner = ownerOf(hit.object);
+      const ud = owner?.userData;
       // pickable === false: ghosted sibling rooms while a room is focused
       if (ud?.kind && ud.pickable !== false && isShown(hit.object)) {
-        return hit.object;
+        return owner;
       }
     }
     return null;
@@ -129,6 +144,9 @@ function setupPicking() {
       tooltip.innerHTML =
         `<strong>${friendlyName(ud.entityId)}</strong><br>` +
         `<span class="sub">${stateLabel(ud.entityId)} · ${ud.roomName}</span>`;
+    } else if (ud.kind === 'object') {
+      tooltip.innerHTML =
+        `<strong>${ud.name}</strong><br><span class="sub">${ud.roomName}</span>`;
     } else {
       tooltip.innerHTML = `<strong>${ud.roomName}</strong><br><span class="sub">Level ${ud.level}</span>`;
     }
@@ -185,6 +203,8 @@ function setupPicking() {
       } else {
         openDevicePanel(ud.entityId);
       }
+    } else if (ud.kind === 'object') {
+      openObjectPanel(ud.objectId);
     } else if (ud.kind === 'room') {
       if (isDouble) selectRoom(ud.roomId);
       else enterFocus(ud.roomId);
@@ -202,8 +222,10 @@ async function main() {
   const house = await api.getHouse();
   buildHouse(house);
   buildDevices(house);
+  buildObjects(house);
   buildLabels(house);
   initFocus();
+  initDrag();
   initUI({ structure, house, onReload: reloadHouse });
   initRoomPanel({ house });
   initPlanner({ getStructure: () => structure, onClose: reloadHouse });

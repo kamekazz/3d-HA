@@ -206,7 +206,8 @@ form input[type="color"] { padding: 2px; height: 32px; }
 .btn-row { display: flex; gap: 8px; margin-top: 4px; }
 
 /* room + entity lists */
-#room-list .room-item, #placed-list .placed-item, #entity-list .entity-item {
+#room-list .room-item, #placed-list .placed-item, #entity-list .entity-item,
+#object-list .placed-item {
   display: flex; align-items: center; gap: 6px;
   padding: 6px 8px; border-radius: 6px; margin-bottom: 4px;
   background: #1a212b; font-size: 13px;
@@ -217,6 +218,50 @@ form input[type="color"] { padding: 2px; height: 32px; }
 }
 .placed-item input { width: 52px; padding: 3px 4px; font-size: 12px;
   background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 4px; }
+
+/* second line under each placed device: model + rotation + scale */
+.placed-model-row {
+  display: flex; align-items: center; gap: 6px;
+  margin: -2px 0 6px; padding: 0 8px;
+}
+.placed-model-row select {
+  flex: 1; min-width: 0; padding: 3px 4px; font-size: 12px;
+  background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 4px;
+}
+.placed-model-row input { width: 52px; padding: 3px 4px; font-size: 12px;
+  background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 4px; }
+#obj-model-select {
+  flex: 1; min-width: 0; padding: 6px 8px; font-size: 13px;
+  background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 6px;
+}
+
+/* 3D model library modal */
+#models-modal {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(8, 11, 15, 0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+#mm-box {
+  position: relative; top: auto; right: auto; bottom: auto;
+  width: min(480px, 92vw); max-height: 80vh;
+}
+#mm-upload-form { display: flex; gap: 8px; margin: 12px 0; }
+#mm-upload-form input[type="file"] { flex: 1.4; min-width: 0; margin-top: 0; }
+#mm-upload-form input[type="text"] { flex: 1; min-width: 0; margin-top: 0; }
+#mm-list .mm-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 6px; margin-bottom: 4px;
+  background: #1a212b; font-size: 13px;
+}
+.mm-item input.name {
+  flex: 1; min-width: 0; padding: 4px 6px; font-size: 13px;
+  background: transparent; color: #e6e9ee; border: 1px solid transparent;
+  border-radius: 4px;
+}
+.mm-item input.name:hover, .mm-item input.name:focus {
+  background: #10141a; border-color: #2a3340;
+}
+.mm-item .muted { white-space: nowrap; }
 
 /* room-focus exit chip */
 #focus-exit {

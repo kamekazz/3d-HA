@@ -1,4 +1,5 @@
 // Holds live entity states and applies them to the 3D markers.
+import * as THREE from 'three';
 import { markers, baseColor } from './devices.js';
 
 const states = new Map(); // entity_id -> HA state object
@@ -74,6 +75,49 @@ export function stateLabel(entityId) {
   return unit ? `${s.state} ${unit}` : s.state;
 }
 
+const GREY_UNAVAILABLE = 0x3a4149;
+const GREY_LERP_TARGET = new THREE.Color(GREY_UNAVAILABLE);
+
+// Apply one visual state to a marker root. Primitives get the classic
+// color+emissive repaint; model-backed markers (GLB Groups, multi-mesh,
+// multi-material) keep their authored colors — state shows as an emissive
+// glow (on), original materials (off), or a grey tint (unavailable).
+// stateScale composes with the user's placement scale so a 2× couch stays 2×.
+function applyStyle(marker, { color, emissiveHex, emissiveIntensity, grey, stateScale }) {
+  marker.scale.setScalar((marker.userData.userScale ?? 1) * stateScale);
+
+  if (!marker.userData.modelId) {
+    const mat = marker.material;
+    if (!mat) return; // model Group still loading its instance
+    mat.color.setHex(grey ? GREY_UNAVAILABLE : color);
+    mat.emissive.setHex(emissiveHex ?? 0x000000);
+    if (emissiveIntensity !== undefined) mat.emissiveIntensity = emissiveIntensity;
+    return;
+  }
+
+  marker.traverse((child) => {
+    if (!child.isMesh || !child.userData.__orig) return;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    mats.forEach((m, i) => {
+      const orig = child.userData.__orig[i];
+      if (!orig) return;
+      if (m.color && orig.color !== null) {
+        m.color.setHex(orig.color);
+        if (grey) m.color.lerp(GREY_LERP_TARGET, 0.7);
+      }
+      if (m.emissive) { // unlit materials (KHR_materials_unlit) have none
+        if (emissiveHex !== undefined && emissiveHex !== null && !grey) {
+          m.emissive.setHex(emissiveHex);
+          m.emissiveIntensity = emissiveIntensity ?? 1;
+        } else {
+          m.emissive.setHex(grey ? 0x000000 : (orig.emissive ?? 0x000000));
+          m.emissiveIntensity = orig.emissiveIntensity;
+        }
+      }
+    });
+  });
+}
+
 export function styleMarker(entityId) {
   const marker = markers.get(entityId);
   if (!marker) return;
@@ -82,9 +126,7 @@ export function styleMarker(entityId) {
   const base = baseColor(type);
 
   if (!s || s.state === 'unavailable' || s.state === 'unknown') {
-    marker.material.color.setHex(0x3a4149);
-    marker.material.emissive.setHex(0x000000);
-    marker.scale.setScalar(0.8);
+    applyStyle(marker, { grey: true, stateScale: 0.8 });
     return;
   }
 
@@ -92,10 +134,11 @@ export function styleMarker(entityId) {
   // glow + grow while recording/streaming
   if (type === 'camera') {
     const active = s.state === 'recording' || s.state === 'streaming';
-    marker.material.color.setHex(base);
-    marker.material.emissive.setHex(base);
-    marker.material.emissiveIntensity = active ? 0.9 : 0.15;
-    marker.scale.setScalar(active ? 1.3 : 1.0);
+    applyStyle(marker, {
+      color: base, emissiveHex: base,
+      emissiveIntensity: active ? 0.9 : 0.15,
+      stateScale: active ? 1.3 : 1.0,
+    });
     return;
   }
 
@@ -104,20 +147,16 @@ export function styleMarker(entityId) {
                         'climate'].includes(type);
   if (isToggleable) {
     if (ON_STATES.has(s.state)) {
-      marker.material.color.setHex(base);
-      marker.material.emissive.setHex(base);
-      marker.material.emissiveIntensity = 0.7;
-      marker.scale.setScalar(1.25);
+      applyStyle(marker, { color: base, emissiveHex: base,
+                           emissiveIntensity: 0.7, stateScale: 1.25 });
     } else {
-      marker.material.color.setHex(0x555e69);
-      marker.material.emissive.setHex(0x000000);
-      marker.scale.setScalar(1.0);
+      // model markers: null emissive = restore authored materials
+      applyStyle(marker, { color: 0x555e69, emissiveHex: marker.userData.modelId
+                           ? null : 0x000000, stateScale: 1.0 });
     }
   } else {
     // sensors etc: always show the type color, dimly lit
-    marker.material.color.setHex(base);
-    marker.material.emissive.setHex(base);
-    marker.material.emissiveIntensity = 0.25;
-    marker.scale.setScalar(1.0);
+    applyStyle(marker, { color: base, emissiveHex: base,
+                         emissiveIntensity: 0.25, stateScale: 1.0 });
   }
 }

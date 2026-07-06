@@ -113,6 +113,25 @@ every write; invalid polygons → HTTP 400. `points: null` reverts a room to its
 centered-BoxGeometry path. `focus.js` frames rooms via world-space `Box3`, never
 `geometry.parameters` (BoxGeometry-only API).
 
+**3D model library** ("Models" topbar button): uploaded `.glb`/`.gltf` files live in a `models`
+table + gitignored `backend/uploads/models/model_<id>.<ext>` (same deterministic-filename pattern as
+floor plans; `MODEL_EXTENSIONS` whitelist). A model can (a) **replace a device marker** —
+`placements.model_id` (FK, `ON DELETE SET NULL` so deleting a model reverts the primitive), plus
+`rot_y` (radians) and `scale` — or (b) be placed as **standalone furniture**: an `objects` row
+(room-anchored like placements, `model_id ON DELETE CASCADE`). `frontend/js/models.js` owns the
+GLTFLoader (+ DRACO decoder from the CDN) and a per-model cache; instances are `scene.clone(true)`
+with **cloned materials** (originals stashed in `child.userData.__orig`) inside a pivot scaled
+×3.28084 (glTF is meters, world is feet) — device models are bbox-centered, furniture bottom-seated.
+`state.js applyStyle` restyles model groups by emissive glow/grey-lerp (never repaints authored
+colors) and composes `scale = userScale × stateScale`. `objects.js` builds furniture into floor
+groups (`userData.kind: 'object'`); `main.js pick()` raycasts markers+objects first (recursive,
+walks up to the `userData.kind` owner) so they win over translucent walls. `drag.js` drags the
+**selected** marker/object (selection = open device/object panel) on the horizontal plane through
+its own height, one PATCH on release, no rebuild. Endpoints: `POST /api/house/model` (multipart),
+`GET /api/house/models` (with usage counts), `GET /api/house/model/<id>/file`, `PATCH/DELETE
+/api/house/model/<id>`, `POST /api/house/room/<id>/object`, `PATCH/DELETE /api/house/object/<id>`.
+Max upload 64 MB (`app.py MAX_CONTENT_LENGTH`; api.js maps the bodyless 413 to a friendly error).
+
 **Stairs** connect two floors: a `stairs` row (rect footprint + `direction` of ascent, n/s/e/w)
 belongs to the LOWER floor (`floor_id`) and rises that floor's full `floor_height`. In 3D they're
 stepped meshes added to the house root (not a floor group) so `setLevel` can show them on **both**
@@ -154,5 +173,6 @@ importmap — no npm/bundler):
 - Windows dev environment (PowerShell). Default port is 5000; if that's in use, an alternate
   `3d-ha-5001` launch config exists (see `.claude/launch.json`).
 - Not yet implemented (see `3d-home-assistant-house-spec.md` phases 8-9): drag-to-position for
-  *devices* in the 2D planner (rooms drag there already; device positions are numeric inputs),
-  app-level login (needed before hosting this anywhere public).
+  *devices* in the 2D planner (rooms drag there already; devices drag in the 3D view once their
+  panel is open, or via numeric inputs), app-level login (needed before hosting this anywhere
+  public).

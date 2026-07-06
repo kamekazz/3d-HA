@@ -51,5 +51,23 @@ export const api = {
   updatePlacement: (id, data) => patch(`/api/house/device/${id}`, data),
   deletePlacement: (id) => del(`/api/house/device/${id}`),
 
+  getModels: () => get('/api/house/models'),
+  uploadModel: async (file, name) => {
+    const body = new FormData();
+    body.append('file', file);
+    if (name) body.append('name', name);
+    const res = await fetch('/api/house/model', { method: 'POST', body });
+    // Flask's 413 has no JSON body — give it a friendly message
+    if (res.status === 413) throw new Error('file too large (max 64 MB)');
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`);
+    return data;
+  },
+  renameModel: (id, data) => patch(`/api/house/model/${id}`, data),
+  deleteModel: (id) => del(`/api/house/model/${id}`),
+  addObject: (roomId, data) => post(`/api/house/room/${roomId}/object`, data),
+  updateObject: (id, data) => patch(`/api/house/object/${id}`, data),
+  deleteObject: (id) => del(`/api/house/object/${id}`),
+
   control: (payload) => post('/api/control', payload),
 };

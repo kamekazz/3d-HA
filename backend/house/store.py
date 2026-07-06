@@ -54,13 +54,37 @@ CREATE TABLE IF NOT EXISTS placements (
     y REAL NOT NULL DEFAULT 5.0,
     z REAL NOT NULL DEFAULT 0,
     type TEXT NOT NULL DEFAULT 'sensor',
-    visible INTEGER NOT NULL DEFAULT 1
+    visible INTEGER NOT NULL DEFAULT 1,
+    model_id INTEGER REFERENCES models(id) ON DELETE SET NULL,
+    rot_y REAL NOT NULL DEFAULT 0,
+    scale REAL NOT NULL DEFAULT 1.0
+);
+CREATE TABLE IF NOT EXISTS models (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    filename TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS objects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,
+    name TEXT NOT NULL DEFAULT '',
+    x REAL NOT NULL DEFAULT 0,
+    y REAL NOT NULL DEFAULT 0,
+    z REAL NOT NULL DEFAULT 0,
+    rot_y REAL NOT NULL DEFAULT 0,
+    scale REAL NOT NULL DEFAULT 1.0
 );
 """
 
 ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height",
                "color", "points")
-PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible")
+PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible",
+                    "model_id", "rot_y", "scale")
+# Standalone furniture/decor: a library model placed in a room, no HA entity.
+OBJECT_FIELDS = ("name", "model_id", "x", "y", "z", "rot_y", "scale")
+MODEL_FIELDS = ("name",)
 # stairs.floor_id is the LOWER of the two floors they connect; they rise that
 # floor's full floor_height. direction = which way they ascend on the plan.
 STAIR_FIELDS = ("name", "x", "z", "width", "depth", "direction", "floor_id")
@@ -148,6 +172,10 @@ class HouseStore:
             "ALTER TABLE floors ADD COLUMN plan_scale REAL NOT NULL DEFAULT 0.05",
             "ALTER TABLE floors ADD COLUMN plan_x REAL NOT NULL DEFAULT 0",
             "ALTER TABLE floors ADD COLUMN plan_z REAL NOT NULL DEFAULT 0",
+            "ALTER TABLE placements ADD COLUMN model_id INTEGER"
+            " REFERENCES models(id) ON DELETE SET NULL",
+            "ALTER TABLE placements ADD COLUMN rot_y REAL NOT NULL DEFAULT 0",
+            "ALTER TABLE placements ADD COLUMN scale REAL NOT NULL DEFAULT 1.0",
         ):
             try:
                 self._db.execute(ddl)
@@ -183,6 +211,9 @@ class HouseStore:
             rooms = self._rows("SELECT * FROM rooms ORDER BY id")
             placements = self._rows("SELECT * FROM placements ORDER BY id")
             stairs = self._rows("SELECT * FROM stairs ORDER BY id")
+            objects = self._rows(
+                "SELECT o.*, m.name AS model_name FROM objects o"
+                " JOIN models m ON m.id = o.model_id ORDER BY o.id")
 
         rooms_by_floor = {}
         for room in rooms:
@@ -192,6 +223,7 @@ class HouseStore:
                                  if room.get("points") else None}
             del room["points"]  # footprint is the API surface for geometry
             room["devices"] = []
+            room["objects"] = []
             rooms_by_floor.setdefault(room["floor_id"], []).append(room)
         room_by_id = {r["id"]: r for r in rooms}
         for p in placements:
@@ -200,7 +232,18 @@ class HouseStore:
                 room["devices"].append({
                     "id": p["id"], "entity_id": p["entity_id"], "type": p["type"],
                     "visible": int(p["visible"]),
+                    "model_id": p["model_id"], "rot_y": p["rot_y"],
+                    "scale": p["scale"],
                     "position": {"x": p["x"], "y": p["y"], "z": p["z"]},
+                })
+        for o in objects:
+            room = room_by_id.get(o["room_id"])
+            if room:
+                room["objects"].append({
+                    "id": o["id"], "model_id": o["model_id"],
+                    "model_name": o["model_name"], "name": o["name"],
+                    "rot_y": o["rot_y"], "scale": o["scale"],
+                    "position": {"x": o["x"], "y": o["y"], "z": o["z"]},
                 })
         stairs_by_floor = {}
         for st in stairs:
@@ -647,5 +690,100 @@ class HouseStore:
         with self._lock:
             cur = self._db.execute("DELETE FROM placements WHERE id=?",
                                    (placement_id,))
+            self._db.commit()
+            return cur.rowcount > 0
+
+    # ---- model library -------------------------------------------------------
+
+    def list_models(self):
+        with self._lock:
+            return self._rows(
+                "SELECT m.*,"
+                " (SELECT COUNT(*) FROM placements WHERE model_id = m.id)"
+                "   AS placement_count,"
+                " (SELECT COUNT(*) FROM objects WHERE model_id = m.id)"
+                "   AS object_count"
+                " FROM models m ORDER BY m.name COLLATE NOCASE")
+
+    def get_model(self, model_id):
+        with self._lock:
+            row = self._db.execute("SELECT * FROM models WHERE id=?",
+                                   (model_id,)).fetchone()
+            return dict(row) if row else None
+
+    def create_model(self, name):
+        with self._lock:
+            cur = self._db.execute("INSERT INTO models (name) VALUES (?)",
+                                   (name,))
+            self._db.commit()
+            return cur.lastrowid
+
+    def set_model_filename(self, model_id, filename):
+        with self._lock:
+            self._db.execute("UPDATE models SET filename=? WHERE id=?",
+                             (filename, model_id))
+            self._db.commit()
+
+    def update_model(self, model_id, data):
+        allowed = {k: data[k] for k in MODEL_FIELDS if k in data}
+        if not allowed:
+            return False
+        sets = ", ".join(f"{k}=?" for k in allowed)
+        with self._lock:
+            cur = self._db.execute(f"UPDATE models SET {sets} WHERE id=?",
+                                   (*allowed.values(), model_id))
+            self._db.commit()
+            return cur.rowcount > 0
+
+    def delete_model(self, model_id):
+        """Delete a model row; FKs revert placements (SET NULL) and remove
+        objects (CASCADE). Returns the deleted row (for file cleanup) or None."""
+        with self._lock:
+            row = self._db.execute("SELECT * FROM models WHERE id=?",
+                                   (model_id,)).fetchone()
+            if not row:
+                return None
+            self._db.execute("DELETE FROM models WHERE id=?", (model_id,))
+            self._db.commit()
+            return dict(row)
+
+    # ---- objects (standalone furniture/decor) --------------------------------
+
+    def add_object(self, room_id, data):
+        pos = data.get("position") or {}
+        with self._lock:
+            if not self._db.execute("SELECT 1 FROM rooms WHERE id=?",
+                                    (room_id,)).fetchone():
+                return None
+            cur = self._db.execute(
+                "INSERT INTO objects (room_id, model_id, name, x, y, z,"
+                " rot_y, scale) VALUES (?,?,?,?,?,?,?,?)",
+                (room_id, int(data["model_id"]), data.get("name") or "",
+                 float(pos.get("x", data.get("x", 0))),
+                 float(pos.get("y", data.get("y", 0))),
+                 float(pos.get("z", data.get("z", 0))),
+                 float(data.get("rot_y", 0)),
+                 float(data.get("scale", 1.0))))
+            self._db.commit()
+            return cur.lastrowid
+
+    def update_object(self, object_id, data):
+        flat = dict(data)
+        for k, v in (data.get("position") or {}).items():
+            flat[k] = v
+        allowed = {k: flat[k] for k in OBJECT_FIELDS if k in flat}
+        if not allowed:
+            return False
+        sets = ", ".join(f"{k}=?" for k in allowed)
+        with self._lock:
+            cur = self._db.execute(f"UPDATE objects SET {sets} WHERE id=?",
+                                   (*allowed.values(), object_id))
+            self._db.commit()
+            return cur.rowcount > 0
+
+    def delete_object(self, object_id):
+        with self._lock:
+            cur = self._db.execute("DELETE FROM objects WHERE id=?",
+                                   (object_id,))
             self._db.commit()
             return cur.rowcount > 0

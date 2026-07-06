@@ -1,8 +1,11 @@
 // Places device markers inside rooms; each marker is bound to an entity_id.
 import * as THREE from 'three';
 import { floorGroups } from './house.js';
+import { getInstance } from './models.js';
+// circular with state.js, but only called long after both modules evaluate
+import { styleMarker } from './state.js';
 
-export const markers = new Map(); // entity_id -> marker mesh
+export const markers = new Map(); // entity_id -> marker root (Mesh or Group)
 
 const BASE_COLORS = {
   light: 0xffd54a,
@@ -58,18 +61,43 @@ export function buildDevices(house) {
   }
 }
 
-function makeMarker(dev, room, floor) {
+function makePrimitiveMesh(type) {
   const mat = new THREE.MeshStandardMaterial({
-    color: baseColor(dev.type),
+    color: baseColor(type),
     emissive: 0x000000,
     roughness: 0.4,
   });
-  const marker = new THREE.Mesh(GEOMETRIES[dev.type] ?? GEOMETRIES.default, mat);
+  return new THREE.Mesh(GEOMETRIES[type] ?? GEOMETRIES.default, mat);
+}
+
+function makeMarker(dev, room, floor) {
+  // model-backed markers are a Group filled asynchronously; primitives stay a
+  // plain Mesh so buildDevices remains synchronous either way
+  let marker;
+  if (dev.model_id) {
+    marker = new THREE.Group();
+    getInstance(dev.model_id, 'center')
+      .then((inst) => {
+        marker.add(inst);
+        styleMarker(dev.entity_id); // apply current state to the new materials
+      })
+      .catch((err) => {
+        // broken/missing model: degrade to the primitive, never a blank spot
+        console.warn(`model ${dev.model_id} failed for ${dev.entity_id}:`, err);
+        marker.userData.modelId = null;
+        marker.add(makePrimitiveMesh(dev.type));
+        styleMarker(dev.entity_id);
+      });
+  } else {
+    marker = makePrimitiveMesh(dev.type);
+  }
   const fp = room.footprint;
   marker.position.set(
     fp.x + dev.position.x,
     dev.position.y,
     fp.z + dev.position.z);
+  marker.rotation.y = dev.rot_y || 0;
+  marker.scale.setScalar(dev.scale || 1);
   marker.visible = dev.visible !== 0;
   marker.userData = {
     kind: 'device',
@@ -80,6 +108,10 @@ function makeMarker(dev, room, floor) {
     roomName: room.name,
     level: floor.level,
     hiddenByUser: dev.visible === 0,
+    modelId: dev.model_id ?? null,
+    userScale: dev.scale || 1,
+    fpX: fp.x, // room footprint origin: converts world XZ <-> room-relative
+    fpZ: fp.z,
   };
   return marker;
 }

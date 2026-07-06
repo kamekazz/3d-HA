@@ -24,6 +24,7 @@
     <span id="conn-label">connecting…</span>
     <div class="spacer"></div>
     <button id="btn-planner" type="button" title="Edit each floor's layout on a top-down plan (feet)">Floor plan</button>
+    <button id="btn-models" type="button" title="Upload and manage 3D models (.glb) for devices and furniture">Models</button>
     <button id="btn-editor" type="button">Room editor</button>
     <button id="btn-sync" type="button" title="Re-read HA and update the layout: move rooms to match their HA floor, add new areas, drop empty floors deleted in HA">Sync with HA</button>
     <button id="btn-refresh" type="button" title="Re-read floors/areas/devices from HA">Refresh HA</button>
@@ -59,6 +60,46 @@
     <div id="dp-attrs" class="attrs"></div>
     <div id="dp-controls" class="controls"></div>
   </aside>
+
+  <!-- Furniture/object edit panel (click a placed model in 3D) -->
+  <aside id="object-panel" class="panel hidden">
+    <button class="close" data-close="object-panel" type="button">&times;</button>
+    <h2 id="op-name">Object</h2>
+    <p id="op-model" class="muted"></p>
+    <p class="muted">Drag it in the 3D view, or edit the numbers:</p>
+    <form id="object-form">
+      <div class="row3">
+        <label>X <input id="op-x" type="number" step="0.1"></label>
+        <label>Y <input id="op-y" type="number" step="0.1"></label>
+        <label>Z <input id="op-z" type="number" step="0.1"></label>
+      </div>
+      <div class="row3">
+        <label>Rotation (°) <input id="op-rot" type="number" step="15"></label>
+        <label>Scale <input id="op-scale" type="number" step="0.05" min="0.01"></label>
+        <label>Name <input id="op-rename" placeholder="(model name)"></label>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="op-delete" class="danger">Delete object</button>
+      </div>
+    </form>
+  </aside>
+
+  <!-- 3D model library manager -->
+  <div id="models-modal" class="hidden">
+    <div id="mm-box" class="panel">
+      <button class="close" data-close="models-modal" type="button">&times;</button>
+      <h2>3D model library</h2>
+      <p class="muted">Upload .glb files (recommended — self-contained) or .gltf with
+        embedded textures. Assign them to devices in the room editor, or place them
+        as furniture. Keep models low-poly for smooth rendering.</p>
+      <form id="mm-upload-form">
+        <input type="file" id="mm-file" accept=".glb,.gltf" required>
+        <input type="text" id="mm-name" placeholder="Display name (optional)">
+        <button type="submit" id="mm-upload">Upload</button>
+      </form>
+      <div id="mm-list"></div>
+    </div>
+  </div>
 
   <!-- Room editor panel -->
   <aside id="editor" class="panel hidden">
@@ -101,6 +142,12 @@
       <div id="placed-list"></div>
       <h4>Entities in linked HA area</h4>
       <div id="entity-list" class="muted">Link the room to an HA area to list its entities.</div>
+      <h4>Furniture &amp; objects</h4>
+      <div id="object-list"></div>
+      <div class="btn-row">
+        <select id="obj-model-select"></select>
+        <button id="obj-add" type="button" class="small">Add to room</button>
+      </div>
     </section>
   </aside>
 

@@ -1,9 +1,13 @@
-// Level selector, device side panel, room editor.
+// Level selector, device side panel, room editor, model library, object panel.
 import { api } from './api.js';
 import { floorGroups, setLevel, getLevel, highlightRoom } from './house.js';
 import { getState, friendlyName, stateLabel, onStateApplied } from './state.js';
 import { exitFocus, getFocusedRoomId } from './focus.js';
 import { renderControls, createCameraView, isSliderActive } from './controls.js';
+import { markers } from './devices.js';
+import { objects3d } from './objects.js';
+import { setSelected, onDragMoved } from './drag.js';
+import { invalidateModel } from './models.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -12,6 +16,8 @@ let house = null;       // our layout from /api/house
 let reloadHouse = null; // callback from main.js: refetch + rebuild scene
 let selectedRoomId = null;
 let panelEntityId = null;
+let panelObjectId = null;
+let modelsList = [];    // library from /api/house/models
 
 // ---------------------------------------------------------------- helpers
 
@@ -34,6 +40,26 @@ function findRoom(roomId) {
   for (const f of house.floors) {
     const r = (f.rooms || []).find((r) => r.id === roomId);
     if (r) return { room: r, floor: f };
+  }
+  return null;
+}
+
+function findObjectById(objectId) {
+  for (const f of house.floors) {
+    for (const r of f.rooms || []) {
+      const o = (r.objects || []).find((o) => o.id === objectId);
+      if (o) return { obj: o, room: r, floor: f };
+    }
+  }
+  return null;
+}
+
+function findPlacementById(placementId) {
+  for (const f of house.floors) {
+    for (const r of f.rooms || []) {
+      const d = (r.devices || []).find((d) => d.id === placementId);
+      if (d) return { dev: d, room: r, floor: f };
+    }
   }
   return null;
 }
@@ -101,12 +127,38 @@ export function initUI({ structure: s, house: h, onReload }) {
       if (btn.dataset.close === 'device-panel') {
         panelEntityId = null;
         stopDeviceCamera(); // drop the MJPEG connection, don't stream unseen
+        setSelected(null);
+      }
+      if (btn.dataset.close === 'object-panel') {
+        panelObjectId = null;
+        setSelected(null);
       }
     };
   });
 
   $('room-form').onsubmit = onRoomFormSubmit;
   $('rf-cancel').onclick = resetRoomForm;
+
+  $('btn-models').onclick = openModelsModal;
+  $('mm-upload-form').onsubmit = onModelUpload;
+  $('obj-add').onclick = onAddObject;
+  wireObjectPanel();
+  refreshModels(); // async fill of the library-dependent selects
+
+  // drag ended: server already PATCHed — sync the cached house + open panels
+  // without a full reload (the mesh is already where the user left it)
+  onDragMoved(({ kind, id, x, z }) => {
+    if (kind === 'device') {
+      const found = findPlacementById(id);
+      if (found) { found.dev.position.x = x; found.dev.position.z = z; }
+      if (selectedRoomId && found?.room.id === selectedRoomId) renderPlacementSection();
+    } else {
+      const found = findObjectById(id);
+      if (found) { found.obj.position.x = x; found.obj.position.z = z; }
+      if (panelObjectId === id) { $('op-x').value = x; $('op-z').value = z; }
+      if (selectedRoomId && found?.room.id === selectedRoomId) renderPlacementSection();
+    }
+  });
 
   onStateApplied((entityId) => {
     if (isSliderActive()) return; // HA echoes mid-drag must not rebuild the slider
@@ -128,6 +180,18 @@ export function updateData({ structure: s, house: h }) {
     resetRoomForm();
   }
   if (selectedRoomId) renderPlacementSection();
+  // scene was rebuilt: re-point the drag selection at the fresh meshes
+  if (panelObjectId) {
+    if (findObjectById(panelObjectId)) {
+      setSelected(objects3d.get(panelObjectId) || null);
+    } else {
+      panelObjectId = null;
+      $('object-panel').classList.add('hidden');
+      setSelected(null);
+    }
+  } else if (panelEntityId) {
+    setSelected(markers.get(panelEntityId) || null);
+  }
 }
 
 export function setConnStatus(status) {
@@ -201,6 +265,8 @@ export function openDevicePanel(entityId) {
   panelEntityId = entityId;
   renderDevicePanel(entityId);
   $('device-panel').classList.remove('hidden');
+  // the open panel makes this marker the drag target in the 3D view
+  setSelected(markers.get(entityId) || null);
 }
 
 function renderDevicePanel(entityId) {
@@ -420,10 +486,13 @@ function renderPlacementSection() {
     rm.onclick = async () => { await api.deletePlacement(dev.id); reloadHouse(); };
     item.append(name, ...inputs, rm);
     placed.appendChild(item);
+    placed.appendChild(renderModelRow(dev));
   }
   if (!placed.children.length) {
     placed.innerHTML = '<p class="muted">Nothing placed yet.</p>';
   }
+
+  renderObjectSection(room);
 
   // entities available in the linked HA area
   const list = $('entity-list');
@@ -470,4 +539,262 @@ function renderPlacementSection() {
   if (!candidates.length) {
     list.innerHTML = '<p class="muted">All entities in this area are placed.</p>';
   }
+}
+
+// model / rotation / scale controls for one placed device
+function renderModelRow(dev) {
+  const row = document.createElement('div');
+  row.className = 'placed-model-row';
+
+  const sel = document.createElement('select');
+  sel.title = '3D model (replaces the default marker)';
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = '— default marker —';
+  sel.appendChild(none);
+  for (const m of modelsList) {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    sel.appendChild(opt);
+  }
+  sel.value = dev.model_id ?? '';
+  sel.onchange = async () => {
+    await api.updatePlacement(dev.id, {
+      model_id: sel.value ? Number(sel.value) : null,
+    });
+    reloadHouse();
+  };
+
+  const rot = document.createElement('input');
+  rot.type = 'number'; rot.step = '15'; rot.title = 'rotation (degrees)';
+  rot.value = Math.round((dev.rot_y || 0) * 180 / Math.PI);
+  rot.onchange = async () => {
+    await api.updatePlacement(dev.id, { rot_y: Number(rot.value) * Math.PI / 180 });
+    reloadHouse();
+  };
+
+  const scale = document.createElement('input');
+  scale.type = 'number'; scale.step = '0.05'; scale.min = '0.01'; scale.title = 'scale';
+  scale.value = dev.scale ?? 1;
+  scale.onchange = async () => {
+    await api.updatePlacement(dev.id, { scale: Number(scale.value) || 1 });
+    reloadHouse();
+  };
+
+  row.append(sel, rot, scale);
+  return row;
+}
+
+// ---------------------------------------------------------------- objects
+
+function renderObjectSection(room) {
+  const list = $('object-list');
+  list.innerHTML = '';
+  for (const o of room.objects || []) {
+    const item = document.createElement('div');
+    item.className = 'placed-item';
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = o.name || o.model_name;
+    name.title = 'Open the object panel (rotate, resize, drag)';
+    name.onclick = () => openObjectPanel(o.id);
+
+    const inputs = ['x', 'y', 'z'].map((axis) => {
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.step = '0.1'; inp.title = axis;
+      inp.value = o.position[axis];
+      inp.onchange = async () => {
+        await api.updateObject(o.id, { [axis]: Number(inp.value) });
+        reloadHouse();
+      };
+      return inp;
+    });
+
+    const rm = document.createElement('button');
+    rm.className = 'small danger';
+    rm.textContent = '✕';
+    rm.onclick = async () => {
+      await api.deleteObject(o.id);
+      if (panelObjectId === o.id) {
+        panelObjectId = null;
+        $('object-panel').classList.add('hidden');
+        setSelected(null);
+      }
+      reloadHouse();
+    };
+    item.append(name, ...inputs, rm);
+    list.appendChild(item);
+  }
+  if (!list.children.length) {
+    list.innerHTML = '<p class="muted">No objects in this room.</p>';
+  }
+
+  const sel = $('obj-model-select');
+  sel.innerHTML = '';
+  if (!modelsList.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '— upload models first —';
+    sel.appendChild(opt);
+    sel.disabled = true;
+    $('obj-add').disabled = true;
+  } else {
+    sel.disabled = false;
+    $('obj-add').disabled = false;
+    for (const m of modelsList) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      sel.appendChild(opt);
+    }
+  }
+}
+
+async function onAddObject() {
+  const found = findRoom(selectedRoomId);
+  const modelId = Number($('obj-model-select').value);
+  if (!found || !modelId) return;
+  const fp = found.room.footprint;
+  try {
+    const res = await api.addObject(found.room.id, {
+      model_id: modelId,
+      position: { x: +(fp.width / 2).toFixed(2), y: 0, z: +(fp.depth / 2).toFixed(2) },
+    });
+    await reloadHouse();
+    openObjectPanel(res.id); // selected right away, ready to drag into place
+  } catch (e) {
+    alert(`Could not add object: ${e.message}`);
+  }
+}
+
+// ---------------------------------------------------------------- object panel
+
+export function openObjectPanel(objectId) {
+  const found = findObjectById(objectId);
+  if (!found) return;
+  panelObjectId = objectId;
+  const { obj } = found;
+  $('op-name').textContent = obj.name || obj.model_name;
+  $('op-model').textContent = `Model: ${obj.model_name} · ${found.room.name}`;
+  $('op-x').value = obj.position.x;
+  $('op-y').value = obj.position.y;
+  $('op-z').value = obj.position.z;
+  $('op-rot').value = Math.round((obj.rot_y || 0) * 180 / Math.PI);
+  $('op-scale').value = obj.scale ?? 1;
+  $('op-rename').value = obj.name || '';
+  setSelected(objects3d.get(objectId) || null);
+  $('object-panel').classList.remove('hidden');
+}
+
+function wireObjectPanel() {
+  const patch = async (data) => {
+    if (!panelObjectId) return;
+    const keep = panelObjectId;
+    try {
+      await api.updateObject(keep, data);
+      await reloadHouse();
+      openObjectPanel(keep);
+    } catch (e) {
+      alert(`Update failed: ${e.message}`);
+    }
+  };
+  $('op-x').onchange = () => patch({ x: Number($('op-x').value) });
+  $('op-y').onchange = () => patch({ y: Number($('op-y').value) });
+  $('op-z').onchange = () => patch({ z: Number($('op-z').value) });
+  $('op-rot').onchange = () => patch({ rot_y: Number($('op-rot').value) * Math.PI / 180 });
+  $('op-scale').onchange = () => patch({ scale: Number($('op-scale').value) || 1 });
+  $('op-rename').onchange = () => patch({ name: $('op-rename').value.trim() });
+  $('op-delete').onclick = async () => {
+    if (!panelObjectId) return;
+    await api.deleteObject(panelObjectId);
+    panelObjectId = null;
+    $('object-panel').classList.add('hidden');
+    setSelected(null);
+    reloadHouse();
+  };
+  $('object-form').onsubmit = (e) => e.preventDefault();
+}
+
+// ---------------------------------------------------------------- model library
+
+async function refreshModels() {
+  try {
+    modelsList = await api.getModels();
+  } catch {
+    modelsList = [];
+  }
+  renderModelsList();
+  if (selectedRoomId) renderPlacementSection();
+}
+
+function openModelsModal() {
+  $('models-modal').classList.remove('hidden');
+  refreshModels();
+}
+
+function renderModelsList() {
+  const list = $('mm-list');
+  list.innerHTML = '';
+  for (const m of modelsList) {
+    const item = document.createElement('div');
+    item.className = 'mm-item';
+
+    const name = document.createElement('input');
+    name.className = 'name';
+    name.value = m.name;
+    name.title = 'Rename';
+    name.onchange = async () => {
+      const v = name.value.trim();
+      if (!v) { name.value = m.name; return; }
+      await api.renameModel(m.id, { name: v });
+      refreshModels();
+    };
+
+    const usage = document.createElement('span');
+    usage.className = 'muted';
+    const parts = [];
+    if (m.placement_count) parts.push(`${m.placement_count} device${m.placement_count > 1 ? 's' : ''}`);
+    if (m.object_count) parts.push(`${m.object_count} object${m.object_count > 1 ? 's' : ''}`);
+    usage.textContent = parts.join(' · ') || 'unused';
+
+    const rm = document.createElement('button');
+    rm.className = 'small danger';
+    rm.textContent = '✕';
+    rm.onclick = async () => {
+      const warn = [];
+      if (m.placement_count) warn.push(`${m.placement_count} device marker(s) revert to defaults`);
+      if (m.object_count) warn.push(`${m.object_count} placed object(s) will be removed`);
+      if (!confirm(`Delete model "${m.name}"?` +
+                   (warn.length ? `\n\n${warn.join('\n')}` : ''))) return;
+      await api.deleteModel(m.id);
+      invalidateModel(m.id);
+      await refreshModels();
+      reloadHouse();
+    };
+
+    item.append(name, usage, rm);
+    list.appendChild(item);
+  }
+  if (!list.children.length) {
+    list.innerHTML = '<p class="muted">No models yet — upload a .glb above.</p>';
+  }
+}
+
+async function onModelUpload(e) {
+  e.preventDefault();
+  const file = $('mm-file').files[0];
+  if (!file) return;
+  const btn = $('mm-upload');
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+  try {
+    await api.uploadModel(file, $('mm-name').value.trim());
+    $('mm-upload-form').reset();
+    await refreshModels();
+  } catch (err) {
+    alert(`Upload failed: ${err.message}`);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Upload';
 }

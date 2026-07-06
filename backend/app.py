@@ -27,7 +27,8 @@ def create_app():
     app = Flask(__name__, static_folder=str(config.FRONTEND_DIR),
                 static_url_path="")
     app.secret_key = config.APP_SECRET
-    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # floor-plan uploads
+    # floor-plan images and 3D model (.glb) uploads
+    app.config["MAX_CONTENT_LENGTH"] = 64 * 1024 * 1024
 
     app.extensions["ha_cache"] = HACache()
     app.extensions["house_store"] = HouseStore(config.DB_PATH)
