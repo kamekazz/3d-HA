@@ -43,7 +43,7 @@ function roomEdges(mesh) {
 function restoreLevelVisuals(level) {
   for (const mesh of roomMeshes.values()) {
     if (mesh.userData.level !== level) continue;
-    setRoomOpacity(mesh, 0.18);
+    setRoomOpacity(mesh, 1.0);
     mesh.userData.pickable = true;
     const edges = roomEdges(mesh);
     if (edges) edges.visible = true;
@@ -79,7 +79,7 @@ export function enterFocus(roomId) {
     const edges = roomEdges(sib);
     if (edges) edges.visible = false;
   }
-  setRoomOpacity(mesh, 0.3);
+  setRoomOpacity(mesh, 1.0);
   for (const marker of markers.values()) {
     if (marker.userData.level === level && marker.userData.roomId !== roomId) {
       marker.visible = false;

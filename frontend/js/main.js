@@ -89,17 +89,33 @@ function setupPicking() {
     pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
 
-    // device markers + objects first: room walls are translucent, so they must
-    // win even when a wall face sits between them and the camera (recursive:
-    // GLB groups only register through their children)
+    const hits = raycaster.intersectObjects(scene.children, true);
+
+    // nearest opaque room/stair surface: walls are solid now (dollhouse), so
+    // markers behind one are invisible and must not win the priority pass
+    // (hits are distance-sorted; edge outlines and ghost-faded walls don't
+    // hide anything)
+    let occluderDist = Infinity;
+    for (const hit of hits) {
+      if (hit.object.userData?.part === 'edges') continue;
+      const kind = ownerOf(hit.object)?.userData?.kind;
+      if ((kind === 'room' || kind === 'stairs') && isShown(hit.object)
+          && (hit.object.material?.opacity ?? 1) > 0.5) {
+        occluderDist = hit.distance;
+        break;
+      }
+    }
+
+    // device markers + objects first so they win over the room that contains
+    // them (recursive: GLB groups only register through their children)
     const priorityHits = raycaster.intersectObjects(
       [...markers.values(), ...objects3d.values()], true);
     for (const hit of priorityHits) {
+      if (hit.distance > occluderDist + 0.25) break; // hidden behind a wall
       const owner = ownerOf(hit.object);
       if (owner && isShown(hit.object)) return owner;
     }
 
-    const hits = raycaster.intersectObjects(scene.children, true);
     for (const hit of hits) {
       const owner = ownerOf(hit.object);
       const ud = owner?.userData;
@@ -115,7 +131,7 @@ function setupPicking() {
     if (!hovered) return;
     const ud = hovered.userData;
     if (ud.kind === 'room') {
-      hovered.material.opacity = ud.baseOpacity ?? 0.18;
+      hovered.material.emissiveIntensity = ud.baseEmissive ?? 0;
     } else if (ud.kind === 'device') {
       styleMarker(ud.entityId); // state-driven restore, can't desync
       hideLabel(ud.entityId); // labels are hover-only now, even in focus mode
@@ -127,7 +143,9 @@ function setupPicking() {
     hovered = obj;
     const ud = obj.userData;
     if (ud.kind === 'room') {
-      obj.material.opacity = Math.min((ud.baseOpacity ?? 0.18) + 0.1, 1);
+      // accent-tinted glow: walls are opaque now, so opacity can't signal
+      obj.material.emissive.copy(ud.accent);
+      obj.material.emissiveIntensity = (ud.baseEmissive ?? 0) + 0.15;
     } else if (ud.kind === 'device') {
       obj.scale.multiplyScalar(1.25);
       showLabel(ud.entityId);

@@ -34,7 +34,11 @@ CREATE TABLE IF NOT EXISTS rooms (
     depth REAL NOT NULL DEFAULT 10,
     height REAL NOT NULL DEFAULT 8.0,
     color TEXT NOT NULL DEFAULT '#e8e8e8',
-    points TEXT
+    points TEXT,
+    wall_color TEXT NOT NULL DEFAULT '#f2ede3',
+    floor_color TEXT NOT NULL DEFAULT '#e5decf',
+    wall_texture TEXT,
+    floor_texture TEXT
 );
 CREATE TABLE IF NOT EXISTS stairs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,7 +83,8 @@ CREATE TABLE IF NOT EXISTS objects (
 """
 
 ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height",
-               "color", "points")
+               "color", "points",
+               "wall_color", "floor_color", "wall_texture", "floor_texture")
 PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible",
                     "model_id", "rot_y", "scale")
 # Standalone furniture/decor: a library model placed in a room, no HA entity.
@@ -176,6 +181,12 @@ class HouseStore:
             " REFERENCES models(id) ON DELETE SET NULL",
             "ALTER TABLE placements ADD COLUMN rot_y REAL NOT NULL DEFAULT 0",
             "ALTER TABLE placements ADD COLUMN scale REAL NOT NULL DEFAULT 1.0",
+            "ALTER TABLE rooms ADD COLUMN wall_color TEXT NOT NULL"
+            " DEFAULT '#f2ede3'",
+            "ALTER TABLE rooms ADD COLUMN floor_color TEXT NOT NULL"
+            " DEFAULT '#e5decf'",
+            "ALTER TABLE rooms ADD COLUMN wall_texture TEXT",
+            "ALTER TABLE rooms ADD COLUMN floor_texture TEXT",
         ):
             try:
                 self._db.execute(ddl)
@@ -569,12 +580,17 @@ class HouseStore:
         with self._lock:
             cur = self._db.execute(
                 "INSERT INTO rooms (floor_id, name, ha_area_id, x, z, width, depth,"
-                " height, color, points) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                " height, color, points, wall_color, floor_color, wall_texture,"
+                " floor_texture) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (int(data["floor_id"]), data["name"], data.get("ha_area_id"),
                  x, z, width, depth,
                  float(data.get("height", 8.0)),
                  data.get("color", "#e8e8e8"),
-                 points_json))
+                 points_json,
+                 data.get("wall_color") or "#f2ede3",
+                 data.get("floor_color") or "#e5decf",
+                 data.get("wall_texture") or None,
+                 data.get("floor_texture") or None))
             self._db.commit()
             return cur.lastrowid
 

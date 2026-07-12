@@ -1,6 +1,7 @@
 // Builds floors + rooms from /api/house. Levels stack on Y, rooms on the X-Z grid.
 import * as THREE from 'three';
 import { scene, focusOn } from './scene.js';
+import { getTiledTexture, textureSize } from './textures.js';
 
 export const floorGroups = new Map();  // level -> THREE.Group
 export const roomMeshes = new Map();   // roomId -> mesh
@@ -92,20 +93,60 @@ function buildStairs(st, floor, upperLevel, baseY) {
   return group;
 }
 
+// BoxGeometry UVs run 0..1 per face; stretch them to world feet so a wall
+// texture tiles at its preset ft-per-repeat regardless of room size. Faces
+// come in the fixed order +X,-X,+Y,-Y,+Z,-Z, 4 vertices each.
+function worldScaleBoxUVs(geo, w, h, d) {
+  const dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+  const uv = geo.attributes.uv;
+  for (let face = 0; face < 6; face++) {
+    const [su, sv] = dims[face];
+    for (let i = face * 4; i < face * 4 + 4; i++) {
+      uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
+    }
+  }
+  uv.needsUpdate = true;
+}
+
 function buildRoom(room, floor) {
   const fp = room.footprint;
-  const color = new THREE.Color(room.color || '#8fa8bf');
+  const isPoly = fp.points && fp.points.length >= 3;
+  // room.color is the accent (edge outlines here, fill in the 2D planner);
+  // wall/floor surfaces have their own color + optional preset texture
+  const accent = new THREE.Color(room.color || '#8fa8bf');
+
+  // Polygon geometry (Extrude/Shape) has UVs in shape coords = world feet,
+  // so one repeat per `size` ft means repeat 1/size; rect geometry has 0..1
+  // UVs, scaled to feet below (box) or via repeat = dims/size (plane slab).
+  const ws = textureSize(room.wall_texture);
+  const wallTex = getTiledTexture(room.wall_texture, 1 / ws, 1 / ws);
+  const fs = textureSize(room.floor_texture);
+  const floorTex = isPoly
+    ? getTiledTexture(room.floor_texture, 1 / fs, 1 / fs)
+    : getTiledTexture(room.floor_texture, fp.width / fs, fp.depth / fs);
+
+  // Dollhouse walls: BackSide culls camera-facing walls so the view always
+  // reaches into the room; far walls show their interior face opaque.
+  // transparent stays true so focus-mode ghost fades don't recompile the
+  // shader; polygonOffset pushes wall triangles back so the slab and the
+  // accent edge lines win the depth fight against the coincident wall caps.
   const wallsMat = new THREE.MeshStandardMaterial({
-    color, transparent: true, opacity: 0.18,
-    side: THREE.DoubleSide, depthWrite: false,
+    color: new THREE.Color(room.wall_color || '#f2ede3'),
+    map: wallTex,
+    transparent: true, opacity: 1.0,
+    side: THREE.BackSide, depthWrite: true, roughness: 0.95,
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
   });
+  // Must stay MeshStandardMaterial on a child with userData.part === 'slab':
+  // roomlights.js drives its emissive for the night glow.
   const slabMat = new THREE.MeshStandardMaterial({
-    color: color.clone().multiplyScalar(0.55), roughness: 0.9,
-    transparent: true, opacity: 0.85,
+    color: new THREE.Color(room.floor_color || '#e5decf'),
+    map: floorTex, roughness: 0.9,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
   });
 
   let walls, slab;
-  if (fp.points && fp.points.length >= 3) {
+  if (isPoly) {
     // polygon footprint: Shape lives in XY, so map (x, z) -> (x, -z); after
     // rotateX(-PI/2) the extrusion (+shape Z) rises along +Y and shape Y maps
     // back onto +Z, putting the footprint flat on the XZ plane
@@ -123,8 +164,9 @@ function buildRoom(room, floor) {
     slab = new THREE.Mesh(slabGeo, slabMat);
     slab.position.y = 0.01;
   } else {
-    walls = new THREE.Mesh(
-      new THREE.BoxGeometry(fp.width, room.height, fp.depth), wallsMat);
+    const boxGeo = new THREE.BoxGeometry(fp.width, room.height, fp.depth);
+    if (wallTex) worldScaleBoxUVs(boxGeo, fp.width, room.height, fp.depth);
+    walls = new THREE.Mesh(boxGeo, wallsMat);
     walls.position.set(fp.x + fp.width / 2, room.height / 2, fp.z + fp.depth / 2);
 
     slab = new THREE.Mesh(new THREE.PlaneGeometry(fp.width, fp.depth), slabMat);
@@ -135,12 +177,12 @@ function buildRoom(room, floor) {
   walls.userData = {
     kind: 'room', roomId: room.id, roomName: room.name,
     haAreaId: room.ha_area_id, level: floor.level,
-    baseOpacity: 0.18,
+    baseOpacity: 1.0, baseEmissive: 0, accent,
   };
 
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(walls.geometry),
-    new THREE.LineBasicMaterial({ color: color.clone().multiplyScalar(1.4) }));
+    new THREE.LineBasicMaterial({ color: accent.clone().multiplyScalar(1.4) }));
   edges.userData.part = 'edges';
   walls.add(edges);
 
@@ -164,16 +206,26 @@ export function getLevel() {
   return currentLevel;
 }
 
-// Single writer for room wall opacity: keeps userData.baseOpacity in sync so
-// hover (which brightens then restores baseOpacity) never clobbers the
-// editor highlight or focus-mode fades.
+// Single writer for room wall opacity (used by focus-mode fades): keeps
+// userData.baseOpacity in sync, and drops depthWrite on nearly-invisible
+// ghost walls so they don't occlude the focused room.
 export function setRoomOpacity(mesh, value) {
   mesh.material.opacity = value;
+  mesh.material.depthWrite = value > 0.5;
   mesh.userData.baseOpacity = value;
+}
+
+// Single writer for the accent-tinted glow that marks hover/selection now
+// that walls are opaque (opacity can't signal anymore). Hover reads
+// userData.baseEmissive to restore, mirroring the baseOpacity pattern.
+export function setRoomEmissive(mesh, intensity) {
+  mesh.material.emissive.copy(mesh.userData.accent);
+  mesh.material.emissiveIntensity = intensity;
+  mesh.userData.baseEmissive = intensity;
 }
 
 export function highlightRoom(roomId) {
   for (const [id, mesh] of roomMeshes) {
-    setRoomOpacity(mesh, id === roomId ? 0.38 : 0.18);
+    setRoomEmissive(mesh, id === roomId ? 0.35 : 0);
   }
 }

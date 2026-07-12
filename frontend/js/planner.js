@@ -4,6 +4,7 @@
 // the 3D scene is rebuilt once, when the planner closes.
 import { api } from './api.js';
 import { getLevel } from './house.js';
+import { fillTextureSelect } from './textures.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -212,6 +213,12 @@ async function persistRoom(room) {
     floor_id: room.floor_id,
     height: room.height,
     color: room.color,
+    // full payload per gesture: omitting these would revert appearance edits
+    // on the next drag (undefined keys are fine — JSON drops them)
+    wall_color: room.wall_color,
+    wall_texture: room.wall_texture || null,
+    floor_color: room.floor_color,
+    floor_texture: room.floor_texture || null,
     footprint: {
       x: round2(bb.minX), z: round2(bb.minZ),
       width: round2(bb.w), depth: round2(bb.h),
@@ -874,6 +881,10 @@ function updatePropsPanel() {
     $('pl-area').value = room.ha_area_id || '';
     $('pl-color').value = room.color || '#8fa8bf';
     $('pl-height').value = room.height;
+    $('pl-wall-color').value = room.wall_color || '#f2ede3';
+    $('pl-wall-tex').value = room.wall_texture || '';
+    $('pl-floor-color').value = room.floor_color || '#e5decf';
+    $('pl-floor-tex').value = room.floor_texture || '';
   }
   const st = selectedStair();
   const spanel = $('pl-sprops');
@@ -1089,6 +1100,8 @@ export function initPlanner({ getStructure: gs, onClose }) {
   });
 
   // properties panel — persist on change
+  fillTextureSelect($('pl-wall-tex'));
+  fillTextureSelect($('pl-floor-tex'));
   const roomPatch = (apply) => async () => {
     const room = selectedRoom();
     if (!room) return;
@@ -1102,6 +1115,10 @@ export function initPlanner({ getStructure: gs, onClose }) {
   $('pl-height').onchange = roomPatch((r) => {
     r.height = Math.max(1, Number($('pl-height').value) || r.height);
   });
+  $('pl-wall-color').onchange = roomPatch((r) => { r.wall_color = $('pl-wall-color').value; });
+  $('pl-wall-tex').onchange = roomPatch((r) => { r.wall_texture = $('pl-wall-tex').value || null; });
+  $('pl-floor-color').onchange = roomPatch((r) => { r.floor_color = $('pl-floor-color').value; });
+  $('pl-floor-tex').onchange = roomPatch((r) => { r.floor_texture = $('pl-floor-tex').value || null; });
   $('pl-rect').onclick = roomPatch((r) => {
     const bb = bboxOf(r._poly);
     r._poly = [[bb.minX, bb.minZ], [bb.minX + bb.w, bb.minZ],

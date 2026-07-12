@@ -8,6 +8,7 @@ import { markers } from './devices.js';
 import { objects3d } from './objects.js';
 import { setSelected, onDragMoved } from './drag.js';
 import { invalidateModel } from './models.js';
+import { fillTextureSelect } from './textures.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -74,6 +75,8 @@ export function initUI({ structure: s, house: h, onReload }) {
   buildLevelButtons();
   fillFloorSelect();
   fillAreaSelect();
+  fillTextureSelect($('rf-wall-tex'));
+  fillTextureSelect($('rf-floor-tex'));
   renderRoomList();
 
   $('btn-editor').onclick = () => $('editor').classList.toggle('hidden');
@@ -397,6 +400,10 @@ export function selectRoom(roomId) {
   $('rf-x').value = room.footprint.x;
   $('rf-z').value = room.footprint.z;
   $('rf-color').value = room.color || '#8fa8bf';
+  $('rf-wall-color').value = room.wall_color || '#f2ede3';
+  $('rf-wall-tex').value = room.wall_texture || '';
+  $('rf-floor-color').value = room.floor_color || '#e5decf';
+  $('rf-floor-tex').value = room.floor_texture || '';
   $('rf-save').textContent = 'Update room';
   $('rf-cancel').classList.remove('hidden');
 
@@ -412,6 +419,8 @@ function resetRoomForm() {
   $('rf-id').value = '';
   $('rf-width').value = 13; $('rf-depth').value = 10; $('rf-height').value = 8;
   $('rf-x').value = 0; $('rf-z').value = 0; $('rf-color').value = '#8fa8bf';
+  $('rf-wall-color').value = '#f2ede3'; $('rf-wall-tex').value = '';
+  $('rf-floor-color').value = '#e5decf'; $('rf-floor-tex').value = '';
   $('rf-save').textContent = 'Save room';
   $('rf-cancel').classList.add('hidden');
   $('placement-section').classList.add('hidden');
@@ -432,6 +441,10 @@ async function onRoomFormSubmit(e) {
     },
     height: Number($('rf-height').value),
     color: $('rf-color').value,
+    wall_color: $('rf-wall-color').value,
+    wall_texture: $('rf-wall-tex').value || null,
+    floor_color: $('rf-floor-color').value,
+    floor_texture: $('rf-floor-tex').value || null,
   };
   const id = $('rf-id').value;
   try {

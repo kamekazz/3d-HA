@@ -130,7 +130,15 @@
       <div class="row3">
         <label>X <input id="rf-x" type="number" step="0.1" value="0"></label>
         <label>Z <input id="rf-z" type="number" step="0.1" value="0"></label>
-        <label>Color <input id="rf-color" type="color" value="#8fa8bf"></label>
+        <label title="Edge outlines in 3D and the room's fill in the 2D planner">Accent <input id="rf-color" type="color" value="#8fa8bf"></label>
+      </div>
+      <div class="row3">
+        <label>Wall color <input id="rf-wall-color" type="color" value="#f2ede3"></label>
+        <label>Wall texture <select id="rf-wall-tex"></select></label>
+      </div>
+      <div class="row3">
+        <label>Floor color <input id="rf-floor-color" type="color" value="#e5decf"></label>
+        <label>Floor texture <select id="rf-floor-tex"></select></label>
       </div>
       <div class="btn-row">
         <button type="submit" id="rf-save">Save room</button>
@@ -199,8 +207,16 @@
       <label>Name <input id="pl-name"></label>
       <label>HA area <select id="pl-area"><option value="">— no HA area —</option></select></label>
       <div class="row3">
-        <label>Color <input id="pl-color" type="color"></label>
+        <label title="Edge outlines in 3D and the room's fill in this planner">Accent <input id="pl-color" type="color"></label>
         <label>Height (ft) <input id="pl-height" type="number" step="0.5" min="3"></label>
+      </div>
+      <div class="row3">
+        <label>Wall color <input id="pl-wall-color" type="color"></label>
+        <label>Wall texture <select id="pl-wall-tex"></select></label>
+      </div>
+      <div class="row3">
+        <label>Floor color <input id="pl-floor-color" type="color"></label>
+        <label>Floor texture <select id="pl-floor-tex"></select></label>
       </div>
       <div class="btn-row">
         <button id="pl-rect" type="button" class="secondary" title="Replace the shape with its bounding rectangle">Make rectangular</button>

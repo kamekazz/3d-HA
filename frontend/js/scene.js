@@ -28,8 +28,9 @@ export function initScene(container) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   // filmic tone mapping so the daylight ramp (bright noon → dim night) rolls
-  // off instead of clipping; no shadow maps — the translucent double-sided
-  // walls (opacity 0.18, depthWrite off) turn them into acne
+  // off instead of clipping; no shadow maps — the BackSide dollhouse walls
+  // (camera-facing faces culled) would cast broken shadows, and enabling
+  // shadows would recompile every MeshStandard shader
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
   container.appendChild(renderer.domElement);
