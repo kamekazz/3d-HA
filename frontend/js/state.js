@@ -13,6 +13,10 @@ export function getState(entityId) {
   return states.get(entityId);
 }
 
+export function findEntities(prefix) {
+  return [...states.keys()].filter((id) => id.startsWith(prefix)).sort();
+}
+
 export function onStateApplied(fn) {
   listeners.add(fn);
 }

@@ -3,10 +3,16 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export let scene, camera, renderer, controls;
+export let hemiLight, sunLight; // driven live by daylight.js (sun/weather)
 
 export const MIN_ZOOM = 10, MAX_ZOOM = 300;
 let zoomTarget = 0; // desired camera↔target distance; eased toward each frame
 let poseGoal = null; // {position, target} being flown to; suspends the zoom easing
+
+// per-frame callbacks (fn(dt)) — lets daylight.js/roomlights.js animate
+// without importing into the render loop and creating a module cycle
+const frameCallbacks = new Set();
+export function onFrame(fn) { frameCallbacks.add(fn); }
 
 export function initScene(container) {
   scene = new THREE.Scene();
@@ -21,6 +27,11 @@ export function initScene(container) {
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
+  // filmic tone mapping so the daylight ramp (bright noon → dim night) rolls
+  // off instead of clipping; no shadow maps — the translucent double-sided
+  // walls (opacity 0.18, depthWrite off) turn them into acne
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
   container.appendChild(renderer.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
@@ -42,10 +53,11 @@ export function initScene(container) {
     zoomTarget = THREE.MathUtils.clamp(zoomTarget * Math.pow(1.001, px), MIN_ZOOM, MAX_ZOOM);
   }, { passive: false });
 
-  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x30363f, 1.0));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-  sun.position.set(60, 90, 36);
-  scene.add(sun);
+  hemiLight = new THREE.HemisphereLight(0xdfe8ff, 0x30363f, 1.0);
+  scene.add(hemiLight);
+  sunLight = new THREE.DirectionalLight(0xffffff, 1.4);
+  sunLight.position.set(60, 90, 36);
+  scene.add(sunLight);
 
   // 1 ft grid cells — the world unit is one foot
   const grid = new THREE.GridHelper(200, 200, 0x2a3340, 0x1c232d);
@@ -65,7 +77,10 @@ export function initScene(container) {
     renderer.setSize(container.clientWidth, container.clientHeight);
   });
 
+  const clock = new THREE.Clock();
   renderer.setAnimationLoop(() => {
+    const dt = clock.getDelta();
+    for (const fn of frameCallbacks) fn(dt);
     if (poseGoal) {
       // fly-to tween: drive camera + target ourselves; controls are disabled so
       // damping momentum can't fight the flight path
@@ -94,7 +109,7 @@ export function initScene(container) {
   });
 
   // debug handle (console): inspect the scene / renderer stats
-  window.__scene3d = { scene, camera, renderer, controls };
+  window.__scene3d = { scene, camera, renderer, controls, hemiLight, sunLight };
 }
 
 export function focusOn(x, y, z) {

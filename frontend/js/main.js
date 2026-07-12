@@ -13,6 +13,8 @@ import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, openObj
 import { initDrag } from './drag.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
+import { initDaylight } from './daylight.js';
+import { initRoomLights, setRoomLightsData } from './roomlights.js';
 
 let structure = null;
 
@@ -43,6 +45,7 @@ async function reloadHouse() {
   buildDevices(house);
   buildObjects(house);
   buildLabels(house);
+  setRoomLightsData({ house, structure }); // fresh slab materials — repoint glow
   await loadStates();
   updateData({ structure, house });
   updateRoomPanelData(house);
@@ -216,6 +219,7 @@ function setupPicking() {
 
 async function main() {
   initScene(document.getElementById('scene-container'));
+  initDaylight();
   setupPicking();
 
   await loadStructure();
@@ -229,6 +233,8 @@ async function main() {
   initUI({ structure, house, onReload: reloadHouse });
   initRoomPanel({ house });
   initPlanner({ getStructure: () => structure, onClose: reloadHouse });
+  initRoomLights();
+  setRoomLightsData({ house, structure });
   await loadStates();
   updateData({ structure, house });
 
@@ -249,6 +255,7 @@ async function main() {
           clearInterval(retry);
           const h = await api.getHouse();
           updateData({ structure, house: h });
+          setRoomLightsData({ house: h, structure }); // map area-level lights
         }
       }, 5000);
     }

@@ -150,6 +150,23 @@ house, PATCHes per gesture through the normal room endpoints, and triggers exact
 when closed. `demo/seed_demo.py` + `demo/demo_layout.json` seed this instance's real layout (traced
 from the screenshots in `demo/`) — idempotent keyed upserts, re-runnable.
 
+**Dynamic lighting** follows Home Assistant's sun and weather — frontend-only, no backend changes.
+`frontend/js/daylight.js` reads `sun.sun` (`elevation`/`azimuth`) and the first `weather.*` entity
+(via `state.js findEntities`), maps elevation through a keyframe ramp (night/dusk/golden/day) and
+the weather condition through a dim/desaturate table, and eases `scene.js`'s exported
+`sunLight`/`hemiLight` plus background+fog color toward the target each frame (~1s settle;
+`onFrame(fn)` tick registry in scene.js — fog near must stay > controls.maxDistance 300; HA azimuth
+0=N maps to scene north = −Z). Renderer uses ACESFilmic tone mapping; shadows stay off (translucent
+walls). Topbar `☀ auto` button cycles auto/day/night (persisted in `localStorage['3dha.lightMode']`);
+`window.__daylight.simulate({elevation, azimuth, condition})` fakes states for testing,
+`simulate(null)` reverts. `frontend/js/roomlights.js` makes rooms glow at night when their HA
+`light.*` entities are on (placed devices ∪ the linked HA area's lights): slab emissive tint per lit
+room, plus a **fixed pool of 6 PointLights** (never added/removed — changing the scene's light count
+recompiles every MeshStandard shader; only intensities animate, scaled by `getNightFactor()`).
+When >6 rooms are lit, the ones nearest `controls.target` on visible levels win.
+`setRoomLightsData({house, structure})` must be re-called after every house rebuild
+(`main.js reloadHouse`) because slabs get fresh materials.
+
 **Frontend module layout** (`frontend/js/`, loaded as native ES modules, Three.js via CDN
 importmap — no npm/bundler):
 - `main.js` — bootstraps: loads HA structure + house layout, builds the scene, wires picking
@@ -161,6 +178,8 @@ importmap — no npm/bundler):
 - `state.js` — live entity-state store; restyles markers on state change (color/emissive/scale
   encode on/off/unavailable).
 - `socket.js` — SocketIO client wrapper with polling fallback.
+- `daylight.js` — sun/weather-driven scene lighting (see Dynamic lighting above).
+- `roomlights.js` — per-room night glow for HA lights that are on.
 - `ui.js` — room editor panel, device detail/control panel, level selector, connection banner.
 - `planner.js` — the 2D per-floor floor-plan editor (canvas overlay, feet grid, polygon editing,
   plan-image tracing).
