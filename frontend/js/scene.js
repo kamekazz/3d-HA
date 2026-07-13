@@ -6,7 +6,11 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 export let scene, camera, renderer, controls;
 export let hemiLight, sunLight; // driven live by daylight.js (sun/weather)
 
-export const MIN_ZOOM = 10, MAX_ZOOM = 300;
+export const MIN_ZOOM = 10;
+// Drops to the opening-shot distance once the house is framed (frameInitialView)
+// so you can never zoom out past the initial view. `let` on purpose — importers
+// (focus.js) track the live binding.
+export let MAX_ZOOM = 300;
 let zoomTarget = 0; // desired camera↔target distance; eased toward each frame
 let poseGoal = null; // {position, target} being flown to; suspends the zoom easing
 
@@ -155,17 +159,24 @@ export function focusOn(x, y, z) {
   zoomTarget = camera.position.distanceTo(controls.target);
 }
 
-// One-time opening shot: frame the whole house from the front (+X/+Z) at a low
-// angle, aimed above mid-height so the house sits toward the bottom of the view.
+// One-time opening shot: a near-eye-level curb view from out front — camera
+// pitched down just 3° so the roofline breaks the horizon, aimed above
+// mid-height so the house sits in the lower half of the frame with sky above.
+// The front of this house faces ~+Z; azimuth is offset slightly left of
+// face-on so the facade reads in 3D instead of flat. Also locks zoom-out to
+// this distance: the opening shot is the farthest view.
 export function frameInitialView(cx, cz, spanX, spanZ, topY) {
-  const dist = THREE.MathUtils.clamp(Math.hypot(spanX, spanZ) * 1.35, 60, MAX_ZOOM);
-  const elev = THREE.MathUtils.degToRad(26);
-  const ty = topY * 0.6;
+  const dist = THREE.MathUtils.clamp(Math.hypot(spanX, spanZ) * 1.03, 60, MAX_ZOOM);
+  const elev = THREE.MathUtils.degToRad(3);
+  const az = THREE.MathUtils.degToRad(-10);
+  const ty = topY * 0.58;
   controls.target.set(cx, ty, cz);
-  const h = dist * Math.cos(elev) / Math.SQRT2;
-  camera.position.set(cx + h, ty + dist * Math.sin(elev), cz + h);
+  const h = dist * Math.cos(elev);
+  camera.position.set(cx + Math.sin(az) * h, ty + dist * Math.sin(elev), cz + Math.cos(az) * h);
   camera.lookAt(controls.target);
   zoomTarget = dist;
+  MAX_ZOOM = dist;
+  controls.maxDistance = dist;
 }
 
 // Smoothly fly the camera to a new pose (eased in the render loop above).
