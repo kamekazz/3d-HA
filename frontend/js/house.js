@@ -250,9 +250,10 @@ function buildRoom(room, floor) {
   };
 
   const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(walls.geometry),
+    new THREE.EdgesGeometry(slabGeo),
     new THREE.LineBasicMaterial({ color: accent.clone().multiplyScalar(1.4) }));
   edges.userData.part = 'edges';
+  edges.position.y = 0.01;
   walls.add(edges);
 
   slab.userData.part = 'slab';
