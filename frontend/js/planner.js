@@ -28,6 +28,7 @@ let selectedRoomId = null;
 let selectedStairId = null;
 let selectedVertex = null; // vertex index in the selected room's polygon
 let drag = null;           // transient gesture state
+let lastPointerDownTime = 0; // manual double-click tracking
 let spaceHeld = false;
 let view = { x: -5, z: -5, pxPerFt: 14 }; // world coords of top-left + zoom
 
@@ -179,7 +180,7 @@ function renderStatus(cursor) {
   else if (mode === 'draw') parts.push('Drag to draw a room · Esc to cancel');
   else if (mode === 'draw-stairs') parts.push('Drag out the stairwell — stairs connect down to the floor below · Esc to cancel');
   else if (selectedStair()) parts.push('Drag to move · corners resize · arrow select sets which way they go up · Del removes');
-  else if (selectedRoom()) parts.push('Drag corners/edges to reshape · Alt+click an edge to add a corner · Del removes a corner');
+  else if (selectedRoom()) parts.push('Drag corners/edges to reshape · Dbl-click an edge to add a corner · Dbl-click or Del a corner to remove');
   else parts.push('Click a room to edit · "+ Draw room" to add one · drag to pan, wheel to zoom');
   $('pl-status').textContent = parts.join('  ·  ');
 }
@@ -531,6 +532,9 @@ function hitTest(w) {
 
 function onPointerDown(e) {
   if (!isOpen) return;
+  const now = Date.now();
+  const isDblClick = (now - lastPointerDownTime < 400);
+  lastPointerDownTime = now;
   try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic event */ }
   const rect = canvas.getBoundingClientRect();
   const px = e.clientX - rect.left, py = e.clientY - rect.top;
@@ -567,15 +571,41 @@ function onPointerDown(e) {
              orig: { ...hit.st }, startW: w, moved: false };
     redraw();
   } else if (hit?.kind === 'vertex') {
+    if (isDblClick && hit.room._poly.length > 3) {
+      const room = hit.room;
+      const before = room._poly.map((p) => [...p]);
+      room._poly.splice(hit.i, 1);
+      selectedVertex = null;
+      if (isSelfIntersecting(room._poly)) {
+        room._poly = before;
+        setStatus('Removing that corner would make edges cross.');
+      } else {
+        persistRoom(room).catch(console.error);
+      }
+      redraw();
+      return;
+    }
     selectedVertex = hit.i;
     drag = { type: 'vertex', room: hit.room, i: hit.i,
              before: hit.room._poly.map((p) => [...p]), moved: false };
   } else if (hit?.kind === 'edge') {
+    if (isDblClick) {
+      const room = hit.room;
+      drag = { type: 'vertex', room, i: hit.i + 1,
+               before: room._poly.map((p) => [...p]), moved: true };
+      const [ax, az] = room._poly[hit.i];
+      const [bx, bz] = room._poly[(hit.i + 1) % room._poly.length];
+      room._poly.splice(hit.i + 1, 0,
+        [snap((ax + bx)/2, e.shiftKey), snap((az + bz)/2, e.shiftKey)]);
+      selectedVertex = hit.i + 1;
+      redraw();
+      return;
+    }
     drag = { type: 'edge', room: hit.room, i: hit.i,
              before: hit.room._poly.map((p) => [...p]),
              orig: hit.room._poly.map((p) => [...p]),
              startW: w, moved: false };
-  } else if (hit?.kind === 'segment' && e.altKey) {
+  } else if (hit?.kind === 'segment' && (e.altKey || isDblClick)) {
     // insert a vertex on the edge and start dragging it
     const room = hit.room;
     drag = { type: 'vertex', room, i: hit.i + 1,
