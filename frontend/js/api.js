@@ -76,6 +76,9 @@ export const api = {
   placeDevice: (roomId, data) => post(`/api/house/room/${roomId}/device`, data),
   updatePlacement: (id, data) => patch(`/api/house/device/${id}`, data),
   deletePlacement: (id) => del(`/api/house/device/${id}`),
+  createOpening: (roomId, data) => post(`/api/house/room/${roomId}/opening`, data),
+  updateOpening: (id, data) => patch(`/api/house/opening/${id}`, data),
+  deleteOpening: (id) => del(`/api/house/opening/${id}`),
 
   getModels: () => get('/api/house/models'),
   uploadModel: async (file, name) => {

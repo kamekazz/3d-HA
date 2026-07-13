@@ -80,6 +80,17 @@ CREATE TABLE IF NOT EXISTS objects (
     rot_y REAL NOT NULL DEFAULT 0,
     scale REAL NOT NULL DEFAULT 1.0
 );
+CREATE TABLE IF NOT EXISTS openings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    room_id INTEGER NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    type TEXT NOT NULL DEFAULT 'door',
+    edge_index INTEGER NOT NULL,
+    offset REAL NOT NULL DEFAULT 0,
+    width REAL NOT NULL DEFAULT 3.0,
+    height REAL NOT NULL DEFAULT 7.0,
+    elevation REAL NOT NULL DEFAULT 0,
+    entity_id TEXT
+);
 """
 
 ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height",
@@ -89,6 +100,7 @@ PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible",
                     "model_id", "rot_y", "scale")
 # Standalone furniture/decor: a library model placed in a room, no HA entity.
 OBJECT_FIELDS = ("name", "model_id", "x", "y", "z", "rot_y", "scale")
+OPENING_FIELDS = ("type", "edge_index", "offset", "width", "height", "elevation", "entity_id")
 MODEL_FIELDS = ("name",)
 # stairs.floor_id is the LOWER of the two floors they connect; they rise that
 # floor's full floor_height. direction = which way they ascend on the plan.
@@ -98,7 +110,7 @@ STAIR_DIRECTIONS = ("n", "s", "e", "w")
 # Tables covered by undo/redo snapshots, in parent -> child FK order.
 # `models` is deliberately excluded: model upload/delete manage files on disk
 # and are not undoable; restores null/drop references to vanished models.
-HISTORY_TABLES = ("floors", "rooms", "stairs", "placements", "objects")
+HISTORY_TABLES = ("floors", "rooms", "stairs", "placements", "objects", "openings")
 
 # Defaults for rooms generated from HA areas (editable afterwards). Feet.
 GEN_ROOM = {"width": 16.0, "depth": 13.0, "height": 8.0, "gap": 3.0}
@@ -230,6 +242,7 @@ class HouseStore:
             objects = self._rows(
                 "SELECT o.*, m.name AS model_name FROM objects o"
                 " JOIN models m ON m.id = o.model_id ORDER BY o.id")
+            openings = self._rows("SELECT * FROM openings ORDER BY id")
 
         rooms_by_floor = {}
         for room in rooms:
@@ -240,6 +253,7 @@ class HouseStore:
             del room["points"]  # footprint is the API surface for geometry
             room["devices"] = []
             room["objects"] = []
+            room["openings"] = []
             rooms_by_floor.setdefault(room["floor_id"], []).append(room)
         room_by_id = {r["id"]: r for r in rooms}
         for p in placements:
@@ -260,6 +274,19 @@ class HouseStore:
                     "model_name": o["model_name"], "name": o["name"],
                     "rot_y": o["rot_y"], "scale": o["scale"],
                     "position": {"x": o["x"], "y": o["y"], "z": o["z"]},
+                })
+        for op in openings:
+            room = room_by_id.get(op["room_id"])
+            if room:
+                room["openings"].append({
+                    "id": op["id"],
+                    "type": op["type"],
+                    "edge_index": op["edge_index"],
+                    "offset": op["offset"],
+                    "width": op["width"],
+                    "height": op["height"],
+                    "elevation": op["elevation"],
+                    "entity_id": op["entity_id"],
                 })
         stairs_by_floor = {}
         for st in stairs:
@@ -851,3 +878,38 @@ class HouseStore:
                                    (object_id,))
             self._db.commit()
             return cur.rowcount > 0
+
+    # ---- openings (doors and windows) ----------------------------------------
+
+    def add_opening(self, room_id, data):
+        with self._lock:
+            if not self._db.execute("SELECT 1 FROM rooms WHERE id=?", (room_id,)).fetchone():
+                return None
+            cur = self._db.execute(
+                "INSERT INTO openings (room_id, type, edge_index, offset, width, height, elevation, entity_id)"
+                " VALUES (?,?,?,?,?,?,?,?)",
+                (room_id, data.get("type", "door"), int(data["edge_index"]), float(data.get("offset", 0)),
+                 float(data.get("width", 3.0)), float(data.get("height", 7.0)),
+                 float(data.get("elevation", 0.0)), data.get("entity_id"))
+            )
+            self._db.commit()
+            return cur.lastrowid
+
+    def update_opening(self, opening_id, data):
+        allowed = {k: data[k] for k in OPENING_FIELDS if k in data}
+        if not allowed:
+            return False
+        sets = ", ".join(f"{k}=?" for k in allowed)
+        with self._lock:
+            cur = self._db.execute(
+                f"UPDATE openings SET {sets} WHERE id=?",
+                (*allowed.values(), opening_id))
+            self._db.commit()
+            return cur.rowcount > 0
+
+    def delete_opening(self, opening_id):
+        with self._lock:
+            cur = self._db.execute("DELETE FROM openings WHERE id=?", (opening_id,))
+            self._db.commit()
+            return cur.rowcount > 0
+

@@ -26,6 +26,7 @@ let activeFloorId = null;
 let mode = 'select';       // 'select' | 'draw' | 'draw-stairs'
 let selectedRoomId = null;
 let selectedStairId = null;
+let selectedOpeningId = null;
 let selectedVertex = null; // vertex index in the selected room's polygon
 let drag = null;           // transient gesture state
 let lastPointerDownTime = 0; // manual double-click tracking
@@ -61,6 +62,12 @@ function activeRooms() {
 }
 function selectedRoom() {
   return activeRooms().find((r) => r.id === selectedRoomId) || null;
+}
+
+function selectedOpening() {
+  const room = selectedRoom();
+  if (!room || !room.openings) return null;
+  return room.openings.find(o => o.id === selectedOpeningId) || null;
 }
 
 function floorBelowActive() {
@@ -243,6 +250,29 @@ async function persistRoom(room) {
   }
 }
 
+async function persistOpening(op, roomId) {
+  const payload = {
+    type: op.type,
+    edge_index: op.edge_index,
+    offset: round2(op.offset),
+    width: round2(op.width),
+    height: round2(op.height),
+    elevation: round2(op.elevation),
+    entity_id: op.entity_id || null,
+  };
+  try {
+    if (op.id) {
+      await api.updateOpening(op.id, payload);
+    } else {
+      const res = await api.createOpening(roomId, payload);
+      op.id = res.id;
+    }
+    setStatus('');
+  } catch (err) {
+    setStatus(`Save failed: ${err.message}`);
+  }
+}
+
 // ------------------------------------------------------------------ drawing
 
 function resizeCanvas() {
@@ -329,6 +359,36 @@ function drawRoom(room, isSel) {
     ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
     ctx.fillStyle = pointInPolygon([wx, wz], pts) ? '#4a9eff' : '#d64545';
     ctx.fill();
+  }
+
+  // openings
+  for (const op of room.openings || []) {
+    const isOpSel = selectedOpeningId === op.id;
+    const ax = pts[op.edge_index][0], az = pts[op.edge_index][1];
+    const bx = pts[(op.edge_index + 1) % pts.length][0], bz = pts[(op.edge_index + 1) % pts.length][1];
+    const dx = bx - ax, dz = bz - az;
+    const len = Math.hypot(dx, dz);
+    if (len < 0.01) continue;
+    const u = [dx / len, dz / len];
+    
+    // clamp offset
+    let off = op.offset;
+    if (off < 0) off = 0;
+    if (off + op.width > len) off = Math.max(0, len - op.width);
+    op._rendered_offset = off;
+    
+    const sx = ax + u[0] * off, sz = az + u[1] * off;
+    const ex = ax + u[0] * (off + op.width), ez = az + u[1] * (off + op.width);
+    
+    const p1 = worldToScreen(sx, sz);
+    const p2 = worldToScreen(ex, ez);
+    
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.lineWidth = isOpSel ? 5 : 3;
+    ctx.strokeStyle = op.type === 'window' ? '#4fd1c5' : '#ed8936';
+    ctx.stroke();
   }
 
   if (!isSel) return;
@@ -509,7 +569,20 @@ function hitTest(w) {
     }
     for (let i = 0; i < pts.length; i++) { // then edge bodies (for Alt+insert)
       const hit = distToSegment([w.x, w.z], pts[i], pts[(i + 1) % pts.length]);
-      if (hit.d <= tol) return { kind: 'segment', room: sel, i, at: hit };
+      if (hit.d <= tol) {
+        // check if hit an opening first
+        const len = Math.hypot(pts[(i + 1) % pts.length][0] - pts[i][0], pts[(i + 1) % pts.length][1] - pts[i][1]);
+        const off = hit.t * len;
+        for (const op of sel.openings || []) {
+          if (op.edge_index === i) {
+            const ro = op._rendered_offset ?? op.offset;
+            if (off >= ro && off <= ro + op.width) {
+              return { kind: 'opening', room: sel, op, off, hitOffset: off - ro };
+            }
+          }
+        }
+        return { kind: 'segment', room: sel, i, at: hit, len, t: hit.t };
+      }
     }
   }
   // stairs sit on top of rooms, so test them first
@@ -552,6 +625,38 @@ function onPointerDown(e) {
              ax, az, bx: ax, bz: az, moved: false };
     return;
   }
+  
+  if (mode === 'draw-door' || mode === 'draw-window') {
+    const hit = hitTest(w);
+    if (hit?.kind === 'segment' || hit?.kind === 'edge') {
+      const isWindow = mode === 'draw-window';
+      const op = {
+        id: null,
+        type: isWindow ? 'window' : 'door',
+        edge_index: hit.i,
+        offset: Math.max(0, hit.at ? (hit.at.t * hit.len - 1.5) : 0),
+        width: 3,
+        height: isWindow ? 4 : 7,
+        elevation: isWindow ? 3 : 0,
+        entity_id: null
+      };
+      (hit.room.openings ||= []).push(op);
+      mode = 'select';
+      $('pl-door').classList.remove('active');
+      $('pl-window').classList.remove('active');
+      canvas.style.cursor = '';
+      selectedRoomId = hit.room.id;
+      persistOpening(op, hit.room.id).then(() => {
+        selectedOpeningId = op.id;
+        updatePropsPanel();
+        redraw();
+      });
+      redraw();
+    } else {
+      setStatus('Click on a room edge to add a ' + (mode === 'draw-window' ? 'window' : 'door') + '.');
+    }
+    return;
+  }
 
   const hit = hitTest(w);
   if (hit?.kind === 'stair-corner') {
@@ -569,6 +674,17 @@ function onPointerDown(e) {
     }
     drag = { type: 'stair-move', st: hit.st, before: { ...hit.st },
              orig: { ...hit.st }, startW: w, moved: false };
+    redraw();
+  } else if (hit?.kind === 'opening') {
+    if (selectedOpeningId !== hit.op.id) {
+      selectedOpeningId = hit.op.id;
+      selectedRoomId = hit.room.id;
+      selectedStairId = null;
+      selectedVertex = null;
+      updatePropsPanel();
+    }
+    drag = { type: 'opening', room: hit.room, op: hit.op,
+             before: { ...hit.op }, origOffset: hit.op.offset, hitOffset: hit.hitOffset, startW: w, moved: false };
     redraw();
   } else if (hit?.kind === 'vertex') {
     if (isDblClick && hit.room._poly.length > 3) {
@@ -628,9 +744,10 @@ function onPointerDown(e) {
              origMin: { x: bb.minX, z: bb.minZ }, startW: w, moved: false };
     redraw();
   } else {
-    if (selectedRoomId !== null || selectedStairId !== null) {
+    if (selectedRoomId !== null || selectedStairId !== null || selectedOpeningId !== null) {
       selectedRoomId = null;
       selectedStairId = null;
+      selectedOpeningId = null;
       selectedVertex = null;
       updatePropsPanel();
       redraw();
@@ -722,6 +839,21 @@ function onPointerMove(e) {
       horizontal || !vertical ? snap(bz + dz, e.shiftKey) : bz,
     ];
     drag.invalid = isSelfIntersecting(pts);
+  } else if (drag.type === 'opening') {
+    const pts = drag.room._poly;
+    const ax = pts[drag.op.edge_index][0], az = pts[drag.op.edge_index][1];
+    const bx = pts[(drag.op.edge_index + 1) % pts.length][0], bz = pts[(drag.op.edge_index + 1) % pts.length][1];
+    const dx = bx - ax, dz = bz - az;
+    const len = Math.hypot(dx, dz);
+    if (len > 0.01) {
+      const u = [dx / len, dz / len];
+      const proj = (w.x - ax) * u[0] + (w.z - az) * u[1];
+      let newOffset = proj - drag.hitOffset;
+      if (e.shiftKey) newOffset = snap(newOffset, false);
+      if (newOffset < 0) newOffset = 0;
+      if (newOffset + drag.op.width > len) newOffset = Math.max(0, len - drag.op.width);
+      drag.op.offset = newOffset;
+    }
   } else if (drag.type === 'room') {
     const dx = snap(drag.origMin.x + (w.x - drag.startW.x), e.shiftKey) - drag.origMin.x;
     const dz = snap(drag.origMin.z + (w.z - drag.startW.z), e.shiftKey) - drag.origMin.z;
@@ -801,6 +933,12 @@ async function onPointerUp(e) {
     return;
   }
 
+  if (d.type === 'opening') {
+    if (d.moved) persistOpening(d.op, d.room.id).catch(console.error);
+    redraw();
+    return;
+  }
+
   // vertex / edge / room gestures
   if (!d.moved) { redraw(); return; }
   if (d.invalid || isSelfIntersecting(d.room._poly)) {
@@ -838,10 +976,12 @@ async function onKeyDown(e) {
       else drag.room._poly = drag.before;
       drag = null;
       redraw();
-    } else if (mode === 'draw' || mode === 'draw-stairs') {
+    } else if (mode === 'draw' || mode === 'draw-stairs' || mode === 'draw-door' || mode === 'draw-window') {
       mode = 'select';
       $('pl-draw').classList.remove('active');
       $('pl-stairs').classList.remove('active');
+      $('pl-door').classList.remove('active');
+      $('pl-window').classList.remove('active');
       canvas.style.cursor = '';
       drag = null;
       redraw();
@@ -860,6 +1000,10 @@ async function onKeyDown(e) {
   if (typing) return;
 
   if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedOpening()) {
+      await deleteSelectedOpening();
+      return;
+    }
     if (selectedStair()) {
       await deleteSelectedStair();
       return;
@@ -921,6 +1065,32 @@ function updatePropsPanel() {
   const spanel = $('pl-sprops');
   spanel.classList.toggle('hidden', !st);
   if (st) $('pl-sdir').value = st.direction;
+
+  const op = selectedOpening();
+  const oppanel = $('pl-op-props');
+  oppanel.classList.toggle('hidden', !op);
+  if (op) {
+    $('pl-op-type').value = op.type;
+    $('pl-op-width').value = op.width;
+    $('pl-op-height').value = op.height;
+    $('pl-op-elev').value = op.elevation;
+    $('pl-op-entity').value = op.entity_id || '';
+  }
+}
+
+async function deleteSelectedOpening() {
+  const op = selectedOpening();
+  const room = selectedRoom();
+  if (!op || !room) return;
+  try {
+    if (op.id) await api.deleteOpening(op.id);
+    room.openings = room.openings.filter((o) => o !== op);
+    selectedOpeningId = null;
+    updatePropsPanel();
+    redraw();
+  } catch (err) {
+    setStatus(`Delete failed: ${err.message}`);
+  }
 }
 
 async function deleteSelectedStair() {
@@ -1133,6 +1303,8 @@ export function initPlanner({ getStructure: gs, onClose }) {
     mode = mode === 'draw' ? 'select' : 'draw';
     $('pl-draw').classList.toggle('active', mode === 'draw');
     $('pl-stairs').classList.remove('active');
+    $('pl-door').classList.remove('active');
+    $('pl-window').classList.remove('active');
     canvas.style.cursor = mode === 'draw' ? 'crosshair' : '';
     renderStatus();
   };
@@ -1140,7 +1312,27 @@ export function initPlanner({ getStructure: gs, onClose }) {
     mode = mode === 'draw-stairs' ? 'select' : 'draw-stairs';
     $('pl-stairs').classList.toggle('active', mode === 'draw-stairs');
     $('pl-draw').classList.remove('active');
+    $('pl-door').classList.remove('active');
+    $('pl-window').classList.remove('active');
     canvas.style.cursor = mode === 'draw-stairs' ? 'crosshair' : '';
+    renderStatus();
+  };
+  $('pl-door').onclick = () => {
+    mode = mode === 'draw-door' ? 'select' : 'draw-door';
+    $('pl-door').classList.toggle('active', mode === 'draw-door');
+    $('pl-window').classList.remove('active');
+    $('pl-draw').classList.remove('active');
+    $('pl-stairs').classList.remove('active');
+    canvas.style.cursor = mode === 'draw-door' ? 'crosshair' : '';
+    renderStatus();
+  };
+  $('pl-window').onclick = () => {
+    mode = mode === 'draw-window' ? 'select' : 'draw-window';
+    $('pl-window').classList.toggle('active', mode === 'draw-window');
+    $('pl-door').classList.remove('active');
+    $('pl-draw').classList.remove('active');
+    $('pl-stairs').classList.remove('active');
+    canvas.style.cursor = mode === 'draw-window' ? 'crosshair' : '';
     renderStatus();
   };
   $('pl-sdir').onchange = async () => {
@@ -1191,6 +1383,21 @@ export function initPlanner({ getStructure: gs, onClose }) {
     selectedVertex = null;
   });
   $('pl-delete').onclick = deleteSelectedRoom;
+
+  const opPatch = (apply) => async () => {
+    const op = selectedOpening();
+    const room = selectedRoom();
+    if (!op || !room) return;
+    apply(op);
+    await persistOpening(op, room.id);
+    redraw();
+  };
+  $('pl-op-type').onchange = opPatch((o) => { o.type = $('pl-op-type').value; });
+  $('pl-op-width').onchange = opPatch((o) => { o.width = Math.max(0.5, Number($('pl-op-width').value) || o.width); });
+  $('pl-op-height').onchange = opPatch((o) => { o.height = Math.max(0.5, Number($('pl-op-height').value) || o.height); });
+  $('pl-op-elev').onchange = opPatch((o) => { o.elevation = Math.max(0, Number($('pl-op-elev').value) || 0); });
+  $('pl-op-entity').onchange = opPatch((o) => { o.entity_id = $('pl-op-entity').value.trim() || null; });
+  $('pl-op-delete').onclick = deleteSelectedOpening;
 
   // debug handle (console): inspect planner state, map world ft -> screen px
   window.__planner = {

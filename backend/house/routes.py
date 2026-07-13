@@ -395,3 +395,35 @@ def delete_object(object_id):
     if not _store().delete_object(object_id):
         return jsonify({"error": "object not found"}), 404
     return jsonify({"ok": True})
+
+
+# ---- openings (doors and windows) -------------------------------------------
+
+@bp.post("/room/<int:room_id>/opening")
+@undoable
+def place_opening(room_id):
+    data = request.get_json(force=True)
+    if "edge_index" not in data:
+        return jsonify({"error": "edge_index is required"}), 400
+    opening_id = _store().add_opening(room_id, data)
+    if opening_id is None:
+        return jsonify({"error": "room not found"}), 404
+    return jsonify({"id": opening_id}), 201
+
+
+@bp.patch("/opening/<int:opening_id>")
+@undoable
+def update_opening(opening_id):
+    updated = _store().update_opening(opening_id, request.get_json(force=True))
+    if not updated:
+        return jsonify({"error": "opening not found or nothing to update"}), 404
+    return jsonify({"ok": True})
+
+
+@bp.delete("/opening/<int:opening_id>")
+@undoable
+def delete_opening(opening_id):
+    if not _store().delete_opening(opening_id):
+        return jsonify({"error": "opening not found"}), 404
+    return jsonify({"ok": True})
+

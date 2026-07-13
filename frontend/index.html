@@ -191,6 +191,10 @@
       <button id="pl-draw" type="button" class="secondary">+ Draw room</button>
       <button id="pl-stairs" type="button" class="secondary"
               title="Draw a stairwell — it connects this floor to the one below and shows on both">+ Stairs</button>
+      <button id="pl-door" type="button" class="secondary"
+              title="Add a door to a room wall">+ Door</button>
+      <button id="pl-window" type="button" class="secondary"
+              title="Add a window to a room wall">+ Window</button>
       <button id="pl-close" type="button">Done</button>
     </div>
     <canvas id="pl-canvas"></canvas>
@@ -205,6 +209,23 @@
       </label>
       <div class="btn-row">
         <button id="pl-sdelete" type="button" class="danger">Delete stairs</button>
+      </div>
+    </aside>
+    <aside id="pl-op-props" class="hidden">
+      <label>Type
+        <select id="pl-op-type">
+          <option value="door">Door</option>
+          <option value="window">Window</option>
+        </select>
+      </label>
+      <div class="row3">
+        <label>Width (ft) <input id="pl-op-width" type="number" step="0.5" min="1"></label>
+        <label>Height (ft) <input id="pl-op-height" type="number" step="0.5" min="1"></label>
+        <label>Elev (ft) <input id="pl-op-elev" type="number" step="0.5" min="0"></label>
+      </div>
+      <label title="Link to an HA binary_sensor or cover entity">HA Entity <input id="pl-op-entity" placeholder="e.g. binary_sensor.front_door"></label>
+      <div class="btn-row">
+        <button id="pl-op-delete" type="button" class="danger">Delete opening</button>
       </div>
     </aside>
     <aside id="pl-props" class="hidden">

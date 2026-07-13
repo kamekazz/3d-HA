@@ -1,10 +1,12 @@
-// Builds floors + rooms from /api/house. Levels stack on Y, rooms on the X-Z grid.
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene, focusOn } from './scene.js';
 import { getTiledTexture, textureSize } from './textures.js';
+import { onStateApplied, isOn } from './state.js';
 
 export const floorGroups = new Map();  // level -> THREE.Group
 export const roomMeshes = new Map();   // roomId -> mesh
+export const openingMeshes = new Map(); // opId -> THREE.Group (hinge)
 export const floorBaseY = new Map();   // level -> world Y of the floor slab
 const stairGroups = [];                // stairs span two levels, so they live
                                        // outside the floor groups
@@ -16,6 +18,7 @@ export function buildHouse(house) {
   if (houseRoot) scene.remove(houseRoot);
   floorGroups.clear();
   roomMeshes.clear();
+  openingMeshes.clear();
   floorBaseY.clear();
   stairGroups.length = 0;
 
@@ -146,33 +149,98 @@ function buildRoom(room, floor) {
   });
 
   let walls, slab;
-  if (isPoly) {
-    // polygon footprint: Shape lives in XY, so map (x, z) -> (x, -z); after
-    // rotateX(-PI/2) the extrusion (+shape Z) rises along +Y and shape Y maps
-    // back onto +Z, putting the footprint flat on the XZ plane
-    const shape = new THREE.Shape(
-      fp.points.map(([px, pz]) => new THREE.Vector2(px, -pz)));
-    const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: room.height, bevelEnabled: false,
-    });
-    geo.rotateX(-Math.PI / 2);
-    walls = new THREE.Mesh(geo, wallsMat);
-    walls.position.set(fp.x, 0, fp.z); // anchored at bbox min corner, not centered
+  const pts = isPoly ? fp.points.map(([px, pz]) => [px, pz])
+    : [[0, 0], [fp.width, 0], [fp.width, fp.depth], [0, fp.depth]];
+  
+  const wallGeos = [];
+  for (let i = 0; i < pts.length; i++) {
+    const ax = pts[i][0], az = pts[i][1];
+    const bx = pts[(i + 1) % pts.length][0], bz = pts[(i + 1) % pts.length][1];
+    const dx = bx - ax, dz = bz - az;
+    const len = Math.hypot(dx, dz);
+    if (len < 0.01) continue;
+    
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    shape.lineTo(len, 0);
+    shape.lineTo(len, room.height);
+    shape.lineTo(0, room.height);
+    shape.lineTo(0, 0);
+    
+    for (const op of room.openings || []) {
+      if (op.edge_index === i) {
+        let off = op.offset;
+        if (off < 0) off = 0;
+        if (off + op.width > len) off = Math.max(0, len - op.width);
+        
+        const hole = new THREE.Path();
+        hole.moveTo(off, op.elevation);
+        hole.lineTo(off + op.width, op.elevation);
+        hole.lineTo(off + op.width, op.elevation + op.height);
+        hole.lineTo(off, op.elevation + op.height);
+        hole.lineTo(off, op.elevation);
+        shape.holes.push(hole);
 
-    const slabGeo = new THREE.ShapeGeometry(shape);
-    slabGeo.rotateX(-Math.PI / 2);
-    slab = new THREE.Mesh(slabGeo, slabMat);
-    slab.position.y = 0.01;
-  } else {
-    const boxGeo = new THREE.BoxGeometry(fp.width, room.height, fp.depth);
-    if (wallTex) worldScaleBoxUVs(boxGeo, fp.width, room.height, fp.depth);
-    walls = new THREE.Mesh(boxGeo, wallsMat);
-    walls.position.set(fp.x + fp.width / 2, room.height / 2, fp.z + fp.depth / 2);
-
-    slab = new THREE.Mesh(new THREE.PlaneGeometry(fp.width, fp.depth), slabMat);
-    slab.rotation.x = -Math.PI / 2;
-    slab.position.y = -room.height / 2 + 0.01;
+        const isDoor = op.type === 'door';
+        const depth = isDoor ? 0.2 : 0.3;
+        const panelMat = new THREE.MeshStandardMaterial({
+          color: isDoor ? 0x8b5a2b : 0x4fd1c5,
+          transparent: !isDoor,
+          opacity: isDoor ? 1.0 : 0.4,
+          roughness: isDoor ? 0.8 : 0.1,
+          side: THREE.DoubleSide
+        });
+        const panelGeo = new THREE.BoxGeometry(op.width, op.height, depth);
+        const panel = new THREE.Mesh(panelGeo, panelMat);
+        
+        const hinge = new THREE.Group();
+        panel.position.set(op.width / 2, op.height / 2, 0);
+        hinge.add(panel);
+        
+        const angle = Math.atan2(-dz, dx);
+        const u = [dx / len, dz / len];
+        hinge.position.set(ax + u[0] * off, op.elevation, az + u[1] * off);
+        hinge.rotation.y = angle;
+        hinge.userData = { id: op.id, entityId: op.entity_id, type: op.type, baseAngle: angle };
+        openingMeshes.set(op.id, hinge);
+        // Will add to walls mesh after it's created
+      }
+    }
+    
+    const geo = new THREE.ShapeGeometry(shape);
+    const angle = Math.atan2(-dz, dx);
+    geo.rotateY(angle);
+    geo.translate(ax, 0, az);
+    
+    const uv = geo.attributes.uv;
+    for (let k = 0; k < uv.count; k++) {
+      uv.setXY(k, uv.getX(k) / ws, uv.getY(k) / ws);
+    }
+    
+    wallGeos.push(geo);
   }
+  
+  let wallsGeo = null;
+  if (wallGeos.length > 0) {
+    wallsGeo = BufferGeometryUtils.mergeGeometries(wallGeos, false);
+  } else {
+    wallsGeo = new THREE.BufferGeometry();
+  }
+  
+  walls = new THREE.Mesh(wallsGeo, wallsMat);
+  walls.position.set(fp.x, 0, fp.z);
+  
+  for (const [id, hinge] of openingMeshes) {
+    if (room.openings?.some(o => o.id === id)) {
+      walls.add(hinge);
+    }
+  }
+
+  const slabShape = new THREE.Shape(pts.map(([px, pz]) => new THREE.Vector2(px, -pz)));
+  const slabGeo = new THREE.ShapeGeometry(slabShape);
+  slabGeo.rotateX(-Math.PI / 2);
+  slab = new THREE.Mesh(slabGeo, slabMat);
+  slab.position.y = 0.01;
 
   walls.userData = {
     kind: 'room', roomId: room.id, roomName: room.name,
@@ -229,3 +297,13 @@ export function highlightRoom(roomId) {
     setRoomEmissive(mesh, id === roomId ? 0.35 : 0);
   }
 }
+
+onStateApplied((entityId) => {
+  const targetAngleDelta = Math.PI / 2; // open 90 degrees inward
+  for (const [id, mesh] of openingMeshes) {
+    if (!mesh.userData.entityId) continue;
+    if (entityId && mesh.userData.entityId !== entityId) continue;
+    const active = isOn(mesh.userData.entityId);
+    mesh.rotation.y = mesh.userData.baseAngle + (active ? targetAngleDelta : 0);
+  }
+});
