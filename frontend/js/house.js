@@ -9,7 +9,7 @@ export const floorGroups = new Map();  // level -> THREE.Group
 export const roomMeshes = new Map();   // roomId -> mesh
 export const openingMeshes = new Map(); // opId -> THREE.Group (hinge)
 export const floorBaseY = new Map();   // level -> world Y of the floor slab
-const stairGroups = [];                // stairs span two levels, so they live
+export const stairGroups = [];         // stairs span two levels, so they live
                                        // outside the floor groups
 
 let houseRoot = null;
@@ -313,7 +313,8 @@ export function setLevel(level) {
   for (const [lvl, group] of floorGroups) {
     group.visible = houseMode ? true : (level === 'all' || lvl === level);
     for (const child of group.children) {
-      if (child.userData.kind === 'device') continue; // markers keep own vis.
+      // markers and label sprites own their visibility (devices.js/labels.js)
+      if (child.userData.kind === 'device' || child.isSprite) continue;
       child.visible = !houseMode; // rooms + objects hidden only in House mode
     }
   }

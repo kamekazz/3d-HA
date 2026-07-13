@@ -7,6 +7,50 @@ import { styleMarker } from './state.js';
 
 export const markers = new Map(); // entity_id -> marker root (Mesh or Group)
 
+// ------------------------------------------------------- global visibility
+// Markers are hidden by default ("house only" view); the ○ Devices topbar
+// button flips this. Edit mode force-shows them (drag/placement need visible
+// markers) without touching the persisted preference. Focus mode hides the
+// other rooms' markers on the focused level. All writers funnel through
+// syncMarkerVisibility so the states can't fight each other.
+const MARKERS_KEY = '3dha.markersShown';
+let markersShown = false;
+try { markersShown = localStorage.getItem(MARKERS_KEY) === '1'; } catch { /* private mode */ }
+let editOverride = false;
+let focusScope = null; // {level, roomId} while a room is focused
+
+window.addEventListener('appModeChanged', (e) => {
+  editOverride = e.detail.mode === 'edit';
+  applyAllMarkerVisibility();
+});
+
+export function areMarkersShown() {
+  return markersShown;
+}
+
+// THE single writer of marker.visible
+export function syncMarkerVisibility(marker) {
+  const ud = marker.userData;
+  const focusHidden = !!focusScope &&
+    ud.level === focusScope.level && ud.roomId !== focusScope.roomId;
+  marker.visible = !ud.hiddenByUser && (markersShown || editOverride) && !focusHidden;
+}
+
+export function applyAllMarkerVisibility() {
+  for (const m of markers.values()) syncMarkerVisibility(m);
+}
+
+export function setMarkersShown(shown) {
+  markersShown = !!shown;
+  try { localStorage.setItem(MARKERS_KEY, shown ? '1' : '0'); } catch { /* private mode */ }
+  applyAllMarkerVisibility();
+}
+
+export function setFocusMarkerScope(scope) {
+  focusScope = scope;
+  applyAllMarkerVisibility();
+}
+
 const BASE_COLORS = {
   light: 0xffd54a,
   switch: 0x35c26a,
@@ -98,7 +142,6 @@ function makeMarker(dev, room, floor) {
     fp.z + dev.position.z);
   marker.rotation.y = dev.rot_y || 0;
   marker.scale.setScalar(dev.scale || 1);
-  marker.visible = dev.visible !== 0;
   marker.userData = {
     kind: 'device',
     entityId: dev.entity_id,
@@ -113,6 +156,7 @@ function makeMarker(dev, room, floor) {
     fpX: fp.x, // room footprint origin: converts world XZ <-> room-relative
     fpZ: fp.z,
   };
+  syncMarkerVisibility(marker);
   return marker;
 }
 
@@ -121,5 +165,5 @@ export function setMarkerHidden(entityId, hidden) {
   const marker = markers.get(entityId);
   if (!marker) return;
   marker.userData.hiddenByUser = hidden;
-  marker.visible = !hidden;
+  syncMarkerVisibility(marker);
 }

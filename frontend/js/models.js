@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { getEnvIntensity } from './scene.js';
 
 const FEET_PER_METER = 3.28084;
 
@@ -60,6 +61,8 @@ export async function getInstance(modelId, anchor = 'bottom') {
       ? child.material.map((m) => m.clone())
       : child.material.clone();
     const mats = Array.isArray(child.material) ? child.material : [child.material];
+    // instances load async, possibly after the last applyEnvIntensity() sweep
+    for (const m of mats) if ('envMapIntensity' in m) m.envMapIntensity = getEnvIntensity();
     child.userData.__orig = mats.map((m) => ({
       color: m.color ? m.color.getHex() : null,
       emissive: m.emissive ? m.emissive.getHex() : null,

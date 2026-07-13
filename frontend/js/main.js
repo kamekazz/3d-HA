@@ -1,8 +1,8 @@
 // Bootstrap: load data, build the 3D scene, wire UI + realtime.
 import * as THREE from 'three';
 import { api } from './api.js';
-import { initScene, scene, camera, renderer } from './scene.js';
-import { buildHouse, roomMeshes } from './house.js';
+import { initScene, scene, camera, renderer, applyEnvIntensity } from './scene.js';
+import { buildHouse, roomMeshes, stairGroups } from './house.js';
 import { buildDevices, markers } from './devices.js';
 import { buildObjects, objects3d } from './objects.js';
 import { setAllStates, applyState, friendlyName, stateLabel, styleMarker } from './state.js';
@@ -47,6 +47,7 @@ async function reloadHouse() {
   buildObjects(house);
   buildLabels(house);
   setRoomLightsData({ house, structure }); // fresh slab materials — repoint glow
+  applyEnvIntensity(); // fresh materials default to envMapIntensity 1
   await loadStates();
   updateData({ structure, house });
   updateRoomPanelData(house);
@@ -90,7 +91,11 @@ function setupPicking() {
     pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
 
-    const hits = raycaster.intersectObjects(scene.children, true);
+    // only rooms + stairs — never the whole scene: the house-shell GLB alone
+    // has thousands of meshes, and raycasting it per pointermove tanked fps
+    // (the shell was never pickable anyway; grid/ground/labels have no kind)
+    const hits = raycaster.intersectObjects(
+      [...roomMeshes.values(), ...stairGroups], true);
 
     // nearest opaque room/stair surface: walls are solid now (dollhouse), so
     // markers behind one are invisible and must not win the priority pass
@@ -153,7 +158,21 @@ function setupPicking() {
     }
   }
 
+  // hover raycasts are rAF-gated (many pointermoves per frame otherwise) and
+  // skipped entirely while the button is down — orbiting doesn't need hover
+  let pendingMove = null;
+  let moveQueued = false;
   renderer.domElement.addEventListener('pointermove', (e) => {
+    pendingMove = e;
+    if (moveQueued) return;
+    moveQueued = true;
+    requestAnimationFrame(() => {
+      moveQueued = false;
+      if (!downAt) handleHover(pendingMove);
+    });
+  });
+
+  function handleHover(e) {
     const obj = pick(e);
     if (obj !== hovered) {
       clearHover();
@@ -175,7 +194,7 @@ function setupPicking() {
     tooltip.style.left = `${e.clientX + 14}px`;
     tooltip.style.top = `${e.clientY + 14}px`;
     tooltip.classList.remove('hidden');
-  });
+  }
 
   renderer.domElement.addEventListener('pointerleave', () => {
     clearHover();

@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { camera, controls, flyTo, getViewPose, MIN_ZOOM, MAX_ZOOM } from './scene.js';
 import { roomMeshes, setLevel, getLevel, setRoomOpacity } from './house.js';
-import { markers } from './devices.js';
+import { setFocusMarkerScope } from './devices.js';
 import { hideAllLabels } from './labels.js';
 
 let focusedRoomId = null;
@@ -39,7 +39,8 @@ function roomEdges(mesh) {
   return mesh.children.find((c) => c.userData.part === 'edges');
 }
 
-// stateless restore: put every room + marker on a level back to normal
+// stateless restore: put every room on a level back to normal (markers are
+// restored by clearing/replacing the focus scope in devices.js)
 function restoreLevelVisuals(level) {
   for (const mesh of roomMeshes.values()) {
     if (mesh.userData.level !== level) continue;
@@ -47,9 +48,6 @@ function restoreLevelVisuals(level) {
     mesh.userData.pickable = true;
     const edges = roomEdges(mesh);
     if (edges) edges.visible = true;
-  }
-  for (const marker of markers.values()) {
-    marker.visible = !marker.userData.hiddenByUser;
   }
 }
 
@@ -80,11 +78,7 @@ export function enterFocus(roomId) {
     if (edges) edges.visible = false;
   }
   setRoomOpacity(mesh, 1.0);
-  for (const marker of markers.values()) {
-    if (marker.userData.level === level && marker.userData.roomId !== roomId) {
-      marker.visible = false;
-    }
-  }
+  setFocusMarkerScope({ level, roomId });
   // no showRoomLabels here: the room panel carries the info; hover still
   // pops a single label
 
@@ -119,6 +113,7 @@ export function exitFocus({ flyBack = true } = {}) {
   if (focusedRoomId === null) return;
   const mesh = roomMeshes.get(focusedRoomId);
   if (mesh) restoreLevelVisuals(mesh.userData.level);
+  setFocusMarkerScope(null);
   hideAllLabels();
   focusedRoomId = null;
 

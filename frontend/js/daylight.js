@@ -2,7 +2,7 @@
 // sets the time-of-day look, the weather entity dims/tints it. Everything
 // eases toward its target each frame, so state changes fade instead of snap.
 import * as THREE from 'three';
-import { scene, hemiLight, sunLight, onFrame } from './scene.js';
+import { scene, hemiLight, sunLight, onFrame, setEnvIntensity } from './scene.js';
 import { getState, findEntities, onStateApplied } from './state.js';
 
 // ------------------------------------------------------------- ramps/tables
@@ -63,6 +63,7 @@ function makeLightState() {
     fogNear: FOG_DEFAULT.near,
     fogFar: FOG_DEFAULT.far,
     nightFactor: 0,
+    envIntensity: 0.45,
   };
 }
 
@@ -153,6 +154,9 @@ function recomputeTarget() {
   target.fogNear = fog.near;
   target.fogFar = fog.far;
   target.nightFactor = THREE.MathUtils.clamp((4 - elevation) / 10, 0, 1);
+  // IBL follows the sun so the environment map doesn't flatten nights
+  target.envIntensity =
+    THREE.MathUtils.lerp(0.45, 0.05, target.nightFactor) * w.hemiX;
 }
 
 // ------------------------------------------------------------- per-frame
@@ -163,6 +167,7 @@ function converged() {
   return Math.abs(current.sunIntensity - target.sunIntensity) < 1e-3 &&
          Math.abs(current.hemiIntensity - target.hemiIntensity) < 1e-3 &&
          Math.abs(current.nightFactor - target.nightFactor) < 1e-3 &&
+         Math.abs(current.envIntensity - target.envIntensity) < 1e-3 &&
          Math.abs(current.fogNear - target.fogNear) < 0.1 &&
          current.sunDir.distanceToSquared(target.sunDir) < 1e-6 &&
          Math.abs(current.bg.r - target.bg.r) < 1e-3 &&
@@ -186,7 +191,9 @@ function tick(dt) {
   current.fogNear = THREE.MathUtils.lerp(current.fogNear, target.fogNear, k);
   current.fogFar = THREE.MathUtils.lerp(current.fogFar, target.fogFar, k);
   current.nightFactor = THREE.MathUtils.lerp(current.nightFactor, target.nightFactor, k);
+  current.envIntensity = THREE.MathUtils.lerp(current.envIntensity, target.envIntensity, k);
 
+  setEnvIntensity(current.envIntensity);
   sunLight.position.copy(_pos.copy(current.sunDir).multiplyScalar(SUN_DISTANCE));
   sunLight.color.copy(current.sunColor);
   sunLight.intensity = current.sunIntensity;
@@ -258,11 +265,13 @@ function syncCurrentToTarget() {
   current.fogNear = target.fogNear;
   current.fogFar = target.fogFar;
   current.nightFactor = target.nightFactor;
+  current.envIntensity = target.envIntensity;
   // push once so the first frame already shows the right look
   tickApply();
 }
 
 function tickApply() {
+  setEnvIntensity(current.envIntensity);
   sunLight.position.copy(_pos.copy(current.sunDir).multiplyScalar(SUN_DISTANCE));
   sunLight.color.copy(current.sunColor);
   sunLight.intensity = current.sunIntensity;

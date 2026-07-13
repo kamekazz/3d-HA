@@ -1,6 +1,7 @@
 // Three.js scene, camera, controls, lights, render loop.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 export let scene, camera, renderer, controls;
 export let hemiLight, sunLight; // driven live by daylight.js (sun/weather)
@@ -25,7 +26,7 @@ export function initScene(container) {
   camera.position.set(45, 50, 45);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   renderer.setSize(container.clientWidth, container.clientHeight);
   // filmic tone mapping so the daylight ramp (bright noon → dim night) rolls
   // off instead of clipping; no shadow maps — the FrontSide dollhouse walls
@@ -34,6 +35,13 @@ export function initScene(container) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
   container.appendChild(renderer.domElement);
+
+  // IBL: GLB models ship PBR (often metallic) materials that render black
+  // without an environment map. Generated once at startup — the one-time
+  // shader recompile happens before the first frame.
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  pmrem.dispose();
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -121,6 +129,25 @@ export function initScene(container) {
 
   // debug handle (console): inspect the scene / renderer stats
   window.__scene3d = { scene, camera, renderer, controls, hemiLight, sunLight };
+}
+
+// envMapIntensity owner — daylight.js drives it with the day/night ramp so the
+// IBL doesn't flatten nights (r160 has no scene.environmentIntensity; the
+// per-material uniform never recompiles shaders). Lives here so devices/models
+// can read it without an import cycle through daylight.js.
+let envIntensity = 0.45;
+export function getEnvIntensity() { return envIntensity; }
+export function setEnvIntensity(v) {
+  envIntensity = v;
+  applyEnvIntensity();
+}
+// re-run after rebuilds: fresh room/marker materials default to intensity 1
+export function applyEnvIntensity() {
+  scene.traverse((o) => {
+    if (!o.isMesh) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) if (m && 'envMapIntensity' in m) m.envMapIntensity = envIntensity;
+  });
 }
 
 export function focusOn(x, y, z) {

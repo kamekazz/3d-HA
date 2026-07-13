@@ -5,7 +5,7 @@ import { floorGroups, setLevel, getLevel, highlightRoom,
 import { getState, friendlyName, stateLabel, onStateApplied } from './state.js';
 import { exitFocus, getFocusedRoomId, onFocusChanged } from './focus.js';
 import { renderControls, createCameraView, isSliderActive } from './controls.js';
-import { markers } from './devices.js';
+import { markers, areMarkersShown, setMarkersShown } from './devices.js';
 import { objects3d } from './objects.js';
 import { setSelected, onDragMoved } from './drag.js';
 import { invalidateModel } from './models.js';
@@ -40,6 +40,20 @@ export function setAppMode(mode) {
   // Update scene background and grid when mode changes
   const ev = new CustomEvent('appModeChanged', { detail: { mode } });
   window.dispatchEvent(ev);
+  paintMarkersBtn();
+}
+
+// ○ Devices topbar button: global show/hide for all device markers.
+// Edit mode force-shows markers (drag/placement need them), so the button is
+// disabled there and the user's preference resumes back in view mode.
+function paintMarkersBtn() {
+  const btn = $('btn-markers');
+  if (!btn) return;
+  btn.textContent = areMarkersShown() ? '◉ Devices' : '○ Devices';
+  btn.disabled = appMode === 'edit';
+  btn.title = appMode === 'edit'
+    ? 'Markers are always visible in edit mode'
+    : 'Show or hide all device markers';
 }
 
 export function evaluateDashboardVisibility() {
@@ -123,6 +137,10 @@ export function initUI({ structure: s, house: h, onReload }) {
 
   $('chk-edit-mode').onchange = (e) => {
     setAppMode(e.target.checked ? 'edit' : 'view');
+  };
+  $('btn-markers').onclick = () => {
+    setMarkersShown(!areMarkersShown());
+    paintMarkersBtn();
   };
   onFocusChanged(() => evaluateDashboardVisibility());
   // Initialize UI state
