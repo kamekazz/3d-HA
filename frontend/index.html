@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>3D Home Assistant House</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
   <script type="importmap">
   {
@@ -23,20 +26,42 @@
     <span id="conn-status" class="status-dot" title="Realtime status"></span>
     <span id="conn-label">connecting…</span>
     <div class="spacer"></div>
-    <button id="btn-undo" type="button" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
-    <button id="btn-redo" type="button" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
-    <button id="btn-daylight" type="button" title="Scene lighting: follow HA sun/weather, or force day/night">☀ auto</button>
-    <button id="btn-planner" type="button" title="Edit each floor's layout on a top-down plan (feet)">Floor plan</button>
-    <button id="btn-models" type="button" title="Upload and manage 3D models (.glb) for devices and furniture">Models</button>
-    <button id="btn-editor" type="button">Room editor</button>
-    <button id="btn-sync" type="button" title="Re-read HA and update the layout: move rooms to match their HA floor, add new areas, drop empty floors deleted in HA">Sync with HA</button>
-    <button id="btn-refresh" type="button" title="Re-read floors/areas/devices from HA">Refresh HA</button>
+    <div id="mode-toggle" class="mode-switch">
+      <span class="mode-label" id="mode-view">View</span>
+      <label class="switch">
+        <input type="checkbox" id="chk-edit-mode">
+        <span class="slider round"></span>
+      </label>
+      <span class="mode-label muted" id="mode-edit">Edit</span>
+    </div>
+    <div class="spacer" style="flex: 0 0 10px;"></div>
+    <button id="btn-undo" class="edit-only hidden" type="button" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+    <button id="btn-redo" class="edit-only hidden" type="button" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
+    <button id="btn-daylight" class="edit-only hidden" type="button" title="Scene lighting: follow HA sun/weather, or force day/night">☀ auto</button>
+    <button id="btn-planner" class="edit-only hidden" type="button" title="Edit each floor's layout on a top-down plan (feet)">Floor plan</button>
+    <button id="btn-models" class="edit-only hidden" type="button" title="Upload and manage 3D models (.glb) for devices and furniture">Models</button>
+    <button id="btn-editor" class="edit-only hidden" type="button">Room editor</button>
+    <button id="btn-sync" class="edit-only hidden" type="button" title="Re-read HA and update the layout: move rooms to match their HA floor, add new areas, drop empty floors deleted in HA">Sync with HA</button>
+    <button id="btn-refresh" class="edit-only hidden" type="button" title="Re-read floors/areas/devices from HA">Refresh HA</button>
   </header>
 
   <nav id="levels"></nav>
 
   <div id="banner" class="hidden"></div>
   <div id="tooltip" class="hidden"></div>
+
+  <!-- Whole house dashboard: shown in view mode when Level = All -->
+  <div id="house-dashboard" class="dashboard-overlay">
+    <div class="dash-widget time-weather">
+      <div id="dash-time" class="dash-big">--:--</div>
+      <div id="dash-date" class="dash-sub">--</div>
+    </div>
+    <div class="dash-widget house-temp">
+      <div class="dash-title">House Temp</div>
+      <div id="dash-temp" class="dash-big">--°</div>
+      <div class="dash-sub">Click a room to view</div>
+    </div>
+  </div>
 
   <!-- shown in room-focus mode: click (or Esc) to fly back out -->
   <button id="focus-exit" class="hidden" type="button" title="Exit room focus (Esc)"></button>

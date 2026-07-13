@@ -66,11 +66,21 @@ export function initScene(container) {
   scene.add(grid);
 
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(650, 650),
-    new THREE.MeshStandardMaterial({ color: 0x141a22, roughness: 1 }));
+    new THREE.PlaneGeometry(2000, 2000),
+    new THREE.MeshStandardMaterial({ color: 0x141a22, roughness: 1, transparent: true, opacity: 0.8 }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.02;
   scene.add(ground);
+  
+  // App mode toggle listener
+  window.addEventListener('appModeChanged', (e) => {
+    const isEdit = e.detail.mode === 'edit';
+    grid.visible = isEdit;
+    ground.visible = isEdit;
+  });
+  // Initial state for view mode
+  grid.visible = false;
+  ground.visible = false;
 
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;

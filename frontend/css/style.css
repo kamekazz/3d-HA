@@ -1,7 +1,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: system-ui, "Segoe UI", sans-serif;
+  font-family: "Outfit", system-ui, "Segoe UI", sans-serif;
   background: #10141a;
   color: #e6e9ee;
   overflow: hidden;
@@ -329,3 +329,47 @@ form input[type="color"] { padding: 2px; height: 32px; }
   color: #f4d488; padding: 10px 16px; border-radius: 8px; font-size: 13px;
   max-width: 620px; text-align: center;
 }
+
+/* Mode Switch Toggle */
+.mode-switch {
+  display: flex; align-items: center; gap: 8px; margin: 0 10px;
+}
+.mode-label { font-size: 13px; font-weight: 500; transition: color 0.3s ease; }
+.mode-switch .switch {
+  position: relative; display: inline-block; width: 44px; height: 24px;
+}
+.mode-switch .switch input { opacity: 0; width: 0; height: 0; }
+.mode-switch .slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background-color: #2b6cb0; transition: .4s;
+  border-radius: 24px;
+}
+.mode-switch .slider:before {
+  position: absolute; content: ""; height: 18px; width: 18px;
+  left: 3px; bottom: 3px; background-color: white; transition: .4s;
+  border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.mode-switch input:checked + .slider { background-color: #b23b3b; }
+.mode-switch input:focus + .slider { box-shadow: 0 0 1px #b23b3b; }
+.mode-switch input:checked + .slider:before { transform: translateX(20px); }
+
+/* Whole House Dashboard */
+.dashboard-overlay {
+  position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+  z-index: 10; display: flex; gap: 24px; pointer-events: none;
+  opacity: 1; transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.dashboard-overlay.hidden {
+  opacity: 0; transform: translate(-50%, -20px); pointer-events: none;
+}
+.dash-widget {
+  background: rgba(22, 27, 35, 0.7); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px; padding: 20px 28px; color: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); pointer-events: auto;
+  text-align: center;
+}
+.dash-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: #aab4c4; margin-bottom: 8px; }
+.dash-big { font-size: 48px; font-weight: 300; line-height: 1.1; margin-bottom: 4px; }
+.dash-sub { font-size: 14px; color: #8b95a5; font-weight: 400; }
+.dash-widget:hover { background: rgba(26, 33, 43, 0.85); transition: background 0.2s; }

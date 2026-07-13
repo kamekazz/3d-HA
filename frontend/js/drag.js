@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { api } from './api.js';
 import { scene, camera, renderer, controls } from './scene.js';
+import { appMode } from './ui.js';
 
 let selected = null;  // root Object3D with userData.kind 'device' | 'object'
 let helper = null;    // selection highlight
@@ -29,6 +30,10 @@ export function setSelected(obj) {
     scene.remove(helper);
     helper.dispose();
     helper = null;
+  }
+  if (appMode === 'view') {
+    selected = null;
+    return;
   }
   selected = obj || null;
   if (selected) {

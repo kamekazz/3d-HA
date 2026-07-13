@@ -2,7 +2,7 @@
 import { api } from './api.js';
 import { floorGroups, setLevel, getLevel, highlightRoom } from './house.js';
 import { getState, friendlyName, stateLabel, onStateApplied } from './state.js';
-import { exitFocus, getFocusedRoomId } from './focus.js';
+import { exitFocus, getFocusedRoomId, onFocusChanged } from './focus.js';
 import { renderControls, createCameraView, isSliderActive } from './controls.js';
 import { markers } from './devices.js';
 import { objects3d } from './objects.js';
@@ -19,6 +19,45 @@ let selectedRoomId = null;
 let panelEntityId = null;
 let panelObjectId = null;
 let modelsList = [];    // library from /api/house/models
+
+export let appMode = 'view'; // 'view' or 'edit'
+
+export function setAppMode(mode) {
+  appMode = mode;
+  document.querySelectorAll('.edit-only').forEach(el => {
+    el.classList.toggle('hidden', mode === 'view');
+  });
+  if (mode === 'view') {
+    $('editor').classList.add('hidden');
+    $('object-panel').classList.add('hidden');
+    $('models-modal').classList.add('hidden');
+    $('planner').classList.add('hidden');
+  }
+  evaluateDashboardVisibility();
+  
+  // Update scene background and grid when mode changes
+  const ev = new CustomEvent('appModeChanged', { detail: { mode } });
+  window.dispatchEvent(ev);
+}
+
+export function evaluateDashboardVisibility() {
+  const dash = $('house-dashboard');
+  if (!dash) return;
+  const level = getLevel();
+  // Show dashboard only in view mode when looking at the whole house and no room is focused
+  const isRoomFocused = getFocusedRoomId() !== null;
+  if (appMode === 'view' && level === 'all' && !isRoomFocused) {
+    dash.classList.remove('hidden');
+    // populate fake weather/temp for now
+    const now = new Date();
+    $('dash-time').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    $('dash-date').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+    $('dash-temp').textContent = '72°';
+  } else {
+    dash.classList.add('hidden');
+  }
+}
+
 
 // ---------------------------------------------------------------- helpers
 
@@ -77,7 +116,15 @@ export function initUI({ structure: s, house: h, onReload }) {
   fillAreaSelect();
   fillTextureSelect($('rf-wall-tex'));
   fillTextureSelect($('rf-floor-tex'));
+  fillTextureSelect($('rf-floor-tex'));
   renderRoomList();
+
+  $('chk-edit-mode').onchange = (e) => {
+    setAppMode(e.target.checked ? 'edit' : 'view');
+  };
+  onFocusChanged(() => evaluateDashboardVisibility());
+  // Initialize UI state
+  setAppMode('view');
 
   $('btn-editor').onclick = () => $('editor').classList.toggle('hidden');
   $('btn-refresh').onclick = async () => {
@@ -229,6 +276,7 @@ function buildLevelButtons() {
       setLevel(value === 'all' ? 'all' : Number(value));
       nav.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
+      evaluateDashboardVisibility();
     };
     nav.appendChild(btn);
   };
