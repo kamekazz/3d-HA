@@ -40,6 +40,7 @@
     <button id="btn-daylight" class="edit-only hidden" type="button" title="Scene lighting: follow HA sun/weather, or force day/night">☀ auto</button>
     <button id="btn-planner" class="edit-only hidden" type="button" title="Edit each floor's layout on a top-down plan (feet)">Floor plan</button>
     <button id="btn-models" class="edit-only hidden" type="button" title="Upload and manage 3D models (.glb) for devices and furniture">Models</button>
+    <button id="btn-align" class="edit-only hidden" type="button" title="Position, rotate and scale the whole-house model">Align house</button>
     <button id="btn-editor" class="edit-only hidden" type="button">Room editor</button>
     <button id="btn-sync" class="edit-only hidden" type="button" title="Re-read HA and update the layout: move rooms to match their HA floor, add new areas, drop empty floors deleted in HA">Sync with HA</button>
     <button id="btn-refresh" class="edit-only hidden" type="button" title="Re-read floors/areas/devices from HA">Refresh HA</button>
@@ -108,6 +109,28 @@
       </div>
       <div class="btn-row">
         <button type="button" id="op-delete" class="danger">Delete object</button>
+      </div>
+    </form>
+  </aside>
+
+  <!-- Whole-house model alignment panel (opened from "Align house") -->
+  <aside id="shell-panel" class="panel hidden">
+    <button class="close" data-close="shell-panel" type="button">&times;</button>
+    <h2>House model</h2>
+    <p id="shell-model" class="muted"></p>
+    <p class="muted">Drag it on the floor in the 3D view, or edit the numbers:</p>
+    <form id="shell-form">
+      <div class="row3">
+        <label>X (ft) <input id="shell-x" type="number" step="0.5"></label>
+        <label>Y (ft) <input id="shell-y" type="number" step="0.5"></label>
+        <label>Z (ft) <input id="shell-z" type="number" step="0.5"></label>
+      </div>
+      <div class="row3">
+        <label>Rotation (°) <input id="shell-rot" type="number" step="5"></label>
+        <label>Scale <input id="shell-scale" type="number" step="0.05" min="0.01"></label>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="shell-unset" class="danger">Unset house model</button>
       </div>
     </form>
   </aside>

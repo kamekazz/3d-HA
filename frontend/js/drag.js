@@ -88,6 +88,19 @@ export function initDrag() {
     controls.enabled = true;
     el.style.cursor = '';
     const ud = selected.userData;
+    // The house shell sits on the house root (no room footprint offset); its
+    // position IS world XZ, saved through the shell endpoint.
+    if (ud.kind === 'house-shell') {
+      const x = +selected.position.x.toFixed(2);
+      const z = +selected.position.z.toFixed(2);
+      try {
+        await api.setHouseShell({ x, z });
+        for (const fn of movedListeners) fn({ kind: 'house-shell', x, z });
+      } catch (err) {
+        console.warn('shell drag save failed:', err);
+      }
+      return;
+    }
     const x = +(selected.position.x - ud.fpX).toFixed(2);
     const z = +(selected.position.z - ud.fpZ).toFixed(2);
     try {

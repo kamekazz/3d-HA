@@ -22,7 +22,9 @@ const mutListeners = new Set();
 export function onLayoutMutation(fn) { mutListeners.add(fn); }
 function notifyMutation(path) {
   if (!path.startsWith('/api/house')) return;
-  if (/\/(undo|redo|history)$/.test(path) || path.includes('/model')) return;
+  // models and the house shell aren't in undo history — don't wake undo.js
+  if (/\/(undo|redo|history)$/.test(path)
+      || path.includes('/model') || path.endsWith('/shell')) return;
   for (const fn of mutListeners) fn();
 }
 
@@ -39,6 +41,11 @@ const patch = async (p, data) => {
 };
 const del = async (p) => {
   const body = await request(p, { method: 'DELETE' });
+  notifyMutation(p);
+  return body;
+};
+const put = async (p, data) => {
+  const body = await request(p, { method: 'PUT', body: JSON.stringify(data ?? {}) });
   notifyMutation(p);
   return body;
 };
@@ -94,6 +101,8 @@ export const api = {
   },
   renameModel: (id, data) => patch(`/api/house/model/${id}`, data),
   deleteModel: (id) => del(`/api/house/model/${id}`),
+  getHouseShell: () => get('/api/house/shell'),
+  setHouseShell: (data) => put('/api/house/shell', data),
   addObject: (roomId, data) => post(`/api/house/room/${roomId}/object`, data),
   updateObject: (id, data) => patch(`/api/house/object/${id}`, data),
   deleteObject: (id) => del(`/api/house/object/${id}`),

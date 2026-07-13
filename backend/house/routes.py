@@ -360,6 +360,36 @@ def delete_model(model_id):
     return jsonify({"ok": True})
 
 
+# ---- house shell (whole-house model view) -----------------------------------
+# Singleton config: which library model renders as the whole house in the
+# "House" view, plus a single rigid transform to align it. Not @undoable
+# (like the model endpoints — app config, not versioned layout).
+
+@bp.get("/shell")
+def get_shell():
+    return jsonify(_store().get_house_shell())
+
+
+@bp.put("/shell")
+def set_shell():
+    data = request.get_json(force=True) or {}
+    store = _store()
+    fields = {}
+    if "model_id" in data:
+        mid = data["model_id"]
+        if mid is not None:
+            if not isinstance(mid, int) or store.get_model(mid) is None:
+                return jsonify({"error": "unknown model_id"}), 400
+        fields["model_id"] = mid
+    for key in ("x", "y", "z", "rot_y", "scale"):
+        if key in data and data[key] is not None:
+            try:
+                fields[key] = float(data[key])
+            except (TypeError, ValueError):
+                return jsonify({"error": f"{key} must be a number"}), 400
+    return jsonify(store.set_house_shell(fields))
+
+
 # ---- objects (standalone furniture/decor placed in rooms) -------------------
 
 @bp.post("/room/<int:room_id>/object")

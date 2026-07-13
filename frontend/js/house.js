@@ -3,6 +3,7 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 import { scene, focusOn } from './scene.js';
 import { getTiledTexture, textureSize } from './textures.js';
 import { onStateApplied, isOn } from './state.js';
+import { getInstance } from './models.js';
 
 export const floorGroups = new Map();  // level -> THREE.Group
 export const roomMeshes = new Map();   // roomId -> mesh
@@ -14,6 +15,13 @@ const stairGroups = [];                // stairs span two levels, so they live
 let houseRoot = null;
 let currentLevel = 'all';
 
+// The whole-house shell model: when configured, the "House" (level 'all') view
+// hides the generated geometry and shows this single model instead. Loads
+// async; until it resolves (or if it fails) the view falls back to the normal
+// stacked all-floors geometry. See setLevel below.
+let houseShell = null;    // loaded shell root Group, or null (not loaded/failed)
+let shellConfig = null;   // { model_id, x, y, z, rot_y, scale } from the payload
+
 export function buildHouse(house) {
   if (houseRoot) scene.remove(houseRoot);
   floorGroups.clear();
@@ -21,6 +29,7 @@ export function buildHouse(house) {
   openingMeshes.clear();
   floorBaseY.clear();
   stairGroups.length = 0;
+  houseShell = null; // the old shell went away with the old houseRoot
 
   houseRoot = new THREE.Group();
   scene.add(houseRoot);
@@ -59,6 +68,38 @@ export function buildHouse(house) {
 
   if (center) focusOn(center.x, 5, center.z);
   setLevel(currentLevel);
+
+  // Kick off the whole-house shell (async). setLevel re-runs once it resolves.
+  shellConfig = house.house_shell && house.house_shell.model_id
+    ? { ...house.house_shell } : null;
+  if (shellConfig) loadHouseShell(shellConfig);
+}
+
+function applyShellTransform(root, cfg) {
+  root.position.set(cfg.x || 0, cfg.y || 0, cfg.z || 0);
+  root.rotation.y = cfg.rot_y || 0;
+  root.scale.setScalar(cfg.scale || 1); // multiplies the pivot's meters->feet
+}
+
+async function loadHouseShell(cfg) {
+  const root = houseRoot; // the root this shell belongs to
+  let pivot;
+  try {
+    pivot = await getInstance(cfg.model_id, 'bottom'); // floor seated at Y=0
+  } catch (err) {
+    console.warn(`house shell model ${cfg.model_id} failed to load:`, err);
+    return; // stay in the generated-geometry fallback
+  }
+  if (houseRoot !== root) return; // a newer rebuild superseded this one
+  const shell = new THREE.Group();
+  // kind lets drag.js recognise it; pickable:false keeps pick() from selecting
+  // it as a click target (it's a backdrop). drag.js uses its own reference.
+  shell.userData = { kind: 'house-shell', pickable: false };
+  shell.add(pivot);
+  applyShellTransform(shell, cfg);
+  root.add(shell);
+  houseShell = shell;
+  setLevel(currentLevel); // a shell now exists — apply House mode if on 'all'
 }
 
 function buildStairs(st, floor, upperLevel, baseY) {
@@ -264,16 +305,43 @@ function buildRoom(room, floor) {
 
 export function setLevel(level) {
   currentLevel = level;
+  // House mode = the 'all' view WITH a shell loaded: hide the generated
+  // geometry (walls/slabs/objects) + stairs and show the shell instead, but
+  // keep device markers (kind 'device') visible/clickable. Without a shell,
+  // 'all' behaves exactly as before (stacked floors).
+  const houseMode = level === 'all' && !!houseShell;
   for (const [lvl, group] of floorGroups) {
-    group.visible = level === 'all' || lvl === level;
+    group.visible = houseMode ? true : (level === 'all' || lvl === level);
+    for (const child of group.children) {
+      if (child.userData.kind === 'device') continue; // markers keep own vis.
+      child.visible = !houseMode; // rooms + objects hidden only in House mode
+    }
   }
   for (const g of stairGroups) { // stairs show on both levels they connect
-    g.visible = level === 'all' || g.userData.levels.includes(level);
+    g.visible = houseMode ? false : (level === 'all' || g.userData.levels.includes(level));
   }
+  if (houseShell) houseShell.visible = houseMode;
 }
 
 export function getLevel() {
   return currentLevel;
+}
+
+// Live-update the shell's transform (numeric panel / drag) without a rebuild.
+export function setShellTransform(t) {
+  if (!shellConfig) return;
+  Object.assign(shellConfig, t);
+  if (houseShell) applyShellTransform(houseShell, shellConfig);
+}
+
+// The shell root Group (for drag.js), or null when no shell is loaded.
+export function getShellRoot() {
+  return houseShell;
+}
+
+// Current shell config { model_id, x, y, z, rot_y, scale }, or null.
+export function getShellConfig() {
+  return shellConfig ? { ...shellConfig } : null;
 }
 
 // Single writer for room wall opacity (used by focus-mode fades): keeps

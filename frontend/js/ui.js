@@ -1,6 +1,7 @@
 // Level selector, device side panel, room editor, model library, object panel.
 import { api } from './api.js';
-import { floorGroups, setLevel, getLevel, highlightRoom } from './house.js';
+import { floorGroups, setLevel, getLevel, highlightRoom,
+         setShellTransform, getShellRoot, getShellConfig } from './house.js';
 import { getState, friendlyName, stateLabel, onStateApplied } from './state.js';
 import { exitFocus, getFocusedRoomId, onFocusChanged } from './focus.js';
 import { renderControls, createCameraView, isSliderActive } from './controls.js';
@@ -34,7 +35,8 @@ export function setAppMode(mode) {
     $('planner').classList.add('hidden');
   }
   evaluateDashboardVisibility();
-  
+  updateAlignAvailability();
+
   // Update scene background and grid when mode changes
   const ev = new CustomEvent('appModeChanged', { detail: { mode } });
   window.dispatchEvent(ev);
@@ -183,6 +185,9 @@ export function initUI({ structure: s, house: h, onReload }) {
         panelObjectId = null;
         setSelected(null);
       }
+      if (btn.dataset.close === 'shell-panel') {
+        setSelected(null); // stop dragging the shell
+      }
     };
   });
 
@@ -191,6 +196,8 @@ export function initUI({ structure: s, house: h, onReload }) {
 
   $('btn-models').onclick = openModelsModal;
   $('mm-upload-form').onsubmit = onModelUpload;
+  $('btn-align').onclick = openAlignPanel;
+  wireShellPanel();
   $('obj-add').onclick = onAddObject;
   wireObjectPanel();
   refreshModels(); // async fill of the library-dependent selects
@@ -198,6 +205,14 @@ export function initUI({ structure: s, house: h, onReload }) {
   // drag ended: server already PATCHed — sync the cached house + open panels
   // without a full reload (the mesh is already where the user left it)
   onDragMoved(({ kind, id, x, z }) => {
+    if (kind === 'house-shell') {
+      setShellTransform({ x, z }); // keep shellConfig in sync with the drag
+      if (!$('shell-panel').classList.contains('hidden')) {
+        $('shell-x').value = +x.toFixed(2);
+        $('shell-z').value = +z.toFixed(2);
+      }
+      return;
+    }
     if (kind === 'device') {
       const found = findPlacementById(id);
       if (found) { found.dev.position.x = x; found.dev.position.z = z; }
@@ -241,7 +256,11 @@ export function updateData({ structure: s, house: h }) {
     }
   } else if (panelEntityId) {
     setSelected(markers.get(panelEntityId) || null);
+  } else if (!$('shell-panel').classList.contains('hidden')) {
+    // scene rebuilt while aligning: re-point drag at the fresh shell root
+    setSelected(getShellRoot());
   }
+  updateAlignAvailability();
 }
 
 export function setConnStatus(status) {
@@ -280,7 +299,9 @@ function buildLevelButtons() {
     };
     nav.appendChild(btn);
   };
-  mk('All floors', 'all');
+  // 'all' is also "House" mode when a shell model is configured (house.js
+  // swaps the generated geometry for the model); label it House either way.
+  mk('House', 'all');
   for (const f of [...house.floors].sort((a, b) => a.level - b.level)) {
     mk(`${f.level} · ${f.name}`, f.level);
   }
@@ -786,12 +807,85 @@ async function refreshModels() {
     modelsList = [];
   }
   renderModelsList();
+  updateAlignAvailability();
   if (selectedRoomId) renderPlacementSection();
 }
 
 function openModelsModal() {
   $('models-modal').classList.remove('hidden');
   refreshModels();
+}
+
+// ---- whole-house shell model alignment ------------------------------------
+
+// Sync the level nav's active button without importing focus.js (which imports
+// us). Mirrors focus.js's own DOM-only helper.
+function setActiveLevelBtn(level) {
+  document.querySelectorAll('#levels button').forEach((b) => {
+    b.classList.toggle('active', String(b.dataset.level) === String(level));
+  });
+}
+
+function shellModelName(cfg) {
+  const m = modelsList.find((x) => x.id === cfg?.model_id);
+  return m ? m.name : `model #${cfg?.model_id}`;
+}
+
+// Read the 5 alignment inputs into a shell-transform patch (deg -> rad).
+function readShellForm() {
+  const s = parseFloat($('shell-scale').value);
+  return {
+    x: parseFloat($('shell-x').value) || 0,
+    y: parseFloat($('shell-y').value) || 0,
+    z: parseFloat($('shell-z').value) || 0,
+    rot_y: (parseFloat($('shell-rot').value) || 0) * Math.PI / 180,
+    scale: s > 0 ? s : 1,
+  };
+}
+
+function populateShellForm(cfg) {
+  $('shell-x').value = cfg.x ?? 0;
+  $('shell-y').value = cfg.y ?? 0;
+  $('shell-z').value = cfg.z ?? 0;
+  $('shell-rot').value = Math.round((cfg.rot_y ?? 0) * 180 / Math.PI);
+  $('shell-scale').value = cfg.scale ?? 1;
+}
+
+// Show "Align house" only in edit mode with a shell configured; drop the panel
+// if the shell was unset.
+function updateAlignAvailability() {
+  const has = !!house?.house_shell?.model_id;
+  $('btn-align').classList.toggle('hidden', !(has && appMode === 'edit'));
+  if (!has) $('shell-panel').classList.add('hidden');
+}
+
+function openAlignPanel() {
+  const cfg = getShellConfig() || house?.house_shell;
+  if (!cfg) return;
+  $('models-modal').classList.add('hidden'); // if opened from the model list
+  exitFocus({ flyBack: false });
+  setLevel('all');            // House view: the shell is only visible here
+  setActiveLevelBtn('all');
+  evaluateDashboardVisibility();
+  populateShellForm(cfg);
+  $('shell-model').textContent = `Model: ${shellModelName(cfg)}`;
+  $('shell-panel').classList.remove('hidden');
+  setSelected(getShellRoot()); // make the shell draggable (null until it loads)
+}
+
+function wireShellPanel() {
+  for (const id of ['shell-x', 'shell-y', 'shell-z', 'shell-rot', 'shell-scale']) {
+    // live-preview on every keystroke, persist once the field is committed
+    $(id).addEventListener('input', () => setShellTransform(readShellForm()));
+    $(id).addEventListener('change', () => { api.setHouseShell(readShellForm()); });
+  }
+  $('shell-unset').onclick = async () => {
+    await api.setHouseShell({ model_id: null });
+    $('shell-panel').classList.add('hidden');
+    setSelected(null);
+    await reloadHouse();
+    await refreshModels();
+  };
 }
 
 function renderModelsList() {
@@ -819,6 +913,20 @@ function renderModelsList() {
     if (m.object_count) parts.push(`${m.object_count} object${m.object_count > 1 ? 's' : ''}`);
     usage.textContent = parts.join(' · ') || 'unused';
 
+    // Mark this model as the whole-house shell shown in the "House" view.
+    const isShell = house?.house_shell?.model_id === m.id;
+    const useHouse = document.createElement('button');
+    useHouse.className = 'small' + (isShell ? ' active' : ' secondary');
+    useHouse.type = 'button';
+    useHouse.textContent = isShell ? '✓ House model' : 'Use as house';
+    useHouse.title = 'Show this model as the whole house in the House view';
+    useHouse.onclick = async () => {
+      await api.setHouseShell({ model_id: isShell ? null : m.id });
+      await reloadHouse();      // updateData refreshes house + align availability
+      await refreshModels();    // re-render the list's active state
+      if (!isShell) openAlignPanel();
+    };
+
     const rm = document.createElement('button');
     rm.className = 'small danger';
     rm.textContent = '✕';
@@ -834,7 +942,7 @@ function renderModelsList() {
       reloadHouse();
     };
 
-    item.append(name, usage, rm);
+    item.append(name, usage, useHouse, rm);
     list.appendChild(item);
   }
   if (!list.children.length) {

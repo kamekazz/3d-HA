@@ -91,6 +91,15 @@ CREATE TABLE IF NOT EXISTS openings (
     elevation REAL NOT NULL DEFAULT 0,
     entity_id TEXT
 );
+CREATE TABLE IF NOT EXISTS house_shell (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    model_id INTEGER REFERENCES models(id) ON DELETE SET NULL,
+    x REAL NOT NULL DEFAULT 0,
+    y REAL NOT NULL DEFAULT 0,
+    z REAL NOT NULL DEFAULT 0,
+    rot_y REAL NOT NULL DEFAULT 0,
+    scale REAL NOT NULL DEFAULT 1.0
+);
 """
 
 ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height",
@@ -102,6 +111,9 @@ PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible",
 OBJECT_FIELDS = ("name", "model_id", "x", "y", "z", "rot_y", "scale")
 OPENING_FIELDS = ("type", "edge_index", "offset", "width", "height", "elevation", "entity_id")
 MODEL_FIELDS = ("name",)
+# The whole-house shell: one chosen library model + a single rigid transform
+# used to align it in the scene. Singleton row (id=1). Not in HISTORY_TABLES.
+SHELL_FIELDS = ("model_id", "x", "y", "z", "rot_y", "scale")
 # stairs.floor_id is the LOWER of the two floors they connect; they rise that
 # floor's full floor_height. direction = which way they ascend on the plan.
 STAIR_FIELDS = ("name", "x", "z", "width", "depth", "direction", "floor_id")
@@ -294,7 +306,7 @@ class HouseStore:
         for floor in floors:
             floor["rooms"] = rooms_by_floor.get(floor["id"], [])
             floor["stairs"] = stairs_by_floor.get(floor["id"], [])
-        return {"floors": floors}
+        return {"floors": floors, "house_shell": self.get_house_shell()}
 
     def export_snapshot(self):
         """Raw rows of every history table, keyed by table name (undo/redo)."""
@@ -837,6 +849,36 @@ class HouseStore:
             self._db.execute("DELETE FROM models WHERE id=?", (model_id,))
             self._db.commit()
             return dict(row)
+
+    # ---- house shell (whole-house model) -------------------------------------
+
+    def get_house_shell(self):
+        """The singleton shell config, or None when unset / model_id is NULL
+        (mirrors placements ON DELETE SET NULL: deleting the model unsets it)."""
+        with self._lock:
+            row = self._db.execute(
+                "SELECT * FROM house_shell WHERE id=1").fetchone()
+        if not row or row["model_id"] is None:
+            return None
+        return dict(row)
+
+    def set_house_shell(self, data):
+        """Upsert the singleton shell row (id=1) from a partial dict. Unlisted
+        fields keep their current value (transform-only or model-only PATCH)."""
+        allowed = {k: data[k] for k in SHELL_FIELDS if k in data}
+        if not allowed:
+            return self.get_house_shell()
+        cols = ", ".join(allowed)
+        placeholders = ", ".join("?" for _ in allowed)
+        updates = ", ".join(f"{k}=excluded.{k}" for k in allowed)
+        with self._lock:
+            self._db.execute(
+                f"INSERT INTO house_shell (id, {cols})"
+                f" VALUES (1, {placeholders})"
+                f" ON CONFLICT(id) DO UPDATE SET {updates}",
+                tuple(allowed.values()))
+            self._db.commit()
+        return self.get_house_shell()
 
     # ---- objects (standalone furniture/decor) --------------------------------
 
