@@ -159,6 +159,14 @@ export function focusOn(x, y, z) {
   zoomTarget = camera.position.distanceTo(controls.target);
 }
 
+// Retune the zoom-out cap live (floorview.js tightens it per floor, then
+// restores the house cap). Importers of MAX_ZOOM track the live binding.
+export function setMaxZoom(d) {
+  MAX_ZOOM = d;
+  controls.maxDistance = d;
+  if (zoomTarget > d) zoomTarget = d;
+}
+
 // One-time opening shot: a near-eye-level curb view from out front — camera
 // pitched down just 3° so the roofline breaks the horizon, aimed above
 // mid-height so the house sits in the lower half of the frame with sky above.
@@ -175,8 +183,7 @@ export function frameInitialView(cx, cz, spanX, spanZ, topY) {
   camera.position.set(cx + Math.sin(az) * h, ty + dist * Math.sin(elev), cz + Math.cos(az) * h);
   camera.lookAt(controls.target);
   zoomTarget = dist;
-  MAX_ZOOM = dist;
-  controls.maxDistance = dist;
+  setMaxZoom(dist);
 }
 
 // Smoothly fly the camera to a new pose (eased in the render loop above).

@@ -17,6 +17,7 @@ import { initDaylight } from './daylight.js';
 import { initEnvironment, setEnvironmentData } from './environment.js';
 import { initWeather } from './weather.js';
 import { initRoomLights, setRoomLightsData } from './roomlights.js';
+import { initFloorView } from './floorview.js';
 import { initUndo } from './undo.js';
 
 let structure = null;
@@ -263,6 +264,7 @@ async function main() {
   initDaylight();
   initEnvironment();
   initWeather();
+  initFloorView();
   setupPicking();
 
   await loadStructure();

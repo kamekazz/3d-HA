@@ -119,7 +119,8 @@ export function exitFocus({ flyBack = true } = {}) {
 
   setLevel(savedLevel ?? 'all');
   setActiveLevelButton(savedLevel ?? 'all');
-  controls.enablePan = true;
+  // floor view (floorview.js) keeps pan off — only House view pans freely
+  controls.enablePan = (savedLevel ?? 'all') === 'all';
   document.getElementById('focus-exit').classList.add('hidden');
   if (flyBack && savedPose) flyTo(savedPose.position, savedPose.target);
   savedPose = null;

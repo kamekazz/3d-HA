@@ -215,10 +215,14 @@ function tick(dt) {
   hemiLight.color.copy(current.hemiSky);
   hemiLight.groundColor.copy(current.hemiGround);
   hemiLight.intensity = current.hemiIntensity;
-  scene.background.copy(current.bg);
-  scene.fog.color.copy(current.bg); // fog matches bg for a seamless horizon
-  scene.fog.near = current.fogNear;
-  scene.fog.far = current.fogFar;
+  // floorview.js swaps the background for a gradient texture and nulls the
+  // fog while a single floor is shown — only touch them when they're ours
+  if (scene.background?.isColor) scene.background.copy(current.bg);
+  if (scene.fog) {
+    scene.fog.color.copy(current.bg); // fog matches bg for a seamless horizon
+    scene.fog.near = current.fogNear;
+    scene.fog.far = current.fogFar;
+  }
 }
 
 // ------------------------------------------------------------- mode button
@@ -269,6 +273,13 @@ export function initDaylight() {
   };
 }
 
+// floorview.js calls this after giving the background/fog back: tick()
+// early-returns once converged, so a sky that changed while the floor
+// backdrop was up would otherwise stay stale until the next state change.
+export function repaintSky() {
+  tickApply();
+}
+
 function syncCurrentToTarget() {
   current.sunDir.copy(target.sunDir);
   current.sunColor.copy(target.sunColor);
@@ -293,8 +304,10 @@ function tickApply() {
   hemiLight.color.copy(current.hemiSky);
   hemiLight.groundColor.copy(current.hemiGround);
   hemiLight.intensity = current.hemiIntensity;
-  scene.background.copy(current.bg);
-  scene.fog.color.copy(current.bg);
-  scene.fog.near = current.fogNear;
-  scene.fog.far = current.fogFar;
+  if (scene.background?.isColor) scene.background.copy(current.bg);
+  if (scene.fog) {
+    scene.fog.color.copy(current.bg);
+    scene.fog.near = current.fogNear;
+    scene.fog.far = current.fogFar;
+  }
 }

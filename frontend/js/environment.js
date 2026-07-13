@@ -3,7 +3,8 @@
 // lawn. All trees/bushes merge into two meshes (one trunk draw call, one
 // vertex-colored foliage draw call); placement uses a seeded RNG so the yard
 // never reshuffles across rebuilds. Rebuilt from the house bbox on every
-// reloadHouse. Visible in view mode only — edit mode shows the grid instead.
+// reloadHouse. Visible in view mode on the House level only — edit mode shows
+// the grid, single-floor view shows a dark backdrop (floorview.js) instead.
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene } from './scene.js';
@@ -77,14 +78,22 @@ export function initEnvironment() {
   grass.position.y = -0.05; // below edit ground (-0.02); the two never co-show
   root.add(grass);
 
+  // yard shows only in view mode on the whole-house level — edit mode shows
+  // the grid, single-floor view shows floorview.js's studio backdrop
+  let inViewMode = true;
+  let onHouseLevel = true;
+  const applyVisibility = () => { root.visible = inViewMode && onHouseLevel; };
   window.addEventListener('appModeChanged', (e) => {
-    root.visible = e.detail.mode === 'view';
+    inViewMode = e.detail.mode === 'view';
+    applyVisibility();
   });
 
   // The whole-house shell GLB loads async and its real footprint is far
   // bigger than the traced room rects; setLevel fires levelChanged once it
   // lands — measure it and replant the yard around the true bounds.
-  window.addEventListener('levelChanged', () => {
+  window.addEventListener('levelChanged', (e) => {
+    onHouseLevel = e.detail.level === 'all';
+    applyVisibility();
     if (!lastHouse) return;
     const shell = getShellRoot();
     const r = shell ? rectOfShell(shell) : null;

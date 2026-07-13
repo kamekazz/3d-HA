@@ -199,7 +199,20 @@ and eased wet/whitened lawn tinting via `setGroundWet/Snow`. It follows daylight
 sun+weather through `onDaylightChanged`, so the mode button and `__daylight.simulate({condition})`
 drive it too; `window.__weather.step(secs)` advances the easing manually for testing (rAF pauses in
 hidden tabs, so nothing eases while the tab is backgrounded). Both hide in edit mode
-(`appModeChanged`), where the grid/dark ground shows instead.
+(`appModeChanged`), where the grid/dark ground shows instead, and in single-floor view (below).
+
+**Single-floor presentation mode** (`frontend/js/floorview.js`): picking a floor in the level
+selector shouldn't leave one slab hovering over the lawn, so on `levelChanged` to a floor it swaps
+the sky for a dark studio-gradient backdrop (a radial CanvasTexture as `scene.background`, fog
+nulled — daylight.js guards its background/fog writes behind `scene.background.isColor`/`scene.fog`
+and exposes `repaintSky()` for the restore, since its tick early-returns once converged), flies the
+camera to a centered ~50°-elevation dollhouse shot of that floor's rooms (keeps the current
+azimuth), locks zoom-out just past that framing shot (`scene.js setMaxZoom` retunes the live
+`MAX_ZOOM` cap), and disables pan so the floor stays centered; environment.js and weather.js hide
+their roots on the same event. Selecting House ('all') restores the daylight sky, the house zoom
+cap, and the pose you left from (focus-mode exits then override with their own saved pose — both
+were captured at the same moment). Same-level re-fires (rebuilds) only re-center the orbit target
+— buildHouse's `focusOn` points it at the whole-house center otherwise — without moving the camera.
 
 **Frontend module layout** (`frontend/js/`, loaded as native ES modules, Three.js via CDN
 importmap — no npm/bundler):
@@ -213,6 +226,8 @@ importmap — no npm/bundler):
   encode on/off/unavailable).
 - `socket.js` — SocketIO client wrapper with polling fallback.
 - `daylight.js` — sun/weather-driven scene lighting (see Dynamic lighting above).
+- `floorview.js` — single-floor presentation mode: dark backdrop, centered floor framing,
+  zoom-out lock (see Single-floor presentation mode above).
 - `roomlights.js` — per-room night glow for HA lights that are on.
 - `environment.js` — grass/trees/bushes yard + contact shadow (see Outdoor environment above).
 - `weather.js` — rain/snow/clouds/lightning + lawn tint from the HA weather condition.

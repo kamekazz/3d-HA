@@ -228,8 +228,17 @@ export function initWeather() {
     weatherRoot.add(cl.mesh);
   }
 
+  // like the yard: weather only exists outdoors — view mode, House level
+  let inViewMode = true;
+  let onHouseLevel = true;
+  const applyVisibility = () => { weatherRoot.visible = inViewMode && onHouseLevel; };
   window.addEventListener('appModeChanged', (e) => {
-    weatherRoot.visible = e.detail.mode === 'view';
+    inViewMode = e.detail.mode === 'view';
+    applyVisibility();
+  });
+  window.addEventListener('levelChanged', (e) => {
+    onHouseLevel = e.detail.level === 'all';
+    applyVisibility();
   });
 
   onDaylightChanged(retarget);
