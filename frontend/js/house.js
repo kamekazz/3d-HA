@@ -128,8 +128,9 @@ function buildRoom(room, floor) {
     ? getTiledTexture(room.floor_texture, 1 / fs, 1 / fs)
     : getTiledTexture(room.floor_texture, fp.width / fs, fp.depth / fs);
 
-  // Dollhouse walls: BackSide culls camera-facing walls so the view always
+  // Dollhouse walls: FrontSide culls camera-facing walls so the view always
   // reaches into the room; far walls show their interior face opaque.
+  // (Normals point inward, so outside faces are Back and culled).
   // transparent stays true so focus-mode ghost fades don't recompile the
   // shader; polygonOffset pushes wall triangles back so the slab and the
   // accent edge lines win the depth fight against the coincident wall caps.
@@ -137,7 +138,7 @@ function buildRoom(room, floor) {
     color: new THREE.Color(room.wall_color || '#f2ede3'),
     map: wallTex,
     transparent: true, opacity: 1.0,
-    side: THREE.BackSide, depthWrite: true, roughness: 0.95,
+    side: THREE.FrontSide, depthWrite: true, roughness: 0.95,
     polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
   });
   // Must stay MeshStandardMaterial on a child with userData.part === 'slab':
