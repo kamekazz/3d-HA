@@ -67,6 +67,22 @@ const BINARY_LABELS = {
   running: ['Running', 'Idle'],
 };
 
+// ISO datetime states (timestamp sensors) read as raw machine strings —
+// render them as relative time, falling back to "Jul 11, 1:04 PM" when old
+const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
+function formatTimestamp(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if (mins >= 0 && mins < 1) return 'Just now';
+  if (mins >= 1 && mins < 60) return `${mins} min ago`;
+  if (mins >= 60 && mins < 24 * 60) return `${Math.round(mins / 60)} hr ago`;
+  const date = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return `${date}, ${time}`;
+}
+
 export function stateLabel(entityId) {
   const s = states.get(entityId);
   if (!s) return 'unknown';
@@ -74,6 +90,9 @@ export function stateLabel(entityId) {
     const pair = BINARY_LABELS[s.attributes?.device_class];
     if (pair) return s.state === 'on' ? pair[0] : pair[1];
     return s.state === 'on' ? 'On' : 'Off';
+  }
+  if (s.attributes?.device_class === 'timestamp' || ISO_DATETIME.test(s.state)) {
+    return formatTimestamp(s.state);
   }
   const unit = s.attributes?.unit_of_measurement;
   return unit ? `${s.state} ${unit}` : s.state;

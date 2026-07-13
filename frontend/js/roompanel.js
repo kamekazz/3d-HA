@@ -98,7 +98,9 @@ function sensorTile(dev) {
 
   const render = () => {
     name.textContent = friendlyName(dev.entity_id);
-    value.textContent = stateLabel(dev.entity_id);
+    const label = stateLabel(dev.entity_id);
+    value.textContent = label;
+    value.classList.toggle('long', label.length > 12);
     const dc = getState(dev.entity_id)?.attributes?.device_class;
     sub.textContent = (dc || domainOf(dev)).replaceAll('_', ' ');
   };
@@ -133,7 +135,9 @@ function toggleTile(dev) {
 
   const render = () => {
     name.textContent = friendlyName(dev.entity_id);
-    value.textContent = stateLabel(dev.entity_id);
+    const label = stateLabel(dev.entity_id);
+    value.textContent = label;
+    value.classList.toggle('long', label.length > 12);
     tile.classList.toggle('on', isOn(dev.entity_id));
   };
   render();
@@ -324,6 +328,12 @@ export function initRoomPanel({ house: h }) {
     editMode = !editMode;
     render();
   };
+
+  // relative timestamp labels ("5 min ago") drift without a state change
+  setInterval(() => {
+    if (currentRoomId === null || editMode || isSliderActive()) return;
+    for (const t of tiles.values()) t.render();
+  }, 30_000);
 
   onStateApplied((entityId) => {
     if (currentRoomId === null || editMode || isSliderActive()) return;
