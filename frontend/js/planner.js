@@ -5,6 +5,7 @@
 import { api } from './api.js';
 import { getLevel } from './house.js';
 import { fillTextureSelect } from './textures.js';
+import { setUndoHandler } from './undo.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -978,6 +979,38 @@ function setActiveFloor(floorId) {
 
 // ------------------------------------------------------------------ open/close
 
+// After an undo/redo while the planner is open: re-fetch the house and
+// rebuild the planner's working state, keeping the current floor, selection
+// and pan/zoom where still valid. Deliberately NOT setActiveFloor — that
+// clears the selection and fitView() would reset the zoom on every undo.
+// Cached plan images are reused (files survive undo); after undoing a plan
+// re-upload the old cached bitmap may show until the planner is reopened.
+async function rehydrate() {
+  const keepFloor = activeFloorId;
+  const keepRoom = selectedRoomId;
+  const keepStair = selectedStairId;
+  house = await api.getHouse();
+  for (const f of house.floors || []) {
+    for (const r of f.rooms || []) r._poly = absPoly(r);
+  }
+  drag = null; // never let a live gesture reference stale room objects
+  selectedVertex = null;
+  const floors = floorsSorted();
+  activeFloorId = floors.some((f) => f.id === keepFloor)
+    ? keepFloor : floors[0]?.id ?? null;
+  selectedRoomId = activeRooms().some((r) => r.id === keepRoom) ? keepRoom : null;
+  selectedStairId = activeStairs().some(({ st }) => st.id === keepStair)
+    ? keepStair : null;
+  buildFloorTabs();
+  updatePropsPanel();
+  loadPlanImage(activeFloor()); // restores an undone plan-image pointer
+  updateImgControls();
+  redraw();
+  renderStatus();
+}
+
+let prevUndoHandler = null;
+
 export async function openPlanner(initialLevel) {
   house = await api.getHouse();
   for (const f of house.floors || []) {
@@ -995,6 +1028,7 @@ export async function openPlanner(initialLevel) {
   $('planner').classList.remove('hidden');
   resizeCanvas();
   setActiveFloor(activeFloorId);
+  prevUndoHandler = setUndoHandler(rehydrate);
 }
 
 function closePlanner() {
@@ -1002,6 +1036,7 @@ function closePlanner() {
   isOpen = false;
   mode = 'select';
   drag = null;
+  setUndoHandler(prevUndoHandler); // undo refreshes the 3D view again
   $('pl-draw').classList.remove('active');
   $('planner').classList.add('hidden');
   onCloseCb?.(); // one 3D rebuild for the whole editing session

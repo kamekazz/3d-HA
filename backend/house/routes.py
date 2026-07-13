@@ -1,4 +1,5 @@
 """CRUD for our own 3D layout data (/api/house/*)."""
+import functools
 import os
 import sqlite3
 
@@ -34,6 +35,59 @@ def _store():
     return current_app.extensions["house_store"]
 
 
+def _history():
+    return current_app.extensions["house_history"]
+
+
+def undoable(view):
+    """Snapshot the layout before a mutating endpoint; record it only if the
+    call succeeded AND actually changed something, so no-op PATCHes never
+    burn an undo step. Goes between the route decorator and the function."""
+    @functools.wraps(view)
+    def wrapper(*args, **kwargs):
+        store = _store()
+        before = store.export_snapshot()
+        resp = view(*args, **kwargs)
+        status = resp[1] if isinstance(resp, tuple) else resp.status_code
+        if status < 400 and store.export_snapshot() != before:
+            _history().record(before)
+        return resp
+    return wrapper
+
+
+@bp.post("/undo")
+def undo_house():
+    store, hist = _store(), _history()
+    snap = hist.undo(store.export_snapshot())
+    if snap is None:
+        return jsonify({"ok": False, **hist.counts()})
+    try:
+        store.restore_snapshot(snap)
+    except Exception as exc:
+        hist.restore_failed(snap, was_undo=True)
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"ok": True, **hist.counts()})
+
+
+@bp.post("/redo")
+def redo_house():
+    store, hist = _store(), _history()
+    snap = hist.redo(store.export_snapshot())
+    if snap is None:
+        return jsonify({"ok": False, **hist.counts()})
+    try:
+        store.restore_snapshot(snap)
+    except Exception as exc:
+        hist.restore_failed(snap, was_undo=False)
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"ok": True, **hist.counts()})
+
+
+@bp.get("/history")
+def history_counts():
+    return jsonify(_history().counts())
+
+
 @bp.get("")
 def get_house():
     store = _store()
@@ -56,6 +110,7 @@ def get_house():
 
 
 @bp.post("/generate")
+@undoable
 def generate_from_ha():
     """Re-generate on demand: adds floors/rooms/devices HA knows about that we
     don't have yet. Existing rooms and placements are never touched."""
@@ -69,6 +124,7 @@ def generate_from_ha():
 
 
 @bp.post("/sync")
+@undoable
 def sync_house():
     """Reconcile the whole layout with HA in one shot: add new floors, move
     rooms to the floor their HA area now lives on, add rooms/devices for new
@@ -82,6 +138,7 @@ def sync_house():
 
 
 @bp.post("/floor")
+@undoable
 def create_floor():
     data = request.get_json(force=True)
     if not data.get("name") or data.get("level") is None:
@@ -94,6 +151,7 @@ def create_floor():
 
 
 @bp.patch("/floor/<int:floor_id>")
+@undoable
 def update_floor(floor_id):
     if not _store().update_floor(floor_id, request.get_json(force=True)):
         return jsonify({"error": "floor not found or nothing to update"}), 404
@@ -101,6 +159,7 @@ def update_floor(floor_id):
 
 
 @bp.post("/floor/<int:floor_id>/plan")
+@undoable
 def upload_floor_plan(floor_id):
     file = request.files.get("file")
     if not file or not file.filename:
@@ -128,15 +187,18 @@ def get_floor_plan(floor_id):
 
 
 @bp.delete("/floor/<int:floor_id>/plan")
+@undoable
 def delete_floor_plan(floor_id):
     if not _store().get_floor(floor_id):
         return jsonify({"error": "floor not found"}), 404
-    _remove_plan_files(floor_id)
+    # Only null the pointer — keep the file on disk so undo can bring the
+    # image back. upload_floor_plan removes stale files on the next upload.
     _store().set_floor_plan_image(floor_id, None)
     return jsonify({"ok": True})
 
 
 @bp.post("/room")
+@undoable
 def create_room():
     data = request.get_json(force=True)
     if not data.get("name") or data.get("floor_id") is None:
@@ -149,6 +211,7 @@ def create_room():
 
 
 @bp.patch("/room/<int:room_id>")
+@undoable
 def update_room(room_id):
     try:
         updated = _store().update_room(room_id, request.get_json(force=True))
@@ -160,6 +223,7 @@ def update_room(room_id):
 
 
 @bp.delete("/room/<int:room_id>")
+@undoable
 def delete_room(room_id):
     if not _store().delete_room(room_id):
         return jsonify({"error": "room not found"}), 404
@@ -167,6 +231,7 @@ def delete_room(room_id):
 
 
 @bp.post("/stairs")
+@undoable
 def create_stairs():
     data = request.get_json(force=True)
     if data.get("floor_id") is None:
@@ -181,6 +246,7 @@ def create_stairs():
 
 
 @bp.patch("/stairs/<int:stair_id>")
+@undoable
 def update_stairs(stair_id):
     try:
         updated = _store().update_stairs(stair_id, request.get_json(force=True))
@@ -192,6 +258,7 @@ def update_stairs(stair_id):
 
 
 @bp.delete("/stairs/<int:stair_id>")
+@undoable
 def delete_stairs(stair_id):
     if not _store().delete_stairs(stair_id):
         return jsonify({"error": "stairs not found"}), 404
@@ -199,6 +266,7 @@ def delete_stairs(stair_id):
 
 
 @bp.post("/room/<int:room_id>/device")
+@undoable
 def place_device(room_id):
     data = request.get_json(force=True)
     if not data.get("entity_id"):
@@ -210,6 +278,7 @@ def place_device(room_id):
 
 
 @bp.patch("/device/<int:placement_id>")
+@undoable
 def update_placement(placement_id):
     try:
         updated = _store().update_placement(placement_id,
@@ -222,6 +291,7 @@ def update_placement(placement_id):
 
 
 @bp.delete("/device/<int:placement_id>")
+@undoable
 def delete_placement(placement_id):
     if not _store().delete_placement(placement_id):
         return jsonify({"error": "placement not found"}), 404
@@ -293,6 +363,7 @@ def delete_model(model_id):
 # ---- objects (standalone furniture/decor placed in rooms) -------------------
 
 @bp.post("/room/<int:room_id>/object")
+@undoable
 def place_object(room_id):
     data = request.get_json(force=True)
     if data.get("model_id") is None:
@@ -307,6 +378,7 @@ def place_object(room_id):
 
 
 @bp.patch("/object/<int:object_id>")
+@undoable
 def update_object(object_id):
     try:
         updated = _store().update_object(object_id, request.get_json(force=True))
@@ -318,6 +390,7 @@ def update_object(object_id):
 
 
 @bp.delete("/object/<int:object_id>")
+@undoable
 def delete_object(object_id):
     if not _store().delete_object(object_id):
         return jsonify({"error": "object not found"}), 404

@@ -81,6 +81,23 @@ row; re-leveling an existing floor happens solely through `reconcile_floor_level
 The frontend button issues a `refreshHA()` first, waits ~1.5s for the registry refresh to land, then
 calls sync.
 
+**Undo/redo** covers every layout edit app-wide (planner gestures, panel field changes, 3D drags,
+deletes, generate/sync). Backend-owned, session-only: `@undoable` on each mutating route in
+`house/routes.py` snapshots the five layout tables (`HISTORY_TABLES` in `house/store.py` — models
+excluded, they're file-lifecycle) via `HouseStore.export_snapshot` before the call and records it in
+`house/history.py` (`HouseHistory`, in-memory two-stack, cap 100) only if the call succeeded and
+changed data (no-op PATCHes burn no step). `POST /api/house/undo|redo` restore a snapshot verbatim
+with **original row ids** (`restore_snapshot`: delete-all child→parent, insert parent→child — so
+undoing a room delete restores its cascade-deleted placements/objects, and `floors.level UNIQUE`
+never trips), returning `{ok, can_undo, can_redo}`; `GET /api/house/history` returns counts.
+Dangling `model_id` on restore: placements → NULL, objects → row dropped. `delete_floor_plan` only
+nulls the DB column now (file kept on disk) so undoing a plan delete re-shows the image; file
+*contents* aren't versioned. Frontend: `js/undo.js` owns the topbar + planner buttons and
+Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z (skipped while typing in inputs — native text undo wins); `api.js`
+notifies it after every mutating `/api/house` call so buttons stay fresh. After undo/redo the
+current context re-fetches: `reloadHouse` in the 3D view, or the planner's `rehydrate()` (swapped in
+via `setUndoHandler` on open/close — keeps floor/selection/zoom, unlike `setActiveFloor`).
+
 **Realtime path:** HA's `state_changed` events arrive on the `HARealtime` background thread, update
 `HACache`, and are relayed to all connected browsers via `realtime/socketio.py` (SocketIO event
 `state_changed`). The frontend (`js/socket.js`) falls back to 5s polling if the socket drops.
@@ -183,7 +200,9 @@ importmap — no npm/bundler):
 - `ui.js` — room editor panel, device detail/control panel, level selector, connection banner.
 - `planner.js` — the 2D per-floor floor-plan editor (canvas overlay, feet grid, polygon editing,
   plan-image tracing).
-- `api.js` — thin fetch wrapper for the Flask endpoints above.
+- `api.js` — thin fetch wrapper for the Flask endpoints above; notifies layout-mutation listeners
+  (`onLayoutMutation`) after each mutating `/api/house` call.
+- `undo.js` — app-wide undo/redo buttons + Ctrl+Z/Y shortcuts (see Undo/redo above).
 
 ## Conventions worth knowing
 

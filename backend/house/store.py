@@ -95,6 +95,11 @@ MODEL_FIELDS = ("name",)
 STAIR_FIELDS = ("name", "x", "z", "width", "depth", "direction", "floor_id")
 STAIR_DIRECTIONS = ("n", "s", "e", "w")
 
+# Tables covered by undo/redo snapshots, in parent -> child FK order.
+# `models` is deliberately excluded: model upload/delete manage files on disk
+# and are not undoable; restores null/drop references to vanished models.
+HISTORY_TABLES = ("floors", "rooms", "stairs", "placements", "objects")
+
 # Defaults for rooms generated from HA areas (editable afterwards). Feet.
 GEN_ROOM = {"width": 16.0, "depth": 13.0, "height": 8.0, "gap": 3.0}
 GEN_PALETTE = ("#8fa8bf", "#b98fbf", "#8fbf9c", "#bfae8f",
@@ -263,6 +268,49 @@ class HouseStore:
             floor["rooms"] = rooms_by_floor.get(floor["id"], [])
             floor["stairs"] = stairs_by_floor.get(floor["id"], [])
         return {"floors": floors}
+
+    def export_snapshot(self):
+        """Raw rows of every history table, keyed by table name (undo/redo)."""
+        with self._lock:
+            return {t: self._rows(f"SELECT * FROM {t} ORDER BY id")
+                    for t in HISTORY_TABLES}
+
+    def restore_snapshot(self, snap):
+        """Replace the layout tables with a snapshot, keeping original row ids.
+
+        Delete-all child->parent then insert parent->child: FK enforcement
+        never trips and floors.level UNIQUE can't collide mid-write (the
+        table is empty when levels are written). sqlite_sequence never
+        decreases, so rows created later can't collide with restored ids.
+        Models aren't snapshotted: a placement whose model has since been
+        deleted reverts to the primitive marker (model_id NULL, mirroring
+        ON DELETE SET NULL); an object whose model is gone is dropped
+        (mirroring ON DELETE CASCADE).
+        """
+        with self._lock:
+            try:
+                valid_models = {r["id"] for r in
+                                self._rows("SELECT id FROM models")}
+                for t in reversed(HISTORY_TABLES):
+                    self._db.execute(f"DELETE FROM {t}")
+                for t in HISTORY_TABLES:
+                    for row in snap.get(t, []):
+                        row = dict(row)
+                        mid = row.get("model_id")
+                        if t == "placements" and mid is not None \
+                                and mid not in valid_models:
+                            row["model_id"] = None
+                        if t == "objects" and mid not in valid_models:
+                            continue
+                        cols = ", ".join(row)
+                        ph = ", ".join("?" for _ in row)
+                        self._db.execute(
+                            f"INSERT INTO {t} ({cols}) VALUES ({ph})",
+                            tuple(row.values()))
+                self._db.commit()
+            except Exception:
+                self._db.rollback()
+                raise
 
     def has_floors(self):
         with self._lock:

@@ -14,6 +14,7 @@ from api.ha_routes import bp as ha_bp
 from ha.cache import HACache
 from ha.client import HAClient
 from ha.ws_client import HARealtime
+from house.history import HouseHistory
 from house.routes import bp as house_bp
 from house.store import HouseStore
 from realtime.socketio import make_state_relay, socketio
@@ -32,6 +33,7 @@ def create_app():
 
     app.extensions["ha_cache"] = HACache()
     app.extensions["house_store"] = HouseStore(config.DB_PATH)
+    app.extensions["house_history"] = HouseHistory()  # session-only undo/redo
     app.extensions["ha_rest"] = None
     app.extensions["ha_realtime"] = None
 

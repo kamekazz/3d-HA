@@ -16,10 +16,32 @@ async function request(path, options = {}) {
   return body;
 }
 
+// Layout-mutation listeners: undo.js subscribes to keep its buttons fresh
+// after every house edit (models excluded — they're not in undo history).
+const mutListeners = new Set();
+export function onLayoutMutation(fn) { mutListeners.add(fn); }
+function notifyMutation(path) {
+  if (!path.startsWith('/api/house')) return;
+  if (/\/(undo|redo|history)$/.test(path) || path.includes('/model')) return;
+  for (const fn of mutListeners) fn();
+}
+
 const get = (p) => request(p);
-const post = (p, data) => request(p, { method: 'POST', body: JSON.stringify(data ?? {}) });
-const patch = (p, data) => request(p, { method: 'PATCH', body: JSON.stringify(data ?? {}) });
-const del = (p) => request(p, { method: 'DELETE' });
+const post = async (p, data) => {
+  const body = await request(p, { method: 'POST', body: JSON.stringify(data ?? {}) });
+  notifyMutation(p);
+  return body;
+};
+const patch = async (p, data) => {
+  const body = await request(p, { method: 'PATCH', body: JSON.stringify(data ?? {}) });
+  notifyMutation(p);
+  return body;
+};
+const del = async (p) => {
+  const body = await request(p, { method: 'DELETE' });
+  notifyMutation(p);
+  return body;
+};
 
 export const api = {
   getStructure: () => get('/api/ha/structure'),
@@ -28,6 +50,9 @@ export const api = {
   refreshHA: () => post('/api/ha/refresh'),
 
   getHouse: () => get('/api/house'),
+  undo: () => post('/api/house/undo'),
+  redo: () => post('/api/house/redo'),
+  getHistory: () => get('/api/house/history'),
   generateHouse: () => post('/api/house/generate'),
   syncHouse: () => post('/api/house/sync'),
   updateFloor: (id, data) => patch(`/api/house/floor/${id}`, data),
@@ -38,6 +63,7 @@ export const api = {
     const res = await fetch(`/api/house/floor/${floorId}/plan`, { method: 'POST', body });
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`);
+    notifyMutation(`/api/house/floor/${floorId}/plan`);
     return data;
   },
   deleteFloorPlan: (floorId) => del(`/api/house/floor/${floorId}/plan`),

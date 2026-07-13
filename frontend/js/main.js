@@ -15,6 +15,7 @@ import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
 import { initDaylight } from './daylight.js';
 import { initRoomLights, setRoomLightsData } from './roomlights.js';
+import { initUndo } from './undo.js';
 
 let structure = null;
 
@@ -251,6 +252,7 @@ async function main() {
   initUI({ structure, house, onReload: reloadHouse });
   initRoomPanel({ house });
   initPlanner({ getStructure: () => structure, onClose: reloadHouse });
+  initUndo({ defaultRefresh: reloadHouse });
   initRoomLights();
   setRoomLightsData({ house, structure });
   await loadStates();

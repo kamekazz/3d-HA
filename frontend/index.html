@@ -23,6 +23,8 @@
     <span id="conn-status" class="status-dot" title="Realtime status"></span>
     <span id="conn-label">connecting…</span>
     <div class="spacer"></div>
+    <button id="btn-undo" type="button" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+    <button id="btn-redo" type="button" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
     <button id="btn-daylight" type="button" title="Scene lighting: follow HA sun/weather, or force day/night">☀ auto</button>
     <button id="btn-planner" type="button" title="Edit each floor's layout on a top-down plan (feet)">Floor plan</button>
     <button id="btn-models" type="button" title="Upload and manage 3D models (.glb) for devices and furniture">Models</button>
@@ -184,6 +186,8 @@
           <option value="1">1 ft</option>
         </select>
       </label>
+      <button id="pl-undo" type="button" class="secondary" title="Undo (Ctrl+Z)" disabled>↶</button>
+      <button id="pl-redo" type="button" class="secondary" title="Redo (Ctrl+Y)" disabled>↷</button>
       <button id="pl-draw" type="button" class="secondary">+ Draw room</button>
       <button id="pl-stairs" type="button" class="secondary"
               title="Draw a stairwell — it connects this floor to the one below and shows on both">+ Stairs</button>
