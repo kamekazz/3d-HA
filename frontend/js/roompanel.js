@@ -18,6 +18,7 @@ let currentRoomId = null;
 let editMode = false;
 const tiles = new Map();    // entity_id -> { render } (non-camera tiles only)
 const camViews = new Map(); // entity_id -> camera view handle
+let shownIds = new Set();   // entity_ids currently rendered as tiles
 
 const TOGGLE_DOMAINS = new Set(['light', 'switch', 'fan', 'input_boolean']);
 
@@ -42,6 +43,17 @@ function findRoom(roomId) {
 
 function domainOf(dev) {
   return dev.entity_id.split('.')[0];
+}
+
+// unknown/unavailable entities render as dead cards — keep them out of the
+// tile view (they stay listed in edit mode, and reappear if they come back)
+function isUsable(dev) {
+  const s = getState(dev.entity_id);
+  return !!s && s.state !== 'unknown' && s.state !== 'unavailable';
+}
+
+function shownDevices(room) {
+  return (room.devices || []).filter((d) => d.visible !== 0 && isUsable(d));
 }
 
 // ---------------------------------------------------------------- tiles
@@ -170,7 +182,8 @@ function teardownTiles() {
 function renderTiles(room) {
   teardownTiles();
   const container = $('rp-tiles');
-  const devices = (room.devices || []).filter((d) => d.visible !== 0);
+  const devices = shownDevices(room);
+  shownIds = new Set(devices.map((d) => d.entity_id));
   const byName = (a, b) =>
     friendlyName(a.entity_id).localeCompare(friendlyName(b.entity_id));
 
@@ -193,9 +206,12 @@ function renderTiles(room) {
     for (const dev of group.members) container.appendChild(makeTile(dev));
   }
   if (!devices.length) {
-    container.innerHTML = (room.devices || []).length
-      ? '<p class="muted">All entities in this room are hidden — use Edit to show some.</p>'
-      : '<p class="muted">No devices placed in this room yet.</p>';
+    const placed = (room.devices || []).length;
+    container.innerHTML = !placed
+      ? '<p class="muted">No devices placed in this room yet.</p>'
+      : (room.devices || []).some((d) => d.visible !== 0)
+        ? '<p class="muted">All entities in this room are currently unavailable.</p>'
+        : '<p class="muted">All entities in this room are hidden — use Edit to show some.</p>';
   }
 }
 
@@ -249,9 +265,9 @@ function renderEditList(room) {
 function updateHeader(room) {
   $('rp-name').textContent = room.name;
   const total = (room.devices || []).length;
-  const hidden = (room.devices || []).filter((d) => d.visible === 0).length;
-  $('rp-count').textContent = hidden
-    ? `${total - hidden} of ${total} entities`
+  const shown = shownDevices(room).length;
+  $('rp-count').textContent = shown < total
+    ? `${shown} of ${total} entities`
     : `${total} entit${total === 1 ? 'y' : 'ies'}`;
   const btn = $('rp-edit');
   btn.textContent = editMode ? 'Done' : 'Edit';
@@ -311,6 +327,16 @@ export function initRoomPanel({ house: h }) {
 
   onStateApplied((entityId) => {
     if (currentRoomId === null || editMode || isSliderActive()) return;
+    // availability flips add/remove tiles, so rebuild when the shown set changed
+    const room = findRoom(currentRoomId);
+    if (room) {
+      const want = shownDevices(room);
+      if (want.length !== shownIds.size ||
+          want.some((d) => !shownIds.has(d.entity_id))) {
+        render();
+        return;
+      }
+    }
     if (entityId === null) {
       for (const t of tiles.values()) t.render();
     } else {
