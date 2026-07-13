@@ -14,6 +14,8 @@ import { initDrag } from './drag.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
 import { initDaylight } from './daylight.js';
+import { initEnvironment, setEnvironmentData } from './environment.js';
+import { initWeather } from './weather.js';
 import { initRoomLights, setRoomLightsData } from './roomlights.js';
 import { initUndo } from './undo.js';
 
@@ -46,6 +48,7 @@ async function reloadHouse() {
   buildDevices(house);
   buildObjects(house);
   buildLabels(house);
+  setEnvironmentData(house); // yard follows the (possibly moved) footprints
   setRoomLightsData({ house, structure }); // fresh slab materials — repoint glow
   applyEnvIntensity(); // fresh materials default to envMapIntensity 1
   await loadStates();
@@ -258,6 +261,8 @@ function setupPicking() {
 async function main() {
   initScene(document.getElementById('scene-container'));
   initDaylight();
+  initEnvironment();
+  initWeather();
   setupPicking();
 
   await loadStructure();
@@ -266,6 +271,7 @@ async function main() {
   buildDevices(house);
   buildObjects(house);
   buildLabels(house);
+  setEnvironmentData(house);
   initFocus();
   initDrag();
   initUI({ structure, house, onReload: reloadHouse });

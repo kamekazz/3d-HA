@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import { scene, focusOn } from './scene.js';
+import { scene, focusOn, frameInitialView } from './scene.js';
 import { getTiledTexture, textureSize } from './textures.js';
 import { onStateApplied, isOn } from './state.js';
 import { getInstance } from './models.js';
@@ -22,6 +22,10 @@ let currentLevel = 'all';
 let houseShell = null;    // loaded shell root Group, or null (not loaded/failed)
 let shellConfig = null;   // { model_id, x, y, z, rot_y, scale } from the payload
 
+// The opening camera shot is set once, from the first build that has rooms;
+// later rebuilds (edits, undo, sync) must not yank the camera around.
+let initialViewDone = false;
+
 export function buildHouse(house) {
   if (houseRoot) scene.remove(houseRoot);
   floorGroups.clear();
@@ -36,7 +40,7 @@ export function buildHouse(house) {
 
   const floors = [...(house.floors || [])].sort((a, b) => a.level - b.level);
   let y = 0;
-  let center = null;
+  let bbox = null; // whole-house footprint across all floors
 
   floors.forEach((floor, i) => {
     floorBaseY.set(floor.level, y);
@@ -51,7 +55,14 @@ export function buildHouse(house) {
       group.add(mesh);
       roomMeshes.set(room.id, mesh);
       const fp = room.footprint;
-      if (!center) center = { x: fp.x + fp.width / 2, z: fp.z + fp.depth / 2 };
+      if (!bbox) {
+        bbox = { minX: fp.x, minZ: fp.z, maxX: fp.x + fp.width, maxZ: fp.z + fp.depth };
+      } else {
+        bbox.minX = Math.min(bbox.minX, fp.x);
+        bbox.minZ = Math.min(bbox.minZ, fp.z);
+        bbox.maxX = Math.max(bbox.maxX, fp.x + fp.width);
+        bbox.maxZ = Math.max(bbox.maxZ, fp.z + fp.depth);
+      }
     }
 
     // stairs rise from this floor's base up to the next floor's base; they
@@ -66,7 +77,16 @@ export function buildHouse(house) {
     y += floor.floor_height || 10.0;
   });
 
-  if (center) focusOn(center.x, 5, center.z);
+  if (bbox) {
+    const cx = (bbox.minX + bbox.maxX) / 2;
+    const cz = (bbox.minZ + bbox.maxZ) / 2;
+    if (!initialViewDone) {
+      initialViewDone = true;
+      frameInitialView(cx, cz, bbox.maxX - bbox.minX, bbox.maxZ - bbox.minZ, y);
+    } else {
+      focusOn(cx, 5, cz);
+    }
+  }
   setLevel(currentLevel);
 
   // Kick off the whole-house shell (async). setLevel re-runs once it resolves.
@@ -322,6 +342,9 @@ export function setLevel(level) {
     g.visible = houseMode ? false : (level === 'all' || g.userData.levels.includes(level));
   }
   if (houseShell) houseShell.visible = houseMode;
+  // window event (not a callback registry) so devices.js/ui.js can react to
+  // entering/leaving House mode without a circular import (house→state→devices)
+  window.dispatchEvent(new CustomEvent('levelChanged', { detail: { level, houseMode } }));
 }
 
 export function getLevel() {

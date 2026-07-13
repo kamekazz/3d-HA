@@ -43,17 +43,21 @@ export function setAppMode(mode) {
   paintMarkersBtn();
 }
 
-// ○ Devices topbar button: global show/hide for all device markers.
-// Edit mode force-shows markers (drag/placement need them), so the button is
-// disabled there and the user's preference resumes back in view mode.
+// ○ Devices topbar button: show/hide device markers on floor levels. The
+// House (shell) view always hides markers, and edit mode force-shows them
+// (drag/placement need them) — the button is disabled in both, and the
+// user's preference resumes on a normal floor view.
+let inHouseMode = false; // kept fresh via onLevelChanged in initUI
 function paintMarkersBtn() {
   const btn = $('btn-markers');
   if (!btn) return;
   btn.textContent = areMarkersShown() ? '◉ Devices' : '○ Devices';
-  btn.disabled = appMode === 'edit';
-  btn.title = appMode === 'edit'
-    ? 'Markers are always visible in edit mode'
-    : 'Show or hide all device markers';
+  btn.disabled = appMode === 'edit' || inHouseMode;
+  btn.title = inHouseMode
+    ? 'Devices are hidden in the House view'
+    : appMode === 'edit'
+      ? 'Markers are always visible in edit mode'
+      : 'Show or hide device markers';
 }
 
 export function evaluateDashboardVisibility() {
@@ -142,6 +146,10 @@ export function initUI({ structure: s, house: h, onReload }) {
     setMarkersShown(!areMarkersShown());
     paintMarkersBtn();
   };
+  window.addEventListener('levelChanged', (e) => {
+    inHouseMode = e.detail.houseMode;
+    paintMarkersBtn();
+  });
   onFocusChanged(() => evaluateDashboardVisibility());
   // Initialize UI state
   setAppMode('view');

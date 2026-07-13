@@ -78,6 +78,14 @@ export function getNightFactor() {
   return current.nightFactor;
 }
 
+// weather.js (particles/clouds) follows the same resolved sun+weather as the
+// lighting — including mode overrides and __daylight.simulate() — via this
+// registry instead of re-deriving it from entity states.
+const daylightListeners = new Set();
+let lastDaylight = { elevation: 45, condition: 'sunny', nightFactor: 0 };
+export function onDaylightChanged(fn) { daylightListeners.add(fn); }
+export function getDaylight() { return lastDaylight; }
+
 // ------------------------------------------------------------- target calc
 
 const _tint = new THREE.Color();
@@ -157,6 +165,13 @@ function recomputeTarget() {
   // IBL follows the sun so the environment map doesn't flatten nights
   target.envIntensity =
     THREE.MathUtils.lerp(0.45, 0.05, target.nightFactor) * w.hemiX;
+
+  lastDaylight = {
+    elevation,
+    condition: condition || 'sunny',
+    nightFactor: target.nightFactor,
+  };
+  for (const fn of daylightListeners) fn(lastDaylight);
 }
 
 // ------------------------------------------------------------- per-frame

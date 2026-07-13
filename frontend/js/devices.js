@@ -8,19 +8,26 @@ import { styleMarker } from './state.js';
 export const markers = new Map(); // entity_id -> marker root (Mesh or Group)
 
 // ------------------------------------------------------- global visibility
-// Markers are hidden by default ("house only" view); the ○ Devices topbar
-// button flips this. Edit mode force-shows them (drag/placement need visible
+// Markers show on floor levels (○ Devices topbar button can hide them) but
+// are ALWAYS hidden in House mode — the shell view is a clean exterior.
+// Edit mode force-shows them on floor levels (drag/placement need visible
 // markers) without touching the persisted preference. Focus mode hides the
 // other rooms' markers on the focused level. All writers funnel through
 // syncMarkerVisibility so the states can't fight each other.
 const MARKERS_KEY = '3dha.markersShown';
-let markersShown = false;
-try { markersShown = localStorage.getItem(MARKERS_KEY) === '1'; } catch { /* private mode */ }
+let markersShown = true;
+try { markersShown = localStorage.getItem(MARKERS_KEY) !== '0'; } catch { /* private mode */ }
 let editOverride = false;
+let houseModeActive = false; // 'all' level with a shell loaded
 let focusScope = null; // {level, roomId} while a room is focused
 
 window.addEventListener('appModeChanged', (e) => {
   editOverride = e.detail.mode === 'edit';
+  applyAllMarkerVisibility();
+});
+
+window.addEventListener('levelChanged', (e) => {
+  houseModeActive = e.detail.houseMode;
   applyAllMarkerVisibility();
 });
 
@@ -33,7 +40,8 @@ export function syncMarkerVisibility(marker) {
   const ud = marker.userData;
   const focusHidden = !!focusScope &&
     ud.level === focusScope.level && ud.roomId !== focusScope.roomId;
-  marker.visible = !ud.hiddenByUser && (markersShown || editOverride) && !focusHidden;
+  marker.visible = !ud.hiddenByUser && (markersShown || editOverride) &&
+    !focusHidden && !houseModeActive;
 }
 
 export function applyAllMarkerVisibility() {

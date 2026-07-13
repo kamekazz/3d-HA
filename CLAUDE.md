@@ -184,6 +184,23 @@ When >6 rooms are lit, the ones nearest `controls.target` on visible levels win.
 `setRoomLightsData({house, structure})` must be re-called after every house rebuild
 (`main.js reloadHouse`) because slabs get fresh materials.
 
+**Outdoor environment & weather** (frontend-only): `frontend/js/environment.js` builds the yard —
+a grass disc reaching past fog-far, merged low-poly trees/bushes (two draw calls, vertex-colored
+foliage, seeded RNG so the yard never reshuffles) laid out to mirror the real property's satellite
+view (dense west treeline, treeline across the back, open east lawn, shrubs flanking the driveway
+entrance), plus a fake-AO contact shadow. Plants anchor to the house-shell GLB's **measured**
+footprint when one is loaded — re-measured on `levelChanged` since the shell loads async, with flat
+hardscape meshes (<3 ft tall, e.g. the driveway) excluded from the bounds — and never grow on a
+room rect (`onPad`). `setEnvironmentData(house)` re-runs on every `reloadHouse`.
+`frontend/js/weather.js` renders the HA weather condition: rain streaks (LineSegments) + snow
+(Points) from fixed max-size pools throttled with `setDrawRange`, ~9 drifting cloud meshes,
+lightning as `renderer.toneMappingExposure` flashes (never add/remove lights — shader recompile),
+and eased wet/whitened lawn tinting via `setGroundWet/Snow`. It follows daylight.js's resolved
+sun+weather through `onDaylightChanged`, so the mode button and `__daylight.simulate({condition})`
+drive it too; `window.__weather.step(secs)` advances the easing manually for testing (rAF pauses in
+hidden tabs, so nothing eases while the tab is backgrounded). Both hide in edit mode
+(`appModeChanged`), where the grid/dark ground shows instead.
+
 **Frontend module layout** (`frontend/js/`, loaded as native ES modules, Three.js via CDN
 importmap — no npm/bundler):
 - `main.js` — bootstraps: loads HA structure + house layout, builds the scene, wires picking
@@ -197,6 +214,8 @@ importmap — no npm/bundler):
 - `socket.js` — SocketIO client wrapper with polling fallback.
 - `daylight.js` — sun/weather-driven scene lighting (see Dynamic lighting above).
 - `roomlights.js` — per-room night glow for HA lights that are on.
+- `environment.js` — grass/trees/bushes yard + contact shadow (see Outdoor environment above).
+- `weather.js` — rain/snow/clouds/lightning + lawn tint from the HA weather condition.
 - `ui.js` — room editor panel, device detail/control panel, level selector, connection banner.
 - `planner.js` — the 2D per-floor floor-plan editor (canvas overlay, feet grid, polygon editing,
   plan-image tracing).

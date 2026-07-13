@@ -155,6 +155,19 @@ export function focusOn(x, y, z) {
   zoomTarget = camera.position.distanceTo(controls.target);
 }
 
+// One-time opening shot: frame the whole house from the front (+X/+Z) at a low
+// angle, aimed above mid-height so the house sits toward the bottom of the view.
+export function frameInitialView(cx, cz, spanX, spanZ, topY) {
+  const dist = THREE.MathUtils.clamp(Math.hypot(spanX, spanZ) * 1.35, 60, MAX_ZOOM);
+  const elev = THREE.MathUtils.degToRad(26);
+  const ty = topY * 0.6;
+  controls.target.set(cx, ty, cz);
+  const h = dist * Math.cos(elev) / Math.SQRT2;
+  camera.position.set(cx + h, ty + dist * Math.sin(elev), cz + h);
+  camera.lookAt(controls.target);
+  zoomTarget = dist;
+}
+
 // Smoothly fly the camera to a new pose (eased in the render loop above).
 export function flyTo(position, target) {
   poseGoal = {
