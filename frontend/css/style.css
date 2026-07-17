@@ -431,82 +431,47 @@ form input[type="color"] { padding: 2px; height: 32px; }
 }
 #home-btn .hb-sub { display: block; font-size: 11px; font-weight: 400; color: var(--text-dim); }
 
-/* Left column: greeting + status + scenes */
+/* Left column: 2-column camera grid — capacity is computed in cameras.js so
+   it never scrolls (wall tablet, touch only); overflow:hidden is the backstop */
 #left-dash {
-  position: fixed; top: 82px; left: 20px; bottom: 100px; width: 240px;
-  z-index: 22; display: flex; flex-direction: column; gap: 12px;
-  overflow-y: auto; scrollbar-width: none;
+  position: fixed; top: 82px; left: 20px; bottom: 100px; width: 380px;
+  z-index: 22; display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 10px; grid-auto-rows: max-content; align-content: start;
+  overflow: hidden;
 }
-#left-dash::-webkit-scrollbar { display: none; }
-#left-dash .card { padding: 14px 16px; flex: none; }
-#ld-greeting { font-size: 17px; font-weight: 600; margin-bottom: 2px; }
-#ld-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
-.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
-.status-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(255, 255, 255, 0.05); border-radius: var(--radius-pill);
-  padding: 5px 11px; font-size: 11.5px; color: var(--text-faint);
-}
-.status-chip::before {
-  content: ""; width: 7px; height: 7px; border-radius: 50%;
-  background: var(--text-dim); flex: none;
-}
-.status-chip.ok { color: #9fe6bd; }
-.status-chip.ok::before { background: var(--ok); }
-.status-chip.warn { color: #f4d488; }
-.status-chip.warn::before { background: var(--warn); }
 
-#scenes-card h3, #calendar-card h3, .ld-heading {
-  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text-dim); font-weight: 600; margin-bottom: 10px;
+.cam-tile {
+  position: relative; border-radius: var(--radius-lg); overflow: hidden;
+  background: #0b0e13; border: 1px solid var(--glass-border); cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: transform 0.12s;
 }
-#scene-list { display: flex; flex-direction: column; gap: 8px; }
-.scene-pill {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  background: rgba(255, 255, 255, 0.04); border: 1px solid transparent;
-  border-radius: var(--radius-md); padding: 9px 10px;
-  color: var(--text); font-size: 13px; font-weight: 500; text-align: left;
+.cam-tile:active { transform: scale(0.96); }
+/* placeholder glyph: visible until the first snapshot lands, and shows
+   through the dimmed image of a broken/offline camera */
+.cam-tile::before {
+  content: "📷"; position: absolute; inset: 0; display: grid;
+  place-items: center; font-size: 22px; opacity: 0.25;
 }
-.scene-pill:hover { background: rgba(255, 255, 255, 0.09); }
-.scene-pill .sp-icon {
-  width: 30px; height: 30px; border-radius: 9px; flex: none;
-  display: flex; align-items: center; justify-content: center; font-size: 15px;
+.cam-tile.broken > img { opacity: 0.35; }
+.cam-tile > img,
+.cam-tile .cam-view img {
+  position: relative; display: block; width: 100%; aspect-ratio: 16 / 9;
+  object-fit: cover; min-height: 0; border: 0; border-radius: 0;
 }
-.scene-pill .sp-name {
-  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.cam-label {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 14px 10px 6px; font-size: 11.5px; font-weight: 600;
+  background: linear-gradient(to top, rgba(8, 10, 14, 0.85), transparent);
+  pointer-events: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.scene-pill .sp-go { color: var(--text-dim); font-size: 15px; flex: none; }
-.scene-pill.running .sp-go { color: var(--ok); }
+.cam-fav-badge {
+  position: absolute; top: 6px; right: 8px; font-size: 13px;
+  color: var(--warn); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
 
-/* calendar card: day headings + event rows */
-#cal-list { display: flex; flex-direction: column; }
-.cal-day {
-  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text-dim); font-weight: 600; margin: 8px 0 3px;
-}
-.cal-day:first-child { margin-top: 0; }
-.cal-event { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12.5px; }
-.cal-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.cal-time { color: var(--text-dim); font-size: 11px; flex: none; min-width: 52px; }
-.cal-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cal-empty { font-size: 12px; color: var(--text-dim); }
-
-/* cameras launcher: a scene-pill-shaped button card */
-#cameras-btn {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  color: var(--text); font-size: 13px; font-weight: 600; text-align: left;
-  min-height: 48px;
-}
-#cameras-btn:hover { background: var(--glass-bg-strong); }
-#cameras-btn .cb-icon {
-  width: 30px; height: 30px; border-radius: 9px; flex: none;
-  background: rgba(76, 158, 232, 0.3);
-  display: flex; align-items: center; justify-content: center; font-size: 15px;
-}
-#cameras-btn span:nth-child(2) { flex: 1; }
-#cameras-btn .cb-go { color: var(--text-dim); font-size: 15px; flex: none; }
-
-/* full-screen camera grid overlay (above dashboard chrome, below planner) */
+/* full-screen single-camera live view (above dashboard chrome, below planner) */
 #cam-overlay {
   position: fixed; inset: 0; z-index: 55;
   background: rgba(8, 10, 14, 0.94);
@@ -514,38 +479,37 @@ form input[type="color"] { padding: 2px; height: 32px; }
 }
 #cam-overlay.hidden { display: none; }
 #cam-head { display: flex; align-items: center; padding: 14px 20px; flex: none; }
-#cam-head h2 { flex: 1; font-size: 17px; }
-#cam-close {
+#cam-head h2 {
+  flex: 1; font-size: 17px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#cam-fav, #cam-close {
   width: 44px; height: 44px; padding: 0; border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.08); color: var(--text);
   font-size: 22px; line-height: 1; flex: none;
 }
-#cam-close:hover { background: rgba(255, 255, 255, 0.16); }
-#cam-grid {
-  flex: 1; overflow-y: auto; padding: 0 20px 20px;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px; align-content: start;
+#cam-fav { font-size: 24px; margin-right: 10px; }
+#cam-fav.fav { color: var(--warn); }
+#cam-fav:active, #cam-close:active { background: rgba(255, 255, 255, 0.16); }
+#cam-stage { flex: 1; position: relative; min-height: 0; }
+#cam-stage .cam-view { position: absolute; inset: 0 20px 20px; }
+#cam-stage .cam-view img {
+  display: block; width: 100%; height: 100%;
+  object-fit: contain; border: 0;
 }
-.cam-tile {
-  position: relative; border-radius: var(--radius-lg); overflow: hidden;
-  background: #000; cursor: pointer;
+.cam-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 56px; height: 56px; padding: 0; border-radius: 50%;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  color: var(--text); font-size: 26px; line-height: 1; z-index: 2;
+  -webkit-tap-highlight-color: transparent;
 }
-.cam-tile.broken > img { opacity: 0.35; }
-.cam-tile > img,
-.cam-tile .cam-view img {
-  display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
-  min-height: 0; border: 0; border-radius: 0;
-}
-#cam-overlay.expanded .cam-tile:not(.big) { display: none; }
-.cam-tile.big { grid-column: 1 / -1; }
-.cam-tile.big .cam-view img {
-  aspect-ratio: auto; height: calc(100vh - 140px); object-fit: contain;
-}
-.cam-label {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  padding: 18px 12px 8px; font-size: 13px; font-weight: 600;
-  background: linear-gradient(to top, rgba(8, 10, 14, 0.85), transparent);
-  pointer-events: none;
+#cam-prev { left: 28px; }
+#cam-next { right: 28px; }
+.cam-nav:active {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-50%) scale(0.94);
 }
 
 /* Right column: room cards grouped by floor */

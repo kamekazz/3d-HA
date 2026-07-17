@@ -1,39 +1,16 @@
-// Tablet dashboard chrome (view mode): greeting + status + scene pills in the
-// left column, live tiles (clock / temperature / lights / security / climate)
-// along the bottom, and the Home button that returns to the whole-house view.
-// Every tile hides itself when HA has no matching entities; everything updates
-// live off state.js's onStateApplied.
+// Tablet dashboard chrome (view mode): live tiles (clock / temperature /
+// lights / security / climate) along the bottom, and the Home button that
+// returns to the whole-house view. (The left column is the camera grid,
+// owned by cameras.js.) Every tile hides itself when HA has no matching
+// entities; everything updates live off state.js's onStateApplied.
 import { api } from './api.js';
 import { setLevel, getLevel } from './house.js';
 import { exitFocus, onFocusChanged } from './focus.js';
-import { getState, findEntities, isOn, friendlyName, onStateApplied } from './state.js';
+import { getState, findEntities, isOn, onStateApplied } from './state.js';
 import { getAllHouseLightIds } from './roomlights.js';
 import { showBanner } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
-
-// binary_sensor device_classes that mean "something is wrong" when on
-const PROBLEM_CLASSES = new Set(['smoke', 'gas', 'carbon_monoxide', 'problem',
-                                 'moisture', 'safety', 'tamper']);
-
-// scene name keywords -> emoji + icon tint (reference-style colorful pills)
-const SCENE_ICONS = [
-  [/morning|day|dia|bright/i, '☀️', '#b7791f'],
-  [/night|noite|sleep|bed/i, '🌙', '#4c51bf'],
-  [/movie|cinema|tv|film/i, '🎬', '#9b2c2c'],
-  [/relax|chill|calm|cozy/i, '🛋️', '#276749'],
-  [/dinner|eat|kitchen|coz/i, '🍽️', '#975a16'],
-  [/party|fun/i, '🎉', '#b83280'],
-  [/away|leave|out/i, '🚪', '#4a5568'],
-];
-const SCENE_FALLBACK_TINTS = ['#2b6cb0', '#276749', '#975a16', '#4c51bf', '#9b2c2c'];
-
-function sceneIcon(name, index) {
-  for (const [re, emoji, tint] of SCENE_ICONS) {
-    if (re.test(name)) return { emoji, tint };
-  }
-  return { emoji: '✨', tint: SCENE_FALLBACK_TINTS[index % SCENE_FALLBACK_TINTS.length] };
-}
 
 // ---------------------------------------------------------------- clock
 
@@ -41,73 +18,6 @@ function renderClock() {
   const now = new Date();
   $('bb-time').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   $('bb-date').textContent = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-
-  const h = now.getHours();
-  const part = h < 5 ? 'Good night' : h < 12 ? 'Good morning'
-             : h < 18 ? 'Good afternoon' : 'Good evening';
-  const name = localStorage.getItem('3dha.userName');
-  $('ld-greeting').textContent = name ? `${part}, ${name}` : part;
-  $('ld-sub').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
-}
-
-// ---------------------------------------------------------------- status chip
-
-function renderStatus() {
-  const chip = $('ld-status');
-  const problems = [];
-  for (const id of findEntities('binary_sensor.')) {
-    const s = getState(id);
-    if (s?.state === 'on' && PROBLEM_CLASSES.has(s.attributes?.device_class)) {
-      problems.push(friendlyName(id));
-    }
-  }
-  for (const id of findEntities('alarm_control_panel.')) {
-    if (getState(id)?.state === 'triggered') problems.push(friendlyName(id));
-  }
-  if (problems.length) {
-    chip.className = 'status-chip warn';
-    chip.textContent = problems.length === 1 ? problems[0] : `${problems.length} alerts`;
-    chip.title = problems.join(', ');
-  } else {
-    chip.className = 'status-chip ok';
-    chip.textContent = 'All OK';
-    chip.title = 'No alerts';
-  }
-}
-
-// ---------------------------------------------------------------- scenes
-
-let sceneIds = [];
-
-function renderScenes() {
-  const ids = findEntities('scene.');
-  if (String(ids) === String(sceneIds)) return; // set unchanged — keep the DOM
-  sceneIds = ids;
-  const card = $('scenes-card');
-  const list = $('scene-list');
-  card.classList.toggle('hidden', !ids.length);
-  list.innerHTML = '';
-  ids.forEach((id, i) => {
-    const name = friendlyName(id).replace(/^scene[:.]?\s*/i, '');
-    const { emoji, tint } = sceneIcon(name, i);
-    const pill = document.createElement('button');
-    pill.className = 'scene-pill';
-    pill.type = 'button';
-    pill.innerHTML =
-      `<span class="sp-icon" style="background:${tint}">${emoji}</span>` +
-      `<span class="sp-name"></span><span class="sp-go">›</span>`;
-    pill.querySelector('.sp-name').textContent = name;
-    pill.onclick = async () => {
-      pill.classList.add('running');
-      try {
-        await api.control({ entity_id: id, domain: 'scene', service: 'turn_on' });
-      } catch (e) {
-        showBanner(`Scene failed: ${e.message}`, 4000);
-      }
-      setTimeout(() => pill.classList.remove('running'), 1500);
-    };
-    list.appendChild(pill);
-  });
 }
 
 // ---------------------------------------------------------------- temp tile
@@ -274,17 +184,15 @@ export function initDashboard() {
 
   onStateApplied((entityId) => {
     if (entityId === null) { // bulk load / reconnect: (re)pick entities
-      renderStatus(); renderScenes(); renderTemp(); renderLights();
+      renderTemp(); renderLights();
       renderSecurity(); renderClimate();
       return;
     }
     if (entityId.startsWith('light.')) {
       if (isOn(entityId)) lightsPendingUntil = 0; // external turn-on wins
       renderLights();
-    } else if (entityId.startsWith('binary_sensor.')) {
-      renderStatus();
     } else if (entityId.startsWith('alarm_control_panel.')) {
-      renderStatus(); renderSecurity();
+      renderSecurity();
     } else if (entityId.startsWith('lock.')) {
       renderSecurity();
     } else if (entityId.startsWith('climate.')) {

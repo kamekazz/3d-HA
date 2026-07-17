@@ -52,43 +52,30 @@
   <div id="banner" class="hidden"></div>
   <div id="tooltip" class="hidden"></div>
 
-  <!-- Tablet dashboard chrome (view mode). dashboard.js owns the left column,
-       bottom bar and Home button; roomcards.js owns the room-card panel. -->
+  <!-- Tablet dashboard chrome (view mode). cameras.js owns the left column,
+       dashboard.js the bottom bar and Home button; roomcards.js owns the
+       room-card panel. -->
   <button id="home-btn" class="glass view-chrome" type="button" title="Whole house view">
     <span class="hb-icon">⌂</span>
     <span class="hb-text">Home<span class="hb-sub" id="hb-sub">all systems</span></span>
   </button>
 
-  <aside id="left-dash" class="view-chrome">
-    <div class="glass card">
-      <div id="ld-greeting">Good evening</div>
-      <div id="ld-sub">Welcome home</div>
-      <div class="chip-row">
-        <span id="ld-status" class="status-chip ok">All OK</span>
-      </div>
-    </div>
-    <button class="glass card hidden" id="cameras-btn" type="button">
-      <span class="cb-icon">📷</span><span>Cameras</span>
-      <span class="cb-go">›</span>
-    </button>
-    <div class="glass card hidden" id="calendar-card">
-      <h3>Calendar</h3>
-      <div id="cal-list"></div>
-    </div>
-    <div class="glass card hidden" id="scenes-card">
-      <h3>Scenes</h3>
-      <div id="scene-list"></div>
-    </div>
-  </aside>
+  <!-- Left column: a 2-column grid of idling camera snapshots (cameras.js
+       fills it; sized to fit with no scrolling — this is a touch tablet). -->
+  <aside id="left-dash" class="view-chrome hidden"></aside>
 
-  <!-- Full-screen camera grid, opened from the Cameras button. Deliberately
-       not view-chrome: edit-mode CSS must not hide it mid-stream. -->
+  <!-- Full-screen single-camera live view, opened by tapping a tile.
+       Deliberately not view-chrome: edit-mode CSS must not hide it mid-stream. -->
   <div id="cam-overlay" class="hidden">
     <div id="cam-head">
-      <h2>Cameras</h2>
+      <h2 id="cam-title">Camera</h2>
+      <button id="cam-fav" class="close" type="button" title="Favorite">☆</button>
       <button id="cam-close" class="close" type="button" title="Close">&times;</button>
     </div>
-    <div id="cam-grid"></div>
+    <div id="cam-stage">
+      <button id="cam-prev" class="cam-nav" type="button" title="Previous camera">‹</button>
+      <button id="cam-next" class="cam-nav" type="button" title="Next camera">›</button>
+    </div>
   </div>
 
   <aside id="room-cards" class="view-chrome"></aside>

@@ -20,7 +20,6 @@ import { initRoomLights, setRoomLightsData } from './roomlights.js';
 import { initFloorView } from './floorview.js';
 import { initUndo } from './undo.js';
 import { initDashboard } from './dashboard.js';
-import { initCalendar } from './calendar.js';
 import { initCameras } from './cameras.js';
 import { initRoomCards, setRoomCardsData } from './roomcards.js';
 import { requestSnapshots } from './snapshots.js';
@@ -290,7 +289,6 @@ async function main() {
   initRoomLights();
   setRoomLightsData({ house, structure });
   initDashboard();
-  initCalendar();
   initCameras();
   initRoomCards();
   setRoomCardsData(house, structure); // after setRoomLightsData — cards read its light sets
