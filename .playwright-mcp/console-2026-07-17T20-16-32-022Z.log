@@ -621,3 +621,5 @@
 [ 2235813ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5001/api/ha/states:0
 [ 2238137ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5001/socket.io/?EIO=4&transport=polling&t=PznsrVJ:0
 [ 2240813ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5001/api/ha/states:0
+[ 2245172ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5001/socket.io/?EIO=4&transport=polling&t=PznstDN:0
+[ 2245433ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5001/api/ha/states:0
