@@ -68,7 +68,7 @@ def calendar():
     if rest is None:
         return jsonify({"error": "HA is not configured (.env)"}), 503
     try:
-        days = min(max(int(request.args.get("days", 7)), 1), 31)
+        days = min(max(int(request.args.get("days", 30)), 1), 180)
     except ValueError:
         return jsonify({"error": "days must be an integer"}), 400
     start = datetime.now(timezone.utc)

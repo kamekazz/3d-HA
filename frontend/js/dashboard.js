@@ -165,6 +165,100 @@ function renderClimate() {
   });
 }
 
+// ---------------------------------------------------------------- calendar tile
+
+// Calendars are sparse, so look far ahead (past the 30-day default) to surface
+// the next real event. Unlike the other tiles, this data isn't in the live
+// state stream — it's fetched over HTTP and refreshed on a slow timer.
+const CAL_HORIZON_DAYS = 180;
+const CAL_REFRESH_MS = 15 * 60_000;
+let calEvents = [];
+
+// All-day events carry a bare "YYYY-MM-DD" (no zone) — build it in local time so
+// it doesn't slip a day; timed events carry a full ISO string with an offset.
+function eventStart(ev) {
+  if (ev.all_day && /^\d{4}-\d{2}-\d{2}$/.test(ev.start)) {
+    const [y, m, d] = ev.start.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(ev.start);
+}
+
+function calDayDiff(date) {
+  const a = new Date(); a.setHours(0, 0, 0, 0);
+  const b = new Date(date); b.setHours(0, 0, 0, 0);
+  return Math.round((b - a) / 86_400_000);
+}
+
+function formatWhen(ev) {
+  const d = eventStart(ev);
+  const diff = calDayDiff(d);
+  let day;
+  if (diff === 0) day = 'Today';
+  else if (diff === 1) day = 'Tomorrow';
+  else if (diff > 1 && diff < 7) day = d.toLocaleDateString([], { weekday: 'long' });
+  else day = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  if (ev.all_day) return day;
+  return `${day} · ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+}
+
+function renderCalendar() {
+  const tile = $('bb-calendar');
+  const next = calEvents[0];
+  if (!next) { tile.classList.add('hidden'); closeCalPopover(); return; }
+  tile.classList.remove('hidden');
+  const more = calEvents.length - 1;
+  tile.title = more > 0 ? `Tap for ${calEvents.length} upcoming events` : 'Next event';
+  tile.innerHTML =
+    `<span class="bb-icon" style="background:rgba(88,101,242,.35)">📅</span>` +
+    `<div class="bb-main"><div class="bb-value">${escapeHtml(next.summary)}</div>` +
+    `<div class="bb-label">${escapeHtml(formatWhen(next))}</div></div>`;
+  if (!$('cal-popover').classList.contains('hidden')) renderCalPopover();
+}
+
+async function refreshCalendar() {
+  try {
+    const data = await api.getCalendar(CAL_HORIZON_DAYS);
+    calEvents = data?.events || [];
+  } catch {
+    calEvents = []; // HA not configured / unreachable → tile just hides
+  }
+  renderCalendar();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+// -------- upcoming-events popover
+
+function renderCalPopover() {
+  const pop = $('cal-popover');
+  pop.innerHTML =
+    `<div class="cal-pop-head">Upcoming</div>` +
+    calEvents.slice(0, 8).map((ev) =>
+      `<div class="cal-row"><span class="cal-when">${escapeHtml(formatWhen(ev))}</span>` +
+      `<span class="cal-summary">${escapeHtml(ev.summary)}</span></div>`).join('');
+}
+
+function openCalPopover() {
+  const pop = $('cal-popover');
+  renderCalPopover();
+  pop.classList.remove('hidden');
+  // anchor above the tile
+  const r = $('bb-calendar').getBoundingClientRect();
+  pop.style.left = `${Math.round(r.left)}px`;
+  pop.style.bottom = `${Math.round(window.innerHeight - r.top + 10)}px`;
+}
+
+function closeCalPopover() { $('cal-popover').classList.add('hidden'); }
+
+function toggleCalPopover() {
+  if ($('cal-popover').classList.contains('hidden')) openCalPopover();
+  else closeCalPopover();
+}
+
 // ---------------------------------------------------------------- init
 
 export function initDashboard() {
@@ -177,6 +271,15 @@ export function initDashboard() {
   };
   $('bb-lights').onclick = allLightsOff;
 
+  refreshCalendar();
+  setInterval(refreshCalendar, CAL_REFRESH_MS);
+  $('bb-calendar').onclick = (e) => { e.stopPropagation(); toggleCalPopover(); };
+  // dismiss the popover on any outside click or Esc
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#cal-popover, #bb-calendar')) closeCalPopover();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCalPopover(); });
+
   // ambient chrome yields to the focus panel while a room is focused
   onFocusChanged((roomId) => {
     document.body.classList.toggle('room-focused', roomId !== null);
@@ -186,6 +289,7 @@ export function initDashboard() {
     if (entityId === null) { // bulk load / reconnect: (re)pick entities
       renderTemp(); renderLights();
       renderSecurity(); renderClimate();
+      refreshCalendar(); // HA may have just connected after our first attempt
       return;
     }
     if (entityId.startsWith('light.')) {

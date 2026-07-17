@@ -64,6 +64,16 @@
        fills it; sized to fit with no scrolling — this is a touch tablet). -->
   <aside id="left-dash" class="view-chrome hidden"></aside>
 
+  <!-- Full-screen all-cameras grid, opened from the grid's "All cameras"
+       tile. Sits under the live view so tapping a camera layers on top. -->
+  <div id="cam-all" class="hidden">
+    <div id="cam-all-head">
+      <h2>All cameras</h2>
+      <button id="cam-all-close" class="close" type="button" title="Close">&times;</button>
+    </div>
+    <div id="cam-all-grid"></div>
+  </div>
+
   <!-- Full-screen single-camera live view, opened by tapping a tile.
        Deliberately not view-chrome: edit-mode CSS must not hide it mid-stream. -->
   <div id="cam-overlay" class="hidden">
@@ -91,7 +101,11 @@
     <div class="glass bb-tile tappable hidden" id="bb-lights"></div>
     <div class="glass bb-tile hidden" id="bb-security"></div>
     <div class="glass bb-tile hidden" id="bb-climate"></div>
+    <div class="glass bb-tile tappable hidden" id="bb-calendar"></div>
   </footer>
+
+  <!-- Upcoming-events popover, opened by tapping the calendar tile -->
+  <div id="cal-popover" class="glass hidden"></div>
 
   <!-- shown in room-focus mode: click (or Esc) to fly back out -->
   <button id="focus-exit" class="hidden" type="button" title="Exit room focus (Esc)"></button>

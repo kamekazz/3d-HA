@@ -1,12 +1,15 @@
 // Left-column camera grid (2 columns of idling snapshots, favorites first,
-// sliced to exactly what fits — the wall tablet never scrolls) + full-screen
-// single-camera live view. Grid snapshots load through a small round-robin
-// queue (2 in flight, short gap between requests) — a house can have dozens
-// of cameras, and letting every tile poll independently floods HA/Nabu Casa
-// with concurrent camera_proxy calls that 502 and then retry-storm. A failed
-// tile simply rejoins the cycle. Tapping a tile opens the live MJPEG view
-// (one stream max — each holds a backend worker thread); the queue pauses
-// while a stream is up, the tab is hidden, or CSS hides the column.
+// sliced to exactly what fits — the wall tablet never scrolls) + a full-screen
+// all-cameras view (tiles sized so every camera fits the screen) + a
+// full-screen single-camera live view. When cameras overflow the column, the
+// grid's last slot becomes an "All cameras" button. Snapshots load through a
+// small round-robin queue (2 in flight, short gap between requests) — a house
+// can have dozens of cameras, and letting every tile poll independently floods
+// HA/Nabu Casa with concurrent camera_proxy calls that 502 and then
+// retry-storm. A failed tile simply rejoins the cycle. Tapping a tile opens
+// the live MJPEG view (one stream max — each holds a backend worker thread);
+// the queue pauses while a stream is up, the tab is hidden, or CSS hides the
+// column.
 import { findEntities, friendlyName, onStateApplied } from './state.js';
 import { createCameraView } from './controls.js';
 import { showBanner } from './ui.js';
@@ -14,18 +17,21 @@ import { showBanner } from './ui.js';
 const WORKERS = 2;        // concurrent snapshot fetches
 const REQUEST_GAP_MS = 200;
 const CYCLE_REST_MS = 5000; // pause between full refresh sweeps
-const GRID_GAP = 10;        // must match #left-dash gap in style.css
+const GRID_GAP = 10;        // must match #left-dash / #cam-all-grid gap
 const FAVS_KEY = '3dha.favCameras';
 
-let tiles = [];        // {id, tile, img, broken}
-let session = 0;       // bumped on every grid rebuild — stale workers stop
+let gridTiles = [];    // {id, tile, img, broken} — left-column grid
+let allTiles = [];     // same shape — all-cameras overlay
+let tiles = [];        // whichever list the pump is currently sweeping
+let session = 0;       // bumped on every pump restart — stale workers stop
 let capacity = 0;      // how many tiles fit the column with no scrolling
 let gridSig = '';      // capacity + visible ids — skip no-op rebuilds
 let favs = new Set();
 
-let overlayOpen = false;
-let liveId = null;     // entity shown in the overlay
-let liveView = null;   // createCameraView handle while the overlay is up
+let allOpen = false;   // all-cameras overlay up
+let overlayOpen = false; // live view up
+let liveId = null;     // entity shown in the live view
+let liveView = null;   // createCameraView handle while the live view is up
 
 const $ = (id) => document.getElementById(id);
 
@@ -56,9 +62,8 @@ function toggleFav(id) {
   try { localStorage.setItem(FAVS_KEY, JSON.stringify([...favs])); } catch { /* private mode */ }
 }
 
-// Favorites first, each group ordered by display name. Grid shows the first
-// `capacity`; prev/next in the live view cycles the whole list, so cameras
-// that didn't fit can still be reached (and starred into the grid).
+// Favorites first, each group ordered by display name. The left grid shows
+// the first slice; the all-cameras view and prev/next cycle the whole list.
 function orderedCameras() {
   const byName = (a, b) => cameraLabel(a).localeCompare(cameraLabel(b));
   const all = findEntities('camera.');
@@ -87,15 +92,15 @@ function loadSnapshot(t) {
   });
 }
 
-// Round-robin over all tiles forever (until the session changes): workers
-// share one advancing index, so a slow camera never blocks the rest of the
-// grid; whichever worker wraps past the last tile takes the long rest.
+// Round-robin over the active tile list forever (until the session changes):
+// workers share one advancing index, so a slow camera never blocks the rest
+// of the grid; whichever worker wraps past the last tile takes the long rest.
 async function pump(mySession) {
   const dash = $('left-dash');
   let next = 0;
   const worker = async () => {
     while (mySession === session && tiles.length) {
-      if (overlayOpen || document.hidden || !dashVisible(dash)) {
+      if (overlayOpen || document.hidden || (!allOpen && !dashVisible(dash))) {
         await sleep(1000); // stream up / tab hidden / column hidden — hold
         continue;
       }
@@ -108,7 +113,40 @@ async function pump(mySession) {
   await Promise.all(Array.from({ length: WORKERS }, worker));
 }
 
-// ---------------------------------------------------------------- grid
+function startPump(list) {
+  tiles = list;
+  session += 1;
+  pump(session);
+}
+
+function teardownTiles(list) {
+  for (const t of list) { t.img.onload = t.img.onerror = null; t.img.src = ''; }
+}
+
+// ---------------------------------------------------------------- tiles
+
+function makeCameraTile(id) {
+  const tile = document.createElement('div');
+  tile.className = 'cam-tile';
+  const img = document.createElement('img');
+  img.alt = ''; // the .cam-label names the camera; alt text would flash while loading
+  const label = document.createElement('div');
+  label.className = 'cam-label';
+  label.textContent = cameraLabel(id);
+  tile.append(img, label);
+  if (favs.has(id)) {
+    const badge = document.createElement('span');
+    badge.className = 'cam-fav-badge';
+    badge.textContent = '★';
+    tile.appendChild(badge);
+  }
+  tile.setAttribute('role', 'button');
+  tile.setAttribute('aria-label', `Open ${cameraLabel(id)} live view`);
+  tile.addEventListener('click', () => openLive(id));
+  return { id, tile, img, broken: false };
+}
+
+// ---------------------------------------------------------------- left grid
 
 // How many 16:9 tiles fit the fixed column? Measured at runtime so the
 // edit-preview top offset and future CSS tweaks are absorbed automatically.
@@ -127,38 +165,98 @@ function renderGrid() {
   if (!all.length) return;
   if (!capacity) computeCapacity();
 
-  const visible = all.slice(0, capacity);
-  const sig = `${capacity}|${visible.join()}`;
+  // cameras overflow the column → the last slot becomes the "All" button
+  const overflow = all.length > capacity;
+  const visible = overflow ? all.slice(0, capacity - 1) : all;
+  const sig = `${capacity}|${all.length}|${visible.join()}`;
   if (sig === gridSig) return; // set unchanged — keep the DOM
   gridSig = sig;
 
-  session += 1; // stop the old pump; tiles are rebuilt below
-  for (const t of tiles) { t.img.onload = t.img.onerror = null; t.img.src = ''; }
-  tiles = [];
+  teardownTiles(gridTiles);
+  gridTiles = [];
   dash.innerHTML = '';
 
   for (const id of visible) {
-    const tile = document.createElement('div');
-    tile.className = 'cam-tile';
-    const img = document.createElement('img');
-    img.alt = ''; // the .cam-label names the camera; alt text would flash while loading
-    const label = document.createElement('div');
-    label.className = 'cam-label';
-    label.textContent = cameraLabel(id);
-    tile.append(img, label);
-    if (favs.has(id)) {
-      const badge = document.createElement('span');
-      badge.className = 'cam-fav-badge';
-      badge.textContent = '★';
-      tile.appendChild(badge);
-    }
-    tile.setAttribute('role', 'button');
-    tile.setAttribute('aria-label', `Open ${cameraLabel(id)} live view`);
-    tile.addEventListener('click', () => openLive(id));
-    dash.appendChild(tile);
-    tiles.push({ id, tile, img, broken: false });
+    const t = makeCameraTile(id);
+    dash.appendChild(t.tile);
+    gridTiles.push(t);
   }
-  pump(session);
+  if (overflow) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cam-tile cam-all-btn';
+    btn.innerHTML =
+      '<span class="cab-icon">⊞</span><span class="cab-text">All cameras</span>' +
+      `<span class="cab-count">${all.length}</span>`;
+    btn.onclick = openAll;
+    dash.appendChild(btn);
+  }
+  if (!allOpen) startPump(gridTiles); // all-view owns the pump while it's up
+}
+
+// ---------------------------------------------------------------- all view
+
+// Pick the column count that maximizes tile size while every camera fits the
+// stage with no scrolling (16:9 tiles, GRID_GAP gaps).
+function layoutAllGrid() {
+  const grid = $('cam-all-grid');
+  const n = allTiles.length;
+  if (!n) return;
+  const style = getComputedStyle(grid);
+  const W = grid.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const H = grid.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  let best = { cols: Math.ceil(Math.sqrt(n)), w: 0 };
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+    const w = (W - (cols - 1) * GRID_GAP) / cols;
+    const h = w * (9 / 16);
+    if (w > best.w && rows * h + (rows - 1) * GRID_GAP <= H) best = { cols, w };
+  }
+  grid.style.gridTemplateColumns = `repeat(${best.cols}, ${Math.floor(best.w)}px)`;
+}
+
+let allSig = ''; // camera set+order — skip rebuilds on mere state changes
+
+function renderAll() {
+  const grid = $('cam-all-grid');
+  const ids = orderedCameras();
+  const sig = ids.join();
+  if (sig === allSig) return;
+  allSig = sig;
+  teardownTiles(allTiles);
+  allTiles = [];
+  grid.innerHTML = '';
+  for (const id of ids) {
+    const t = makeCameraTile(id);
+    grid.appendChild(t.tile);
+    allTiles.push(t);
+  }
+  layoutAllGrid();
+  startPump(allTiles);
+}
+
+function onAllKeydown(e) {
+  if (e.key !== 'Escape' || overlayOpen) return; // live view's Esc wins
+  e.stopPropagation(); // focus.js's Esc (exit room focus) must not also fire
+  closeAll();
+}
+
+function openAll() {
+  allOpen = true;
+  $('cam-all').classList.remove('hidden');
+  document.addEventListener('keydown', onAllKeydown, true);
+  renderAll();
+}
+
+function closeAll() {
+  document.removeEventListener('keydown', onAllKeydown, true);
+  teardownTiles(allTiles);
+  allTiles = [];
+  allSig = '';
+  $('cam-all-grid').innerHTML = '';
+  $('cam-all').classList.add('hidden');
+  allOpen = false;
+  startPump(gridTiles);
 }
 
 // ---------------------------------------------------------------- live view
@@ -219,24 +317,33 @@ function closeLive() {
 export function initCameras() {
   loadFavs();
   $('cam-close').onclick = closeLive;
+  $('cam-all-close').onclick = closeAll;
   $('cam-prev').onclick = () => stepCamera(-1);
   $('cam-next').onclick = () => stepCamera(1);
   $('cam-fav').onclick = () => {
     if (!liveId) return;
     toggleFav(liveId);
     syncFavButton();
-    gridSig = ''; // favorites reorder the grid behind the overlay
+    gridSig = ''; // favorites reorder the grids behind the overlay
     renderGrid();
+    if (allOpen) renderAll();
   };
 
   let resizeTimer = 0;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { computeCapacity(); renderGrid(); }, 150);
+    resizeTimer = setTimeout(() => {
+      computeCapacity();
+      renderGrid();
+      if (allOpen) layoutAllGrid();
+    }, 150);
   });
 
   onStateApplied((entityId) => {
-    if (entityId === null || entityId.startsWith('camera.')) renderGrid();
+    if (entityId === null || entityId.startsWith('camera.')) {
+      renderGrid();
+      if (allOpen) renderAll();
+    }
   });
   renderGrid();
 }

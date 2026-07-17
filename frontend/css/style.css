@@ -471,6 +471,36 @@ form input[type="color"] { padding: 2px; height: 32px; }
   pointer-events: none;
 }
 
+/* the grid's last tile: opens the all-cameras view */
+.cam-all-btn {
+  aspect-ratio: 16 / 9; padding: 0;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 2px;
+  background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+  color: var(--text); font: inherit;
+}
+.cam-all-btn::before { content: none; }
+.cam-all-btn .cab-icon { font-size: 20px; line-height: 1; }
+.cam-all-btn .cab-text { font-size: 11.5px; font-weight: 600; }
+.cam-all-btn .cab-count { font-size: 10.5px; color: var(--text-dim); }
+
+/* full-screen all-cameras grid — under the live view (z 55) so a tapped
+   camera layers on top; tile size is computed in cameras.js so every camera
+   fits the screen with no scrolling */
+#cam-all {
+  position: fixed; inset: 0; z-index: 54;
+  background: rgba(8, 10, 14, 0.94);
+  display: flex; flex-direction: column;
+}
+#cam-all.hidden { display: none; }
+#cam-all-head { display: flex; align-items: center; padding: 14px 20px; flex: none; }
+#cam-all-head h2 { flex: 1; font-size: 17px; }
+#cam-all-grid {
+  flex: 1; min-height: 0; padding: 0 20px 20px;
+  display: grid; gap: 10px;
+  align-content: center; justify-content: center;
+}
+
 /* full-screen single-camera live view (above dashboard chrome, below planner) */
 #cam-overlay {
   position: fixed; inset: 0; z-index: 55;
@@ -483,14 +513,16 @@ form input[type="color"] { padding: 2px; height: 32px; }
   flex: 1; font-size: 17px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-#cam-fav, #cam-close {
+#cam-fav, #cam-close, #cam-all-close {
   width: 44px; height: 44px; padding: 0; border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.08); color: var(--text);
   font-size: 22px; line-height: 1; flex: none;
 }
 #cam-fav { font-size: 24px; margin-right: 10px; }
 #cam-fav.fav { color: var(--warn); }
-#cam-fav:active, #cam-close:active { background: rgba(255, 255, 255, 0.16); }
+#cam-fav:active, #cam-close:active, #cam-all-close:active {
+  background: rgba(255, 255, 255, 0.16);
+}
 #cam-stage { flex: 1; position: relative; min-height: 0; }
 #cam-stage .cam-view { position: absolute; inset: 0 20px 20px; }
 #cam-stage .cam-view img {
@@ -603,6 +635,26 @@ form input[type="color"] { padding: 2px; height: 32px; }
   background: rgba(255, 255, 255, 0.1); font-size: 14px; line-height: 1;
 }
 .bb-steppers button:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* calendar tile: event names can be long — keep the tile from stretching */
+#bb-calendar .bb-value { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+
+/* upcoming-events popover, anchored above the calendar tile */
+#cal-popover {
+  position: fixed; z-index: 24; padding: 10px 12px; min-width: 240px;
+  max-width: 340px; max-height: 320px; overflow-y: auto;
+}
+.cal-pop-head {
+  font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 8px;
+}
+.cal-row {
+  display: flex; gap: 12px; align-items: baseline; padding: 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.cal-row:first-of-type { border-top: none; }
+.cal-when { flex: none; width: 96px; font-size: 12px; color: var(--text-dim); }
+.cal-summary { font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
 
 /* small screens: give the 3D view room — drop the left column first */
 @media (max-width: 980px) {
