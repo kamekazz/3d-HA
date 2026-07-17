@@ -10,6 +10,7 @@ import { objects3d } from './objects.js';
 import { setSelected, onDragMoved } from './drag.js';
 import { invalidateModel } from './models.js';
 import { fillTextureSelect } from './textures.js';
+import { canEdit } from './route.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -24,6 +25,7 @@ let modelsList = [];    // library from /api/house/models
 export let appMode = 'view'; // 'view' or 'edit'
 
 export function setAppMode(mode) {
+  if (!canEdit) mode = 'view'; // "/" is the viewer — edit mode isn't reachable
   appMode = mode;
   document.querySelectorAll('.edit-only').forEach(el => {
     el.classList.toggle('hidden', mode === 'view');
@@ -139,6 +141,10 @@ export function initUI({ structure: s, house: h, onReload }) {
   fillTextureSelect($('rf-floor-tex'));
   renderRoomList();
 
+  // The topbar is editor chrome: CSS hides it on "/", and the level selector
+  // and panels move up into the space it leaves.
+  document.body.classList.toggle('view-only', !canEdit);
+
   $('chk-edit-mode').onchange = (e) => {
     setAppMode(e.target.checked ? 'edit' : 'view');
   };
@@ -151,8 +157,12 @@ export function initUI({ structure: s, house: h, onReload }) {
     paintMarkersBtn();
   });
   onFocusChanged(() => evaluateDashboardVisibility());
-  // Initialize UI state
-  setAppMode('view');
+  // Keep the dashboard clock live — it's otherwise only set on mode/level/focus
+  // changes, so the displayed time froze until the next such event (or a reload).
+  setInterval(evaluateDashboardVisibility, 15_000);
+  // Initialize UI state — /edit opens ready to edit, the toggle previews.
+  $('chk-edit-mode').checked = canEdit;
+  setAppMode(canEdit ? 'edit' : 'view');
 
   $('btn-editor').onclick = () => $('editor').classList.toggle('hidden');
   $('btn-refresh').onclick = async () => {

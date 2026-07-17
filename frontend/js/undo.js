@@ -4,6 +4,7 @@
 // Note: other browser tabs won't see an undo until their next reload — there
 // is no layout-change relay over SocketIO (only state_changed).
 import { api, onLayoutMutation } from './api.js';
+import { canEdit } from './route.js';
 
 const UNDO_BTNS = ['btn-undo', 'pl-undo'];
 const REDO_BTNS = ['btn-redo', 'pl-redo'];
@@ -49,6 +50,7 @@ async function run(action) {
 }
 
 export function initUndo({ defaultRefresh }) {
+  if (!canEdit) return; // no editing on the viewer, so no undo/redo either
   refreshFn = defaultRefresh;
   for (const id of UNDO_BTNS) {
     const el = document.getElementById(id);

@@ -22,6 +22,13 @@ body {
 #topbar h1 { font-size: 15px; font-weight: 600; }
 #topbar .spacer { flex: 1; }
 
+/* View-only page ("/"): no topbar at all — the level selector and panels
+   reclaim the space it left at the top. Editing lives at "/edit". */
+body.view-only #topbar { display: none; }
+body.view-only #levels { top: 14px; }
+body.view-only .panel { top: 14px; }
+body.view-only #room-panel { top: 14px; }
+
 .status-dot {
   width: 10px; height: 10px; border-radius: 50%;
   background: #e0b100; display: inline-block;

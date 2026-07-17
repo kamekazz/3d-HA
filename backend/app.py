@@ -43,7 +43,10 @@ def create_app():
     app.register_blueprint(house_bp)
     socketio.init_app(app)
 
+    # Same page both ways — the frontend reads the path and only shows the
+    # editing chrome on /edit. "/" is the plain viewer.
     @app.get("/")
+    @app.get("/edit")
     def index():
         return send_from_directory(app.static_folder, "index.html")
 
