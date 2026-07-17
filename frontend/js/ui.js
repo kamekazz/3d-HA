@@ -3,7 +3,7 @@ import { api } from './api.js';
 import { floorGroups, setLevel, getLevel, highlightRoom,
          setShellTransform, getShellRoot, getShellConfig } from './house.js';
 import { getState, friendlyName, stateLabel, onStateApplied } from './state.js';
-import { exitFocus, getFocusedRoomId, onFocusChanged } from './focus.js';
+import { exitFocus, getFocusedRoomId } from './focus.js';
 import { renderControls, createCameraView, isSliderActive } from './controls.js';
 import { markers, areMarkersShown, setMarkersShown } from './devices.js';
 import { objects3d } from './objects.js';
@@ -36,8 +36,9 @@ export function setAppMode(mode) {
     $('models-modal').classList.add('hidden');
     $('planner').classList.add('hidden');
   }
-  evaluateDashboardVisibility();
   updateAlignAvailability();
+  // dashboard.js/roomcards.js hide their chrome off this class (CSS-only)
+  document.body.classList.toggle('app-edit', mode === 'edit');
 
   // Update scene background and grid when mode changes
   const ev = new CustomEvent('appModeChanged', { detail: { mode } });
@@ -61,25 +62,6 @@ function paintMarkersBtn() {
       ? 'Markers are always visible in edit mode'
       : 'Show or hide device markers';
 }
-
-export function evaluateDashboardVisibility() {
-  const dash = $('house-dashboard');
-  if (!dash) return;
-  const level = getLevel();
-  // Show dashboard only in view mode when looking at the whole house and no room is focused
-  const isRoomFocused = getFocusedRoomId() !== null;
-  if (appMode === 'view' && level === 'all' && !isRoomFocused) {
-    dash.classList.remove('hidden');
-    // populate fake weather/temp for now
-    const now = new Date();
-    $('dash-time').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    $('dash-date').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
-    $('dash-temp').textContent = '72°';
-  } else {
-    dash.classList.add('hidden');
-  }
-}
-
 
 // ---------------------------------------------------------------- helpers
 
@@ -156,10 +138,6 @@ export function initUI({ structure: s, house: h, onReload }) {
     inHouseMode = e.detail.houseMode;
     paintMarkersBtn();
   });
-  onFocusChanged(() => evaluateDashboardVisibility());
-  // Keep the dashboard clock live — it's otherwise only set on mode/level/focus
-  // changes, so the displayed time froze until the next such event (or a reload).
-  setInterval(evaluateDashboardVisibility, 15_000);
   // Initialize UI state — /edit opens ready to edit, the toggle previews.
   $('chk-edit-mode').checked = canEdit;
   setAppMode(canEdit ? 'edit' : 'view');
@@ -331,7 +309,6 @@ function buildLevelButtons() {
       setLevel(value === 'all' ? 'all' : Number(value));
       nav.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      evaluateDashboardVisibility();
     };
     nav.appendChild(btn);
   };
@@ -902,7 +879,6 @@ function openAlignPanel() {
   exitFocus({ flyBack: false });
   setLevel('all');            // House view: the shell is only visible here
   setActiveLevelBtn('all');
-  evaluateDashboardVisibility();
   populateShellForm(cfg);
   $('shell-model').textContent = `Model: ${shellModelName(cfg)}`;
   $('shell-panel').classList.remove('hidden');

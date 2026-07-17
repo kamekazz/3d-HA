@@ -217,6 +217,8 @@ function tick(dt) {
   }
 }
 
+export function getWeatherRoot() { return weatherRoot; } // snapshots.js hides it while capturing
+
 export function initWeather() {
   weatherRoot = new THREE.Group();
   weatherRoot.name = 'weather';

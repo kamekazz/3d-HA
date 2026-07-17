@@ -22,6 +22,7 @@ let snowF = 0, wetF = 0; // weather.js drives these (eased on its side)
 
 let center = { x: 13, z: 13 };
 export function getEnvironmentCenter() { return center; }
+export function getEnvironmentRoot() { return root; } // snapshots.js hides the yard while capturing
 
 // deterministic layout — same seed, same yard, every load
 function mulberry32(seed) {

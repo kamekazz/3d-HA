@@ -113,6 +113,25 @@ function refreshLit(rec) {
   rec.lit = [...rec.lightIds].some((id) => getState(id) && isOn(id));
 }
 
+// Single source of truth for "which lights belong to this room" — the room
+// cards (roomcards.js) count and toggle off the same sets that drive the glow.
+export function getRoomLightIds(roomId) {
+  return rooms.find((r) => r.roomId === roomId)?.lightIds ?? new Set();
+}
+
+// entity_id -> [roomId] so a light's state change can update just its cards
+export function getRoomsForEntity(entityId) {
+  return (byEntity.get(entityId) || []).map((r) => r.roomId);
+}
+
+// Every light that belongs to some room of the house. The dashboard's
+// "N lights on / all off" tile scopes to these — HA instances can hold
+// hundreds of light entities (virtual/decor integrations) that aren't
+// house lighting.
+export function getAllHouseLightIds() {
+  return new Set(byEntity.keys());
+}
+
 // Give the pool lights to the lit rooms on visible levels; when there are
 // more lit rooms than lights, the ones nearest the camera target win.
 function reassignPool() {

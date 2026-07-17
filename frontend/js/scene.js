@@ -95,12 +95,14 @@ export function initScene(container) {
 
   // 1 ft grid cells — the world unit is one foot
   const grid = new THREE.GridHelper(200, 200, 0x2a3340, 0x1c232d);
+  grid.name = 'editGrid'; // named so snapshots.js can hide it during captures
   grid.position.y = -0.01;
   scene.add(grid);
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(2000, 2000),
     new THREE.MeshStandardMaterial({ color: 0x141a22, roughness: 1, transparent: true, opacity: 0.8 }));
+  ground.name = 'editGround';
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.02;
   scene.add(ground);

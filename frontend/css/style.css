@@ -1,9 +1,41 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* design tokens — the app's glassy dark language */
+:root {
+  --bg: #10141a;
+  --glass-bg: rgba(22, 27, 35, 0.72);
+  --glass-bg-strong: rgba(22, 27, 35, 0.92);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 14px;
+  --card-bg: #161b23;
+  --text: #e6e9ee;
+  --text-dim: #8b95a5;
+  --text-faint: #aab4c4;
+  --accent: #2b6cb0;
+  --accent-hover: #3182ce;
+  --ok: #35c26a;
+  --warn: #e0b100;
+  --danger: #d64545;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-pill: 999px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --font: "Outfit", system-ui, "Segoe UI", sans-serif;
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
 body {
-  font-family: "Outfit", system-ui, "Segoe UI", sans-serif;
-  background: #10141a;
-  color: #e6e9ee;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
   overflow: hidden;
 }
 
@@ -22,12 +54,24 @@ body {
 #topbar h1 { font-size: 15px; font-weight: 600; }
 #topbar .spacer { flex: 1; }
 
-/* View-only page ("/"): no topbar at all — the level selector and panels
-   reclaim the space it left at the top. Editing lives at "/edit". */
+/* View-only page ("/"): no topbar at all — panels reclaim the space it left
+   at the top. Editing lives at "/edit". */
 body.view-only #topbar { display: none; }
-body.view-only #levels { top: 14px; }
 body.view-only .panel { top: 14px; }
 body.view-only #room-panel { top: 14px; }
+
+/* Tablet dashboard chrome (view mode only): hidden while editing, and the
+   ambient columns yield to the focus panel while a room is focused. */
+body.app-edit .view-chrome { display: none !important; }
+
+/* previewing view mode on /edit keeps the topbar — clear it */
+body:not(.view-only) #home-btn { top: 58px; }
+body:not(.view-only) #left-dash { top: 122px; }
+body:not(.view-only) #room-cards { top: 58px; }
+body.room-focused #home-btn,
+body.room-focused #left-dash,
+body.room-focused #bottom-bar,
+body.room-focused #room-cards { display: none; }
 
 .status-dot {
   width: 10px; height: 10px; border-radius: 50%;
@@ -279,11 +323,14 @@ form input[type="color"] { padding: 2px; height: 32px; }
 /* room-focus exit chip */
 #focus-exit {
   position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
-  z-index: 25; background: rgba(22, 27, 35, 0.96); color: #e6e9ee;
-  border: 1px solid #2a3340; border-radius: 999px; padding: 9px 18px;
-  font-size: 13px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  z-index: 25; background: var(--glass-bg); color: var(--text);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border); border-radius: var(--radius-pill);
+  padding: 10px 20px; font-size: 13.5px; font-weight: 500;
+  box-shadow: var(--shadow);
 }
-#focus-exit:hover { background: #2a3340; }
+#focus-exit:hover { background: var(--glass-bg-strong); }
 
 /* 2D floor-plan editor */
 #planner {
@@ -366,23 +413,165 @@ form input[type="color"] { padding: 2px; height: 32px; }
 .mode-switch input:focus + .slider { box-shadow: 0 0 1px #b23b3b; }
 .mode-switch input:checked + .slider:before { transform: translateX(20px); }
 
-/* Whole House Dashboard */
-.dashboard-overlay {
-  position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
-  z-index: 10; display: flex; gap: 24px; pointer-events: none;
-  opacity: 1; transition: opacity 0.4s ease, transform 0.4s ease;
+/* ============================= tablet dashboard ============================ */
+
+/* Home button — top-left, above the left column */
+#home-btn {
+  position: fixed; top: 18px; left: 20px; z-index: 24;
+  width: 240px; padding: 12px 18px;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--glass-bg); color: var(--text);
+  font-size: 15px; font-weight: 600; text-align: left;
 }
-.dashboard-overlay.hidden {
-  opacity: 0; transform: translate(-50%, -20px); pointer-events: none;
+#home-btn:hover { background: var(--glass-bg-strong); }
+#home-btn .hb-icon {
+  width: 34px; height: 34px; border-radius: var(--radius-md);
+  background: var(--accent); display: flex; align-items: center;
+  justify-content: center; font-size: 17px; flex: none;
 }
-.dash-widget {
-  background: rgba(22, 27, 35, 0.7); backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px; padding: 20px 28px; color: #fff;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); pointer-events: auto;
-  text-align: center;
+#home-btn .hb-sub { display: block; font-size: 11px; font-weight: 400; color: var(--text-dim); }
+
+/* Left column: greeting + status + scenes */
+#left-dash {
+  position: fixed; top: 82px; left: 20px; bottom: 100px; width: 240px;
+  z-index: 22; display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto; scrollbar-width: none;
 }
-.dash-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: #aab4c4; margin-bottom: 8px; }
-.dash-big { font-size: 48px; font-weight: 300; line-height: 1.1; margin-bottom: 4px; }
-.dash-sub { font-size: 14px; color: #8b95a5; font-weight: 400; }
-.dash-widget:hover { background: rgba(26, 33, 43, 0.85); transition: background 0.2s; }
+#left-dash::-webkit-scrollbar { display: none; }
+#left-dash .card { padding: 14px 16px; flex: none; }
+#ld-greeting { font-size: 17px; font-weight: 600; margin-bottom: 2px; }
+#ld-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.status-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255, 255, 255, 0.05); border-radius: var(--radius-pill);
+  padding: 5px 11px; font-size: 11.5px; color: var(--text-faint);
+}
+.status-chip::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-dim); flex: none;
+}
+.status-chip.ok { color: #9fe6bd; }
+.status-chip.ok::before { background: var(--ok); }
+.status-chip.warn { color: #f4d488; }
+.status-chip.warn::before { background: var(--warn); }
+
+#scenes-card h3, .ld-heading {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-dim); font-weight: 600; margin-bottom: 10px;
+}
+#scene-list { display: flex; flex-direction: column; gap: 8px; }
+.scene-pill {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid transparent;
+  border-radius: var(--radius-md); padding: 9px 10px;
+  color: var(--text); font-size: 13px; font-weight: 500; text-align: left;
+}
+.scene-pill:hover { background: rgba(255, 255, 255, 0.09); }
+.scene-pill .sp-icon {
+  width: 30px; height: 30px; border-radius: 9px; flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.scene-pill .sp-name {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.scene-pill .sp-go { color: var(--text-dim); font-size: 15px; flex: none; }
+.scene-pill.running .sp-go { color: var(--ok); }
+
+/* Right column: room cards grouped by floor */
+#room-cards {
+  position: fixed; top: 18px; right: 20px; bottom: 100px; width: 288px;
+  z-index: 22; overflow-y: auto; scrollbar-width: none;
+  display: flex; flex-direction: column; gap: 10px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+          mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+  padding: 14px 0;
+}
+#room-cards::-webkit-scrollbar { display: none; }
+.floor-heading {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-dim); font-weight: 600; margin: 6px 4px 0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+.room-card {
+  position: relative; flex: none; cursor: pointer; overflow: hidden;
+  border-radius: var(--radius-lg); background: var(--card-bg);
+  border: 1px solid var(--glass-border); box-shadow: var(--shadow);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.room-card:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.18); }
+.room-card:active { transform: scale(0.985); }
+.room-card .rc-img {
+  display: block; width: 100%; aspect-ratio: 1.6; object-fit: cover;
+  background: var(--card-bg);
+}
+.room-card .rc-placeholder {
+  width: 100%; aspect-ratio: 1.6;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; opacity: 0.9;
+}
+.room-card .rc-body {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; gap: 10px; padding: 22px 12px 10px;
+  background: linear-gradient(to top, rgba(8, 10, 14, 0.88), rgba(8, 10, 14, 0.45) 60%, transparent);
+}
+.room-card .rc-text { flex: 1; min-width: 0; }
+.room-card .rc-name {
+  font-size: 14px; font-weight: 600; line-height: 1.2;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.room-card .rc-sub {
+  font-size: 11px; color: var(--text-faint); margin-top: 1px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.room-card .rc-sub.lit { color: #ffd28a; }
+
+/* iOS-style switch, reusable (room cards; same skeleton as the topbar
+   mode-switch but accent-colored and standalone) */
+.tswitch { position: relative; display: inline-block; width: 44px; height: 26px; flex: none; }
+.tswitch input { opacity: 0; width: 0; height: 0; }
+.tswitch .knob {
+  position: absolute; inset: 0; cursor: pointer; border-radius: 26px;
+  background: rgba(255, 255, 255, 0.18); transition: background 0.25s;
+}
+.tswitch .knob::before {
+  content: ""; position: absolute; width: 20px; height: 20px;
+  left: 3px; top: 3px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35); transition: transform 0.25s;
+}
+.tswitch input:checked + .knob { background: var(--accent-hover); }
+.tswitch input:checked + .knob::before { transform: translateX(18px); }
+.tswitch.pending { opacity: 0.55; }
+
+/* Bottom bar: glassy tiles, centered */
+#bottom-bar {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 22; display: flex; gap: 10px; align-items: stretch;
+  max-width: calc(100vw - 600px);
+}
+#bottom-bar .bb-tile {
+  display: flex; align-items: center; gap: 12px; padding: 10px 18px;
+  color: var(--text);
+}
+#bottom-bar .bb-tile.tappable { cursor: pointer; }
+#bottom-bar .bb-tile.tappable:hover { background: var(--glass-bg-strong); }
+.bb-icon {
+  width: 34px; height: 34px; border-radius: var(--radius-md); flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.bb-main { line-height: 1.15; white-space: nowrap; }
+.bb-value { font-size: 17px; font-weight: 600; }
+.bb-label { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+.bb-steppers { display: flex; gap: 6px; margin-left: 2px; }
+.bb-steppers button {
+  width: 28px; height: 28px; padding: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1); font-size: 14px; line-height: 1;
+}
+.bb-steppers button:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* small screens: give the 3D view room — drop the left column first */
+@media (max-width: 980px) {
+  #left-dash { display: none; }
+  #bottom-bar { max-width: calc(100vw - 340px); }
+}

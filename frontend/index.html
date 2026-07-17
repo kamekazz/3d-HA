@@ -47,23 +47,46 @@
     <button id="btn-refresh" class="edit-only hidden" type="button" title="Re-read floors/areas/devices from HA">Refresh HA</button>
   </header>
 
-  <nav id="levels"></nav>
+  <nav id="levels" class="edit-only hidden"></nav>
 
   <div id="banner" class="hidden"></div>
   <div id="tooltip" class="hidden"></div>
 
-  <!-- Whole house dashboard: shown in view mode when Level = All -->
-  <div id="house-dashboard" class="dashboard-overlay">
-    <div class="dash-widget time-weather">
-      <div id="dash-time" class="dash-big">--:--</div>
-      <div id="dash-date" class="dash-sub">--</div>
+  <!-- Tablet dashboard chrome (view mode). dashboard.js owns the left column,
+       bottom bar and Home button; roomcards.js owns the room-card panel. -->
+  <button id="home-btn" class="glass view-chrome" type="button" title="Whole house view">
+    <span class="hb-icon">⌂</span>
+    <span class="hb-text">Home<span class="hb-sub" id="hb-sub">all systems</span></span>
+  </button>
+
+  <aside id="left-dash" class="view-chrome">
+    <div class="glass card">
+      <div id="ld-greeting">Good evening</div>
+      <div id="ld-sub">Welcome home</div>
+      <div class="chip-row">
+        <span id="ld-status" class="status-chip ok">All OK</span>
+      </div>
     </div>
-    <div class="dash-widget house-temp">
-      <div class="dash-title">House Temp</div>
-      <div id="dash-temp" class="dash-big">--°</div>
-      <div class="dash-sub">Click a room to view</div>
+    <div class="glass card hidden" id="scenes-card">
+      <h3>Scenes</h3>
+      <div id="scene-list"></div>
     </div>
-  </div>
+  </aside>
+
+  <aside id="room-cards" class="view-chrome"></aside>
+
+  <footer id="bottom-bar" class="view-chrome">
+    <div class="glass bb-tile" id="bb-clock">
+      <div class="bb-main">
+        <div class="bb-value" id="bb-time">--:--</div>
+        <div class="bb-label" id="bb-date">—</div>
+      </div>
+    </div>
+    <div class="glass bb-tile hidden" id="bb-temp"></div>
+    <div class="glass bb-tile tappable hidden" id="bb-lights"></div>
+    <div class="glass bb-tile hidden" id="bb-security"></div>
+    <div class="glass bb-tile hidden" id="bb-climate"></div>
+  </footer>
 
   <!-- shown in room-focus mode: click (or Esc) to fly back out -->
   <button id="focus-exit" class="hidden" type="button" title="Exit room focus (Esc)"></button>
