@@ -212,6 +212,9 @@ function tick(dt) {
   sunLight.position.copy(_pos.copy(current.sunDir).multiplyScalar(SUN_DISTANCE));
   sunLight.color.copy(current.sunColor);
   sunLight.intensity = current.sunIntensity;
+  // skip the shadow depth pass when the sun is effectively down (night, or
+  // heavy pouring/fog) — the shadow is invisible there anyway
+  sunLight.castShadow = current.sunIntensity > 0.02;
   hemiLight.color.copy(current.hemiSky);
   hemiLight.groundColor.copy(current.hemiGround);
   hemiLight.intensity = current.hemiIntensity;
@@ -301,6 +304,7 @@ function tickApply() {
   sunLight.position.copy(_pos.copy(current.sunDir).multiplyScalar(SUN_DISTANCE));
   sunLight.color.copy(current.sunColor);
   sunLight.intensity = current.sunIntensity;
+  sunLight.castShadow = current.sunIntensity > 0.02;
   hemiLight.color.copy(current.hemiSky);
   hemiLight.groundColor.copy(current.hemiGround);
   hemiLight.intensity = current.hemiIntensity;

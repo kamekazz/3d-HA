@@ -76,6 +76,7 @@ export function initEnvironment() {
   const grass = new THREE.Mesh(new THREE.CircleGeometry(1200, 48), grassMat);
   grass.rotation.x = -Math.PI / 2;
   grass.position.y = -0.05; // below edit ground (-0.02); the two never co-show
+  grass.receiveShadow = true; // the lawn catches the house-shell's sun shadow
   root.add(grass);
 
   // yard shows only in view mode on the whole-house level — edit mode shows
@@ -317,12 +318,14 @@ function buildYard() {
         vertexColors: true, roughness: 1, flatShading: true })));
   }
 
-  // fake AO blob under the house — shadow maps stay off (see scene.js)
+  // Soft contact-occlusion blob under the house: now that the shell casts a
+  // real directional sun shadow (see scene.js), this stays subtle — it just
+  // grounds the footprint at noon when the real shadow is short and underneath.
   const shadow = new THREE.Mesh(
     new THREE.PlaneGeometry((bx1 - bx0) * 1.4, (bz1 - bz0) * 1.4),
     new THREE.MeshBasicMaterial({
       map: makeShadowTexture(), color: 0x000000,
-      transparent: true, opacity: 0.28, depthWrite: false }));
+      transparent: true, opacity: 0.15, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.set((bx0 + bx1) / 2, -0.03, (bz0 + bz1) / 2);
   yard.add(shadow);

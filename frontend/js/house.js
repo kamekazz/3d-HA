@@ -116,6 +116,9 @@ async function loadHouseShell(cfg) {
   // it as a click target (it's a backdrop). drag.js uses its own reference.
   shell.userData = { kind: 'house-shell', pickable: false };
   shell.add(pivot);
+  // The shell is the only real sun-shadow caster (generated FrontSide walls
+  // never opt in — see scene.js). receiveShadow self-shadows eaves/dormers.
+  shell.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   applyShellTransform(shell, cfg);
   root.add(shell);
   houseShell = shell;

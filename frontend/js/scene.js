@@ -38,6 +38,13 @@ export function initScene(container) {
   // shadows would recompile every MeshStandard shader
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
+  // Real sun shadows: only the opaque house-shell GLB casts and only the lawn
+  // receives (see house.js / environment.js) — the FrontSide dollhouse walls
+  // never opt in, so the "broken translucent walls" reason shadows were off no
+  // longer applies. Enabling here folds the shadow shader variants into the
+  // same one-time startup compile as the PMREM pass below (no runtime hitch).
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
   // IBL: GLB models ship PBR (often metallic) materials that render black
@@ -71,6 +78,20 @@ export function initScene(container) {
   sunLight = new THREE.DirectionalLight(0xffffff, 1.4);
   sunLight.position.set(60, 90, 36);
   scene.add(sunLight);
+  // daylight.js moves the light to sunDir*150 every frame and aims it at the
+  // origin (house center ≈ (13,5,13), only ~18 ft off), so a fixed, generous
+  // ortho frustum covers every sun angle without moving/resizing per frame.
+  // Leave sunLight.target at the origin — daylight.js sets an absolute position,
+  // so re-targeting to house center would tilt the true sun angle.
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(2048, 2048);
+  const shadowCam = sunLight.shadow.camera; // OrthographicCamera
+  shadowCam.left = -140; shadowCam.right = 140;
+  shadowCam.top = 140; shadowCam.bottom = -140;
+  shadowCam.near = 1; shadowCam.far = 400;
+  shadowCam.updateProjectionMatrix();
+  sunLight.shadow.bias = -0.0005;   // kills acne
+  sunLight.shadow.normalBias = 1.0; // ~1 ft — kills peter-panning on thick shell walls
 
   // 1 ft grid cells — the world unit is one foot
   const grid = new THREE.GridHelper(200, 200, 0x2a3340, 0x1c232d);

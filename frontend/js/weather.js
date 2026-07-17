@@ -35,6 +35,8 @@ const MAX_RAIN = 1500;
 const MAX_SNOW = 900;
 const N_CLOUDS = 9;
 const CLOUD_WRAP = 280;
+const CLOUD_Y_BASE = 55;    // lowered so clouds drift into the re-centered view
+const CLOUD_Y_SPREAD = 30;
 const EXPOSURE_BASE = 1.15; // must match scene.js
 
 let weatherRoot;
@@ -122,7 +124,7 @@ function makeCloud(i) {
       color: 0xffffff, roughness: 1, flatShading: true,
       transparent: true, opacity: 0, depthWrite: false }));
   mesh.position.set((i / N_CLOUDS * 2 - 1) * CLOUD_WRAP,
-                    92 + Math.random() * 40,
+                    CLOUD_Y_BASE + Math.random() * CLOUD_Y_SPREAD,
                     (Math.random() * 2 - 1) * 200);
   mesh.visible = false;
   mesh.frustumCulled = false;
