@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- kiosk viewport: this is a wall/hand tablet dashboard — pinch/double-tap
+       zoom would fight the 3D orbit and card taps -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>3D Home Assistant House</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -88,7 +90,19 @@
     </div>
   </div>
 
+  <!-- Right column: a 2-column grid of room cards (roomcards.js fills it;
+       sized to fit with no scrolling — this is a touch tablet). -->
   <aside id="room-cards" class="view-chrome"></aside>
+
+  <!-- Full-screen all-rooms grid, opened from the rail's "All rooms" tile.
+       Tile size is computed in roomcards.js so every room fits, no scroll. -->
+  <div id="rooms-all" class="hidden">
+    <div id="rooms-all-head">
+      <h2>All rooms</h2>
+      <button id="rooms-all-close" class="close" type="button" title="Close">&times;</button>
+    </div>
+    <div id="rooms-all-grid"></div>
+  </div>
 
   <footer id="bottom-bar" class="view-chrome">
     <div class="glass bb-tile" id="bb-clock">

@@ -39,6 +39,17 @@ body {
   overflow: hidden;
 }
 
+/* touch hygiene (wall/hand tablet): no pull-to-refresh or scroll-chain
+   bounce, no double-tap-zoom delay on controls, no long-press text
+   selection or grey tap flash on dashboard chrome */
+html, body { overscroll-behavior: none; }
+button, .cam-tile, .room-card, .bb-tile.tappable, .tswitch .knob,
+.tile.tappable, .chip { touch-action: manipulation; }
+button, .cam-tile, .room-card, .bb-tile { -webkit-tap-highlight-color: transparent; }
+#room-cards, #left-dash, #bottom-bar, #home-btn, #rooms-all, #cam-all {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+
 #scene-container { position: fixed; inset: 0; }
 
 .hidden { display: none !important; }
@@ -67,7 +78,7 @@ body.app-edit .view-chrome { display: none !important; }
 /* previewing view mode on /edit keeps the topbar — clear it */
 body:not(.view-only) #home-btn { top: 58px; }
 body:not(.view-only) #left-dash { top: 122px; }
-body:not(.view-only) #room-cards { top: 58px; }
+body:not(.view-only) #room-cards { top: 122px; }
 body.room-focused #home-btn,
 body.room-focused #left-dash,
 body.room-focused #bottom-bar,
@@ -86,7 +97,12 @@ button {
   background: #2b6cb0; color: #fff; border: 0; border-radius: 6px;
   padding: 7px 12px; font-size: 13px; cursor: pointer;
 }
-button:hover { background: #3182ce; }
+/* hover styling only where a real pointer hovers — on touch, hover state
+   sticks to the last tapped element and reads as a stuck button */
+@media (hover: hover) {
+  button:hover { background: #3182ce; }
+}
+button:active { background: #3182ce; }
 button.secondary { background: #3a4453; }
 button.danger { background: #b23b3b; }
 button.small { padding: 3px 8px; font-size: 12px; }
@@ -112,7 +128,10 @@ button.small { padding: 3px 8px; font-size: 12px; }
   position: absolute; top: 10px; right: 10px; background: transparent;
   font-size: 18px; color: #8b95a5; padding: 2px 8px;
 }
-.panel .close:hover { color: #fff; background: #2a3340; }
+@media (hover: hover) {
+  .panel .close:hover { color: #fff; background: #2a3340; }
+}
+.panel .close:active { color: #fff; background: #2a3340; }
 #editor { right: auto; left: 14px; top: 100px; z-index: 35; }
 
 /* room focus panel — left, ~30% of the screen */
@@ -151,7 +170,10 @@ body.room-panel-open #levels { display: none; } /* focus pins the level anyway *
   padding: 10px; min-height: 72px;
 }
 .tile.tappable { cursor: pointer; }
-.tile.tappable:hover { border-color: #3a4453; background: #20242e; }
+@media (hover: hover) {
+  .tile.tappable:hover { border-color: #3a4453; background: #20242e; }
+}
+.tile.tappable:active { border-color: #3a4453; background: #20242e; }
 .tile.on { background: #20304a; border-color: #2b6cb0; }
 .tile.wide, .tile.camera { grid-column: 1 / -1; }
 .tile .t-name {
@@ -169,7 +191,10 @@ body.room-panel-open #levels { display: none; } /* focus pins the level anyway *
   text-transform: uppercase; letter-spacing: 0.05em;
 }
 .tile .t-more { float: right; background: transparent; color: #8b95a5; padding: 0 6px; }
-.tile .t-more:hover { color: #fff; background: #2a3340; }
+@media (hover: hover) {
+  .tile .t-more:hover { color: #fff; background: #2a3340; }
+}
+.tile .t-more:active { color: #fff; background: #2a3340; }
 .tile.wide .controls { margin-top: 8px; }
 .tile.wide .t-name { font-size: 13px; color: #e6e9ee; }
 
@@ -248,7 +273,10 @@ body.room-panel-open #levels { display: none; } /* focus pins the level anyway *
   background: #232b36; color: #aab4c4; border-radius: 999px;
   padding: 4px 12px; font-size: 12px;
 }
-.chip:hover { background: #2a3340; color: #e6e9ee; }
+@media (hover: hover) {
+  .chip:hover { background: #2a3340; color: #e6e9ee; }
+}
+.chip:active { background: #2a3340; color: #e6e9ee; }
 .chip.active { background: #2b6cb0; color: #fff; }
 
 /* forms */
@@ -315,9 +343,10 @@ form input[type="color"] { padding: 2px; height: 32px; }
   background: transparent; color: #e6e9ee; border: 1px solid transparent;
   border-radius: 4px;
 }
-.mm-item input.name:hover, .mm-item input.name:focus {
-  background: #10141a; border-color: #2a3340;
+@media (hover: hover) {
+  .mm-item input.name:hover { background: #10141a; border-color: #2a3340; }
 }
+.mm-item input.name:focus { background: #10141a; border-color: #2a3340; }
 .mm-item .muted { white-space: nowrap; }
 
 /* room-focus exit chip */
@@ -330,7 +359,10 @@ form input[type="color"] { padding: 2px; height: 32px; }
   padding: 10px 20px; font-size: 13.5px; font-weight: 500;
   box-shadow: var(--shadow);
 }
-#focus-exit:hover { background: var(--glass-bg-strong); }
+@media (hover: hover) {
+  #focus-exit:hover { background: var(--glass-bg-strong); }
+}
+#focus-exit:active { background: var(--glass-bg-strong); }
 
 /* 2D floor-plan editor */
 #planner {
@@ -423,7 +455,10 @@ form input[type="color"] { padding: 2px; height: 32px; }
   background: var(--glass-bg); color: var(--text);
   font-size: 15px; font-weight: 600; text-align: left;
 }
-#home-btn:hover { background: var(--glass-bg-strong); }
+@media (hover: hover) {
+  #home-btn:hover { background: var(--glass-bg-strong); }
+}
+#home-btn:active { background: var(--glass-bg-strong); }
 #home-btn .hb-icon {
   width: 34px; height: 34px; border-radius: var(--radius-md);
   background: var(--accent); display: flex; align-items: center;
@@ -513,14 +548,14 @@ form input[type="color"] { padding: 2px; height: 32px; }
   flex: 1; font-size: 17px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-#cam-fav, #cam-close, #cam-all-close {
+#cam-fav, #cam-close, #cam-all-close, #rooms-all-close {
   width: 44px; height: 44px; padding: 0; border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.08); color: var(--text);
   font-size: 22px; line-height: 1; flex: none;
 }
 #cam-fav { font-size: 24px; margin-right: 10px; }
 #cam-fav.fav { color: var(--warn); }
-#cam-fav:active, #cam-close:active, #cam-all-close:active {
+#cam-fav:active, #cam-close:active, #cam-all-close:active, #rooms-all-close:active {
   background: rgba(255, 255, 255, 0.16);
 }
 #cam-stage { flex: 1; position: relative; min-height: 0; }
@@ -544,41 +579,45 @@ form input[type="color"] { padding: 2px; height: 32px; }
   transform: translateY(-50%) scale(0.94);
 }
 
-/* Right column: room cards grouped by floor */
+/* Right column: 2-column room-card grid — capacity is computed in
+   roomcards.js so it never scrolls (wall tablet, touch only); overflow:hidden
+   is the backstop. Mirrors #left-dash for a symmetric frame. */
 #room-cards {
-  position: fixed; top: 18px; right: 20px; bottom: 100px; width: 200px;
-  z-index: 22; overflow-y: auto; scrollbar-width: none;
-  display: flex; flex-direction: column; gap: 8px;
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent);
-          mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent);
-  padding: 14px 0;
+  position: fixed; top: 82px; right: 20px; bottom: 100px; width: 380px;
+  z-index: 22; display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 10px; grid-auto-rows: max-content; align-content: start;
+  overflow: hidden;
 }
-#room-cards::-webkit-scrollbar { display: none; }
 .floor-heading {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--text-dim); font-weight: 600; margin: 6px 4px 0;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 .room-card {
-  position: relative; flex: none; cursor: pointer; overflow: hidden;
+  /* fixed aspect on the card itself: rows line up evenly and roomcards.js's
+     capacity math stays exact (must match CARD_ASPECT there) */
+  position: relative; aspect-ratio: 1.6; cursor: pointer; overflow: hidden;
   border-radius: var(--radius-lg); background: var(--card-bg);
   border: 1px solid var(--glass-border); box-shadow: var(--shadow);
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
-.room-card:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.18); }
+@media (hover: hover) {
+  .room-card:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.18); }
+}
 .room-card:active { transform: scale(0.985); }
 .room-card .rc-img {
-  display: block; width: 100%; aspect-ratio: 1.6; object-fit: cover;
+  position: absolute; inset: 0; display: block;
+  width: 100%; height: 100%; object-fit: cover;
   background: var(--card-bg);
 }
 .room-card .rc-placeholder {
-  width: 100%; aspect-ratio: 1.6;
+  position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   font-size: 24px; opacity: 0.9;
 }
 .room-card .rc-body {
   position: absolute; left: 0; right: 0; bottom: 0;
-  display: flex; align-items: center; gap: 8px; padding: 14px 10px 8px;
+  display: flex; align-items: center; gap: 6px; padding: 12px 8px 7px;
   background: linear-gradient(to top, rgba(8, 10, 14, 0.88), rgba(8, 10, 14, 0.45) 60%, transparent);
 }
 .room-card .rc-text { flex: 1; min-width: 0; }
@@ -593,6 +632,34 @@ form input[type="color"] { padding: 2px; height: 32px; }
 }
 .room-card .rc-sub.lit { color: #ffd28a; }
 
+/* the rail's last tile: opens the all-rooms view (same idea as .cam-all-btn) */
+.rooms-all-btn {
+  padding: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 2px;
+  background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+  color: var(--text); font: inherit;
+}
+.rooms-all-btn .rab-icon { font-size: 20px; line-height: 1; }
+.rooms-all-btn .rab-text { font-size: 11.5px; font-weight: 600; }
+.rooms-all-btn .rab-count { font-size: 10.5px; color: var(--text-dim); }
+
+/* full-screen all-rooms grid — tile size is computed in roomcards.js so every
+   room fits the screen with no scrolling, with a heading row per floor */
+#rooms-all {
+  position: fixed; inset: 0; z-index: 54;
+  background: rgba(8, 10, 14, 0.94);
+  display: flex; flex-direction: column;
+}
+#rooms-all.hidden { display: none; }
+#rooms-all-head { display: flex; align-items: center; padding: 14px 20px; flex: none; }
+#rooms-all-head h2 { flex: 1; font-size: 17px; }
+#rooms-all-grid {
+  flex: 1; min-height: 0; padding: 0 20px 20px;
+  display: grid; gap: 10px;
+  align-content: center; justify-content: center;
+}
+#rooms-all-grid .floor-heading { grid-column: 1 / -1; align-self: end; }
+
 /* iOS-style switch, reusable (room cards; same skeleton as the topbar
    mode-switch but accent-colored and standalone) */
 .tswitch { position: relative; display: inline-block; width: 40px; height: 24px; flex: none; }
@@ -606,6 +673,10 @@ form input[type="color"] { padding: 2px; height: 32px; }
   left: 3px; top: 3px; border-radius: 50%; background: #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35); transition: transform 0.25s;
 }
+/* invisible halo: grows the 40×24 switch to a ~56×48 touch target without
+   changing its look; taps on it stay inside the label, so the card's
+   fly-in click never fires */
+.tswitch .knob::after { content: ""; position: absolute; inset: -12px -8px; }
 .tswitch input:checked + .knob { background: var(--accent-hover); }
 .tswitch input:checked + .knob::before { transform: translateX(16px); }
 .tswitch.pending { opacity: 0.55; }
@@ -614,14 +685,19 @@ form input[type="color"] { padding: 2px; height: 32px; }
 #bottom-bar {
   position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
   z-index: 22; display: flex; gap: 10px; align-items: stretch;
-  max-width: calc(100vw - 520px);
+  /* the rails end at bottom:100px, so nothing can overlap the bar — the
+     clamp only keeps it off the screen edges */
+  max-width: calc(100vw - 40px);
 }
 #bottom-bar .bb-tile {
   display: flex; align-items: center; gap: 12px; padding: 10px 18px;
   color: var(--text);
 }
 #bottom-bar .bb-tile.tappable { cursor: pointer; }
-#bottom-bar .bb-tile.tappable:hover { background: var(--glass-bg-strong); }
+@media (hover: hover) {
+  #bottom-bar .bb-tile.tappable:hover { background: var(--glass-bg-strong); }
+}
+#bottom-bar .bb-tile.tappable:active { background: var(--glass-bg-strong); }
 .bb-icon {
   width: 34px; height: 34px; border-radius: var(--radius-md); flex: none;
   display: flex; align-items: center; justify-content: center; font-size: 16px;
@@ -629,12 +705,16 @@ form input[type="color"] { padding: 2px; height: 32px; }
 .bb-main { line-height: 1.15; white-space: nowrap; }
 .bb-value { font-size: 17px; font-weight: 600; }
 .bb-label { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
-.bb-steppers { display: flex; gap: 6px; margin-left: 2px; }
+.bb-steppers { display: flex; gap: 8px; margin-left: 2px; }
 .bb-steppers button {
-  width: 28px; height: 28px; padding: 0; border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1); font-size: 14px; line-height: 1;
+  /* 44px: minimum comfortable touch target */
+  width: 44px; height: 44px; padding: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1); font-size: 18px; line-height: 1;
 }
-.bb-steppers button:hover { background: rgba(255, 255, 255, 0.2); }
+@media (hover: hover) {
+  .bb-steppers button:hover { background: rgba(255, 255, 255, 0.2); }
+}
+.bb-steppers button:active { background: rgba(255, 255, 255, 0.2); }
 
 /* calendar tile: event names can be long — keep the tile from stretching */
 #bb-calendar .bb-value { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
@@ -642,22 +722,24 @@ form input[type="color"] { padding: 2px; height: 32px; }
 /* upcoming-events popover, anchored above the calendar tile */
 #cal-popover {
   position: fixed; z-index: 24; padding: 10px 12px; min-width: 240px;
-  max-width: 340px; max-height: 320px; overflow-y: auto;
+  max-width: 340px; max-height: min(420px, 60vh); overflow-y: auto;
+  overscroll-behavior: contain; /* finger-scrolling it must not chain away */
 }
 .cal-pop-head {
   font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;
   letter-spacing: 0.06em; margin-bottom: 8px;
 }
 .cal-row {
-  display: flex; gap: 12px; align-items: baseline; padding: 6px 0;
+  display: flex; gap: 12px; align-items: baseline; padding: 9px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 .cal-row:first-of-type { border-top: none; }
 .cal-when { flex: none; width: 96px; font-size: 12px; color: var(--text-dim); }
 .cal-summary { font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
 
-/* small screens: give the 3D view room — drop the left column first */
+/* small screens: give the 3D view room — drop the left column first and
+   narrow the right rail to one column (roomcards.js reads the real count) */
 @media (max-width: 980px) {
   #left-dash { display: none; }
-  #bottom-bar { max-width: calc(100vw - 260px); }
+  #room-cards { width: 200px; grid-template-columns: 1fr; }
 }
