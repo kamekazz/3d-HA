@@ -44,6 +44,14 @@ class HACache:
         with self._lock:
             return list(self._floors)
 
+    def area_picture(self, area_id):
+        """Raw HA-relative picture path for one area, or None."""
+        with self._lock:
+            for a in self._areas:
+                if a.get("area_id") == area_id:
+                    return a.get("picture")
+            return None
+
     def structure(self):
         """Join the four registries into floors -> areas -> devices/entities."""
         with self._lock:
@@ -81,6 +89,7 @@ class HACache:
                 "area_id": a["area_id"],
                 "name": a.get("name"),
                 "floor_id": a.get("floor_id"),
+                "picture": a.get("picture"),
                 "devices": devices_by_area.get(a["area_id"], []),
                 "entities": sorted(entities_by_area.get(a["area_id"], []),
                                    key=lambda x: (x["domain"], x["name"])),

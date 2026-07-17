@@ -20,6 +20,8 @@ import { initRoomLights, setRoomLightsData } from './roomlights.js';
 import { initFloorView } from './floorview.js';
 import { initUndo } from './undo.js';
 import { initDashboard } from './dashboard.js';
+import { initCalendar } from './calendar.js';
+import { initCameras } from './cameras.js';
 import { initRoomCards, setRoomCardsData } from './roomcards.js';
 import { requestSnapshots } from './snapshots.js';
 
@@ -58,7 +60,7 @@ async function reloadHouse() {
   await loadStates();
   updateData({ structure, house });
   updateRoomPanelData(house);
-  setRoomCardsData(house);   // after setRoomLightsData — cards read its light sets
+  setRoomCardsData(house, structure); // after setRoomLightsData — cards read its light sets
   requestSnapshots(house);   // re-capture rooms whose geometry changed
   return house;
 }
@@ -288,8 +290,10 @@ async function main() {
   initRoomLights();
   setRoomLightsData({ house, structure });
   initDashboard();
+  initCalendar();
+  initCameras();
   initRoomCards();
-  setRoomCardsData(house);   // after setRoomLightsData — cards read its light sets
+  setRoomCardsData(house, structure); // after setRoomLightsData — cards read its light sets
   requestSnapshots(house);
   await loadStates();
   updateData({ structure, house });
@@ -312,7 +316,7 @@ async function main() {
           const h = await api.getHouse();
           updateData({ structure, house: h });
           setRoomLightsData({ house: h, structure }); // map area-level lights
-          setRoomCardsData(h); // light counts may change with the HA registry
+          setRoomCardsData(h, structure); // light counts / area pictures arrive with the HA registry
         }
       }, 5000);
     }

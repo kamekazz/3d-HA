@@ -54,6 +54,7 @@ export const api = {
   getStructure: () => get('/api/ha/structure'),
   getStates: () => get('/api/ha/states'),
   getStatus: () => get('/api/ha/status'),
+  getCalendar: (days = 7) => get(`/api/ha/calendar?days=${days}`),
   refreshHA: () => post('/api/ha/refresh'),
 
   getHouse: () => get('/api/house'),

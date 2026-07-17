@@ -456,7 +456,7 @@ form input[type="color"] { padding: 2px; height: 32px; }
 .status-chip.warn { color: #f4d488; }
 .status-chip.warn::before { background: var(--warn); }
 
-#scenes-card h3, .ld-heading {
+#scenes-card h3, #calendar-card h3, .ld-heading {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--text-dim); font-weight: 600; margin-bottom: 10px;
 }
@@ -478,11 +478,81 @@ form input[type="color"] { padding: 2px; height: 32px; }
 .scene-pill .sp-go { color: var(--text-dim); font-size: 15px; flex: none; }
 .scene-pill.running .sp-go { color: var(--ok); }
 
+/* calendar card: day headings + event rows */
+#cal-list { display: flex; flex-direction: column; }
+.cal-day {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-dim); font-weight: 600; margin: 8px 0 3px;
+}
+.cal-day:first-child { margin-top: 0; }
+.cal-event { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12.5px; }
+.cal-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.cal-time { color: var(--text-dim); font-size: 11px; flex: none; min-width: 52px; }
+.cal-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-empty { font-size: 12px; color: var(--text-dim); }
+
+/* cameras launcher: a scene-pill-shaped button card */
+#cameras-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  color: var(--text); font-size: 13px; font-weight: 600; text-align: left;
+  min-height: 48px;
+}
+#cameras-btn:hover { background: var(--glass-bg-strong); }
+#cameras-btn .cb-icon {
+  width: 30px; height: 30px; border-radius: 9px; flex: none;
+  background: rgba(76, 158, 232, 0.3);
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+#cameras-btn span:nth-child(2) { flex: 1; }
+#cameras-btn .cb-go { color: var(--text-dim); font-size: 15px; flex: none; }
+
+/* full-screen camera grid overlay (above dashboard chrome, below planner) */
+#cam-overlay {
+  position: fixed; inset: 0; z-index: 55;
+  background: rgba(8, 10, 14, 0.94);
+  display: flex; flex-direction: column;
+}
+#cam-overlay.hidden { display: none; }
+#cam-head { display: flex; align-items: center; padding: 14px 20px; flex: none; }
+#cam-head h2 { flex: 1; font-size: 17px; }
+#cam-close {
+  width: 44px; height: 44px; padding: 0; border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.08); color: var(--text);
+  font-size: 22px; line-height: 1; flex: none;
+}
+#cam-close:hover { background: rgba(255, 255, 255, 0.16); }
+#cam-grid {
+  flex: 1; overflow-y: auto; padding: 0 20px 20px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px; align-content: start;
+}
+.cam-tile {
+  position: relative; border-radius: var(--radius-lg); overflow: hidden;
+  background: #000; cursor: pointer;
+}
+.cam-tile.broken > img { opacity: 0.35; }
+.cam-tile > img,
+.cam-tile .cam-view img {
+  display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+  min-height: 0; border: 0; border-radius: 0;
+}
+#cam-overlay.expanded .cam-tile:not(.big) { display: none; }
+.cam-tile.big { grid-column: 1 / -1; }
+.cam-tile.big .cam-view img {
+  aspect-ratio: auto; height: calc(100vh - 140px); object-fit: contain;
+}
+.cam-label {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 18px 12px 8px; font-size: 13px; font-weight: 600;
+  background: linear-gradient(to top, rgba(8, 10, 14, 0.85), transparent);
+  pointer-events: none;
+}
+
 /* Right column: room cards grouped by floor */
 #room-cards {
-  position: fixed; top: 18px; right: 20px; bottom: 100px; width: 288px;
+  position: fixed; top: 18px; right: 20px; bottom: 100px; width: 200px;
   z-index: 22; overflow-y: auto; scrollbar-width: none;
-  display: flex; flex-direction: column; gap: 10px;
+  display: flex; flex-direction: column; gap: 8px;
   -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent);
           mask-image: linear-gradient(to bottom, transparent, #000 14px, #000 calc(100% - 14px), transparent);
   padding: 14px 0;
@@ -508,47 +578,47 @@ form input[type="color"] { padding: 2px; height: 32px; }
 .room-card .rc-placeholder {
   width: 100%; aspect-ratio: 1.6;
   display: flex; align-items: center; justify-content: center;
-  font-size: 30px; opacity: 0.9;
+  font-size: 24px; opacity: 0.9;
 }
 .room-card .rc-body {
   position: absolute; left: 0; right: 0; bottom: 0;
-  display: flex; align-items: center; gap: 10px; padding: 22px 12px 10px;
+  display: flex; align-items: center; gap: 8px; padding: 14px 10px 8px;
   background: linear-gradient(to top, rgba(8, 10, 14, 0.88), rgba(8, 10, 14, 0.45) 60%, transparent);
 }
 .room-card .rc-text { flex: 1; min-width: 0; }
 .room-card .rc-name {
-  font-size: 14px; font-weight: 600; line-height: 1.2;
+  font-size: 12.5px; font-weight: 600; line-height: 1.2;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 .room-card .rc-sub {
-  font-size: 11px; color: var(--text-faint); margin-top: 1px;
+  font-size: 10px; color: var(--text-faint); margin-top: 1px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 .room-card .rc-sub.lit { color: #ffd28a; }
 
 /* iOS-style switch, reusable (room cards; same skeleton as the topbar
    mode-switch but accent-colored and standalone) */
-.tswitch { position: relative; display: inline-block; width: 44px; height: 26px; flex: none; }
+.tswitch { position: relative; display: inline-block; width: 40px; height: 24px; flex: none; }
 .tswitch input { opacity: 0; width: 0; height: 0; }
 .tswitch .knob {
-  position: absolute; inset: 0; cursor: pointer; border-radius: 26px;
+  position: absolute; inset: 0; cursor: pointer; border-radius: 24px;
   background: rgba(255, 255, 255, 0.18); transition: background 0.25s;
 }
 .tswitch .knob::before {
-  content: ""; position: absolute; width: 20px; height: 20px;
+  content: ""; position: absolute; width: 18px; height: 18px;
   left: 3px; top: 3px; border-radius: 50%; background: #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35); transition: transform 0.25s;
 }
 .tswitch input:checked + .knob { background: var(--accent-hover); }
-.tswitch input:checked + .knob::before { transform: translateX(18px); }
+.tswitch input:checked + .knob::before { transform: translateX(16px); }
 .tswitch.pending { opacity: 0.55; }
 
 /* Bottom bar: glassy tiles, centered */
 #bottom-bar {
   position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
   z-index: 22; display: flex; gap: 10px; align-items: stretch;
-  max-width: calc(100vw - 600px);
+  max-width: calc(100vw - 520px);
 }
 #bottom-bar .bb-tile {
   display: flex; align-items: center; gap: 12px; padding: 10px 18px;
@@ -573,5 +643,5 @@ form input[type="color"] { padding: 2px; height: 32px; }
 /* small screens: give the 3D view room — drop the left column first */
 @media (max-width: 980px) {
   #left-dash { display: none; }
-  #bottom-bar { max-width: calc(100vw - 340px); }
+  #bottom-bar { max-width: calc(100vw - 260px); }
 }

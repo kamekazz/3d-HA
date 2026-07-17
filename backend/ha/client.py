@@ -41,6 +41,14 @@ class HAClient:
         r.raise_for_status()
         return r.json()
 
+    def get_image(self, path: str):
+        """Fetch an HA-relative image path (e.g. an area picture's
+        /api/image/serve/<id>/512x512). Path comes from HA's own registry,
+        never from the browser."""
+        r = self.session.get(f"{self.base_url}{path}", timeout=self.timeout)
+        r.raise_for_status()
+        return r.content, r.headers.get("Content-Type", "image/jpeg")
+
     def get_camera_image(self, entity_id: str):
         """One JPEG snapshot from HA's camera proxy."""
         r = self.session.get(self._url(f"camera_proxy/{entity_id}"),
@@ -58,6 +66,18 @@ class HAClient:
                              stream=True, timeout=(self.timeout, 30))
         r.raise_for_status()
         return r
+
+    def get_calendars(self):
+        r = self.session.get(self._url("calendars"), timeout=self.timeout)
+        r.raise_for_status()
+        return r.json()
+
+    def get_calendar_events(self, entity_id: str, start_iso: str, end_iso: str):
+        r = self.session.get(self._url(f"calendars/{entity_id}"),
+                             params={"start": start_iso, "end": end_iso},
+                             timeout=self.timeout)
+        r.raise_for_status()
+        return r.json()
 
     def call_service(self, domain: str, service: str, data: dict):
         r = self.session.post(

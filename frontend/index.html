@@ -67,11 +67,29 @@
         <span id="ld-status" class="status-chip ok">All OK</span>
       </div>
     </div>
+    <button class="glass card hidden" id="cameras-btn" type="button">
+      <span class="cb-icon">📷</span><span>Cameras</span>
+      <span class="cb-go">›</span>
+    </button>
+    <div class="glass card hidden" id="calendar-card">
+      <h3>Calendar</h3>
+      <div id="cal-list"></div>
+    </div>
     <div class="glass card hidden" id="scenes-card">
       <h3>Scenes</h3>
       <div id="scene-list"></div>
     </div>
   </aside>
+
+  <!-- Full-screen camera grid, opened from the Cameras button. Deliberately
+       not view-chrome: edit-mode CSS must not hide it mid-stream. -->
+  <div id="cam-overlay" class="hidden">
+    <div id="cam-head">
+      <h2>Cameras</h2>
+      <button id="cam-close" class="close" type="button" title="Close">&times;</button>
+    </div>
+    <div id="cam-grid"></div>
+  </div>
 
   <aside id="room-cards" class="view-chrome"></aside>
 

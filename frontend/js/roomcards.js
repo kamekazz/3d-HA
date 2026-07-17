@@ -1,8 +1,10 @@
 // Right-hand room-card panel (view mode): one tappable card per room, grouped
 // by floor (top floor first). Tapping a card flies into the room (focus mode);
 // the switch on the card toggles the room's lights (same entity sets that
-// drive the night glow in roomlights.js). Card images are 3D snapshots from
-// snapshots.js, with a flat accent placeholder until the capture lands.
+// drive the night glow in roomlights.js). Card images prefer the picture set
+// on the room's linked HA area (proxied via /api/ha/area-picture); rooms
+// without one fall back to 3D snapshots from snapshots.js, with a flat accent
+// placeholder until the capture lands.
 import { api } from './api.js';
 import { enterFocus } from './focus.js';
 import { getRoomLightIds, getRoomsForEntity } from './roomlights.js';
@@ -10,7 +12,8 @@ import { isOn, getState, onStateApplied } from './state.js';
 import { showBanner } from './ui.js';
 import { getSnapshot, onSnapshotReady } from './snapshots.js';
 
-const cards = new Map(); // roomId -> {sub, switchEl, input, img, placeholder, pendingUntil, intended}
+const cards = new Map(); // roomId -> {sub, switchEl, input, img, placeholder, areaPic, pendingUntil, intended}
+const pictureAreas = new Set(); // HA area_ids whose registry entry has a picture
 
 const ROOM_EMOJI = [
   [/kitchen|cocina/i, '🍳'], [/living|sala|lounge|family/i, '🛋️'],
@@ -90,11 +93,32 @@ function buildCard(room) {
     `linear-gradient(135deg, ${room.color || '#8fa8bf'}33, #10141a 85%)`;
   placeholder.textContent = roomEmoji(room.name);
 
-  const snap = getSnapshot(room.id);
-  if (snap) {
-    img.src = snap;
+  const entry = { sub: null, switchEl: null, input: null, img, placeholder,
+                  areaPic: false, pendingUntil: 0, intended: false };
+  if (room.ha_area_id && pictureAreas.has(room.ha_area_id)) {
+    entry.areaPic = true;
+    img.onerror = () => {
+      // one-shot: never let a bad snapshot dataURL re-fire this
+      img.onerror = null;
+      entry.areaPic = false;
+      const snap = getSnapshot(room.id);
+      if (snap) {
+        img.src = snap;
+      } else {
+        img.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+      }
+    };
+    img.src = `/api/ha/area-picture/${encodeURIComponent(room.ha_area_id)}`;
     img.classList.remove('hidden');
     placeholder.classList.add('hidden');
+  } else {
+    const snap = getSnapshot(room.id);
+    if (snap) {
+      img.src = snap;
+      img.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    }
   }
 
   const body = document.createElement('div');
@@ -123,13 +147,21 @@ function buildCard(room) {
   card.append(img, placeholder, body);
   card.addEventListener('click', () => enterFocus(room.id));
 
-  cards.set(room.id, { sub, switchEl, input, img, placeholder,
-                       pendingUntil: 0, intended: false });
+  entry.sub = sub;
+  entry.switchEl = switchEl;
+  entry.input = input;
+  cards.set(room.id, entry);
   return card;
 }
 
 // Full re-render from a fresh /api/house payload (boot + every reloadHouse).
-export function setRoomCardsData(house) {
+export function setRoomCardsData(house, structure) {
+  if (structure) {
+    pictureAreas.clear();
+    for (const floor of structure.floors || [])
+      for (const area of floor.areas || [])
+        if (area.picture) pictureAreas.add(area.area_id);
+  }
   const panel = document.getElementById('room-cards');
   panel.innerHTML = '';
   cards.clear();
@@ -151,7 +183,7 @@ export function setRoomCardsData(house) {
 export function initRoomCards() {
   onSnapshotReady((roomId, url) => {
     const c = cards.get(roomId);
-    if (!c) return;
+    if (!c || c.areaPic) return; // never stomp a real HA area photo
     c.img.src = url;
     c.img.classList.remove('hidden');
     c.placeholder.classList.add('hidden');
