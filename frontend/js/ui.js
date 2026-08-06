@@ -138,6 +138,15 @@ export function initUI({ structure: s, house: h, onReload }) {
     inHouseMode = e.detail.houseMode;
     paintMarkersBtn();
   });
+  // The house shell GLB failed to fetch/parse (house.js). Everything else in
+  // the scene is procedural, so this looks like a render glitch instead of the
+  // deploy problem it almost always is — say so instead of hiding it in the
+  // console. No timeout: the scene stays wrong until it's fixed.
+  window.addEventListener('shellLoadFailed', (e) => {
+    showBanner(`House model (id ${e.detail.modelId}) failed to load — the 3D `
+      + 'house can\'t render. Check the browser console, then '
+      + 'docs/TROUBLESHOOTING-house-shell.md');
+  });
   // Initialize UI state — /edit opens ready to edit, the toggle previews.
   $('chk-edit-mode').checked = canEdit;
   setAppMode(canEdit ? 'edit' : 'view');

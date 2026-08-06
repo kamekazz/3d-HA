@@ -108,6 +108,14 @@ async function loadHouseShell(cfg) {
     pivot = await getInstance(cfg.model_id, 'bottom'); // floor seated at Y=0
   } catch (err) {
     console.warn(`house shell model ${cfg.model_id} failed to load:`, err);
+    // Loudly, not just in the console: a missing shell looks like "the house
+    // vanished" with the rest of the scene intact, which reads as a render bug
+    // rather than the deploy problem it usually is (see
+    // docs/TROUBLESHOOTING-house-shell.md). ui.js turns this into a banner —
+    // an event, not a direct call, because ui.js already imports this module.
+    window.dispatchEvent(new CustomEvent('shellLoadFailed', {
+      detail: { modelId: cfg.model_id, error: err },
+    }));
     return; // stay in the generated-geometry fallback
   }
   if (houseRoot !== root) return; // a newer rebuild superseded this one

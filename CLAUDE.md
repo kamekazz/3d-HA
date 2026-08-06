@@ -138,7 +138,10 @@ currently **tracked in git** on purpose (teammates clone the demo house); re-ign
 `placements.model_id` (FK, `ON DELETE SET NULL` so deleting a model reverts the primitive), plus
 `rot_y` (radians) and `scale` — or (b) be placed as **standalone furniture**: an `objects` row
 (room-anchored like placements, `model_id ON DELETE CASCADE`). `frontend/js/models.js` owns the
-GLTFLoader (+ DRACO decoder from the CDN) and a per-model cache; instances are `scene.clone(true)`
+GLTFLoader (+ DRACO decoder **vendored** at `frontend/vendor/draco/gltf/`, served off our own static
+root — not the CDN, since the house-shell GLB is DRACO-compressed and a CDN-blocked deploy would then
+render the whole scene *except* the house; re-copy it from the matching
+`three@<ver>/examples/jsm/libs/draco/gltf/` if three is bumped) and a per-model cache; instances are `scene.clone(true)`
 with **cloned materials** (originals stashed in `child.userData.__orig`) inside a pivot scaled
 ×3.28084 (glTF is meters, world is feet) — device models are bbox-centered, furniture bottom-seated.
 `state.js applyStyle` restyles model groups by emissive glow/grey-lerp (never repaints authored
@@ -219,7 +222,10 @@ importmap — no npm/bundler):
 - `main.js` — bootstraps: loads HA structure + house layout, builds the scene, wires picking
   (raycasting for click/hover on rooms and device markers) and realtime.
 - `scene.js` — Three.js scene/camera/renderer/controls setup.
-- `house.js` — builds room geometry (floors, walls) from `/api/house` data.
+- `house.js` — builds room geometry (floors, walls) from `/api/house` data. Also loads the
+  whole-house shell GLB; when that fetch/parse fails it dispatches `shellLoadFailed` and `ui.js`
+  raises a persistent banner — a silently missing house reads as a render bug rather than the deploy
+  problem it usually is (see `docs/TROUBLESHOOTING-house-shell.md`).
 - `devices.js` — builds device markers from placements; owns the `markers` map (entity_id → mesh)
   and per-domain base colors.
 - `state.js` — live entity-state store; restyles markers on state change (color/emissive/scale

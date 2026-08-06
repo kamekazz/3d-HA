@@ -35,8 +35,8 @@ Five hops. Any one of them breaking gives you the same blank lawn:
 | 1 | The `house_shell` table holds one row: `id=1, model_id=3, x=20.96, y=0, z=0, rot_y=0, scale=1` | `backend/house/store.py:855` `get_house_shell()` |
 | 2 | `GET /api/house` includes it in the payload as `house_shell` | `backend/house/store.py:309` |
 | 3 | The frontend reads `house.house_shell.model_id` — **and only proceeds if it's set** | `frontend/js/house.js:93` |
-| 4 | It requests the file: `GET /api/house/model/3/file`, served out of the uploads dir | `frontend/js/models.js:23`, `backend/house/routes.py:333` |
-| 5 | Three.js parses the GLB — which is DRACO-compressed, so it also downloads a **decoder from a CDN** | `frontend/js/models.js:14` |
+| 4 | It requests the file: `GET /api/house/model/3/file`, served out of the uploads dir | `frontend/js/models.js:27`, `backend/house/routes.py:333` |
+| 5 | Three.js parses the GLB — which is DRACO-compressed, so it also needs a **decoder** | `frontend/js/models.js:18` |
 
 Two things worth knowing about that last hop. The GLB was compressed from 39 MB down to 992 KB with
 glTF-Transform, and it declares:
@@ -45,21 +45,25 @@ glTF-Transform, and it declares:
 extensionsRequired: ["EXT_texture_webp", "KHR_draco_mesh_compression"]
 ```
 
-So the browser **must** fetch the DRACO decoder WASM from
-`https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/` before it can draw a single
-triangle of the house. This is the only asset in the entire scene that needs it.
+So the browser **must** load the DRACO decoder WASM before it can draw a single triangle of the house.
+This is the only asset in the entire scene that needs it. That decoder is **vendored in this repo** at
+`frontend/vendor/draco/gltf/` and served from our own origin — it used to come from a CDN, which meant
+a network that couldn't reach jsdelivr rendered the whole scene except the house.
 
-And when hop 4 or 5 fails, the handler is just:
+When hop 4 or 5 fails you now get a banner across the top of the screen plus the console detail:
 
 ```js
 // frontend/js/house.js:110
 console.warn(`house shell model ${cfg.model_id} failed to load:`, err);
-return; // stay in the generated-geometry fallback
+// …then a 'shellLoadFailed' event, which ui.js turns into a persistent banner
 ```
 
-Nothing in the UI. No banner, no toast. That's the whole reason this is confusing.
+The banner reads *"House model (id 3) failed to load — the 3D house can't render."* and does not
+auto-dismiss. If you see it, skip to §4 and run the three commands. **Important:** the banner only
+covers a *failed load*. The most common cause below (a fresh database) never gets far enough to fail
+— it has nothing to load — so it stays completely silent.
 
-**One more by-design behaviour:** the shell is only visible in the **House** view. `house.js:335`:
+**One more by-design behaviour:** the shell is only visible in the **House** view. `house.js:343`:
 
 ```js
 const houseMode = level === 'all' && !!houseShell;
@@ -116,8 +120,10 @@ Set your base URL once (change the port if you mapped a different one):
 APP=http://localhost:5000
 ```
 
-**(a) The browser console.** Open DevTools (F12) → Console → type `shell` in the filter box. Reload
-the page. Either you get a line containing `house shell model 3 failed to load` or you get nothing.
+**(a) The banner and the console.** Is there a banner across the top saying the house model failed to
+load? Then open DevTools (F12) → Console → type `shell` in the filter box and reload. Either you get a
+line containing `house shell model 3 failed to load` (plus the underlying HTTP error) or you get
+nothing. **Nothing is a meaningful answer** — see the table below.
 
 **(b) Is the DB row there?**
 
@@ -151,15 +157,16 @@ A `404` with `{"error":"model not found"}` means the `models` row or the file is
 
 ### Which cause do you have?
 
-| (a) console | (b) `/api/house/shell` | (c) model file | → Cause |
+| (a) banner + console | (b) `/api/house/shell` | (c) model file | → Cause |
 |---|---|---|---|
 | nothing | `{...model_id:3...}` | `200`, 992160 | **Cause 1** — you're not in House view. Backend is fine. |
 | **nothing** | `null` | `404` or `200` | **Cause 2** — wrong/fresh database. Most common in Docker. |
-| warns | `{...model_id:3...}` | **`404`** | **Cause 3** — the GLB isn't in the container. |
-| warns | `{...model_id:3...}` | `200`, 992160 | **Cause 4** — the DRACO decoder / WebP is failing in the browser. |
+| banner + warn | `{...model_id:3...}` | **`404`** | **Cause 3** — the GLB isn't in the container. |
+| banner + warn | `{...model_id:3...}` | `200`, 992160 | **Cause 4** — the DRACO decoder / WebP is failing in the browser. |
 
-Note the diagnostic split: **cause 2 is silent** (the frontend never even asks for a file, so there's
-nothing to warn about), while causes 3 and 4 both warn and are told apart by that `curl -sI`.
+Note the diagnostic split: **cause 2 is silent** — no banner, no console line — because the frontend
+never even asks for a file. Causes 3 and 4 both announce themselves and are told apart by that
+`curl -sI`. So "no banner but no house" points squarely at the database.
 
 ---
 
@@ -294,40 +301,37 @@ The file is tracked in git normally — there is no Git LFS in this repo, so not
 
 ### Cause 4 — the DRACO decoder or WebP is failing in the browser
 
-DB row fine, file serves fine, but the console still warns. The house is DRACO-compressed, so
-Three.js has to fetch a decoder from jsdelivr before it can draw it.
+DB row fine, file serves fine, but you still get the banner. The house is DRACO-compressed, so
+Three.js needs the decoder before it can draw it. **This used to be a CDN dependency and is now
+vendored in the repo**, so this cause is much rarer than it was — but the vendored files still have to
+be present and served.
 
-Confirm in DevTools → Network, reload, filter for `draco`. You're looking for
-`draco_wasm_wrapper.js` and `draco_decoder.wasm` from `cdn.jsdelivr.net`. If they're failing or never
-requested, and the console message mentions the decoder — or says
-`GLTFLoader: WebP required by asset but unsupported` — that's this cause.
+Check them from the shell:
 
-Sanity check that jsdelivr is reachable **from the browser's machine**, not the server's:
-
+```bash
+for f in draco_wasm_wrapper.js draco_decoder.wasm draco_decoder.js; do
+  curl -sI $APP/vendor/draco/gltf/$f | head -1
+done
 ```
-https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/draco_decoder.wasm
-```
 
-If the CDN is blocked or the box is air-gapped, vendor the decoder. **This is the only fix here that
-changes source code** — if you need it, push it back so everyone gets it:
+All three must be `200`. Expected sizes: `58456`, `192420`, `512465` bytes. If they 404, the
+`frontend/vendor/` directory didn't make it into your image — same `.dockerignore` / `COPY` /
+volume checklist as cause 3, but for `frontend/` this time.
 
-1. Grab the four files from the matching three.js version (0.160.0):
-   `examples/jsm/libs/draco/gltf/` → `draco_decoder.js`, `draco_decoder.wasm`,
-   `draco_wasm_wrapper.js`, `draco_encoder.js`.
-2. Put them in `frontend/vendor/draco/gltf/`. Flask serves `frontend/` as the static root already
-   (`backend/app.py:29`, `static_url_path=""`), so they'll be reachable at `/vendor/draco/gltf/...`
-   with no new route.
-3. Change one line in `frontend/js/models.js:14`:
+Then confirm in DevTools → Network, reload, filter for `draco`. On a healthy load you'll see
+`draco_wasm_wrapper.js` and `draco_decoder.wasm` fetched **from your own host**, not jsdelivr.
+(`draco_decoder.js` is the fallback for browsers without WebAssembly and normally isn't requested at
+all.) If you see requests going to `cdn.jsdelivr.net` for draco, you're running a stale `models.js` —
+hard-reload with Ctrl+Shift+R, and check `curl -s $APP/js/models.js | grep setDecoderPath` returns
+`'/vendor/draco/gltf/'`.
 
-   ```js
-   // was: dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
-   dracoLoader.setDecoderPath('/vendor/draco/gltf/');
-   ```
+If the console says `GLTFLoader: WebP required by asset but unsupported`, that's the other required
+extension: use a browser with WebP support (any current Chrome, Edge, Firefox or Safari has it). The
+textures in this GLB need it.
 
-4. Hard-reload (Ctrl+Shift+R).
-
-If it's the WebP half that's failing, use a browser that supports WebP (any current Chrome, Edge,
-Firefox or Safari does) — the textures in this GLB require it.
+> If you bump the three.js version in `frontend/index.html`, re-copy the vendored decoder from the
+> matching version — a decoder much older or newer than the loader can fail to initialise:
+> `https://cdn.jsdelivr.net/npm/three@<version>/examples/jsm/libs/draco/gltf/`
 
 ---
 
@@ -345,9 +349,9 @@ Not causes of this bug, but you'll hit them:
 - **The reloader is off on purpose** (`debug=False`). The HA websocket lives on a background thread
   and must start exactly once per process; enabling the reloader double-starts it. Don't turn on
   Flask debug, and don't run more than one worker.
-- **Three.js, socket.io and Google Fonts all come from CDNs** (`frontend/index.html:10-18`). A fully
-  air-gapped box needs all of them vendored, not just DRACO. If the page is completely blank rather
-  than missing-the-house, that's your problem — start there.
+- **Three.js, socket.io and Google Fonts still come from CDNs** (`frontend/index.html:10-18`). Only the
+  DRACO decoder is vendored. A fully air-gapped box needs the rest vendored too. If the page is
+  completely blank rather than missing-the-house, that's your problem — start there.
 - **`.env.example` doesn't exist in the repo**, despite what the README says. Create
   `backend/.env` yourself with three keys:
 
@@ -365,11 +369,14 @@ Not causes of this bug, but you'll hit them:
 
 ### Known rough edges (not fixed yet)
 
-- A failed shell load only writes to the console — it should surface in the UI banner
-  (`frontend/js/house.js:110`).
-- The DRACO decoder is CDN-only; vendoring it in-repo would make offline deploys work by default.
 - There's no `.gitattributes` marking the tracked binaries (`*.glb`, `*.db`, `*.png`) as binary. They
   work today because git auto-detects them, but it's unguarded.
+- Nothing warns when `house_shell` is `null` — that's a legitimate state (most installs have no shell
+  model), so cause 2 stays silent by design. The banner only fires on an actual load failure.
+
+Two rough edges from the first version of this doc **are now fixed** — if you're on an older checkout,
+`git pull`: a failed shell load raises a banner instead of only a `console.warn`, and the DRACO decoder
+is vendored at `frontend/vendor/draco/gltf/` instead of being fetched from jsdelivr.
 
 ---
 

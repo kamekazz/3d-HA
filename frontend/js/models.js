@@ -10,8 +10,12 @@ import { getEnvIntensity } from './scene.js';
 const FEET_PER_METER = 3.28084;
 
 const dracoLoader = new DRACOLoader();
-// decoder WASM is only fetched if a DRACO-compressed mesh actually shows up
-dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/');
+// decoder WASM is only fetched if a DRACO-compressed mesh actually shows up.
+// Served from our own static root (frontend/vendor/), NOT the CDN: the house
+// shell GLB is DRACO-compressed, so a CDN-blocked or air-gapped deploy would
+// render the whole scene except the house. Mirror of
+// three@0.160.0/examples/jsm/libs/draco/gltf/ — re-copy it if three is bumped.
+dracoLoader.setDecoderPath('/vendor/draco/gltf/');
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
 
