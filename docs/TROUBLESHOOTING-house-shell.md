@@ -112,7 +112,26 @@ That single command answers "is the house even in here?". You want to see `model
 
 ---
 
-## 4. Triage: run these three
+## 4. Triage
+
+### The 20-second version — no shell, no Docker, no curl
+
+In the **same browser tab you're viewing the app in**, open these two URLs. Use the exact same scheme,
+host and port you use for the app, and put the path on the end of the *origin* (so if the app is at
+`http://192.168.1.50:5000/`, that's `http://192.168.1.50:5000/api/house/shell`):
+
+| URL | Healthy answer | Bad answer → cause |
+|---|---|---|
+| `<origin>/api/house/shell` | `{"id":1,"model_id":3,…,"x":20.96,…}` | `null` → **cause 2** (database) |
+| `<origin>/api/house/model/3/file` | starts downloading a ~1 MB `.glb` | `{"error":"model not found"}` → **cause 3** (file) |
+
+That single pair separates the two causes that account for almost every occurrence. If the first URL
+returns the row *and* the second downloads the file, the backend is fine — go to cause 1 or 4.
+
+> If those two URLs return Home Assistant's own error pages or a login screen rather than the answers
+> above, you're hitting HA's API namespace instead of this app's — see the path-prefix warning in §6.
+
+### The full version
 
 Set your base URL once (change the port if you mapped a different one):
 
@@ -342,10 +361,28 @@ Not causes of this bug, but you'll hit them:
 - **`app.py` binds to `127.0.0.1`** (`backend/app.py:71`). Inside a container that's container-only
   loopback, so a published port gets you nothing — it must be `0.0.0.0`. You've presumably already
   changed this since the app is reachable at all.
-- **Every API call is an absolute path** (`/api/house`, `/api/house/model/3/file`, …). Serving the app
-  under a URL path prefix — Home Assistant **ingress**, or an nginx `location /3dha/` — breaks the
-  entire app, not just the house. Use a directly mapped port, and surface it in HA with an
-  **iframe panel** or a **Webpage card**, not ingress.
+- **Every API call is an absolute path, and `/api/` collides with Home Assistant's own API.** This is
+  the big one if you're planning to expose the app on your HA hostname (Nabu Casa, ingress, or an nginx
+  `location /threed_house/`). The frontend has **no configurable base URL** — `api.js` calls bare
+  `/api/house`, and six more absolute literals sit outside it:
+
+  | File | Request |
+  |---|---|
+  | `frontend/js/models.js:27` | `/api/house/model/<id>/file` — **the house shell** |
+  | `frontend/js/cameras.js:91`, `controls.js:199,228` | `/api/camera/<id>/snapshot`, `/stream` |
+  | `frontend/js/planner.js:1149` | `/api/house/plan/<floor>` — floor-plan tracing images |
+  | `frontend/js/roomcards.js:140` | `/api/ha/area-picture/<area>` |
+
+  Served under a path prefix, every one of those resolves to the **domain root** — i.e. to Home
+  Assistant's own `/api/`, which will answer with 401/404 instead of this app's data. Two consequences:
+  a path-prefix deploy breaks the whole app, not just the house; and if you "fix" it by hardcoding a
+  base URL into `api.js` only, you get a scene that loads rooms and states fine while the house,
+  camera pictures and plan images all silently fail. Nothing in that table goes through `api.js`.
+
+  Until the frontend learns a base path, host it so the app owns its origin root: a **directly mapped
+  port**, surfaced in HA as an **iframe panel** or **Webpage card** pointing at `http://<host>:5000/`
+  — not ingress, and not a subpath on the HA domain. (Mind mixed content too: an `http://` iframe
+  inside an `https://` HA page is blocked outright by the browser, which looks like a blank panel.)
 - **The reloader is off on purpose** (`debug=False`). The HA websocket lives on a background thread
   and must start exactly once per process; enabling the reloader double-starts it. Don't turn on
   Flask debug, and don't run more than one worker.
