@@ -1,0 +1,29 @@
+{
+  "reference": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\d24ed19b-02f6-4105-8e23-2635cb148998\\scratchpad\\ref\\master_bedroom.jpg",
+  "render": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\d24ed19b-02f6-4105-8e23-2635cb148998\\scratchpad\\shots\\rt7.png",
+  "render_label": "pass 2 · room re-traced, vault closed",
+  "stamp": "second pass running",
+  "lede": "Every piece of this room is built as a GLB, placed in the live Home Assistant house, then screenshotted from the exact spot the photo was taken. A separate critic with fresh context puts the two side by side and says whether ours would pass for the photo. If it would not, it goes back to the builder.",
+  "pieces": [
+    { "name": "Vaulted ceiling", "state": "fail", "round": 2, "note": "Shape is right and it now covers the doorway you stand in. Pitch is still wrong — our gable is a steep symmetric triangle; the photo's apex sits left of centre with two unequal slopes." },
+    { "name": "Bed", "state": "fail", "round": 2, "note": "Too big and too tall. The photo has a slim mattress on a low frame with one shallow drawer, not two deep drawer fronts under a slab." },
+    { "name": "Wall art", "state": "fail", "round": 1, "note": "The painting itself is close. It is scaled far too large — ours nearly reaches the vault where the photo leaves white wall all around." },
+    { "name": "Rug", "state": "fail", "round": 1, "note": "Too big, too white, and the stripes read as corrugated board instead of a soft looped pile." },
+    { "name": "Dresser and mirror", "state": "fail", "round": 1, "note": "The mirror renders as a dark switched-off TV rather than a bright reflective pane, and the dresser crowds the bed." },
+    { "name": "Baseboards", "state": "building", "round": 1, "note": "Not built yet. Their absence is one of the clearest giveaways in the render." },
+    { "name": "Windows and blinds", "state": "pass", "round": 1, "note": "Three windows with white slatted blinds and bright panes, sized and placed off the photo." },
+    { "name": "Desk and chair", "state": "pass", "round": 1, "note": "White panel-end desk under the east window; black mesh task chair turned 20° off square, as the photo shows." },
+    { "name": "Ceiling fan", "state": "pass", "round": 2, "note": "Five white blades and a light kit, downrod length derived from the vault height above it." },
+    { "name": "Foreground chest", "state": "pass", "round": 1, "note": "The dark chest cropped at the right edge of the photo." },
+    { "name": "Floor and walls", "state": "pass", "round": 1, "note": "Grey plank floor, warm white walls. Plank repeat halved to 2.2 ft so boards read at ~6.5 in like real LVP rather than 1 ft barn boards." }
+  ],
+  "facts": {
+    "Room": "id 14 — Master Bed",
+    "Footprint": "re-traced 15 × 16 ft + leg",
+    "Was": "26.5 × 16 ft (traced)",
+    "Vault": "ridge at x 7.5, peak 14.5 ft",
+    "Camera": "doorway, local (12, 16.8), fov 78",
+    "Units": "feet — glTF exported in metres"
+  },
+  "footer": "The floor plan was re-traced to the photo's real proportions on your call; the freed strip west of the bedroom is now a placeholder room called Master Closet."
+}

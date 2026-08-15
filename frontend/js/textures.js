@@ -7,7 +7,9 @@ export const TEXTURE_PRESETS = {
   plaster:  { name: 'Plaster',     url: 'textures/plaster.png',  size: 8, use: 'wall' },
   brick:    { name: 'Brick',       url: 'textures/brick.png',    size: 4, use: 'wall' },
   concrete: { name: 'Concrete',    url: 'textures/concrete.png', size: 6, use: 'wall' },
-  wood:     { name: 'Wood planks', url: 'textures/wood.png',     size: 4, use: 'floor' },
+  // 4 planks per tile, so `size` is 4x the plank width — 2.2 ft gives the ~6.5 in
+  // boards real LVP flooring uses (at 4 ft they read as 1 ft barn boards).
+  wood:     { name: 'Wood planks', url: 'textures/wood.png',     size: 2.2, use: 'floor' },
   tile:     { name: 'Tile',        url: 'textures/tile.png',     size: 4, use: 'floor' },
   carpet:   { name: 'Carpet',      url: 'textures/carpet.png',   size: 6, use: 'floor' },
 };

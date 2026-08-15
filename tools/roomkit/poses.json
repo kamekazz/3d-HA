@@ -1,0 +1,12 @@
+{
+  "_note": "World feet. Master Bed (room 14) was re-traced 2026-08-08 to the photo's real proportions: it now spans x 6.0..21.0, z -20.5..3.0 (main area 15 x 16 ft plus the entry leg). Slab at Y=18 (level 2), eye level Y=23.6. 'ref' reproduces docs/Master bedroom.heic — camera in the south-east doorway looking north-west — and is the only pose critics judge from.",
+
+  "plan": { "pos": [13.5, 46.0, -12.4], "target": [13.5, 18.0, -12.5], "fov": 45, "size": [900, 900] },
+
+  "look_n": { "pos": [13.5, 23.6, -12.5], "target": [13.5, 22.6, -20.5], "fov": 70, "size": [900, 1200] },
+  "look_s": { "pos": [13.5, 23.6, -12.5], "target": [13.5, 22.6, -4.5], "fov": 70, "size": [900, 1200] },
+  "look_e": { "pos": [13.5, 23.6, -12.5], "target": [21.0, 22.6, -12.5], "fov": 70, "size": [900, 1200] },
+  "look_w": { "pos": [13.5, 23.6, -12.5], "target": [6.0, 22.6, -12.5], "fov": 70, "size": [900, 1200] },
+
+  "ref": { "pos": [18.0, 23.6, -3.7], "target": [13.0, 21.8, -16.0], "fov": 78, "size": [900, 1200] }
+}
