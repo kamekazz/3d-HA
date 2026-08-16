@@ -1,82 +1,130 @@
 {
-  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
-  "_room_note": "bath (2F) -- 'Second floor bathroom.jpg'. Enter from the hallway on the NORTH. Standing in that doorway looking south, screen-left is EAST, so the subway-tiled shower with the black sliding rail is on the east side, the white vanity on the west, and the window + toilet on the south (exterior) wall. FLOOR IS PLANK, NOT TILE.",
-  "_room": {
-    "id": 26,
-    "name": "bath",
-    "floor": {
-      "id": 3,
-      "name": "Second floor.",
-      "level": 2
-    },
-    "rect_world": {
-      "x": [
-        10.5,
-        18.6
-      ],
-      "z": [
-        23.4,
-        32.1
-      ]
-    },
-    "size_ft": [
-      8.1,
-      8.7
-    ],
-    "wall_height": 8.0
+ "_note": "FURNISHING PASS (round 4, bathrooms). Build scripts live in scratchpad/baths/ -- bkit.py holds every shared helper (it imports scratchpad/shellpass/kit.py wholesale), b16/b26/b23.py are idempotent by piece name so re-running replaces rather than duplicates, probe2.py solves the four wall-skin albedos from real renders, meterwalls.py reports the finished per-wall numbers, shootpose.py shoots a photo-matched camera without touching poses.json.",
+ "_room_note": "bath (2F) -- 'Second floor bathroom.jpg'. NORTH is the 2F hallway (door at local x 0.42..3.22, the WEST end), WEST is the Rios Room party wall (vanity + round mirror), EAST and SOUTH are exterior. Subway-tiled shower with a black barn-rail slider and a grey hex mosaic pan fills the EAST side x 4.45..8.02, z 0.10..5.30; window on the SOUTH wall x 2.55..5.65; toilet EAST of it, tank on the south wall.",
+ "_room": {
+  "id": 26,
+  "name": "bath",
+  "floor": {
+   "id": 3,
+   "name": "Second floor.",
+   "level": 2
   },
-  "_surfaces": {
-    "wall_color": "#e9e7e2",
-    "floor_color": "#6b6967",
-    "floor_texture": "wood",
-    "wall_texture": null
+  "rect_world": {
+   "x": [
+    10.5,
+    18.6
+   ],
+   "z": [
+    23.4,
+    32.1
+   ]
   },
-  "_camera": {
-    "judge_from": "doll_nw",
-    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
+  "size_ft": [
+   8.1,
+   8.7
+  ],
+  "wall_height": 8.0
+ },
+ "_surfaces": {
+  "wall_color": "#e9e7e2",
+  "floor_color": "#6b6967",
+  "floor_texture": "wood",
+  "wall_texture": null
+ },
+ "_camera": {
+  "judge_from": "doll_ne",
+  "why": "doll_ne culls the N and E walls and leaves the WEST wall (vanity, round black mirror, towel ring) and the SOUTH wall (window, toilet, framed print, towel bar) standing. The shower sits on the EAST wall but is built as a placed object with its own tiled walls, so culling the room's east wall costs nothing. The only stranded item is the north door leaf."
+ },
+ "_openings": [
+  {
+   "type": "door",
+   "edge_index": 0,
+   "offset": 0.42,
+   "width": 2.8,
+   "elevation": 0.0,
+   "height": 6.85
   },
-  "pieces": {
-    "Bath2F Baseboards": {
-      "pos_room_local_ft": [
-        4.05,
-        0.0,
-        4.35
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Bath2F Ceiling": {
-      "pos_room_local_ft": [
-        4.05,
-        7.54,
-        4.35
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Bath2F Shower": {
-      "pos_room_local_ft": [
-        6.07,
-        0.0,
-        2.325
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Bath2F Vanity": {
-      "pos_room_local_ft": [
-        1.95,
-        0.0,
-        5.899
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    }
+  {
+   "type": "window",
+   "edge_index": 2,
+   "offset": 2.45,
+   "width": 3.1,
+   "elevation": 2.95,
+   "height": 3.45
+  }
+ ],
+ "pieces": {
+  "Bath2F Ceiling": {
+   "pos_room_local_ft": [
+    4.05,
+    7.54,
+    4.35
+   ],
+   "rot_y_deg": 0.0,
+   "scale": 1.0
   },
-  "_photo_vs_brief": "The task brief said 'bathrooms are tile'. Rooms 16, 23 and 26 were built with floor_texture 'wood' instead, because every bathroom photo in docs/photos-jpg shows the same grey wood-look PLANK as the rest of the house running unbroken under the vanity and up to the shower curb ('Master Bath. 1/2.jpg', 'Bathroom.jpg', 'Second floor bathroom.jpg'). Tile appears only inside the shower pans and surrounds, which are modelled as tile. Recording the disagreement rather than building against the photo, per ROOM-BRIEF round-2 lesson 1.",
-  "_gaps": [
-    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
-    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
-    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
-  ]
+  "Bath2F Baseboards": {
+   "pos_room_local_ft": [
+    4.05,
+    0.0,
+    4.35
+   ],
+   "rot_y_deg": 0.0,
+   "scale": 1.0
+  },
+  "Bath2F Shower": {
+   "pos_room_local_ft": [
+    6.245,
+    0.0,
+    2.7
+   ],
+   "rot_y_deg": 0.0,
+   "scale": 1.0
+  },
+  "Bath2F Vanity": {
+   "pos_room_local_ft": [
+    1.583,
+    0.0,
+    5.777
+   ],
+   "rot_y_deg": 0.0,
+   "scale": 1.0
+  },
+  "Bath2F Toilet": {
+   "pos_room_local_ft": [
+    4.275,
+    0.0,
+    7.23
+   ],
+   "rot_y_deg": 0.0,
+   "scale": 1.0
+  },
+  "Bath2F Floor Mat": {
+   "pos_room_local_ft": [
+    3.5,
+    0.05,
+    7.425
+   ],
+   "rot_y_deg": 0.0,
+   "scale": 1.0
+  },
+  "Bath2F Wall Wash": {
+   "pos_room_local_ft": [
+    4.05,
+    0.5,
+    4.35
+   ],
+   "rot_y_deg": 0.0,
+   "scale": 1.0
+  }
+ },
+ "_photo_vs_brief": "FLOOR: I agree with the shell pass and with the previous round. Every photo of all three bathrooms shows the same grey wood-look PLANK as the rest of the house running unbroken under the vanities and up to the shower curbs -- no tile field and no threshold strip anywhere outside the pans. Tile appears only INSIDE the enclosures (grey hexagon mosaic in room 26's pan, charcoal pan in room 23, marble slab in room 16) and on the enclosure walls. floor_texture stays 'wood' in all three.",
+ "_contact_shadows": "CONTACT SHADOWS were the unfinished item this round inherited, and they needed four things at once. (1) HEIGHT y=0.05: the room slab is drawn with polygonOffsetFactor -1, so a decal at 0.005-0.018 z-fights into faint crescents. (2) ALPHA-BLENDED, not an opaque colour mix: the opaque version painted mix(floor_color, tone) over the slab, which killed the plank texture and -- because the authored floor_color is lighter than the textured render -- left a PALE disc round every piece. (3) ONE coplanar layer of non-overlapping annuli on a smooth ramp, so there is no bullseye and no outer outline. (4) The ramp has to run OUTSIDE the footprint: the first rebuild ran 0->1 across the piece's own half-extent, which buried every dark ring under the piece and left ~3% alpha where it actually showed -- it metered as no shadow at all. Final form: a solid core over the footprint, alpha falling (1-t)^1.15 over an extra 0.72-0.85 ft. Metered in the doll render: 82 against a clean floor of 124, i.e. 34% darkening at the contact edge easing to zero over ~25 px at dollhouse distance.",
+ "_wall_skins": "Per-wall NON-emissive albedo skins on all four walls, solved by probe2.py: it renders the room twice with only ONE wall's skin changed (grey 250 -> grey 120) and keeps the pixels that moved. There is no bounce light in this scene, so those pixels are that wall's skin and nothing else -- no hand-drawn box can swallow a towel bar or a mirror rim. Each skin then carries a gentle vertical value ramp about the solved albedo (mean preserved by construction), because one flat quad metered sd ~3 against the photographs' 8-15. Measured on the finished room: n 177.9 / w 192.9 / s 165.1, spread 27.8, mean 178.6 (photo's clean wall fields 176.0 / 170.8 / 159.7 / 191.6, mean 174.5). Sample sizes 100k-151k px. The EAST wall could not be metered: the shower alcove covers all but a sliver of it and the probe moved 0 pixels, so its skin is left at #fafafa and reported rather than guessed.",
+ "_gaps": [
+  "The east wall's skin is unsolved (0 px of it are visible anywhere in the room) -- reported rather than invented.",
+  "One bath mat, one plant and six counter items: the photographs are a little busier than this.",
+  "The barn rail reads as a heavy black band from a camera standing right under it in the doorway; it is correct in plan but foreshortens badly at 3 ft.",
+  "Corrected the shell pass twice here: it had the door at the EAST end of the north wall (standing there you would be inside the shower alcove, which no photo shows) and the toilet WEST of the window instead of east."
+ ]
 }

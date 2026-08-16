@@ -63,11 +63,9 @@ def ceil_y(z):
 
 
 # ---------------------------------------------------------------- materials
-CARP = [Material("m27c%d" % i, c, roughness=0.99) for i, c in enumerate(
-    ("#8b8b88", "#93938f", "#848481", "#8f8f8b"))]
-BLK = Material("m27blk", "#1c1d20", roughness=0.94)
-BLK2 = Material("m27blk2", "#232427", roughness=0.92)
-BLK3 = Material("m27blk3", "#161719", roughness=0.95)
+BLK = Material("m27blk", "#494b53", roughness=0.94)
+BLK2 = Material("m27blk2", "#5b5e65", roughness=0.92)
+BLK3 = Material("m27blk3", "#393c41", roughness=0.95)
 WIRE = Material("m27wire", "#c9ced1", roughness=0.34, metallic=0.55)
 WIRE2 = Material("m27wire2", "#aeb3b6", roughness=0.38, metallic=0.55)
 LIN = Material("m27lin", "#dedad2", roughness=0.97)          # cream quilt/linen
@@ -177,12 +175,12 @@ def piece_steps():
     """
     m = Model()
     n = 6
-    x0, x1 = 0.0, 5.65
+    x0, x1 = 3.60, 9.30
     y_hi, y_lo = 2.62, 0.46
     dep = 1.12                       # how far it projects from the south wall
     zb = D - 0.10
     contact_shadow(m, (x0 + x1) / 2 + 0.25, zb - dep / 2 - 0.10,
-                   (x1 - x0) / 2 + 0.55, dep * 0.75, y=0.050, strength=0.44,
+                   (x1 - x0) / 2 + 0.55, dep * 0.75, y=0.078, strength=0.44,
                    room=(W, D))
     sw = (x1 - x0) / n
     for i in range(n):
@@ -195,18 +193,21 @@ def piece_steps():
         if i:                                             # vertical riser face
             yp = y_hi - (y_hi - y_lo) * (i - 1) / (n - 1)
             bx(m, TRIM, a - 0.045, a, y, yp, zb - d - 0.045, zb)
-    # the low plinth that carries on east of the last tread
-    bx(m, TRIM, x1, W, 0.0, y_lo, zb - 0.52, zb)
-    bx(m, TRIM_D, x1, W, y_lo - 0.05, y_lo, zb - 0.575, zb)
+    # the low plinth that carries on either side of the treads -- in the photo
+    # the black wall meets a plain white skirting west of the first tread and
+    # east of the last one
+    for (a, b) in ((0.0, x0), (x1, W)):
+        bx(m, TRIM, a, b, 0.0, y_lo, zb - 0.52, zb)
+        bx(m, TRIM_D, a, b, y_lo - 0.05, y_lo, zb - 0.575, zb)
     # things standing on the treads (photo): folded towels, a shoe, a basket
-    for (a, wdt, i, mat, hh) in ((0.55, 1.15, 0, LIN, 0.42),
-                                 (2.05, 0.95, 1, LIN2, 0.30),
-                                 (3.05, 0.80, 2, GREYT, 0.36),
-                                 (4.20, 0.75, 4, LIN, 0.26)):
+    for (a, wdt, i, mat, hh) in ((4.15, 1.15, 0, LIN, 0.42),
+                                 (5.65, 0.95, 1, LIN2, 0.30),
+                                 (6.65, 0.80, 2, GREYT, 0.36),
+                                 (7.80, 0.75, 4, LIN, 0.26)):
         y = y_hi - (y_hi - y_lo) * i / (n - 1)
         d = dep - 0.10 * i
         bx(m, mat, a, a + wdt, y, y + hh, zb - d + 0.10, zb - 0.14)
-    for sx in (3.95, 4.35):
+    for sx in (7.55, 7.95):
         m.add(rounded_box(0.34, 0.16, 0.82, 0.07, 3), SHOE,
               at=(sx, y_hi - (y_hi - y_lo) * 3 / (n - 1), zb - dep + 0.62))
     return m
@@ -216,7 +217,7 @@ def piece_steps():
 def rack(m, x0, x1, z0, z1, levels, top, shadow=True):
     if shadow:
         contact_shadow(m, (x0 + x1) / 2, (z0 + z1) / 2, (x1 - x0) * 0.56,
-                       (z1 - z0) * 1.05, y=0.050, strength=0.46, room=(W, D))
+                       (z1 - z0) * 1.05, y=0.078, strength=0.46, room=(W, D))
     for px in (x0 + 0.09, x1 - 0.09):
         for pz in (z0 + 0.07, z1 - 0.07):
             m.add(cylinder(0.052, top, 8), WIRE, at=(px, 0.0, pz))
@@ -326,7 +327,7 @@ def piece_floorstuff():
                                 (10.60, 6.35, 1.15, 0.95, 0.48),
                                 (1.55, 6.65, 0.95, 0.80, 0.46),
                                 (12.30, 4.25, 0.80, 0.70, 0.42)):
-        contact_shadow(m, cx, cz, rx, rz, y=0.050, strength=s, room=(W, D))
+        contact_shadow(m, cx, cz, rx, rz, y=0.078, strength=s, room=(W, D))
     # ---- navy duffels
     bag(m, NAVY, 3.30, 5.50, 1.05, 0.72, 0.92, 331)
     bag(m, NAVY2, 10.55, 6.30, 0.88, 0.62, 0.80, 917)
@@ -361,20 +362,34 @@ def piece_floorstuff():
 
 
 # ================================================================= 8 carpet
+NAP = [Material("m27n%d" % i, c, roughness=0.99) for i, c in enumerate(
+    ("#414140", "#4f4f4d", "#464645", "#545451", "#4a4a48"))]
+
+
 def piece_carpet():
-    """A low-relief carpet field over the slab: the app's carpet texture gives
-    the nap, this gives the large-scale tone drift the photo has (sd 11-14, not
-    the flat slab's 0)."""
+    """Carpet NAP.  The slab already carries the app's tiled carpet texture, so
+    this is deliberately PARTIAL -- scattered small patches over ~55% of the
+    floor, which adds the photo's coarse mottle without hiding the fine tiled
+    grain underneath (a full-coverage plane metered sd 2.6 against the photo's
+    19.3 because it painted the texture out)."""
     m = Model()
     rn = Rnd(1919)
-    cell = 1.15
-    nx, nz = int(W / cell) + 1, int(D / cell) + 1
+    cell = 0.30
+    nx, nz = int(W / cell), int(D / cell)
     for i in range(nx):
         for k in range(nz):
-            x0 = i * cell
-            z0 = k * cell
-            rect_up(m, CARP[int(rn.f(0, 3.99))], x0, min(W, x0 + cell), 0.014,
-                    z0, min(D, z0 + cell))
+            if rn.f() > 0.60:
+                continue
+            # jitter position AND size: a strict grid reads as square confetti
+            x0 = i * cell + rn.f(-0.09, 0.09)
+            z0 = k * cell + rn.f(-0.09, 0.09)
+            sx = rn.f(0.13, 0.30)
+            sz = rn.f(0.13, 0.30)
+            a0, a1 = max(0.02, x0), min(W - 0.02, x0 + sx)
+            b0, b1 = max(0.02, z0), min(D - 0.02, z0 + sz)
+            if a1 - a0 < 0.05 or b1 - b0 < 0.05:
+                continue
+            rect_up(m, NAP[int(rn.f(0, 4.99))], a0, a1, 0.055, b0, b1)
     return m
 
 
@@ -405,7 +420,7 @@ def piece_skins(colors):
 
 
 # ===================================================================== main
-SKINS = {"n": "#c8c8c8", "s": "#dcdcdc", "e": "#c0c0c0", "w": "#c0c0c0"}
+SKINS = {"n": "#989898", "s": "#dcdcdc", "e": "#ffffff", "w": "#e4e4e4"}
 
 WANT_OPENINGS = [
     # edge 0 = north wall (z = 12.40 world), offset measured from x = 18.60.
@@ -414,6 +429,7 @@ WANT_OPENINGS = [
 ]
 
 PIECES = {
+    "carpet": ("Master Closet Floor Nap", piece_carpet),
     "ceiling": ("Master Closet Ceiling", piece_ceiling),
     "base": ("Master Closet Baseboards", piece_baseboards),
     "black": ("Master Closet Wall Wash Dark", piece_black_wall),
@@ -421,14 +437,13 @@ PIECES = {
     "shelving": ("Master Closet Shelving", piece_shelving),
     "hang": ("Master Closet Hanging Rack", piece_hanging),
     "stuff": ("Master Closet Clutter", piece_floorstuff),
-    "carpet": ("Master Closet Floor Carpet", piece_carpet),
 }
 
 
 def main(only=None):
     print("room 27 Master Closet")
     if only in (None, "surf"):
-        surfaces(ROOM, wall_color="#e6e4e0", floor_color="#8b8b88",
+        surfaces(ROOM, wall_color="#e6e4e0", floor_color="#494947",
                  floor_texture="carpet")
         openings(ROOM, WANT_OPENINGS)
     for k, (name, fn) in PIECES.items():

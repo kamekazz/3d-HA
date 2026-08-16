@@ -172,6 +172,27 @@ judged, and these are the mistakes they found. Do not repeat them.
    painted on the floor — the critic called it worse than no shadow at close
    range. Use a radial-falloff texture on a single quad; `environment.js` has a
    working `makeShadowTexture()` to copy the idea from.
+
+   **FOUR things must be true at once, and most attempts have had one.** A
+   bathrooms agent finally isolated all four — assume your shadows are invisible
+   until you have measured them, because several rooms shipped shadows that
+   metered as *no shadow at all*:
+   - **Height.** The room slab draws with `polygonOffsetFactor -1`, so anything
+     at y 0.005-0.018 z-fights and loses. **y = 0.05 wins.**
+   - **Alpha, not an opaque colour mix.** An opaque `mix(floor_color, tone)`
+     disc erases the plank texture, and because the authored `floor_color` is
+     lighter than the textured render it draws a *pale* halo round every piece.
+     Alpha-blend so the floor reads through.
+   - **One coplanar layer of non-overlapping annuli**, or the blends stack.
+   - **The ramp must extend OUTSIDE the piece's footprint.** This is the one
+     that keeps surviving rebuilds: `rx, rz` are the piece's own half-extents,
+     so a 0→1 ramp across them buries every dark band *under* the object and
+     leaves ~3% alpha where it is actually visible. Run the falloff an extra
+     ~0.7-0.85 ft past the footprint, and use exponent ~1.15 — at 1.5 all the
+     darkness lands in the first band and reads as a 2 px outline.
+
+   Target, measured in the dollhouse render: about **34% darkening at the
+   contact edge**, easing to zero over ~25 px.
 3. **Match the photo's spread, don't just beat the old number.** Round 1's floor
    measured sigma 9.5 against the photo's 16.2 and read plastic; round 2 "fixed"
    it to 23.7 and reads as a random light/dark patchwork. Overshooting is not
@@ -230,6 +251,21 @@ What you CAN legitimately do, in increasing order of effort:
    If you do it: no emissive, cover the wall corner to corner, and match the
    `roughness` of the room wall (0.95) or the seam will show — see the note
    above about pieces and walls not rendering alike.
+
+   **Solve each skin by probing, not by drawing a box.** Render the room twice
+   with **only one wall's skin changed** (e.g. grey 250 → 120) and keep the
+   pixels that moved. With no bounce light in this scene, those pixels *are*
+   that wall — no hand-drawn sample box can accidentally swallow a towel bar or
+   a door casing. `scratchpad/baths/probe2.py` does exactly this. If a wall is
+   hidden behind a shower or cabinetry and almost no pixels move, say the wall
+   is unsolvable and leave it — do not guess a value for it.
+
+   **But do not ship a skin as flat colour.** Three rooms' skins measured
+   **sd 0.00 and mean|Δ| 0.00 — algebraically perfect paint** — against
+   photographed walls at sd 3.55-26.4. A skin fixes the room's *value* problem
+   and introduces a *texture* problem, and by the scale-blind rule above that is
+   what the eye actually reads. Give the skin a subtle tiled albedo texture or
+   vertex-colour noise, not a single hex. Measure it before you report it.
 
 ## A GLB piece and a room wall do NOT render the same at the same albedo
 

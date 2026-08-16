@@ -102,19 +102,47 @@ def openings(room, want):
 
 
 # -------------------------------------------------------------- wall skins
-def wall_skin(m, wall, W, D, color, y0, y1, holes=(), inset=0.028, rough=0.95):
+def wall_skin(m, wall, W, D, color, y0, y1, holes=(), inset=0.028, rough=0.95,
+              grad=0.085, nband=9):
     """A plain NON-emissive albedo skin over one whole wall face.
 
     Not the rejected emissive "wall wash": no emissive, and it covers the wall
     corner to corner so there is no hard rectangular edge.  roughness matches
     the room wall's 0.95 so the seam under the crown does not show.
     holes = [(a0, a1, y0, y1), ...] in the wall's own axis.
+
+    `grad` adds a gentle VERTICAL value ramp, +-grad about the solved albedo,
+    peaking around 62% of the wall height and falling off toward the skirting
+    and the crown.  One flat quad metered sd 2.7-4.6 against the photographs'
+    8.3-15.0: a real wall is never one value, it darkens into the floor line and
+    under the crown.  This is not emissive and it is not a rectangle painted on
+    part of the wall -- it is the same corner-to-corner skin, subdivided.  The
+    step between adjacent bands is under 2 levels at these values, which is
+    below where banding becomes visible.
     """
+    def _f(t):
+        if grad <= 0:
+            return 1.0
+        # dark at the skirting, peak at ~0.62 height, easing back under the crown
+        return (1.0 + grad * (2.0 * math.sin(math.pi * 0.5
+                                             * min(t / 0.62, 1.0) ** 0.9) - 1.0)
+                - grad * 0.55 * max(0.0, (t - 0.62) / 0.38) ** 1.6)
+
+    # keep the AVERAGE albedo exactly where the two-point fit put it, so the
+    # ramp adds variation without moving the wall's metered mean
+    _norm = sum(_f((i + 0.5) / nband) for i in range(nband)) / nband
+
+    def mat_at(yc):
+        f = _f((yc - y0) / max(y1 - y0, 1e-6)) / _norm
+        c = "#%02x%02x%02x" % tuple(
+            min(255, max(0, int(round(int(color.lstrip("#")[i:i + 2], 16) * f))))
+            for i in (0, 2, 4))
+        return Material("skin" + c.lstrip("#"), c, roughness=rough,
+                        metallic=0.0, double_sided=False)
+
     # ONE-SIDED, wound to face into the room.  A solid box here shows its back
     # from the dollhouse camera -- the two camera-side room walls are culled but
     # a placed object never is, so a dark skin reads as a slab in mid-air.
-    mat = Material("skin" + color.lstrip("#"), color, roughness=rough,
-                   metallic=0.0, double_sided=False)
     total = W if wall in "ns" else D
     bands = [(y0, y1, [])]
     for (a0, a1, hy0, hy1) in holes:
@@ -132,20 +160,28 @@ def wall_skin(m, wall, W, D, color, y0, y1, holes=(), inset=0.028, rough=0.95):
         for (b0, b1, hs) in [b for b in nb if b[1] - b[0] > 0.01]:
             merged.setdefault((round(b0, 4), round(b1, 4)), []).extend(hs)
         bands = [(k[0], k[1], v) for k, v in merged.items()]
+    steps = [y0 + (y1 - y0) * i / nband for i in range(nband + 1)]
     for (b0, b1, hs) in bands:
-        for (a, b) in spans(total, hs):
-            if wall == "n":
-                z = inset
-                m.add(quad((a, b0, z), (b, b0, z), (b, b1, z), (a, b1, z)), mat)
-            elif wall == "s":
-                z = D - inset
-                m.add(quad((b, b0, z), (a, b0, z), (a, b1, z), (b, b1, z)), mat)
-            elif wall == "w":
-                x = inset
-                m.add(quad((x, b0, b), (x, b0, a), (x, b1, a), (x, b1, b)), mat)
-            else:
-                x = W - inset
-                m.add(quad((x, b0, a), (x, b0, b), (x, b1, b), (x, b1, a)), mat)
+        cuts = sorted({b0, b1} | {s for s in steps if b0 < s < b1})
+        for (c0, c1) in zip(cuts, cuts[1:]):
+            mat = mat_at((c0 + c1) / 2.0)
+            for (a, b) in spans(total, hs):
+                if wall == "n":
+                    z = inset
+                    m.add(quad((a, c0, z), (b, c0, z), (b, c1, z), (a, c1, z)),
+                          mat)
+                elif wall == "s":
+                    z = D - inset
+                    m.add(quad((b, c0, z), (a, c0, z), (a, c1, z), (b, c1, z)),
+                          mat)
+                elif wall == "w":
+                    x = inset
+                    m.add(quad((x, c0, b), (x, c0, a), (x, c1, a), (x, c1, b)),
+                          mat)
+                else:
+                    x = W - inset
+                    m.add(quad((x, c0, a), (x, c0, b), (x, c1, b), (x, c1, a)),
+                          mat)
 
 
 def fit_skin(probe_a, meter_a, probe_b, meter_b, target):
@@ -321,7 +357,7 @@ _SH_PAL = {}
 SHADOW_Y = 0.050        # see docstring: 0.018 still loses, 0.05 wins
 
 
-def soft_shadow(m, cx, cz, rx, rz, floor=None, strength=0.58, spill=0.62,
+def soft_shadow(m, cx, cz, rx, rz, floor=None, strength=0.62, spill=0.85,
                 y=SHADOW_Y, steps=10, seg=26, n=2.7, room=None, tone="#121211"):
     """A smooth radial contact shadow: ONE coplanar layer of ALPHA-BLENDED
     concentric annuli.
@@ -392,11 +428,15 @@ def soft_shadow(m, cx, cz, rx, rz, floor=None, strength=0.58, spill=0.62,
             a, b = k, (k + 1) % seg
             tris += [(a, seg + b, seg + a), (a, b, seg + b)]
         # alpha at the OUTER edge of this band; smooth fall to 0 at rx+spill
-        m.add(Part(v, tris, smooth=True), mat_for(strength * (1.0 - t) ** 1.5))
+        # exponent 1.15, not 1.5: at 1.5 almost all of the darkness lands in the
+        # first band, which measures fine up close and reads as a 2 px OUTLINE
+        # from the dollhouse camera (metered 15% darkening 10 px out -- the same
+        # invisible-at-range failure a sibling room was rejected for)
+        m.add(Part(v, tris, smooth=True), mat_for(strength * (1.0 - t) ** 1.15))
         prev = cur
 
 
-def rug(m, x0, x1, z0, z1, color="#eceae6", pile=0.075, shadow=0.30):
+def rug(m, x0, x1, z0, z1, color="#eceae6", pile=0.075, shadow=0.50):
     """A bath mat: puffy sagged pile, a slightly darker rolled edge so the
     silhouette is not a flat white rectangle, and its own radial shadow.
 
@@ -405,7 +445,7 @@ def rug(m, x0, x1, z0, z1, color="#eceae6", pile=0.075, shadow=0.30):
     """
     cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
     rx, rz = (x1 - x0) / 2, (z1 - z0) / 2
-    soft_shadow(m, cx, cz, rx, rz, strength=shadow, spill=0.42, n=3.6, steps=7)
+    soft_shadow(m, cx, cz, rx, rz, strength=shadow, spill=0.72, n=3.6, steps=8)
     y0 = SHADOW_Y + 0.004
     RM = Material("rugm" + color.lstrip("#"), color, roughness=0.99)
     RE = Material("ruge" + color.lstrip("#"), mix(color, "#8d8a85", 0.34),

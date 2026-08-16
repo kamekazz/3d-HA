@@ -107,8 +107,8 @@ CLEARG = Material("mbclr", "#f2f4f2", roughness=0.30, opacity=0.35)
 SHADEG = Material("mbshade", "#f6f4ee", roughness=0.55, emissive="#8a8880")
 
 BOT = [Material("mbb%d" % i, c, roughness=0.45) for i, c in enumerate(
-    ("#f0efeb", "#d8d4cd", "#2c2f33", "#c9a58c", "#8fb0c4", "#e2c96f",
-     "#b9535b", "#5d6f5a"))]
+("#f0efeb", "#dee2e5", "#3a3d41", "#cbb5a6", "#aebfcb", "#ddd2ae",
+     "#a97b7e", "#7d8a78"))]
 
 
 # ===================================================================== shell
@@ -396,13 +396,13 @@ def build_vanity():
            px - 0.24, px + 0.24, py, py + 0.44, z1 - 0.035, z1 - 0.015)
     # counter clutter -- the photo's counters are crowded end to end
     rn = Rnd(9091)
-    for i in range(22):
+    for i in range(16):
         u = rn.f(x0 + 0.30, x1 - 0.30)
         if abs(u - (x0 + 1.55)) < 0.75 or abs(u - (x1 - 1.55)) < 0.75:
             u += 0.95 if u > (x0 + x1) / 2 else -0.95
         u = min(max(u, x0 + 0.18), x1 - 0.18)
         bottle(m, BOT[i % len(BOT)], u, rn.f(z0 + 0.25, z0 + 0.62),
-               rn.f(0.055, 0.105), rn.f(0.30, 0.78), y=TOP,
+               rn.f(0.050, 0.088), rn.f(0.26, 0.62), y=TOP,
                cap=BOT[(i + 3) % len(BOT)])
     for u in (x0 + 0.55, x1 - 0.50):                 # toothbrush tumblers
         m.add(cylinder(0.13, 0.34, 10), Material("mbcup", "#e9e7e2",
@@ -577,10 +577,10 @@ def build_towels():
 # ====================================================================== rugs
 def build_rugs():
     m = Model()
-    rug(m, 4.05, 9.45, 8.85, 10.70, RUGW, shadow=0.44)     # in front of vanity
-    rug(m, 10.60, 12.10, 9.25, 10.30, RUGW, shadow=0.34)   # in front of toilet
-    rug(m, 9.20, 12.30, 6.85, 8.55, RUGW, shadow=0.40)     # beside the tub
-    rug(m, 4.00, 8.05, 4.85, 7.75, RUGW, shadow=0.44)      # outside the shower
+    rug(m, 4.05, 9.45, 8.85, 10.70, RUGW, shadow=0.56)     # in front of vanity
+    rug(m, 10.60, 12.10, 9.25, 10.30, RUGW, shadow=0.46)   # in front of toilet
+    rug(m, 9.20, 12.30, 6.85, 8.55, RUGW, shadow=0.52)     # beside the tub
+    rug(m, 4.00, 8.05, 4.85, 7.75, RUGW, shadow=0.56)      # outside the shower
     return m
 
 

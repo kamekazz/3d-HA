@@ -1,0 +1,310 @@
+{
+ "23": {
+  "surfaces": {
+   "wall_color": "#eeece8",
+   "floor_color": "#7c7a78",
+   "floor_texture": "wood",
+   "wall_texture": null
+  },
+  "openings": [
+   {
+    "type": "door",
+    "edge_index": 2,
+    "offset": 5.75,
+    "width": 2.85,
+    "elevation": 0.0,
+    "height": 6.85
+   }
+  ],
+  "pieces": {
+   "Bath1F Ceiling": {
+    "pos_room_local_ft": [
+     4.95,
+     7.54,
+     3.7
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath1F Baseboards": {
+    "pos_room_local_ft": [
+     4.95,
+     0.0,
+     3.7
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath1F Vanity": {
+    "pos_room_local_ft": [
+     2.08,
+     0.0,
+     1.435
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath1F Shower": {
+    "pos_room_local_ft": [
+     8.293,
+     0.0,
+     4.695
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath1F Toilet": {
+    "pos_room_local_ft": [
+     5.09,
+     0.0,
+     3.02
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath1F Floor Mats": {
+    "pos_room_local_ft": [
+     3.3,
+     0.05,
+     3.574
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath1F Wall Wash": {
+    "pos_room_local_ft": [
+     4.95,
+     0.5,
+     3.7
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   }
+  }
+ },
+ "16": {
+  "surfaces": {
+   "wall_color": "#e4e2dd",
+   "floor_color": "#5a5957",
+   "floor_texture": "wood",
+   "wall_texture": null
+  },
+  "openings": [
+   {
+    "type": "window",
+    "edge_index": 0,
+    "offset": 11.0,
+    "width": 2.9,
+    "elevation": 2.55,
+    "height": 3.8
+   },
+   {
+    "type": "window",
+    "edge_index": 1,
+    "offset": 0.75,
+    "width": 3.2,
+    "elevation": 2.55,
+    "height": 3.8
+   },
+   {
+    "type": "door",
+    "edge_index": 3,
+    "offset": 9.35,
+    "width": 2.8,
+    "elevation": 0.0,
+    "height": 6.85
+   },
+   {
+    "type": "door",
+    "edge_index": 2,
+    "offset": 11.8,
+    "width": 2.5,
+    "elevation": 0.0,
+    "height": 6.85
+   }
+  ],
+  "pieces": {
+   "Master Bath Ceiling": {
+    "pos_room_local_ft": [
+     7.4,
+     7.54,
+     6.35
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Master Bath Baseboards": {
+    "pos_room_local_ft": [
+     7.4,
+     0.0,
+     6.35
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Master Bath Tub": {
+    "pos_room_local_ft": [
+     12.399,
+     0.0,
+     3.926
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Master Bath Shower": {
+    "pos_room_local_ft": [
+     5.19,
+     -0.135,
+     2.1
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Master Bath Vanity": {
+    "pos_room_local_ft": [
+     6.775,
+     0.0,
+     11.24
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Master Bath Toilet": {
+    "pos_room_local_ft": [
+     12.07,
+     0.0,
+     11.041
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Master Bath Cabinet": {
+    "pos_room_local_ft": [
+     1.235,
+     0.0,
+     7.133
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Master Bath Towels": {
+    "pos_room_local_ft": [
+     14.58,
+     2.55,
+     6.95
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Master Bath Floor Rugs": {
+    "pos_room_local_ft": [
+     8.15,
+     0.05,
+     7.776
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Master Bath Wall Wash": {
+    "pos_room_local_ft": [
+     7.4,
+     0.5,
+     6.35
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   }
+  }
+ },
+ "26": {
+  "surfaces": {
+   "wall_color": "#e9e7e2",
+   "floor_color": "#6b6967",
+   "floor_texture": "wood",
+   "wall_texture": null
+  },
+  "openings": [
+   {
+    "type": "door",
+    "edge_index": 0,
+    "offset": 0.42,
+    "width": 2.8,
+    "elevation": 0.0,
+    "height": 6.85
+   },
+   {
+    "type": "window",
+    "edge_index": 2,
+    "offset": 2.45,
+    "width": 3.1,
+    "elevation": 2.95,
+    "height": 3.45
+   }
+  ],
+  "pieces": {
+   "Bath2F Ceiling": {
+    "pos_room_local_ft": [
+     4.05,
+     7.54,
+     4.35
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath2F Baseboards": {
+    "pos_room_local_ft": [
+     4.05,
+     0.0,
+     4.35
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath2F Shower": {
+    "pos_room_local_ft": [
+     6.245,
+     0.0,
+     2.7
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath2F Vanity": {
+    "pos_room_local_ft": [
+     1.583,
+     0.0,
+     5.777
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath2F Toilet": {
+    "pos_room_local_ft": [
+     4.275,
+     0.0,
+     7.23
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath2F Floor Mat": {
+    "pos_room_local_ft": [
+     3.5,
+     0.05,
+     7.425
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   },
+   "Bath2F Wall Wash": {
+    "pos_room_local_ft": [
+     4.05,
+     0.5,
+     4.35
+    ],
+    "rot_y_deg": 0.0,
+    "scale": 1.0
+   }
+  }
+ }
+}

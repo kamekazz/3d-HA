@@ -63,8 +63,8 @@ def stair_y(z):
 GREYWD = Material("h12tread", "#4a4844", roughness=0.72)
 RUNNERG = Material("h12runner", "#5e5c58", roughness=0.98)
 PLANK = [Material("h12pl%d" % i, c, roughness=0.90) for i, c in enumerate(
-    ("#363533", "#414040", "#4a4946", "#545350", "#5b5a55", "#3e3d3b",
-     "#4b4a47", "#434240"))]
+    ("#2b2a29", "#343333", "#3b3a38", "#434240", "#494844", "#32312f",
+     "#3c3b39", "#363533"))]
 RAILBLK = Material("h12rail", "#1e1f24", roughness=0.42, metallic=0.15)
 JUTE = Material("h12jute", "#cfc8ba", roughness=0.98)
 JUTE2 = Material("h12jute2", "#c1b9a9", roughness=0.98)
@@ -274,8 +274,8 @@ def piece_console():
     z0, z1 = CZ - hw, CZ + hw
     x1 = W - 0.10
     x0 = x1 - dep
-    contact_shadow(m, (x0 + x1) / 2 + 0.20, CZ, 1.00, hw + 0.50, y=0.010,
-                   strength=0.26, room=(W, D))
+    contact_shadow(m, (x0 + x1) / 2 + 0.20, CZ, 1.00, hw + 0.50, y=0.078,
+                   strength=0.46, room=(W, D))
     for lz in (z0 + 0.16, z1 - 0.16):
         for lx in (x0 + 0.12, x1 - 0.10):
             bx(m, BLACKMET, lx - 0.035, lx + 0.035, 0.0, 0.62,
@@ -359,7 +359,7 @@ def piece_plants():
     m = Model()
     # --- snake plant, EAST of the door assembly (photo left) ---------------
     sx, sz = 6.60, D - 1.30
-    contact_shadow(m, sx, sz, 0.85, 0.85, y=0.010, strength=0.20, room=(W, D))
+    contact_shadow(m, sx, sz, 0.85, 0.85, y=0.078, strength=0.46, room=(W, D))
     plant_stand(m, sx, sz, 0.55, 1.55, BLACKMET)
     m.add(cylinder(0.52, 0.92, 16, r_top=0.46), POT, at=(sx, 1.55, sz))
     rn = Rnd(505)
@@ -370,7 +370,7 @@ def piece_plants():
               rn.f(1.85, 3.10), rn.f(0.20, 0.30))
     # --- rubber plant, WEST of the door (photo right, big glossy leaves) ---
     rx, rz = 1.15, D - 1.15
-    contact_shadow(m, rx, rz, 1.05, 1.05, y=0.010, strength=0.22, room=(W, D))
+    contact_shadow(m, rx, rz, 1.05, 1.05, y=0.078, strength=0.48, room=(W, D))
     plant_stand(m, rx, rz, 0.62, 1.30, BLACKMET)
     m.add(cylinder(0.62, 0.80, 18, r_top=0.55), POT, at=(rx, 1.30, rz))
     m.add(cylinder(0.052, 3.20, 6), STEM, at=(rx + 0.04, 2.05, rz + 0.02))
@@ -425,8 +425,8 @@ def piece_floor_planks():
 def piece_runner():
     m = Model()
     x0, x1, z0, z1 = 0.70, 3.30, 1.30, 8.60   # sits on top of the plank field
-    contact_shadow(m, (x0 + x1) / 2, (z0 + z1) / 2, 1.45, 3.55, y=0.008,
-                   strength=0.11, room=(W, D))
+    contact_shadow(m, (x0 + x1) / 2, (z0 + z1) / 2, 1.45, 3.55, y=0.078,
+                   strength=0.44, room=(W, D))
     bx(m, JUTE, x0, x1, 0.024, 0.064, z0, z1)
     for i in range(int((z1 - z0) / 0.34)):
         z = z0 + 0.07 + i * 0.34
@@ -489,7 +489,7 @@ PIECES = {
 def main(only=None):
     print("room 12 First floor hallway")
     if only in (None, "surf"):
-        surfaces(ROOM, wall_color="#dcdcdb", floor_color="#6b6967",
+        surfaces(ROOM, wall_color="#dcdcdb", floor_color="#565452",
                  floor_texture="wood")
         openings(ROOM, WANT_OPENINGS)
     for k, (name, fn) in PIECES.items():

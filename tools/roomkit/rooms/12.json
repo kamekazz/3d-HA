@@ -1,6 +1,6 @@
 {
-  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
-  "_room_note": "First floor hallway -- 'First floor hallway.jpg'. The defining piece is the STAIR BALUSTRADE: square white newel, turned white balusters and the BLACK handrail, raked along the west edge of the level-1 stair (local x 3.90, bottom of the flight at local z 19.90 because the stair's direction is 'n'). The ceiling is CUT round the stairwell (hole x 3.78..7.6 / z 9.55..20.05) so the flight is open to the floor above. The skirting is gapped -- with no leaf -- at local z 11.69..15.09 on the west wall, where room 6 has already cut a real passage through to the kitchen.",
+  "_note": "CIRCULATION round. Build scripts live in scratchpad/circ/ -- ckit.py holds the shared helpers (idempotent openings reconcile, per-wall albedo skins with holes punched round every cut, stair dressing) and r12.py / r17.py / r27.py are idempotent by piece name, so re-running rebuilds and re-places without duplicating. Wall/floor probes: scratchpad/circ/probe.py (12, 17) and probe27.py (27); the fine-scale mean|d1| metric is d1.py.",
+  "_room_note": "First floor hallway + entry. VERIFIED this round, not rebuilt: the seven real openings were re-checked against the registered Main Floor Plan (scratchpad/circ/wallscan.py) and against the neighbours own cuts -- north == room 5 opening 32 exactly, west-kitchen == room 6 opening 8 exactly. The stair is the app own level-1 stairs row (world x 14.6..18.4, z 14.3..24.5, ascending north) dressed with treads/risers/runner plus a raked balustrade. CHANGED this round: every contact shadow moved from y=0.008-0.010 (which loses the depth fight to the room slab polygonOffsetFactor -1) to y=0.078, and from strength 0.12-0.26 to 0.44-0.48; the plank palette and floor_color darkened x0.80 so the floor meters 106.5 / sd 12.4 against the photo 109.2 / sd 13.6.",
   "_room": {
     "id": 12,
     "name": "First floor hallway",
@@ -27,32 +27,170 @@
   },
   "_surfaces": {
     "wall_color": "#dcdcdb",
-    "floor_color": "#6b6967",
+    "floor_color": "#565452",
     "floor_texture": "wood",
     "wall_texture": null
   },
   "_camera": {
-    "judge_from": "doll_sw",
-    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
+    "judge_from": "doll_ne",
+    "why": "Walls are FrontSide with inward normals, so the two nearest the camera are culled. Room 12 content is its WEST wall (three doorways) and its SOUTH wall (front door + two sidelights); doll_ne is the only quadrant that leaves BOTH of those standing. The shell pass chose doll_sw, which culls both of them."
   },
+  "_openings": [
+    {
+      "type": "passage",
+      "edge_index": 0,
+      "wall": "n",
+      "offset": 1.38,
+      "width": 4.0,
+      "elevation": 0.0,
+      "height": 7.0,
+      "world_span": [
+        [
+          12.08,
+          4.6
+        ],
+        [
+          16.08,
+          4.6
+        ]
+      ]
+    },
+    {
+      "type": "window",
+      "edge_index": 2,
+      "wall": "s",
+      "offset": 1.25,
+      "width": 0.8,
+      "elevation": 0.6,
+      "height": 6.45,
+      "world_span": [
+        [
+          17.05,
+          32.2
+        ],
+        [
+          16.25,
+          32.2
+        ]
+      ]
+    },
+    {
+      "type": "passage",
+      "edge_index": 2,
+      "wall": "s",
+      "offset": 2.3,
+      "width": 2.9,
+      "elevation": 0.0,
+      "height": 7.05,
+      "world_span": [
+        [
+          16.0,
+          32.2
+        ],
+        [
+          13.1,
+          32.2
+        ]
+      ]
+    },
+    {
+      "type": "window",
+      "edge_index": 2,
+      "wall": "s",
+      "offset": 5.45,
+      "width": 0.8,
+      "elevation": 0.6,
+      "height": 6.45,
+      "world_span": [
+        [
+          12.85,
+          32.2
+        ],
+        [
+          12.05,
+          32.2
+        ]
+      ]
+    },
+    {
+      "type": "passage",
+      "edge_index": 3,
+      "wall": "w",
+      "offset": 1.05,
+      "width": 6.25,
+      "elevation": 0.0,
+      "height": 7.2,
+      "world_span": [
+        [
+          10.7,
+          31.15
+        ],
+        [
+          10.7,
+          24.9
+        ]
+      ]
+    },
+    {
+      "type": "passage",
+      "edge_index": 3,
+      "wall": "w",
+      "offset": 9.65,
+      "width": 2.6,
+      "elevation": 0.0,
+      "height": 6.75,
+      "world_span": [
+        [
+          10.7,
+          22.55
+        ],
+        [
+          10.7,
+          19.95
+        ]
+      ]
+    },
+    {
+      "type": "passage",
+      "edge_index": 3,
+      "wall": "w",
+      "offset": 12.51,
+      "width": 3.4,
+      "elevation": 0.0,
+      "height": 7.2,
+      "world_span": [
+        [
+          10.7,
+          19.69
+        ],
+        [
+          10.7,
+          16.29
+        ]
+      ]
+    }
+  ],
+  "_payload_kb": 710.8,
   "pieces": {
     "Hall1F Balustrade": {
       "pos_room_local_ft": [
-        3.83,
+        3.71,
         0.0,
-        14.905
+        14.759
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 84.1
     },
     "Hall1F Baseboards": {
       "pos_room_local_ft": [
-        3.8,
+        3.66,
         0.0,
         13.8
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 113.1
     },
     "Hall1F Ceiling": {
       "pos_room_local_ft": [
@@ -61,21 +199,83 @@
         13.8
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 79.4
+    },
+    "Hall1F Entry Console": {
+      "pos_room_local_ft": [
+        6.8,
+        0.0,
+        23.6
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 70.6
+    },
+    "Hall1F Entry Plants": {
+      "pos_room_local_ft": [
+        3.775,
+        0.0,
+        26.482
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 143.8
+    },
+    "Hall1F Entry Wreath": {
+      "pos_room_local_ft": [
+        7.41,
+        4.174,
+        23.652
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 60.5
+    },
+    "Hall1F Floor Planks": {
+      "pos_room_local_ft": [
+        3.8,
+        0.014,
+        13.8
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 18.0
     },
     "Hall1F Floor Runner": {
       "pos_room_local_ft": [
         2.0,
-        0.008,
-        5.4
+        0.024,
+        4.95
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 53.7
+    },
+    "Hall1F Stair Treads": {
+      "pos_room_local_ft": [
+        5.67,
+        -0.347,
+        14.8
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 71.5
+    },
+    "Hall1F Wall Wash Skins": {
+      "pos_room_local_ft": [
+        3.8,
+        0.49,
+        13.8
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 16.1
     }
   },
   "_gaps": [
-    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
-    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
-    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
+    "Room 4 (Dining) does NOT register with this room dining passage. Ours is world z 24.90..31.15 (the plan gap is 25.05..32.20); room 4 own cut (opening id 85, its edge 7) is z 22.70..28.30, so the two overlap only over 24.90..28.30. Room 4 is another agent room and was not touched. The fix on their side: opening 85 -> edge_index 7, offset 3.20, width 6.25.",
+    "Walls meter n 197.1 / e 191.9 / w 191.9 / s 168.7 -- spread 28.4, inside the ~30 a real room sits in, against the photo 182.2 (west) and 217.1 (east; that photo patch includes the stair white trim).",
+    "Every wall skin meters sd 0.00 and mean|d1| 0.00 -- flat paint with no fine-scale grain at all, against the photo sd 3.55 / |d1| 0.42. Floor |d1| 0.10 native (0.27 downsampled to the photo ft/px) against the photo 2.96. This is the biggest remaining accuracy gap in all three rooms."
   ]
 }

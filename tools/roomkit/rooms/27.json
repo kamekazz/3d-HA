@@ -1,6 +1,6 @@
 {
-  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
-  "_room_note": "Master Closet -- 'Walking Closet for the Master bedroom.jpg'. The only SLOPED ceiling in the pass: flat to local x 6.8, then raking down to 4.55 ft at the east wall, which is 1.2 ft short of the house's east edge so that is where the roof falls. Grey CARPET, not plank. The dark accent wall under the rake is named 'Master Closet Wall Wash Dark' PURELY so objects.js keeps it unpickable -- it is a flat matte panel, NOT the emissive wall wash two critics rejected. Chrome wire shelving + a hanging rail run.",
+  "_note": "CIRCULATION round. Build scripts live in scratchpad/circ/ -- ckit.py holds the shared helpers (idempotent openings reconcile, per-wall albedo skins with holes punched round every cut, stair dressing) and r12.py / r17.py / r27.py are idempotent by piece name, so re-running rebuilds and re-places without duplicating. Wall/floor probes: scratchpad/circ/probe.py (12, 17) and probe27.py (27); the fine-scale mean|d1| metric is d1.py.",
+  "_room_note": "Master Closet. ORIENTATION CORRECTED THIS ROUND: the shell pass put the ceiling rake and the black accent wall on the EAST wall. Raycasting the house-shell GLB straight down over the footprint gives a roof underside that is CONSTANT in x (x = 22 / 25 / 28 / 31.5 all identical) and falls in z: z=13 -> 21.54, z=15 -> 20.58, z=17 -> 19.61, z=19 -> 18.65, z=20.5 -> 17.93 world ft, slope 0.481 = a 6:12 pitch. So the roof falls SOUTH. Two independent checks agree: the plan makes z=20.80 the outer edge of the 2F with the garage roof beyond, and in both photos the black raked wall is a LONG expanse (south is 13.6 ft, east only 8.4). The single door is on the NORTH wall from the Master Bath, cut to room 16 own span exactly and as a passage so room 16 painted leaf fills it instead of two coplanar panels z-fighting.",
   "_room": {
     "id": 27,
     "name": "Master Closet",
@@ -26,56 +26,134 @@
     "wall_height": 8.0
   },
   "_surfaces": {
-    "wall_color": "#eeece8",
-    "floor_color": "#7d7d7a",
+    "wall_color": "#e6e4e0",
+    "floor_color": "#494947",
     "floor_texture": "carpet",
     "wall_texture": null
   },
   "_camera": {
     "judge_from": "doll_nw",
-    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
+    "why": "The hero surface is the black raked accent wall on the SOUTH; only a camera to the north leaves it standing, and doll_nw keeps SOUTH + EAST, which is the pair the primary photo looks at. The north wall it culls carries only freestanding wire racks, which do not read as floating without a wall behind them."
   },
+  "_openings": [
+    {
+      "type": "passage",
+      "edge_index": 0,
+      "wall": "n",
+      "offset": 0.5,
+      "width": 2.5,
+      "elevation": 0.0,
+      "height": 6.85,
+      "world_span": [
+        [
+          19.1,
+          12.4
+        ],
+        [
+          21.6,
+          12.4
+        ]
+      ]
+    }
+  ],
+  "_payload_kb": 999.2,
   "pieces": {
     "Master Closet Baseboards": {
       "pos_room_local_ft": [
         6.8,
         0.0,
-        4.2
+        4.11
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 17.7
     },
     "Master Closet Ceiling": {
       "pos_room_local_ft": [
         6.8,
-        4.55,
+        4.7,
         4.2
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 43.0
+    },
+    "Master Closet Clutter": {
+      "pos_room_local_ft": [
+        6.813,
+        0.0,
+        6.476
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 234.5
+    },
+    "Master Closet Floor Nap": {
+      "pos_room_local_ft": [
+        6.792,
+        0.055,
+        4.2
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 125.4
+    },
+    "Master Closet Hanging Rack": {
+      "pos_room_local_ft": [
+        2.275,
+        0.0,
+        1.465
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 88.9
     },
     "Master Closet Shelving": {
       "pos_room_local_ft": [
-        6.265,
+        8.921,
         0.0,
-        4.165
+        1.465
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 176.5
+    },
+    "Master Closet Step Bench": {
+      "pos_room_local_ft": [
+        6.8,
+        0.0,
+        7.577
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 62.4
     },
     "Master Closet Wall Wash Dark": {
       "pos_room_local_ft": [
-        13.565,
-        0.52,
+        6.8,
+        0.1,
+        8.32
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 105.9
+    },
+    "Master Closet Wall Wash Skins": {
+      "pos_room_local_ft": [
+        6.8,
+        0.49,
         4.2
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 144.9
     }
   },
   "_gaps": [
-    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
-    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
-    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
+    "The white STEPPED form along the base of the black wall is INFERRED. It is unmistakable in the primary photo -- five or six white treads with a shoe and folded towels standing on them -- but nothing in the layout explains it: there is no stair within 4 ft of this room. Built as what it looks like, a white tiered platform / shoe bench (local x 3.60..9.30, 2.62 ft down to 0.46 ft), with the plain white skirting carrying on either side of it exactly as the photo shows.",
+    "The rake break point (local z 2.60) and its low height (4.70 ft at the south wall) are inferred: the shell own roof numbers put the deck BELOW this room slab, so the shell gives the direction and the slope but not the height. Read off the photos against the 6.5 ft wire rack beside it.",
+    "The east wall caps at 191.9 even with a pure-white (#ffffff) skin -- it is the wall the sun never reaches and cannot be brought to the 205 the other two hit. Residual white-wall spread 15.2 (n 207.0 / w 207.1 / e 191.9) against the photo 211.",
+    "Carpet meters 107.0 / sd 13.3 / mean|d1| 1.13 against the photo 99.3 / 19.3 / 16.35. The nap decal is deliberately PARTIAL (~60% coverage, jittered 0.13-0.30 ft patches at y=0.055) so the app tiled carpet texture still shows through; a full-coverage plane painted the texture out and metered sd 2.6.",
+    "Wall skins meter sd 0.00 / mean|d1| 0.00 against the photo 9.47-21.68 / 0.71-10.26."
   ]
 }

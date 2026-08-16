@@ -73,15 +73,25 @@ SH = (6.15, 9.84, 2.05, 7.34)      # shower alcove x0,x1,z0,z1
 WALLC = "#eeece8"
 
 # ----------------------------------------------------------------- palette
-GREYCB = Material("b1grey", "#b0b2b0", roughness=0.62)     # grey shaker base
-GREYFR = Material("b1greyf", "#a9aba9", roughness=0.64)
+# The photo meters the vanity front at 140.8 against a 198.6 wall -- a ratio of
+# 0.71, i.e. the cabinet is clearly DARKER than the wall.  A GLB piece collects
+# roughly 1.7-2x what a room wall of the same albedo does, so a "grey" hex that
+# looks right on paper renders BRIGHTER than the wall skin and the value step
+# inverts.  These are solved back from that 0.71 ratio, not picked by eye.
+GREYCB = Material("b1grey", "#6e716e", roughness=0.62)     # grey shaker base
+GREYFR = Material("b1greyf", "#676a67", roughness=0.64)
 TOPQ = Material("b1top", "#f8f7f5", roughness=0.34)
 SANI = Material("b1sani", "#f5f5f4", roughness=0.36)
-MIRROR = Material("b1mir", "#eaeef0", roughness=0.86, metallic=0.0)
+# This mirror faces the doorway and the dark hall beyond it, so the photo meters
+# it at 146.3 against a 198.6 wall (0.74).  Room 16's mirrors face a window and
+# meter 210.6/171.3 (1.23), which is why they stay near-white and this one does
+# not.  Still matte: at roughness 0.12 / metallic 0.45 a mirror renders as a
+# black hole in this renderer.
+MIRROR = Material("b1mir", "#7c8083", roughness=0.86, metallic=0.0)
 BLK = BLACKMET
 TILE = Material("b1tile", "#fbfaf8", roughness=0.40)
 TILE2 = Material("b1tile2", "#f3f2ef", roughness=0.40)
-TGROUT = Material("b1grt", "#a9a7a4", roughness=0.88)
+TGROUT = Material("b1grt", "#8c8a87", roughness=0.88)
 PANF = Material("b1pan", "#4c4e4d", roughness=0.55)
 PANW = Material("b1panw", "#eceae7", roughness=0.45)
 PLANT = Material("b1plant", "#5b7a52", roughness=0.85)
@@ -90,8 +100,8 @@ MATD = Material("b1matd", "#8f8d89", roughness=0.99)
 SHADEG = Material("b1shade", "#f7f5ef", roughness=0.55, emissive="#8a8880")
 
 BOT = [Material("b1b%d" % i, c, roughness=0.45) for i, c in enumerate(
-    ("#f0efeb", "#cfd8de", "#2c2f33", "#c9a58c", "#89b5d8", "#e2c96f",
-     "#b9535b", "#5d6f5a"))]
+("#f0efeb", "#dee2e5", "#3a3d41", "#cbb5a6", "#aebfcb", "#ddd2ae",
+     "#a97b7e", "#7d8a78"))]
 
 
 # ===================================================================== shell
@@ -316,7 +326,7 @@ def build_mats():
     second one in front of the shower (both photos)."""
     m = Model()
 
-    BAND = Material("b1band", "#93918c", roughness=0.99)
+    BAND = Material("b1band", "#a6a49f", roughness=0.99)
 
     def mat(x0, x1, z0, z1, nband, along_x=True):
         """Flat striped mat.  A sagged pile plane plus flat stripe boxes tears
@@ -324,7 +334,7 @@ def build_mats():
         under it at the edges -- so the pile is a slab and the stripes are part
         of its top face, laid edge to edge."""
         soft_shadow(m, (x0 + x1) / 2, (z0 + z1) / 2, (x1 - x0) / 2,
-                    (z1 - z0) / 2, strength=0.42, spill=0.40, n=3.6, steps=7)
+                    (z1 - z0) / 2, strength=0.55, spill=0.72, n=3.6, steps=8)
         y0 = SHADOW_Y + 0.004
         bx(m, MATD, x0, x1, y0, y0 + 0.052, z0, z1)               # rolled edge
         n = nband * 2 + 1

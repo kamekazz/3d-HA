@@ -52,8 +52,8 @@ WELL = (4.10, 8.05, 7.70, 16.70)   # the stairwell footprint, local
 
 # ---------------------------------------------------------------- materials
 PLANK = [Material("h17pl%d" % i, c, roughness=0.90) for i, c in enumerate(
-    ("#484744", "#514f4c", "#5a5854", "#605e5a", "#666460", "#4d4b48",
-     "#5b5955", "#535250"))]
+    ("#3c3b39", "#414040", "#464544", "#4a4947", "#4f4e4c", "#3f3e3c",
+     "#4c4b49", "#444341"))]
 WOOL = Material("h17wool", "#ded9cf", roughness=0.98)
 WOOL2 = Material("h17wool2", "#cec9be", roughness=0.98)
 POT = Material("h17pot", "#eeece7", roughness=0.55)
@@ -330,7 +330,7 @@ PIECES = {
 def main(only=None):
     print("room 17 Hallway (2F)")
     if only in (None, "surf"):
-        surfaces(ROOM, wall_color="#d4d6d7", floor_color="#6b6967",
+        surfaces(ROOM, wall_color="#d4d6d7", floor_color="#474642",
                  floor_texture="wood")
         openings(ROOM, WANT_OPENINGS)
     for k, (name, fn) in PIECES.items():

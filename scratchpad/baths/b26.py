@@ -95,11 +95,12 @@ MATW = Material("b2mat", "#ecebe7", roughness=0.99)
 MATD = Material("b2matd", "#b9b7b2", roughness=0.99)
 SHADEG = Material("b2shade", "#f6f4ee", roughness=0.55, emissive="#8a8880")
 ARTF = Material("b2artf", "#f3f2ef", roughness=0.7)
-ARTI = Material("b2arti", "#8f96a0", roughness=0.75)
+ARTI = Material("b2arti", "#7f8a96", roughness=0.75)
+ARTI2 = Material("b2arti2", "#aeb7bf", roughness=0.75)
 
 BOT = [Material("b2b%d" % i, c, roughness=0.45) for i, c in enumerate(
-    ("#f0efeb", "#cfd8de", "#2c2f33", "#c9a58c", "#89b5d8", "#e2c96f",
-     "#b9535b", "#5d6f5a"))]
+("#f0efeb", "#dee2e5", "#3a3d41", "#cbb5a6", "#aebfcb", "#ddd2ae",
+     "#a97b7e", "#7d8a78"))]
 
 
 # ===================================================================== shell
@@ -173,14 +174,15 @@ def build_shower():
         return SUBWAY if (int(a * 7) + r) % 3 else SUBWAY2
 
     tile_face(m, SUBWAY, "zy", x1 - 0.105, z0 + 0.10, z1 - 0.10, 0.30, 7.05,
-              0.60, 0.265, gap=0.020, facing=-1, jitter=jit)
+              0.68, 0.295, gap=0.022, facing=-1, jitter=jit)
     tile_face(m, SUBWAY, "xy", z0 + 0.105, x0 + 0.05, x1 - 0.10, 0.30, 7.05,
-              0.60, 0.265, gap=0.020, facing=1, jitter=jit)
+              0.68, 0.295, gap=0.022, facing=1, jitter=jit)
     tile_face(m, SUBWAY, "xy", z1 - 0.105, x0 + 0.05, x1 - 0.10, 0.30, 7.05,
-              0.60, 0.265, gap=0.020, facing=-1, jitter=jit)
+              0.68, 0.295, gap=0.022, facing=-1, jitter=jit)
     # --- pan: white curb + grey hexagon mosaic floor
     bx(m, PANW, x0 - 0.05, x1, 0.0, 0.30, z0, z1)
-    hex_pan(m, HEXT, HEXG, x0 + 0.06, x1 - 0.12, z0 + 0.12, z1 - 0.12, 0.30)
+    hex_pan(m, HEXT, HEXG, x0 + 0.06, x1 - 0.12, z0 + 0.12, z1 - 0.12, 0.30,
+            r=0.165)
     m.add(cylinder(0.11, 0.02, 12), CHROME, at=((x0 + x1) / 2, 0.30, 2.90))
     bx(m, PANW, x0 - 0.05, x0 + 0.12, 0.30, 0.44, z0, z1)          # curb
     # --- niche in the east tile (photo B2)
@@ -271,23 +273,23 @@ def build_vanity():
     oval_ring(m, BLK, "zy", cz, 5.05, 1.28, 1.28, 0.075, x0 + 0.02, x0 + 0.09)
     # counter clutter + the trailing plant photo B puts beside the sink
     rn = Rnd(6161)
-    for i in range(11):
+    for i in range(6):
         u = rn.f(z0 + 0.25, z1 - 0.25)
         if abs(u - cz) < 0.85:
             u += 1.15 if u > cz else -1.15
         u = min(max(u, z0 + 0.18), z1 - 0.18)
         bottle(m, BOT[i % len(BOT)], rn.f(x0 + 0.30, x1 - 0.25), u,
-               rn.f(0.055, 0.10), rn.f(0.28, 0.62), y=TOP,
+               rn.f(0.050, 0.082), rn.f(0.24, 0.52), y=TOP,
                cap=BOT[(i + 3) % len(BOT)])
     px, pz = x0 + 0.72, z0 + 0.72
-    m.add(cylinder(0.30, 0.52, 12, r_top=0.34),
+    m.add(cylinder(0.24, 0.42, 12, r_top=0.28),
           Material("b2pot", "#efece4", roughness=0.8), at=(px, TOP, pz))
     rn2 = Rnd(77)
     for i in range(11):
         a = 2 * math.pi * i / 11
-        m.add(box(0.30, 0.09, 0.30), PLANT,
-              at=(px + 0.34 * math.cos(a), TOP + 0.52 + rn2.f(0.0, 0.55),
-                  pz + 0.34 * math.sin(a)),
+        m.add(box(0.22, 0.07, 0.22), PLANT,
+              at=(px + 0.24 * math.cos(a), TOP + 0.42 + rn2.f(0.0, 0.42),
+                  pz + 0.24 * math.sin(a)),
               rot_z=R(rn2.f(-40, 40)), rot_x=R(rn2.f(-40, 40)), rot_y=a)
     # black towel ring at the north end of the vanity wall + grey hand towel
     m.add(torus(0.28, 0.030, 18, 6), BLK, at=(x0 + 0.10, 4.20, z0 - 0.95),
@@ -325,26 +327,34 @@ def build_toilet():
     m.add(cylinder(0.18, 0.42, 12), Material("b2tp", "#f6f5f2", roughness=0.9),
           at=(W - 0.28, 2.10, zs - 0.78), rot_z=R(90))
     # framed print on the south wall above the toilet (photo B2)
-    bx(m, TRIM, tx - 0.62, tx + 0.62, 3.55, 4.95, D - 0.075, D - 0.020)
-    bx(m, ARTF, tx - 0.55, tx + 0.55, 3.63, 4.87, D - 0.090, D - 0.075)
+    bx(m, TRIM, tx - 0.72, tx + 0.72, 3.40, 5.15, D - 0.075, D - 0.020)
+    bx(m, ARTF, tx - 0.64, tx + 0.64, 3.49, 5.06, D - 0.090, D - 0.075)
     # one soft botanical mass, not confetti: 26 loose 0.09 ft squares read as
     # dead pixels at any distance, an overlapping cluster of larger leaves reads
     # as a picture
     rn = Rnd(919)
-    for i in range(13):
-        a = 2 * math.pi * i / 13 + rn.f(-0.25, 0.25)
-        r = rn.f(0.10, 0.34)
-        m.add(box(rn.f(0.16, 0.30), rn.f(0.16, 0.30), 0.010), ARTI,
-              at=(tx + r * math.cos(a), 4.25 + r * math.sin(a) * 0.9,
+    for i in range(15):
+        a = 2 * math.pi * i / 15 + rn.f(-0.22, 0.22)
+        r = rn.f(0.12, 0.44)
+        m.add(box(rn.f(0.20, 0.34), rn.f(0.20, 0.34), 0.010),
+              ARTI if i % 2 else ARTI2,
+              at=(tx + r * math.cos(a), 4.35 + r * math.sin(a) * 0.95,
                   D - 0.098), rot_z=R(rn.f(0, 180)))
-    bx(m, ARTI, tx - 0.030, tx + 0.030, 3.80, 4.30, D - 0.096, D - 0.090)
+    bx(m, ARTI, tx - 0.028, tx + 0.028, 3.62, 4.35, D - 0.096, D - 0.090)
     # black towel bar on the south wall WEST of the window
     for bxx in (0.55, 2.25):
         bx(m, BLK, bxx - 0.05, bxx + 0.05, 4.62, 4.84, D - 0.26, D - 0.04)
     m.add(cylinder(0.035, 1.70, 8), BLK, at=(0.55, 4.74, D - 0.22),
           rot_z=R(-90))
-    bx(m, Material("b2towb", "#e7e6e2", roughness=0.96),
-       0.72, 2.08, 3.05, 4.82, D - 0.30, D - 0.16)
+    # folded, not a slab: a flat rectangle of towel reads as a mis-mapped panel
+    T1 = Material("b2towb", "#e7e6e2", roughness=0.96)
+    T2 = Material("b2towb2", "#cbc9c4", roughness=0.96)
+    for i in range(6):
+        fa = 0.74 + i * (1.32 / 6)
+        bx(m, T1 if i % 2 == 0 else T2,
+           fa + 0.010, fa + (1.32 / 6) - 0.010, 3.05, 4.82,
+           D - (0.30 if i % 2 == 0 else 0.245), D - 0.16)
+    bx(m, T1, 0.72, 2.08, 4.66, 4.86, D - 0.34, D - 0.14)
     # floor register between the mat and the toilet
     RG = Material("b2reg", "#dcdcd9", roughness=0.55)
     bx(m, RG, 4.85, 5.75, 0.0, 0.022, D - 0.72, D - 0.16)
@@ -360,7 +370,7 @@ def build_mats():
     m = Model()
     x0, x1, z0, z1 = 2.25, 4.75, 6.55, 8.30
     soft_shadow(m, (x0 + x1) / 2, (z0 + z1) / 2, (x1 - x0) / 2, (z1 - z0) / 2,
-                strength=0.42, spill=0.40, n=3.6, steps=7)
+                strength=0.55, spill=0.72, n=3.6, steps=8)
     # Flat woven mat.  A sagged pile plane plus flat banding boxes tears itself
     # apart (the bands poke through the crown of the sag and sink under it at
     # the edges), so the pile is a slab and the weave is its top face.
