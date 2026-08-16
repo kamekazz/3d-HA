@@ -1,0 +1,156 @@
+{
+  "_note": "Whole-house gauntlet status. Update state/round/note/render per room as critics report, then run: python -m roomkit.house_progress",
+  "headline": "The real house, rebuilt room by room until a critic stops telling them apart",
+  "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. The bar for the overall look is The Sims 4's dollhouse build view; the bar for each room is the photograph of that actual room.",
+  "stamp": "round 2 · geometry re-traced house-wide · exterior finished",
+  "hero": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\625d3716-8337-4ad2-9a27-d9fa0142326d\\scratchpad\\shots\\ext_v3.png",
+  "hero_label": "The exterior, finished against the photograph: light-grey architectural roof, near-black front door, river-rock foundation beds with boxwood and perennials, the SUV in the driveway, bin, porch planters and path lights.",
+  "rooms": [
+    {
+      "id": 14,
+      "name": "Master Bedroom",
+      "state": "pending",
+      "round": 3,
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Master bedroom.jpg",
+      "render": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\625d3716-8337-4ad2-9a27-d9fa0142326d\\scratchpad\\shots\\r3_final.png",
+      "render_label": "round 3",
+      "note": "Round 3 rebuilt from measurement, not guesswork. The bed was proved to be a QUEEN, not a king, by three independent photo anchors — which also explained why the wall art 'looked huge': the ruler was wrong, not the canvas. The 15 ft north wall is now solved as one budget (dresser, window, bed, nightstand) so the long-standing collision between the dresser, the window and the headboard is gone. Vault ridge moved off-centre to sit over the bed, matching the photo's asymmetric gable. Builder also found and fixed a real bug in the screenshot harness: the camera pose never waited for its target to converge, so every earlier comparison was framed slightly off. — Footprint has since been re-traced, so this room's furniture needs re-placing before it can be judged again."
+    },
+    {
+      "id": 6,
+      "name": "Kitchen",
+      "state": "building",
+      "round": 2,
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Kitchen A.jpg",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\kitchen_ref_A.png",
+      "render_label": "round 1 — rejected",
+      "note": "Round 2 in progress: re-placing every piece into the re-traced footprint and fixing the critic's list. The fake internal wall and its 190 sq ft of dead floor are gone with the re-trace."
+    },
+    {
+      "id": 5,
+      "name": "Living Room",
+      "state": "building",
+      "round": 2,
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Living Room A.jpg",
+      "note": "Round 2 in progress: re-placing every piece into the re-traced footprint and fixing the critic's list. The north wall lost 10 ft, so what round 1 packed onto it has to be re-derived from the photos.",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\lr5\\final_ref.png",
+      "render_label": "round 1"
+    },
+    {
+      "id": 4,
+      "name": "Dining",
+      "state": "pending",
+      "round": 1,
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Dining A.jpg",
+      "note": "15 pieces including a real tray ceiling with a medallion, chair rail and picture-frame wainscot, eight parsons chairs, a black six-arm chandelier, and blinds at 44 percent with lawn and porch rail visible through the gap. Orientation was derived rather than assumed by cross-referencing all four photos against the house layout. — Footprint has since been re-traced, so this room's furniture needs re-placing before it can be judged again.",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\final_corner_ne.png",
+      "render_label": "round 1"
+    },
+    {
+      "id": 15,
+      "name": "Rios Room",
+      "state": "pending",
+      "round": 1,
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Rios room.jpg",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots15\\final_doorway.png",
+      "render_label": "round 1 — rejected",
+      "note": "Critic: FAIL. Biggest gap is the windows — built 6.15 ft tall where the photo measures about 4.8 ft, so they read as French doors, which crushes the apparent ceiling height and makes the whole room look oversized. The rubber plant intersects the window, the birdcage and the north wall. Nothing casts a contact shadow. — Footprint has since been re-traced, so this room's furniture needs re-placing before it can be judged again."
+    },
+    {
+      "id": 8,
+      "name": "Office",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Office A.jpg",
+      "note": ""
+    },
+    {
+      "id": 13,
+      "name": "Guest Room",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Guest Room.jpg",
+      "note": ""
+    },
+    {
+      "id": 16,
+      "name": "Master Bathroom",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Master Bath. 1.jpg",
+      "note": ""
+    },
+    {
+      "id": 26,
+      "name": "Second-floor bathroom",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Second floor bathroom.jpg",
+      "note": ""
+    },
+    {
+      "id": 23,
+      "name": "First-floor bathroom",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\First-floor bathroom.jpg",
+      "note": ""
+    },
+    {
+      "id": 12,
+      "name": "First-floor hallway & stairs",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\First floor hallway.jpg",
+      "note": ""
+    },
+    {
+      "id": 17,
+      "name": "Second-floor hallway",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Second-floor hallway.jpg",
+      "note": ""
+    },
+    {
+      "id": 27,
+      "name": "Master Closet",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Walk in the closet to Master Bedroom.jpg",
+      "note": ""
+    },
+    {
+      "id": 9,
+      "name": "Laundry",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Laundry.jpg",
+      "note": ""
+    },
+    {
+      "id": 10,
+      "name": "Pantry",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\pantry door.jpg",
+      "note": ""
+    },
+    {
+      "id": 1,
+      "name": "Movie Room",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Movie room.jpg",
+      "note": ""
+    },
+    {
+      "id": 2,
+      "name": "Arcade Room",
+      "state": "pending",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Arcade Room.jpg",
+      "note": ""
+    }
+  ],
+  "facts": {
+    "Rooms with photos": "17",
+    "Floors": "basement, first, second",
+    "Units": "feet — glTF exported in metres",
+    "Geometry": "re-traced from the three floor plans through one cross-registered transform; the old trace was ~28% too large linearly",
+    "Style bar": "The Sims 4 build-mode dollhouse view",
+    "Accuracy bar": "the photograph of each actual room",
+    "Objects placed": "85 across 5 rooms",
+    "Wall-light spread": "222-125 bytes -> 238-158 after the app-level lighting fix",
+    "First floor": "~1,250 sq ft living + 443 sq ft garage"
+  },
+  "footer": "Renders are taken from the running app at 127.0.0.1:5000 — the same Three.js scene the Home Assistant dashboard draws, with device markers hidden for the comparison."
+}

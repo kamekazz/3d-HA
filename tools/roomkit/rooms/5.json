@@ -1,0 +1,153 @@
+{
+  "_note": "ROUND 2 placement map for room 5 (Living Room), rebuilt after the footprint was re-traced. All coordinates are ROOM-LOCAL feet from the footprint's min corner -- exactly what roomkit.place takes. Read tools/roomkit/ROOM-BRIEF.md first. Pieces are authored facing +z (south); rot then aims them: 0 = back to the NORTH wall, 90 = back to the WEST wall, 180 = back to the SOUTH wall, 270 = back to the EAST wall. Build scripts live in scratchpad/lr5/ (kit2.py + b2_shell/b2_focal/b2_windows/b2_soft/b2_accents/b2_view/b2_shadows.py, shot set in shots.py); each is idempotent and re-runnable. Round 1's scripts (kit.py + b_*.py) are superseded -- their geometry was laid out for the old 30.5 x 17 rectangle.",
+
+  "_room": {
+    "id": 5,
+    "name": "Living Room",
+    "floor": "First floor (level 1), slab world y = 8.0, floor_height 10",
+    "rect": { "x": [0, 20.49], "z": [0, 16.96] },
+    "wall_height": 9.0,
+    "polygon_local": [[20.49, 16.96], [0.0, 16.96], [0.0, 4.96], [4.87, 0.0], [20.49, 0.0]],
+    "edges": {
+      "0_south": "(20.49,16.96) -> (0,16.96), 20.49 ft. offset runs EAST->WEST, i.e. local x = 20.49 - offset",
+      "1_west": "(0,16.96) -> (0,4.96), 12.00 ft. offset runs SOUTH->NORTH, local z = 16.96 - offset",
+      "2_chamfer": "(0,4.96) -> (4.87,0), 6.95 ft. The 45-degree cut across the NORTH-WEST corner",
+      "3_north": "(4.87,0) -> (20.49,0), 15.62 ft. offset runs WEST->EAST, local x = 4.87 + offset",
+      "4_east": "(20.49,0) -> (20.49,16.96), 16.96 ft. offset runs NORTH->SOUTH, local z = offset"
+    },
+    "orientation": "THE FIREPLACE IS ON THE CHAMFER, not on the north wall. Round 1 packed window + art + fireplace + TV + console + slider onto one 30.5 ft north wall; the re-traced room has only 15.62 ft there. docs/floor plan/Main Floor Plan App.png draws the chamfer as a THICKENED wall (1.6 ft against 0.55 ft elsewhere) = a chimney chase, and Kitchen F + Living Room f both show the stone breast on a wall clearly angled to the TV wall (the crown turns a corner between them). NORTH (z=0) is the exterior wall onto the Backyard pad: TV + media console on its west half (local x 4.87..12.0) and the patio slider on its east half (12.0..18.85), which is exactly the split the plan draws. EAST (x=20.49) carries a window at z 1.04..4.02 and the wide canvas over the east sofa; south of z 8.06 it is shared with the first-floor Bathroom. WEST (x=0, z 4.96..16.96) carries a window at z 11.90..14.90 and the framed abstract at z 8.20. SOUTH (z=16.96) is shared with the Kitchen (local x 0..12.6) and the first-floor hallway (12.62..20.22) and has REAL openings in both.",
+    "camera_ref": {
+      "note": "Reproduces Living Room A.jpg -- standing near the south-east corner on a phone ultrawide looking west-north-west across the room at the fireplace corner. shot.py's flyTo only partly converges its target, so the target is pushed 200 ft out along the desired ray; that makes the framing repeatable. The 100 deg vertical FOV is deliberate: photo A is a phone ultrawide.",
+      "pose_json": {
+        "pos": [15.58, 13.70, 2.84],
+        "target": [-123.6, -14.1, -138.4],
+        "fov": 100,
+        "size": [900, 1200]
+      },
+      "at_local": [17.5, 15.2],
+      "eye_ft": 5.7,
+      "dollhouse_pose_json": {
+        "pos": [18.29, 37.68, 10.34],
+        "target": [8.325, 10.52, -3.88],
+        "fov": 42,
+        "size": [1200, 900],
+        "note": "roomkit's generic `doll` pose stands 39 ft out and fills half the frame with the neighbouring rooms; this is the same 50 deg / SE orbit pulled in to 27 ft."
+      }
+    }
+  },
+
+  "_room_surfaces": {
+    "set_with": "PATCH /api/house/room/5",
+    "wall_color": "#b0afac",
+    "wall_texture": "plaster",
+    "floor_color": "#53555a",
+    "floor_texture": "wood",
+    "note": "RE-METERED after the app-level daylight fix -- every round-1 value was too bright. roomkit.meter on the empty room now reads look_n 212 / look_w 163 / look_e 123 / look_s 83 at #b0afac, i.e. a 129-byte spread the room cannot control (one wall_color, and --day puts the sun at azimuth 155, so the north wall's interior face is the only one facing it). Tone is set against the SUNLIT north wall, which is the wall every reference photo shows: render lands at ceiling 215 / north wall 211 / floor ~165 / rug ~183 against photo f's ceiling 204 / wall 156 / floor 111 / rug 157. Ratios: floor/wall 0.78 render vs 0.71 photo, rug/wall 0.87 vs 1.01. The ceiling is emissive-driven (#d8d8d8) because a downward-facing plane collects essentially no light in this scene."
+  },
+
+  "openings": {
+    "_note": "REAL openings (house.js buildRoom -> shape.holes.push), not round 1's flush decals. POST /api/house/room/5/opening. Every opening is filled by the app's placeholder panel -- glass at 0.22 opacity for type 'window', opaque white for 'door' -- so the two cased openings on the south wall are 'window' because faint glass is the closest the app gets to an open cased opening.",
+    "slider": { "edge_index": 3, "offset": 7.13, "width": 6.85, "elevation": 0.0, "height": 6.90, "type": "window", "local": "north wall, x 12.00..18.85" },
+    "window_east": { "edge_index": 4, "offset": 1.04, "width": 2.98, "elevation": 2.35, "height": 4.55, "type": "window", "local": "east wall, z 1.04..4.02" },
+    "window_west": { "edge_index": 1, "offset": 2.06, "width": 3.00, "elevation": 2.35, "height": 4.55, "type": "window", "local": "west wall, z 11.90..14.90" },
+    "kitchen_pass_through": { "edge_index": 0, "offset": 11.49, "width": 8.50, "elevation": 3.45, "height": 4.05, "type": "window", "local": "south wall, x 0.50..9.00, sill 3.45 = over the half wall" },
+    "hallway": { "edge_index": 0, "offset": 2.49, "width": 4.00, "elevation": 0.0, "height": 7.00, "type": "window", "local": "south wall, x 14.00..18.00, full height" }
+  },
+
+  "pieces": {
+    "Living Ceiling": {
+      "pos": [10.24, 8.48, 8.48], "rot": 0,
+      "note": "Polygon ceiling plane at 9.0 ft (a 5-point fan wound to face DOWN, Material double_sided=False, so it is solid at eye level and invisible from the plan/dollhouse view), crown moulding swept along all FIVE edges including the chamfer, nine recessed cans and a flat round flush-mount at local (10.6, 8.2). Cans and flush-mount are single-face `disc_down` fans: round 1's flush-mount used cylinders on a double-sided material and hovered over the room as a white oval in every top-down shot. Ceiling emissive #d8d8d8 -- see _room_surfaces."
+    },
+    "Living Baseboards": {
+      "pos": [10.25, 0.0, 8.48], "rot": 0,
+      "note": "White 5.6 in skirting on the inside face of the north, south, west and east edges, with gaps at the patio slider (edge 3, t 7.13..13.98) and the hallway opening (edge 0, t 2.49..6.49). No skirting on the chamfer -- the stone breast runs floor to ceiling there."
+    },
+    "Living Baseboards Trim": {
+      "pos": [9.29, 0.0, 16.65], "rot": 0,
+      "note": "South-wall architecture: the white countertop cap on the kitchen half wall (x 0.30..9.20 at 3.45 ft), the full-height square column at its east end (x ~9.42, photo B), and the cased jambs + head around the hallway opening. Named into objects.js SURFACE_RE on purpose so it cannot steal the room's clicks."
+    },
+
+    "Living Fireplace": {
+      "pos": [2.91, 0.0, 2.94], "rot": 45.5,
+      "size_ft": [6.86, 9.00, 1.32],
+      "note": "White PAINTED FIELDSTONE breast on the chamfer, floor to ceiling, 6.86 ft along the 6.95 ft diagonal and ~0.85 ft proud, with stone returns on both ends, a 3.20 x 2.30 firebox 0.72 off the floor, a slim mantel shelf at 4.45 ft with a grey reveal under it (no shadows in this renderer, so a white shelf on white stone disappears without one), two small pots of greenery, and a 1.2 ft dark eucalyptus wreath centred at 6.25 ft. THE STONE IS THE ROUND-2 FIX: round 1 built horizontal COURSES of rectangles with jittered heights, which its own author called 'closer to painted brick'. This is a jittered VORONOI tessellation of the wall face -- ~1.34 ft seeds, half-plane clipped, each cell shrunk 0.020 ft for the joint and extruded 0.04-0.16 ft with a domed (faceted) front face and one of four near-white materials. There are no course lines at all and no two stones are the same polygon. Placement: objects.js seats a model on its BBOX centre, and the mantel/wreath reach much further into the room than the chase depth, so the script pushes out by half the measured bbox depth along the chamfer's inward normal -- hard-coding FD/2 puts the back of the chase outside the house."
+    },
+    "Living TV": {
+      "pos": [8.44, 2.13, 0.15], "rot": 0,
+      "size_ft": [6.62, 3.72, 0.10],
+      "note": "Wall-mounted ~91 in panel centred on the 7.13 ft of north wall west of the slider (x 5.12..11.74), bottom at 2.55 ft, on a 0.10 ft black bezel, plus a wall soundbar at 2.13. The screen is ON, showing photo A's mountain-lake wallpaper. The picture is ONE sky field and ONE water field with the land only ever as tilted slivers along the horizon: round 1 (and this build's first pass) drew full-width horizontal bands, which read as a test card at any distance. Every sliver is clamped inside the screen -- otherwise it widens the model bbox and put_in_place centres the TV on the painting instead of on the panel."
+    },
+    "Living Media Console": {
+      "pos": [8.44, -0.01, 0.88], "rot": 0,
+      "size_ft": [5.90, 1.90, 1.46],
+      "note": "Low charcoal console under the TV on splayed black legs, lighter grey top slab, two closed end bays and two open centre cubbies with pale media boxes, plus a speaker, a stack of remotes and a small potted trailer on top."
+    },
+    "Living Slider Trim": {
+      "pos": [15.43, 0.0, 0.15], "rot": 0,
+      "note": "Jambs, head, sill, centre stile, proud casing and the vertical-blind stack parked at the west jamb, all around the REAL slider opening (the glass itself is the app's opening panel)."
+    },
+
+    "Living Window East Trim": { "pos": [20.28, 1.95, 2.53], "rot": 0, "note": "Cased double-hung casing + sash + roman shade around the real east opening (z 1.04..4.02, sill 2.35). Authored directly in room-local feet with rot 0 -- the boxes are axis-aligned either way, so no rotation bookkeeping." },
+    "Living Window West Trim": { "pos": [0.21, 1.95, 13.40], "rot": 0, "note": "Same unit on the west wall (z 11.90..14.90) -- the window at the far left of photo A and at the left edge of Kitchen F." },
+
+    "Living Outdoor View North": { "pos": [15.45, -0.60, -1.67], "rot": 0, "note": "The deck view seen THROUGH the slider: sky / treeline / white railing with balusters / deck boards, standing 1.7 ft OUTSIDE the north wall. With a real opening the view can no longer be painted on the wall, and the app's studio backdrop shows as a white void otherwise. Hidden with every other object in House mode (house.js setLevel)." },
+    "Living Outdoor View East": { "pos": [22.20, 1.20, 2.55], "rot": 0, "note": "Yard view behind the east window: sky / trees / fence / grass." },
+    "Living Outdoor View West": { "pos": [-1.70, 1.20, 13.40], "rot": 0, "note": "Same behind the west window." },
+
+    "Living Art East": { "pos": [20.44, 4.37, 9.30], "rot": 0, "size_ft": [0.09, 2.00, 5.60], "note": "The wide horizontal canvas with the black blob over the east sofa (photo f, right-hand wall), centre 5.4 ft." },
+    "Living Art West": { "pos": [0.05, 4.05, 8.20], "rot": 0, "size_ft": [0.10, 1.90, 2.40], "note": "The pale blush/grey abstract on the west wall between the window and the fireplace, centre 5.0 ft (photo A, left of the fireplace)." },
+    "Living Art South": { "pos": [11.28, 4.08, 16.90], "rot": 0, "note": "The dark twig/driftwood wall piece on the south wall between the column and the hallway opening (photo B)." },
+
+    "Living Floor Rug": {
+      "pos": [11.20, 0.0, 9.80], "rot": 0, "size_ft": [13.30, 0.08, 11.10],
+      "note": "Flatweave, 13.2 x 11.0 of pile with fine ribs both ways, leaving bare plank between it and the console exactly as photo f shows. pos.y = 0.004, NOT 0.010: house.js draws the room slab at y 0.01, so anything seated at 0.010 is coplanar with it. NAMED 'Floor Rug' ON PURPOSE: it covers 43% of the floor and pick() raycasts objects before rooms, so a pickable rug was eating half the room's clicks (round 1 left the room only 33% selectable, the worst in the house). objects.js SURFACE_RE matches the word 'floor', so this makes it scenery and the room jumped to 61% selectable."
+    },
+    "Living Floor Shadows": {
+      "pos": [10.24, 0.02, 8.48], "rot": 0,
+      "note": "THE round-2 headline fix, and the defect both round-1 critics named: the app renders no shadows for generated geometry, so every piece in the house floats. One decal object holds a soft contact shadow under every piece that meets the floor -- three nested, room-clipped outlines of each footprint in ONE translucent black material (#050506 at 0.165), so the overlap gives the penumbra without textures. Decals sit at y 0.086, just above the rug pile (0.079), so the same object serves rug and bare floor alike; an inch of float that no camera in this app resolves. The rug's own edge halo is the exception, drawn at y 0.020 -- below the pile and above the slab -- so the part under the rug is swallowed and only the halo shows. Rings are Sutherland-Hodgman clipped to the room polygon or the penumbra smears through a wall onto the lawn. FOOTPRINTS ARE HAND-COPIED from the build scripts: re-run b2_shadows.py whenever a piece moves."
+    },
+
+    "Living Sofa South": {
+      "pos": [4.35, 0.0, 14.08], "rot": 180,
+      "size_ft": [7.60, 3.10, 6.67],
+      "note": "The sectional backed onto the kitchen half wall (photo B), 7.6 ft body plus a 2.7 x 2.6 ft chaise return at its EAST end, ending clear of the column at x 9.42. Placed with put_anchor, not by bbox centre: the throw drapes 0.5 ft past the back rail and a centre-seated placement left the sofa floating off the wall. Upholstery is authored as VALUE STEPS (body / arms+back / seat tops / dark reveals) because this renderer draws no shadows -- a single greige material makes every sofa a featureless blob."
+    },
+    "Living Sofa East": { "pos": [18.83, 0.0, 9.30], "rot": 270, "size_ft": [8.40, 3.09, 4.22], "note": "8.4 ft sofa with its back to the east wall under Living Art East, exactly the pairing photo f shows. Also put_anchor'd off its back rail." },
+    "Living Armchair": { "pos": [2.23, 0.0, 7.75], "rot": 72, "size_ft": [3.60, 3.10, 4.47], "note": "The pale recliner against the west wall under Living Art West, turned 72 deg so it faces east-south-east into the room -- photos A, B, C and f all put a chair there." },
+    "Living Ottoman": { "pos": [7.70, 0.0, 8.40], "rot": 3, "size_ft": [4.40, 1.45, 2.50], "note": "The long upholstered ottoman between the armchair and the coffee table (photo f), with the laptop, a phone and a folded throw left on it." },
+    "Living Chaise Ottoman": { "pos": [15.20, 0.0, 7.00], "rot": 270, "size_ft": [2.60, 1.44, 4.20], "note": "The long ottoman in front of the east sofa (photo f), with a throw over one end. The floor plan draws it at local x 13.6..16.3, z 6.0..9.8." },
+    "Living Coffee Table": { "pos": [12.00, 0.0, 10.50], "rot": 2, "size_ft": [4.00, 1.80, 2.62], "note": "Grey-wood top on a black metal X-frame, 1.46 ft high, carrying the photo's white tray with the bright-green object in it, a cup, a book stack and a remote." },
+
+    "Living Tower Fan": { "pos": [1.10, 0.0, 5.20], "rot": 0, "note": "The dark bladeless tower fan in the west corner by the fireplace (photo f foreground, and visible in Kitchen F)." },
+    "Living Etagere": { "pos": [19.80, 0.0, 0.72], "rot": 0, "note": "The tall wire plant etagere in the north-east corner past the slider (photo f), four shelves of small potted greenery. Narrowed to 1.2 x 0.85 ft -- the corner between the slider casing and the east window casing is only ~1.6 ft." },
+    "Living Corner Plant": { "pos": [19.50, 0.0, 15.40], "rot": 0, "note": "Potted floor plant in the south-east corner." },
+    "Living Pet Crate": { "pos": [12.50, 0.0, 15.40], "rot": 8, "note": "The white wire pet crate in the foreground of photo B, with a folded blanket in it." },
+    "Living Basket": { "pos": [4.30, 0.0, 12.20], "rot": 0, "note": "Woven blanket basket beside the sectional's chaise return, two throws spilling out of it." },
+    "Living Cushions": { "pos": [10.20, 0.0, 12.90], "rot": 0, "note": "The big cream floor cushion and folded blanket photo B leaves on the rug. NOT named 'Floor Cushions' -- that would match objects.js SURFACE_RE and make real furniture unpickable." }
+  },
+
+  "_what_changed_from_round_1": [
+    "The room lost 10 ft of width (30.5 -> 20.49) and gained a chamfered north-west corner. The fireplace MOVED off the north wall onto the chamfer, which is what the floor plan and photos f / Kitchen F actually show; that is what freed the north wall to hold TV + console + slider at the sizes the plan draws.",
+    "DROPPED: 'Living Sofa West' (the third sofa). The re-traced plan shows two sofas plus one armchair -- a sectional on the south half wall and a sofa on the east wall -- and there is no wall left for a third. Its old position is now the armchair and the west window.",
+    "DROPPED: 'Living Window North' and 'Living Art North'. The plan puts no window on the 15.62 ft north wall (the console and the slider fill it edge to edge) and photo A's window + framed art are on the WEST wall, foreshortened by the ultrawide lens. They were rebuilt as Living Window West Trim + Living Art West.",
+    "DROPPED: 'Living Bench Ottoman'. Two ottomans plus a coffee table is what the plan and photo f show in the smaller room; three was a traffic jam.",
+    "RESIZED: rug 17.6 x 12.2 -> 13.2 x 11.0; TV 6.85 -> 6.62 wide; console 6.8 -> 5.9; south sofa 10.6 -> 7.6 + a 2.7 ft chaise return; east sofa 8.6 -> 8.4; slider 6.30 -> 6.85 (it is now a real opening sized off the plan's glazing run); etagere 1.85 -> 1.20 wide.",
+    "ADDED: real wall openings (5), contact shadows on everything, exterior view boards behind the three openings, the kitchen half-wall cap + column, the hallway cased opening, the south-wall twig art, a pet crate, a blanket basket and floor cushions."
+  ],
+
+  "_known_gaps": [
+    "The app fills EVERY opening with a placeholder panel -- there is no 'open hole' type. The kitchen pass-through and the hallway cased opening are therefore faint glass (0.22 opacity) rather than genuinely open. You can see straight through both, which is the point, but at a grazing angle the panel catches a specular the real openings do not have.",
+    "Wall tone is one colour for five walls and the app lights them very unevenly: metered empty, the sunlit north wall renders 212 and the south wall 83. Tone is set for the north wall because that is the wall every reference photo shows; the south and east walls consequently render darker than the photographs. There is no per-wall control and emissive wall washes are banned (they read as hard-edged panels).",
+    "Horizontal surfaces render brighter than the photographs relative to the walls: floor/wall is 0.78 against photo f's 0.71 and the rug lands at 0.87 against 1.01. Pushing the floor darker enough to match photo A (which reads 0.32, blown out) turns it black in the dollhouse view.",
+    "The TV picture is emissive colour fields, not a photograph. It reads as 'a TV showing a mountain lake' at reference distance but not close up; the GLB writer has no textures.",
+    "The stone now reads as painted fieldstone rather than brick, but the joints are geometric seams between flat-shaded facets, so at close range it reads a little like crazy paving. A real fix needs per-stone bevels or a texture.",
+    "Density is much closer than round 1 (crate, basket, cushions, throws on every seat, clutter on the console, ottoman and coffee table) but the photographs still have more loose blankets and remotes than is modelled.",
+    "shot.py's flyTo does not fully converge its camera TARGET before the screenshot, so the rendered yaw drifts from the requested one. The ref pose works around it by putting the target 200 ft out along the ray."
+  ],
+
+  "_verification": {
+    "check_pick": "python -m roomkit.check_pick 5 --level 1 -> 30/49 floor samples (61%) resolve to the room, against round 1's 33%. The gain is entirely from naming the rug into objects.js SURFACE_RE.",
+    "shots": "scratchpad/lr5/r2_ref.png (photo-A viewpoint), r2_ref_sbs.jpg (side by side), r2_doll5.png (dollhouse), r2_plan.png, r2_south.png (proves the two south-wall openings read through to the kitchen and hallway). Re-take with `python shots.py ref doll5 plan south` from scratchpad/lr5."
+  }
+}

@@ -30,6 +30,14 @@ export function buildObjects(house) {
   }
 }
 
+// Room-scale architectural surfaces placed as objects: a floor plane over the
+// slab, a ceiling, emissive wall washes, baseboard runs. They span the whole
+// room, and pick() raycasts objects before rooms — so left pickable they would
+// swallow every click in that room and the room editor could never be opened.
+// They are scenery, not furniture: not selectable, and so not draggable either,
+// which is what you want for a ceiling. Matched on the placed object's name.
+const SURFACE_RE = /\b(floor|ceiling|wall wash|baseboards?|crown)\b/i;
+
 function makeObject(o, room, floor) {
   const root = new THREE.Group();
   getInstance(o.model_id, 'bottom')
@@ -45,10 +53,12 @@ function makeObject(o, room, floor) {
     fp.z + o.position.z);
   root.rotation.y = o.rot_y || 0;
   root.scale.setScalar(o.scale || 1);
+  const name = o.name || o.model_name || '';
   root.userData = {
     kind: 'object',
     objectId: o.id,
-    name: o.name || o.model_name,
+    name,
+    pickable: !SURFACE_RE.test(name),
     modelId: o.model_id,
     roomId: room.id,
     roomName: room.name,

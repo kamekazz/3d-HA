@@ -254,13 +254,27 @@ function buildRoom(room, floor) {
         hole.lineTo(off, op.elevation);
         shape.holes.push(hole);
 
+        // A `passage` is a cased opening — an arch or a doorway with no door in
+        // it — so the hole above is the whole point and it gets no panel at all.
+        // Without this it was handed the window material and every doorway
+        // between two rooms carried a faint pane of glass across it.
+        if (op.type === 'passage') continue;
+
         const isDoor = op.type === 'door';
         const depth = isDoor ? 0.2 : 0.3;
+        // These panels fill the hole the shape above cuts. They used to be a
+        // saddle-brown slab and a flat teal one; the teal read so unlike glass
+        // that room builders avoided cutting openings at all and faked every
+        // window as a flush decal on the wall. Glass is now a faint cool tint
+        // at low opacity with a tight specular, and a door is painted white
+        // like the real ones in this house — so a real opening is now the better
+        // option, which is what the dollhouse view needs.
         const panelMat = new THREE.MeshStandardMaterial({
-          color: isDoor ? 0x8b5a2b : 0x4fd1c5,
+          color: isDoor ? 0xf1ede6 : 0xdbe7ef,
           transparent: !isDoor,
-          opacity: isDoor ? 1.0 : 0.4,
-          roughness: isDoor ? 0.8 : 0.1,
+          opacity: isDoor ? 1.0 : 0.22,
+          roughness: isDoor ? 0.75 : 0.06,
+          metalness: 0.0,
           side: THREE.DoubleSide
         });
         const panelGeo = new THREE.BoxGeometry(op.width, op.height, depth);

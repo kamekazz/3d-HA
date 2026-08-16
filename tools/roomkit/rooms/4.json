@@ -1,0 +1,118 @@
+{
+  "_note": "Placement map for room 4 (Dining), first floor, level 1. All coordinates are ROOM-LOCAL feet from the footprint's min corner -- exactly what roomkit.place takes. Read tools/roomkit/ROOM-BRIEF.md first. Every piece here is authored in absolute room-local coordinates and placed with a pos derived from its own bbox (see the `place_local` helper), so `pos` below is a bbox artefact, not a design number -- the meaningful geometry is in `size_ft` and the notes.",
+
+  "_room": {
+    "id": 4,
+    "name": "Dining",
+    "floor": "First floor (level 1), slab world y = 8.0",
+    "rect": { "x": [0, 19.0], "z": [0, 17.0] },
+    "wall_height": 9.0,
+    "walls": { "north_z": 0, "south_z": 17.0, "west_x": 0, "east_x": 19.0 },
+    "ha_area_id": "dining_room"
+  },
+
+  "_orientation": {
+    "how_it_was_derived": "Cross-checked the four photos against the house layout. Frontyard is at world z 42.5+ so +Z is the FRONT facade; Dining is the front-left corner room, so SOUTH (local z=17) and WEST (local x=0) are exterior and carry every window. Kitchen sits directly north (world z -2.5..25) and the first-floor hallway directly east (world x 9.5..21), which is where the two cased openings go. Photo B (camera on the east side looking west) shows the clock wall on the LEFT and the buffet wall on the RIGHT, which only works if clock=SOUTH and buffet=NORTH; photo C (camera south looking north) then reads kitchen-left / buffet-centre / stairs-right, and photo A/f (camera in the north half looking south) reads foyer-left / window-clock-window / bay-right. All four agree on that assignment.",
+    "north_z0": "kitchen cased opening (west half) + black buffet with a wall-mounted TV over it (east half)",
+    "south_z17": "front facade -- two windows with the big round clock between them",
+    "west_x0": "side facade -- three close-set windows (the photo's bay), fiddle-leaf fig beside them",
+    "east_x19": "cased opening to the front-door hallway (white front door and dark wood floor beyond)"
+  },
+
+  "_camera": {
+    "primary": "corner_ne -- world pos [8.6,13.6,26.4] target [-6.175,11.472,41.225] fov 75, 900x1200. Closest canned pose to Dining A.jpg (south wall with the clock in the middle-left, west windows to the right).",
+    "also_good": "corner_nw (reads like Dining f), look_n (buffet/TV wall), doll, plan",
+    "warning": "the shot's zoom is NOT reproducible run to run -- scene.js lerps the camera distance back toward its zoom target after flyTo, so the same pose lands 10-20% closer or further on successive runs. Framing differences between rounds are that, not a moved piece."
+  },
+
+  "pieces": {
+    "Dining Walls": {
+      "size_ft": [19.0, 8.17, 17.0], "pos": [9.5, 0.0, 8.5], "rot": 0,
+      "note": "The room's whole interior surface: a ONE-SIDED painted skin 0.035 ft in front of each wall face (wound to face into the room, so it back-face-culls from outside and the app's dollhouse view still reaches in), plus white baseboard (0.52 ft), chair rail (2.60-2.86 ft), picture-frame wainscot mouldings (0.86-2.28 ft, 0.185 ft stock, ~2.9 ft boxes with 0.5 ft gaps) and a two-step crown (7.42-8.15 ft, 0.60 ft projection). Skin and trim are broken around the window openings and the two cased openings. WHY A SKIN AT ALL: under `roomkit.shot --day` (sun el 42 az 155) the two walls the primary view shows get NO direct sun -- the app's own #f2ede3 wall renders at byte 122 (south) / 141 (east) against the photo's 195. Per-wall materials are aimed at 202/196/186/183 (N/W/E/S) for the field and 229/222/214/208 for the trim, solved through the renderer's inverse (scratchpad/build/tone.py)."
+    },
+    "Dining Ceiling": {
+      "size_ft": [19.0, 0.93, 17.0], "pos": [9.5, 8.02, 8.5], "rot": 0,
+      "note": "Tray ceiling: perimeter soffit at 8.15 ft, a 0.80 ft riser stepping up at a 2.05 ft inset, recessed panel at 8.95 ft, applied moulding at the foot of each riser, a ringed medallion under the chandelier at (9.0, 9.9) and a round supply diffuser at (5.2, 5.0). Nothing reaches the 9.0 ft wall top, so it cannot poke into the floor above. Every face is ONE-SIDED and points down/into the recess: solid at eye level, invisible from above (checked with the plan pose -- the floor is still fully visible). TONE IS METERED: a downward plane collects only ~0.055 of scene radiance here, so the soffit (203) and panel (221) are emissive-driven; that 18-byte break is the only thing that draws the tray edge."
+    },
+    "Dining Openings": {
+      "size_ft": [18.44, 7.81, 7.39], "pos": [9.78, 0.0, 3.695], "rot": 0,
+      "note": "Two cased openings, NOT real holes -- the app fills a real opening with a hardcoded teal slab, and every judged viewpoint is from inside. North wall x 0.95..7.65 (kitchen: white base + wall cabinets with door reveals, a dark counter line, grey floor); east wall z 1.10..7.00 (foyer: white six-panel front door, dark wood floor). Both 7.38 ft tall with 0.10 ft jamb/head reveals set back 0.66 ft and white casing 0.34 ft wide on the room side."
+    },
+
+    "Dining Windows South": {
+      "size_ft": [10.30, 4.62, 0.30], "pos": [9.5, 2.865, 16.85], "rot": 0,
+      "note": "Two units on the front facade, centres at local x 6.0 and 13.0 (the clock lives between them). Casing 3.02 x 4.40 ft outer, 0.30 ft stock, stool 2.865-2.98 ft sitting straight on the chair rail (which does the apron's job, as the photo shows). White 2in faux-wood blinds LOWERED TO 44% with a dark reveal line under every slat; the clear strip below shows lawn, a white porch rail and foliage painted in bands on the pane -- that is what Dining A shows, and it is what stops two sunless walls from reading as a grey box."
+    },
+    "Dining Windows West": {
+      "size_ft": [0.30, 4.62, 11.70], "pos": [0.15, 2.865, 8.6], "rot": 0,
+      "note": "Three of the same unit at local z 4.4, 8.6, 12.8 -- the photo's bay, flattened onto a straight wall (see _gaps)."
+    },
+
+    "Dining Table": {
+      "size_ft": [8.0, 2.50, 3.90], "pos": [9.0, 0.0, 9.9], "rot": 0,
+      "note": "Espresso plank-top rectangular table on twin block pedestals at x +/- 1.92 from centre. Top 8.0 x 3.9 ft, 0.155 ft thick over a recessed dark reveal. Long axis runs EAST-WEST (photo B looks straight down its length from the east side). Centre (9.0, 9.9) is deliberately off the room centre: it matches the photo (the table sits toward the window end) AND keeps the chandelier clear of the look_n/s/e/w poses, which stand at the room centre at eye height -- with the table centred, every one of those four shots was a close-up of the inside of a lampshade."
+    },
+    "Dining Chairs": {
+      "size_ft": [11.28, 3.54, 7.08], "pos": [9.0, 0.0, 9.9], "rot": 0,
+      "note": "All eight parsons chairs in ONE model (3 + 3 on the long sides at 2.7 ft spacing, 1 at each end), so they never drift out of register with the table. Each is a 1.60 x 1.54 ft seat at 1.42 ft, one slim 1.56 ft-wide reclined back with a rolled crown at 3.45 ft, and four thin tapered espresso posts. Rebuild them if the table moves -- their positions are derived from TABLE_C."
+    },
+    "Dining Chandelier": {
+      "size_ft": [2.52, 3.39, 2.50], "pos": [9.0, 5.39, 9.9], "rot": 0,
+      "note": "Black six-arm fixture, 1.02 ft arm radius, frosted cylinder shades 0.27 ft radius x 0.76 ft standing on the arms at 5.45 ft -- i.e. shade bottoms 2.95 ft above the table top. Chain of ten links plus a rod up to a canopy at 8.62 ft, meeting the ceiling medallion. pos.y is the bottom of the fixture."
+    },
+    "Dining Rug": {
+      "size_ft": [13.5, 0.04, 10.6], "pos": [9.1, 0.004, 9.3], "rot": 0,
+      "note": "Cream basket-weave area rug with a 0.40 ft binding border. The pile is real geometry: 0.30 ft square blocks of three half-round ribs each, alternating direction block by block. A single rib direction (rounds 3-6) read as corduroy and moired hard against the pixel grid; alternating them is what makes it read as the photo's woven loop pile. pos.y = 0.004, not 0.010: house.js draws the room slab at y 0.01, so anything seated at 0.010 is coplanar with it."
+    },
+
+    "Dining Clock": {
+      "size_ft": [2.32, 2.33, 0.15], "pos": [9.5, 4.435, 16.875], "rot": 0,
+      "note": "2.32 ft round wall clock centred on the south wall at x 9.5, centre 5.60 ft above the floor: black rim and Roman-numeral ticks over a planked natural-wood face. The wood needs a big emissive lift (1.55) because the south wall gets no sun -- at the furniture default it rendered at byte 72 against the photo's 129."
+    },
+    "Dining Buffet": {
+      "size_ft": [5.20, 4.16, 1.74], "pos": [12.5, 0.0, 0.9325], "rot": 0,
+      "note": "Black/espresso sideboard against the north wall, 5.2 x 2.92 ft high x 1.7 ft deep, eight fronts on a 4 x 2 grid with slim bar pulls, on a recessed plinth. On top: the photo's deep-red rose ball in a dark vessel, a dark coffee machine and a white tray. The 4.16 ft bbox height is the coffee machine."
+    },
+    "Dining TV": {
+      "size_ft": [4.60, 2.64, 0.09], "pos": [12.5, 4.36, 0.0925], "rot": 0,
+      "note": "Framed flat panel over the buffet, bottom at 4.36 ft. The white frame is a BORDER, not a slab: a full frame rectangle in front of the screen is what made round 8 render a blank white panel on the north wall."
+    },
+
+    "Dining Fig Tree": {
+      "size_ft": [2.96, 7.13, 2.94], "pos": [2.34, -0.008, 12.25], "rot": 0,
+      "note": "Fiddle-leaf fig on a black three-leg plant stand in a white pot, beside the west windows. 34 violin-shaped leaves 0.74-1.24 ft long on short branches off a woody trunk, crown from 3.4 to 7.1 ft. Placed at (2.35, 12.4) rather than hard in the SW corner where the photo has it: the corner_sw pose stands 0.9 ft off that corner and was rendering entirely inside the foliage."
+    },
+    "Dining Snake Plant": {
+      "size_ft": [1.42, 2.83, 1.12], "pos": [16.75, 0.0, 15.15], "rot": 0,
+      "note": "Snake plant in a white pot on the floor near the SE corner -- the one standing against the wall right of the foyer opening in Dining f. 15 tapered blades, 1.15-1.95 ft."
+    },
+    "Dining Table Decor": {
+      "size_ft": [6.29, 0.94, 2.74], "pos": [8.475, 2.5, 9.9], "rot": 0,
+      "note": "Two dark oval placemats plus the photo's white serving tray with a paper-towel roll on a chrome post and two wood-lidded glass canisters. Positions are derived from TABLE_C, so rebuild after moving the table."
+    }
+  },
+
+  "_room_surfaces": {
+    "set_with": "PATCH /api/house/room/4",
+    "wall_color": "#b9c0c7",
+    "floor_color": "#b9b0a1",
+    "floor_texture": "carpet",
+    "note": "The wall colour barely shows -- Dining Walls covers every wall face -- but it is set to match so the planner and any non-skinned view read correctly. The floor is wall-to-wall carpet with the area rug on top; floor_color was pulled down to #b9b0a1 so the carpet reads a step darker than the rug (they were indistinguishable at #c5bdae)."
+  },
+
+  "_tone_model": {
+    "where": "scratchpad/build/tone.py (throwaway, but the numbers are the ones every material here was solved with)",
+    "illumination": "Measured off bare #f2ede3 walls in the empty room under `--day`: north 1.471, west 0.688, east 0.354, south 0.274, floor 1.621, downward-facing ~0.055 (radiance per unit LINEAR albedo). The forward model -- radiance -> x1.15 exposure -> ACES filmic -> sRGB -- reproduces every one of those to a byte.",
+    "emissive_scale": "1.664. A GLB with a black baseColor and emissiveFactor = linear(0x808080) = 0.2159 renders at byte 151/153 on two different walls, i.e. scene radiance 0.359. The albedo term matches ILLUM exactly (white patch 131 vs 130 predicted, mid grey 42 vs 42), so the 1.664x applies to emissive only. Every emissive here is divided by it.",
+    "roughness_trap": "Glossy materials pick up an env-specular term ILLUM does not model (it was calibrated at roughness 0.9). At roughness 0.55 the espresso table rendered 56 bytes lighter than predicted. All furniture is now 0.82-0.97."
+  },
+
+  "_gaps": [
+    "The west wall is a straight 17 ft plane; the real room has a shallow canted BAY there (visible as the angled corner in Dining A and as the notch on the right edge of the Main Floor Plan). The three west windows are laid flat along the straight wall instead. The footprint is ground truth and was not touched.",
+    "The tray ceiling is a plain rectangle; the photo's tray has a stepped/notched outline at the kitchen end.",
+    "The two cased openings are painted reveals, not holes -- from a viewpoint outside the room they are flat panels. Cutting real openings would make the app draw its hardcoded teal opening slab.",
+    "At night (no --day) the emissive-driven walls, ceiling, trim and the painted 'outside' in the windows stay bright while the floor goes dark, so the room reads as lit even with the lights off. That is inherent to standing in for bounce light the app does not render; the master bedroom's ceiling and baseboards have the same trade-off. The window lawn/fence bands are the most obviously wrong of these.",
+    "The photo's rug and carpet have far more surface texture than the low-poly weave can carry, and the photo's chair fabric has a visible linen grain that is flat colour here.",
+    "No floor register, outlet plates, or the small side plant that appears at the left edge of Dining f (it is in the foyer, not this room)."
+  ]
+}

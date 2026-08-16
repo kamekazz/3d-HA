@@ -129,7 +129,13 @@ function setupPicking() {
     for (const hit of priorityHits) {
       if (hit.distance > occluderDist + 0.25) break; // hidden behind a wall
       const owner = ownerOf(hit.object);
-      if (owner && isShown(hit.object)) return owner;
+      // pickable === false: architectural surface objects (room-wide floors,
+      // ceilings, wall washes, baseboards). They cover the whole room, so
+      // without this they'd swallow every click and the room editor could
+      // never be opened again. See objects.js SURFACE_RE.
+      if (owner && owner.userData.pickable !== false && isShown(hit.object)) {
+        return owner;
+      }
     }
 
     for (const hit of hits) {

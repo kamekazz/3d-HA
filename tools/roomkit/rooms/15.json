@@ -1,0 +1,92 @@
+{
+  "_note": "Placement map for room 15 (Rios Room), second floor, level 2. Reference photos: docs/photos-jpg/'Rios room.jpg' (primary) + 'Rios Room 1/2/3.jpg'. UNLIKE tools/roomkit/layout.json (room 14), every piece here is AUTHORED IN ROOM-LOCAL COORDINATES and placed with rot=0 and pos = (bbox centre x, bbox min y, bbox centre z) -- exactly the seat the app gives a model. There is no 'author facing +z then rotate' bookkeeping: the number in `pos` is just where the model's own bounding box lands. Build scripts: scratchpad/build15/{common,shell,furniture,floor,wallwash}.py -- re-run any of them from that directory with backend/.venv/Scripts/python.exe and the piece is rebuilt and re-placed idempotently by name.",
+
+  "_room": {
+    "id": 15,
+    "name": "Rios Room",
+    "floor": { "id": 3, "name": "Second floor.", "level": 2 },
+    "rect": { "x": [0, 15.5], "z": [0, 16.0] },
+    "wall_height": 8.0,
+    "slab_world_y": 18.0,
+    "origin_world": [-5.0, 18.0, 28.5],
+    "walls": { "north_z": 0, "south_z": 16.0, "west_x": 0, "east_x": 15.5 },
+    "orientation_note": "NORTH (z=0) is the exterior wall with both windows -- that is the far wall in every photo. EAST (x=15.5) carries the birdcage in the NE corner. SOUTH (z=16) is the wall the room is entered from: room 17 (2F hallway, world x 3.5..21) abuts room 15 only over world x 3.5..10.5 = local x 8.5..15.5, so the entry door HAS to be at the east end of the south wall, and that is where the primary photo was taken from. The closet double door goes at the west end of the same wall. WEST (x=0) has the console + landscape art."
+  },
+
+  "_camera": {
+    "judged": { "pos": [6.3, 23.2, 43.8], "target": [2.6, 21.75, 29.4], "fov": 84, "size": [900, 1200] },
+    "note": "World coordinates, for `roomkit.shot --pose-json ... --level 2 --day`. Eye is local (11.3, 15.3) at 5.2 ft -- standing in the entry doorway looking NNW, which is the primary photo's vantage. fov is the VERTICAL fov (three.js); 84 at 3:4 gives ~68 deg horizontal, and that framing puts the north wall at the same size in frame as the photo. Wider (92-100) matches the phone's angle of view but shrinks the far wall well below the photo's.",
+    "extra": {
+      "west_wall": { "pos": [8.0, 23.2, 41.0], "target": [-5.0, 21.6, 38.0], "fov": 80, "size": [1100, 850] },
+      "doll": { "pos": [14.253, 49.901, 52.928], "target": [2.75, 20.24, 36.5], "fov": 42, "size": [1200, 900] }
+    }
+  },
+
+  "_surfaces": {
+    "wall_color": "#e4e2de",
+    "floor_color": "#8f8d8c",
+    "floor_texture": "wood",
+    "note": "Set with PATCH /api/house/room/15. The floor texture is invisible in practice -- 'Rios Floor' covers the whole slab with real plank geometry -- but it is left set so the room still reads as wood if that object is ever removed. wall_color was metered down from #f2f0ec: the photo's ceiling sits ~22 display levels above its walls and the app's ceiling is emissive-driven, so a whiter wall_color collapses that step."
+  },
+
+  "pieces": {
+    "Rios Ceiling": { "size_ft": [15.5, 0.05, 16.0], "pos": [7.75, 7.94, 8.0], "rot": 0,
+      "note": "THE headline fix: the room had no ceiling at all and you saw sky through it. Flat 15.5 x 16 plane at y=7.99, ONE-SIDED facing down (Material double_sided=False) so it is solid at eye level and completely invisible from above -- check with the plan pose, you must still see the floor. A downward plane collects almost no light in this renderer, so its white is emissive-driven (#ffffff albedo + #d4d4d4 emissive) rather than lit. Five recessed cans at local (3.4,7.0) (7.75,7.0) (12.1,7.0) (8.1,1.9) (7.75,12.9) -- the first four are back-projected from the primary photo, which shows three cans on one line plus one near the north wall; the fifth covers the door end. Cans, smoke detector (5.6,11.4) and the HVAC register (2.3,14.4) are all built as DOWNWARD-FACING DISCS/RECTS, not cylinders: a cylinder's top cap is front-facing from above and left white dots lying on the floor in the plan view." },
+
+    "Rios Wall Wash": { "size_ft": [15.5, 8.0, 16.0], "pos": [7.75, 0.0, 8.0], "rot": 0,
+      "note": "0.01 ft one-sided skins on the inside faces of the EAST, WEST and SOUTH walls (#e4e2de + #6f6f6f emissive). The app lights the room with one sun (roomkit --day puts it at azimuth 155) plus a hemisphere light and renders no bounce, so those three walls fell to a blue-grey ~#a4acb4 against a ~#f0f0ee north wall; the photo has all four within a few levels. This carries the missing indirect light. It is the one piece here that is compensating for the renderer rather than modelling something real -- if the app ever gains bounce/AO, delete it first." },
+
+    "Rios Floor": { "size_ft": [15.5, 0.02, 16.0], "pos": [7.75, 0.012, 8.0], "rot": 0,
+      "note": "Grey LVP planks, 0.52 ft wide x 4.3 ft long running NORTH-SOUTH with staggered butt joints, eight tones inside a deliberately narrow band (#66..#7a) over a dark seam ground. The app's 'wood' floor texture tiles at 2.2 ft and reads as fine corduroy from eye level, nothing like the photo's 6-in planks. Sits at y 0.012..0.032; the room slab is drawn at y=0.01, so nothing z-fights. Tone was tuned by eye against the photo across three rounds -- the first pass at #a3a09c rendered near-white and the second at #63615e read as slate." },
+
+    "Rios Baseboards": { "size_ft": [15.5, 0.46, 16.0], "pos": [7.75, 0.0, 8.0], "rot": 0,
+      "note": "White 5.5 in x 0.9 in skirting on all four walls with a flat face and a 0.055 ft chamfer cap, gapped at both south-wall door casings (local x 1.30..6.90 and 9.60..13.20). Carries a #5a5a5a emissive for the same reason the master bedroom's does -- it is standing in for bounce the app does not render." },
+
+    "Rios Window West": { "size_ft": [4.64, 6.15, 0.185], "pos": [3.077, 1.40, 0.092], "rot": 0,
+      "note": "The wide one, left of the ladder shelf. Trim 4.50 x 6.15 ft (glass 3.90 x 4.94), apron bottom at y 1.40, stool 1.91, head cap top 7.55. Flush on the inside wall face -- we deliberately do NOT cut a real opening (the app's opening panels render a hardcoded teal slab). Behind the glass is an emissive white pane with a lumpy foliage canopy filling the lower 80%, which is what the photo shows through the blinds. Blinds are lowered with the slats OPEN at 26 deg and 0.163 ft pitch: at the 38 deg I built first the slats occluded the pane and the window went solid white, losing the greenery that is the most recognisable thing about this wall." },
+    "Rios Window East": { "size_ft": [3.74, 6.15, 0.185], "pos": [10.35, 1.40, 0.092], "rot": 0,
+      "note": "Same unit, narrower (trim 3.60 ft). The photo's two windows differ in width by roughly 4:3 and this pair keeps that. Its right jamb at local 12.15 leaves 3.35 ft of north wall for the rubber plant and the corner." },
+
+    "Rios Ladder Shelf": { "size_ft": [2.55, 5.97, 1.38], "pos": [6.95, -0.01, 0.711], "rot": 0,
+      "note": "White leaning A-frame ladder shelf standing BETWEEN the two windows, feet at z 1.35, top rail against the wall at z 0.14 (10.9 deg lean). Five shelves at y 0.52 / 1.85 / 3.06 / 4.20 / 5.30, depth shrinking 1.24 -> 0.27 ft as the rails lean in. Bottom shelf holds the two white fabric bins from the photo; the rest carry the toy/vase/box clutter. A #b9b7b2 shadow strip is baked under each shelf front -- the app renders no shadows and a white ladder on a white wall was otherwise invisible." },
+    "Rios Round Art": { "size_ft": [2.30, 2.15, 0.102], "pos": [6.95, 5.30, 0.081], "rot": 0,
+      "note": "White-framed square canvas with the dark circular line motif, hung high on the north wall so its lower half sits behind the ladder's top two shelves -- exactly the overlap the photo shows. The circle is 17 horizontal bars clipped to a disc." },
+
+    "Rios Pouf Grey": { "size_ft": [1.98, 1.15, 1.97], "pos": [4.0, 0.0, 1.75], "rot": 0,
+      "note": "Cream chunky-knit round pouf on the floor under the west window. Lathe body plus 26 shallow vertical ribs at 0.975 R -- the first pass used 0.10 ft rib boxes at the equator and it read as a gear." },
+    "Rios Pouf Teal": { "size_ft": [1.75, 1.05, 1.74], "pos": [9.0, 0.0, 1.35], "rot": 0,
+      "note": "The teal knit pouf, right of the ladder shelf. Same construction, smaller." },
+
+    "Rios Rubber Plant": { "size_ft": [3.95, 6.4, 2.6], "pos": [12.107, -0.01, 1.223], "rot": 0,
+      "note": "The big rubber tree in the NE corner. White pot on a splayed four-leg black metal stand; pot base at 0.75 ft, trunk a shallow S climbing to 6.2 ft and drifting ~0.75 ft WEST, 28 big rounded leaves clustered in the upper 58% of the trunk and biased west so the canopy drapes over the east window, which is what the photo shows. Leaves are tilted 48-76 deg toward vertical: authored flat (the leaf primitive is a horizontal disc) they were all edge-on from eye level and the plant read as a totem pole." },
+
+    "Rios Birdcage": { "size_ft": [2.33, 5.87, 3.23], "pos": [14.32, -0.055, 2.95], "rot": 0,
+      "note": "The large parrot cage, back against the EAST wall with its long side running north-south (x 13.25..15.40, z 1.43..4.48). Rolling stand with casters and a lower shelf grid to 1.62, seed skirt + grate tray, mesh body to 4.95 (0.125 ft vertical bars plus 0.30 ft horizontal wires on all four faces), barrel-arch play top to 5.80, door frame + perches + toy blobs inside. WHICH WALL IT IS ON is the one call in this room I am least sure of: in the primary photo the cage sits entirely to the RIGHT of the north/east corner line, which puts it on the east wall, and its base footprint parallelogram runs toward the lower right, i.e. north-south. But the cage subtends far more of that photo than a 3.3 ft object on the east wall can from a doorway 16 ft away -- see the honest-gaps note below." },
+
+    "Rios Console": { "size_ft": [1.15, 3.72, 4.0], "pos": [0.665, 0.0, 11.9], "rot": 0,
+      "note": "Narrow white console against the WEST wall (photos 2 and 3), 4.0 ft long x 1.15 deep x 2.55 high with a lower shelf. Six shoes lined up on the shelf, four small potted plants and a dark tray on top." },
+    "Rios Landscape Art": { "size_ft": [0.11, 2.05, 2.65], "pos": [0.085, 3.55, 11.9], "rot": 0,
+      "note": "The muted gold/grey abstract landscape hung over the console." },
+    "Rios Tower Fan": { "size_ft": [0.88, 2.80, 0.88], "pos": [0.78, 0.0, 9.05], "rot": 0,
+      "note": "The white cylindrical tower fan standing at the north end of the console." },
+    "Rios Snake Plant": { "size_ft": [1.28, 3.98, 1.59], "pos": [1.281, 0.0, 14.939], "rot": 0,
+      "note": "Snake plant in a white pot in the SW corner -- the spiky plant in the near foreground of photos 1 and 2. Eleven tapered blades with pale-green tips." },
+
+    "Rios Door": { "size_ft": [3.60, 7.10, 0.465], "pos": [11.4, 0.0, 15.768], "rot": 0,
+      "note": "The entry door, south wall, opening local x 9.90..12.90 -- forced there by the hallway adjacency (see _room.orientation_note). Six-panel white slab, flush casing, black lever. Built CLOSED: the app has no opening for it and a flush closed door reads correctly from inside, which is the only viewpoint judged." },
+    "Rios Closet Doors": { "size_ft": [5.60, 7.10, 0.165], "pos": [4.10, 0.0, 15.918], "rot": 0,
+      "note": "The white double closet door at the west end of the south wall (photo 3), opening local x 1.60..6.60." },
+    "Rios Gallery Art": { "size_ft": [1.55, 1.95, 0.103], "pos": [7.90, 3.90, 15.919], "rot": 0,
+      "note": "The small framed print set on the south wall between the closet and the entry door." }
+  },
+
+  "_gaps": [
+    "The room reads roomier than the photo. Room 15's footprint (15.5 x 16 ft, traced from the floor plan and ground truth) does not reconcile with the primary photo's angular sizes: back-projecting the birdcage, the two windows and the NE corner against any single focal length puts the far wall about 1.5x closer than 16 ft. Everything here is built to the app's true footprint, so the render always has more empty floor than the photo does.",
+    "The primary photo is shot from OUTSIDE the doorway, with the door leaf and both jambs framing the image and the west-wall console cropped at the left edge. The judged pose stands just inside the room instead, so the console, tower fan and snake plant are out of frame there -- they only show in the west_wall pose.",
+    "Birdcage orientation (east wall, long side north-south) is inferred from the corner line and the base footprint in the photo, not measured. If a critic reads it as facing south out of the NE corner, rotating it is a one-line change in scratchpad/build15/furniture.py birdcage().",
+    "Side-wall brightness is faked. 'Rios Wall Wash' exists only because the renderer has one sun and no bounce; at night it will make the east/west/south walls glow a little more than they should.",
+    "'Rios Floor' covers the whole slab, so a click anywhere on the floor now picks that object instead of the room (main.js pick() raycasts objects before rooms). Same trade the master bedroom's Rug makes, but over the full footprint.",
+    "The ladder-shelf clutter, the cage toys and the console shoes are colour-blocked stand-ins, not modelled objects -- they read at room scale and fall apart in a close-up.",
+    "No window is a real opening: both are flush units on the wall face with a painted-in view, so from outside the house they are decals, and the daylight coming 'through' them is emissive, not light."
+  ]
+}

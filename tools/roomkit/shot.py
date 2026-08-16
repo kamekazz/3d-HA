@@ -69,11 +69,18 @@ async ({ pose, level, light, markers }) => {
   const tgt = { x: pose.target[0], y: pose.target[1], z: pose.target[2] };
   sceneMod.flyTo(pos, tgt);
 
+  // Wait on the TARGET as well as the position. On a re-assert the camera is
+  // already sitting at pose.pos, so a position-only test passes on frame 1 while
+  // controls.target is still lerping away from floorview's recenterFloor goal --
+  // the shot then comes out yawed off the pose by however little the tween got
+  // done in the trailing wait, i.e. by however slow the scene is to draw.
   for (let i = 0; i < 200; i++) {
     await new Promise(r => requestAnimationFrame(r));
     const d = Math.hypot(camera.position.x - pos.x, camera.position.y - pos.y,
                          camera.position.z - pos.z);
-    if (d < 0.02) break;
+    const t = Math.hypot(controls.target.x - tgt.x, controls.target.y - tgt.y,
+                         controls.target.z - tgt.z);
+    if (d < 0.02 && t < 0.02) break;
   }
 
   unclamp();
@@ -156,7 +163,11 @@ def main():
                    "for one-off close-ups instead of editing poses.json, which "
                    "parallel agents would race on")
     p.add_argument("--out", required=True)
-    p.add_argument("--level", type=int, default=DEFAULT_LEVEL)
+    # a string so "all" works: that is the app's House mode, which hides the
+    # generated rooms and shows the whole-house shell GLB — the only way to
+    # shoot the exterior
+    p.add_argument("--level", default=str(DEFAULT_LEVEL),
+                   help="floor level, or 'all' for the exterior shell view")
     p.add_argument("--day", action="store_true", help="force bright daylight")
     p.add_argument("--markers", action="store_true", help="keep HA device markers visible")
     p.add_argument("--settle", type=int, default=1200)
@@ -169,8 +180,9 @@ def main():
         if a.pose not in poses:
             raise SystemExit(f"unknown pose {a.pose!r}; have {sorted(poses)}")
         pose = poses[a.pose]
+    level = a.level if a.level == "all" else int(a.level)
     light = {"elevation": 42, "azimuth": 155, "condition": "sunny"} if a.day else None
-    print(json.dumps(take(pose, a.out, a.level, light, a.settle, a.markers)))
+    print(json.dumps(take(pose, a.out, level, light, a.settle, a.markers)))
 
 
 if __name__ == "__main__":

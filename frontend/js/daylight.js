@@ -9,15 +9,27 @@ import { getState, findEntities, onStateApplied } from './state.js';
 
 // keyframes by sun elevation (degrees), piecewise-lerped. Colors are the
 // clear-sky look; weather multiplies/desaturates on top.
+//
+// The hemisphere GROUND colour is doing a second job here beyond "light bounced
+// off the lawn": it is the only fill an interior surface facing away from the
+// sun receives. With the original dark-slate ground (0x474e57 at full day) the
+// four identically painted walls of an empty room metered 222 / 185 / 158 / 125
+// — a 97-byte spread on one paint colour, where a photograph of a real room
+// holds them within ~30. Every room builder independently papered over that
+// with per-room emissive "wall wash" panels, which then read as hard-edged
+// rectangles. Raising the daytime ground values fixes it once, for every room,
+// with no extra lights (a light count change recompiles every MeshStandard
+// shader — see roomlights.js) and no change to the night end of the ramp, so
+// night mode and the room-glow still work. Verified with `roomkit.meter`.
 const ELEVATION_RAMP = [
   //  el   sun color  sunInt  hemi sky  hemi gnd  hemiInt  bg+fog
   [-18, 0xff8844, 0.00, 0x223052, 0x0b0e14, 0.30, 0x070b12], // night
   [ -8, 0xff8844, 0.00, 0x2c3a5e, 0x151220, 0.40, 0x0d1220], // astro dusk
   [ -3, 0xff7733, 0.35, 0x51557e, 0x241c26, 0.55, 0x1d2135], // civil dusk
-  [  0, 0xff9a4d, 0.65, 0x7c86ab, 0x33282a, 0.70, 0x2c3049], // sunrise/set
-  [  8, 0xffc487, 1.10, 0xa9bedd, 0x3a3a38, 0.85, 0x3d4c68], // golden hour
-  [ 20, 0xffe8c8, 1.35, 0xc7dcf5, 0x40464a, 0.95, 0x54688a],
-  [ 45, 0xfff6e8, 1.50, 0xdfe8ff, 0x474e57, 1.00, 0x5f7692], // full day
+  [  0, 0xff9a4d, 0.65, 0x7c86ab, 0x3f3336, 0.70, 0x2c3049], // sunrise/set
+  [  8, 0xffc487, 1.10, 0xa9bedd, 0x5c5c58, 0.85, 0x3d4c68], // golden hour
+  [ 20, 0xffe8c8, 1.35, 0xc7dcf5, 0x7c848c, 0.95, 0x54688a],
+  [ 45, 0xfff6e8, 1.50, 0xdfe8ff, 0x8e97a1, 1.00, 0x5f7692], // full day
 ];
 
 // HA weather condition -> how much it dims the sun/sky and greys the colors
@@ -162,9 +174,16 @@ function recomputeTarget() {
   target.fogNear = fog.near;
   target.fogFar = fog.far;
   target.nightFactor = THREE.MathUtils.clamp((4 - elevation) / 10, 0, 1);
-  // IBL follows the sun so the environment map doesn't flatten nights
+  // IBL follows the sun so the environment map doesn't flatten nights.
+  // The daytime end was 0.45 and is the main fill an interior wall facing away
+  // from the sun gets: RoomEnvironment is omnidirectional, so unlike the
+  // hemisphere it lifts a shaded wall without flattening the sky/ground
+  // gradient the exterior depends on. Raised to close the wall-to-wall spread
+  // measured by `roomkit.meter` (an empty room ran 222 down to 125 on one paint
+  // colour). Night end left at 0.05 so the dark house and roomlights.js's glow
+  // are untouched.
   target.envIntensity =
-    THREE.MathUtils.lerp(0.45, 0.05, target.nightFactor) * w.hemiX;
+    THREE.MathUtils.lerp(1.15, 0.05, target.nightFactor) * w.hemiX;
 
   lastDaylight = {
     elevation,
