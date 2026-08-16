@@ -2,9 +2,9 @@
   "_note": "Whole-house gauntlet status. Update state/round/note/render per room as critics report, then run: python -m roomkit.house_progress",
   "headline": "The real house, rebuilt room by room until a critic stops telling them apart",
   "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. The bar for the overall look is The Sims 4's dollhouse build view; the bar for each room is the photograph of that actual room.",
-  "stamp": "every floor furnished · whole-house dollhouse complete",
+  "stamp": "paused at an API session limit · partial work verified intact",
   "hero": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\dollhouse\\house_low.png",
-  "hero_label": "Every floor furnished, walls down. The garage, which was the largest bare rectangle in the house, is now the busiest room on the first floor.",
+  "hero_label": "The whole house, every floor furnished. 230 pieces, all 423 Home Assistant device markers intact.",
   "rooms": [
     {
       "id": 14,
@@ -19,20 +19,20 @@
     {
       "id": 6,
       "name": "Kitchen",
-      "state": "judging",
+      "state": "fail",
       "round": 3,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Kitchen A.jpg",
       "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\r3\\final_A.png",
       "render_label": "round 3 — awaiting critic",
-      "note": "Round 3 found one root cause behind four separate defects: round 2 drew marks where the photo has a field. A tone-field rasteriser replaced the vein-drawing, and the surfaces now land on the photograph — backsplash 173.1 against 173.4, island top 204.4 against 205.0, floor 117.3 against 116.4. It also pushed back on three findings with evidence, including refuting the 'inverted normals' diagnosis by raycasting the pixel: the black slab was the fridge's dark side face receiving no sun, an albedo problem, not a winding bug. And it re-cropped the photo at 2x before restoring the upper-cabinet bar pulls that a wrong critic finding had replaced with knobs."
+      "note": "Critic FAILED round 3. The counter stone still reads as marks rather than a field — high-pass energy 0.25 against the photograph's 0.40 to 0.48 — and the room had grown to 5.88 MB, 27 percent of the whole house, spent on the very tone fields that made it worse. It did adjudicate both of the builder's disagreements in the builder's favour. Round 4 was interrupted mid-build."
     },
     {
       "id": 5,
       "name": "Living Room",
-      "state": "judging",
+      "state": "fail",
       "round": 4,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Living Room A.jpg",
-      "note": "Round 4 fixed the metering problem itself: it built a tool that writes a visual overlay of every sample box so each is eyeballed before being quoted, and threw out two of its own samples that way. The stone's dark web turned out not to be the joint colour but the pillow rims, which face sideways and catch no light — replaced with flat tilted plates in 0.85 ft courses, and clean-field spread fell from 34.2 to 5.5-6.0 against the photo's 5.7-11.5. All four walls are now reported with sample sizes. It also found the rug's 'hard seams' were not the rug at all but the coffee table's contact-shadow decal, drawn with a hard core under an open X-frame. Payload cut from 6.4 MB to 1.83 MB.",
+      "note": "Critic FAILED round 4 and found the flaw at the centre of the whole loop: standard deviation is scale-blind. Every fabric and masonry surface here matches the photograph's sd and is 3 to 7 times too smooth at the scale a person actually sees — upholstery 1.62 against 11.84 measured as mean difference between adjacent pixels. It also found two of round 4's fixes were regressions caused by chasing a metric: the east canvas was re-toned until its value ratio was right and ended up a blank slab, and stone relief was deleted because restoring it raised sd. Round 5 was interrupted mid-build.",
       "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\lr5\\r4_ref.png",
       "render_label": "round 4 — awaiting critic"
     },
@@ -79,9 +79,9 @@
     {
       "id": 16,
       "name": "Master Bathroom",
-      "state": "judging",
+      "state": "building",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Master Bath. 1.jpg",
-      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "note": "Furnishing interrupted mid-round while rebuilding contact shadows. Vanity, toilet, glass shower and freestanding tub are placed and the room renders correctly.",
       "round": 1,
       "render_label": "shell pass"
     },
@@ -106,9 +106,9 @@
     {
       "id": 12,
       "name": "First-floor hallway & stairs",
-      "state": "judging",
+      "state": "building",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\First floor hallway.jpg",
-      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "note": "Furnishing interrupted. Ten pieces and seven real openings placed; the builder reported it in good shape before moving on to the second-floor hallway.",
       "round": 1,
       "render_label": "shell pass"
     },
