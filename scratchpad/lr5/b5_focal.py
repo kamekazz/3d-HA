@@ -46,15 +46,23 @@ def lift(hexc, f):
 
 GST = Grain(71, fine=0.30, fine_amp=0.006, coarse=0.90, coarse_amp=0.012)
 
-# Round 4 sat 9 bytes bright on a clean field (195.1 vs photo f's 185.8), so the
-# family comes down ~5%; the five tones give the stone-TO-stone variation that
-# carries most of photo f's sd.
-STONE = [TMaterial("lrstoneA", lift("#a8a49e", LST), tex=T_STONE, roughness=0.97),
-         TMaterial("lrstoneB", lift("#a19d97", LST), tex=T_STONE, roughness=0.97),
-         TMaterial("lrstoneC", lift("#aeaaa4", LST), tex=T_STONE, roughness=0.97),
-         TMaterial("lrstoneD", lift("#9b9791", LST), tex=T_STONE, roughness=0.97),
-         TMaterial("lrstoneE", lift("#a5a19b", LST), tex=T_STONE, roughness=0.97)]
-STONE_P = Material("lrstonep", "#a8a49e", roughness=0.97)      # untextured trim
+# ROUND 5b.  The first round-5 pass metered a clean face at 164.3 mean / sd 40.0
+# over 312,800 px against photo f's stone at 180.7-182.9 / sd 3.5-6.9 on clean
+# plates and 23.9-30.0 on fields that include joints: the render was 17 bytes
+# DARK and carried three times the photo's within-stone contrast, because the
+# relief was tall enough (0.085-0.135 ft over a 0.035 ft shoulder, ~65 deg) to
+# shade every stone into a pillow.  The family lifts ~9%, and the SEVEN tones
+# span 0x9c..0xc2 so that most of the field's spread is stone-TO-stone -- which
+# is what "stones varying 89 -> 209 at ~6 inch scale" describes -- instead of
+# gradient across one stone.
+STONE = [TMaterial("lrstoneA", lift("#b6b2ac", LST), tex=T_STONE, roughness=0.97),
+         TMaterial("lrstoneB", lift("#aeaaa4", LST), tex=T_STONE, roughness=0.97),
+         TMaterial("lrstoneC", lift("#c2beb8", LST), tex=T_STONE, roughness=0.97),
+         TMaterial("lrstoneD", lift("#a6a29c", LST), tex=T_STONE, roughness=0.97),
+         TMaterial("lrstoneE", lift("#bcb8b2", LST), tex=T_STONE, roughness=0.97),
+         TMaterial("lrstoneF", lift("#9e9a94", LST), tex=T_STONE, roughness=0.97),
+         TMaterial("lrstoneG", lift("#b0aca6", LST), tex=T_STONE, roughness=0.97)]
+STONE_P = Material("lrstonep", "#b6b2ac", roughness=0.97)      # untextured trim
 # deep raked joint -- dark, but only 0.024 ft of it is ever visible
 JOINT = Material("lrjoint", "#6f6c66", roughness=0.99)
 WHITE = Material("lrfwhite", "#f2f1ec", roughness=0.55)
@@ -67,12 +75,14 @@ LOG = Material("lrflog", "#3a332c", roughness=0.95)
 GLASSF = Material("lrfglass", "#3b414a", roughness=0.34, metallic=0.05)
 GLASSR = Material("lrfglassr", "#6b737e", roughness=0.22, metallic=0.05)
 GLASSR2 = Material("lrfglassr2", "#4e555e", roughness=0.26, metallic=0.05)
-# matte, dark, barely purple -- photo f meters the fronds at 89.9 rgb(89,90,95)
+# matte, dark, barely purple.  Photo f's fronds meter 90.5 / 95.3 rgb(90,90,96);
+# round 5b's #6b6774 family rendered 146.5 / 149.4, 55 bytes light, so the whole
+# family is scaled 0.62.
 T_WR = Tex(noise_tile(64, 0.62, 1.0, seed=83, blur=1), 0.42, "wreath")
 LWR = tex_lift(T_WR)
-WREATH = TMaterial("lrwreath", lift("#6b6774", LWR), tex=T_WR, roughness=0.99)
-WREATH2 = TMaterial("lrwreath2", lift("#787484", LWR), tex=T_WR, roughness=0.99)
-WREATH3 = TMaterial("lrwreath3", lift("#5d5a66", LWR), tex=T_WR, roughness=0.99)
+WREATH = TMaterial("lrwreath", lift("#423f48", LWR), tex=T_WR, roughness=0.99, double_sided=True)
+WREATH2 = TMaterial("lrwreath2", lift("#4a4752", LWR), tex=T_WR, roughness=0.99, double_sided=True)
+WREATH3 = TMaterial("lrwreath3", lift("#39373f", LWR), tex=T_WR, roughness=0.99, double_sided=True)
 VASE = Material("lrvase", "#d8d6d0", roughness=0.45)
 LEAF = Material("lrleaf", "#57634f", roughness=0.85)
 
@@ -113,18 +123,34 @@ def clip_out(poly, box):
 
 
 def stone_face(m, x0, x1, y0, y1, cut=None):
-    seeds = coursed_seeds(x0, x1, y0, y1, rnd, course=0.85, pitch=0.74, cut=cut)
+    # LEDGESTONE character: courses half as tall as round 4's and widths from
+    # 0.34 ft to 1.6 ft, so the ~6 inch stones photo f shows between the big
+    # plates actually exist.  Round 4/5a's near-equant 0.85 ft grid read as a
+    # regular honeycomb.
+    # NOTE: seeds are laid over the WHOLE face including the firebox cut.
+    # Round 5b passed `cut=` and left the cut region seedless, so the Voronoi
+    # cells around it grew until their CENTROIDS fell inside the box -- and
+    # `clip_out` drops a cell whose centroid is inside -- which opened a bare
+    # grey hole round the firebox a good foot wider than the surround.
+    seeds = coursed_seeds(x0, x1, y0, y1, rnd, course=0.62, pitch=0.60,
+                          wlo=0.58, whi=2.70, hlo=0.60, hhi=1.85)
     n = 0
     for _seed, cell in voronoi_cells(seeds, (x0, y0, x1, y1)):
         if cut:
             cell = clip_out(cell, cut)
-        if len(cell) < 3 or poly_area(cell) < 0.05:
+        if len(cell) < 3 or poly_area(cell) < 0.04:
             continue
-        p = wobble(_shrink(cell, 0.024), rnd, amp=0.075, sub=2)
-        h = rnd.uniform(0.085, 0.135)          # relief, restored but shallower
-        add5(m, plate5(p, ZJ, h, bevel=0.070, rise=0.34, n_ring=2, grain=GST,
+        p = wobble(_shrink(cell, 0.030), rnd, amp=0.060, sub=1)
+        # relief kept, but HALVED and spread over a wide shoulder: the plate
+        # face has to stay flat enough to meter the photo's sd 3.5-6.9 within
+        # one stone while the joint still reads as a raked dark line.
+        h = rnd.uniform(0.042, 0.072)
+        # n_ring=1: at this relief the shoulder is a 30 deg chamfer and the
+        # second ring only bought payload -- 84 stones at n_ring=2 put the
+        # piece over the 300 KB cap.
+        add5(m, plate5(p, ZJ, h, bevel=0.065, rise=0.26, n_ring=1, grain=GST,
                        uv_repeat=T_STONE.repeat,
-                       tilt=(rnd.uniform(-.035, .035), rnd.uniform(-.035, .035))),
+                       tilt=(rnd.uniform(-.022, .022), rnd.uniform(-.022, .022))),
              STONE[rnd.randrange(len(STONE))])
         n += 1
     return n
@@ -192,20 +218,35 @@ m.add(box(FW * 0.83, 0.16, FD * 0.55 + 0.22), WHITE,
 # No solid torus: photo f shows the stone through the middle of the ring, and a
 # filled torus behind thin fronds is exactly what read as a glossy disc.  Fronds
 # only, three courses, matte, each a thin tapered plate laid tangentially.
-WY, WR = 6.20, 0.62
+WY, WR = 6.20, 0.60
 WZ = FZ + 0.16
-for course, (rr0, count, ln, mat) in enumerate((
-        (WR - 0.15, 26, 0.34, WREATH3), (WR + 0.01, 30, 0.40, WREATH),
-        (WR + 0.15, 24, 0.34, WREATH2))):
+# Round 5a's 80 long fronds at +/-0.55 rad of jitter read as a spiky lavender
+# star.  Photo f shows a DENSE soft ring: short overlapping leaves, an open
+# centre about a third of the outer radius, and no shard longer than ~0.25 ft.
+def leaf_quad(w, ln):
+    """One leaf as a 2-triangle double-sided plate.  142 leaves as boxes is
+    5112 welded verts (12 tris each); as quads it is 852."""
+    return Part([(-w / 2, -ln / 2, 0.0), (w / 2, -ln / 2, 0.0),
+                 (w / 2, ln / 2, 0.0), (-w / 2, ln / 2, 0.0)],
+                [(0, 1, 2), (0, 2, 3)])
+
+
+for course, (rr0, count, ln, wd, mat) in enumerate((
+        (WR - 0.22, 30, 0.30, 0.105, WREATH3),
+        (WR - 0.09, 36, 0.34, 0.115, WREATH),
+        (WR + 0.04, 38, 0.32, 0.110, WREATH2),
+        (WR + 0.16, 34, 0.26, 0.095, WREATH))):
     for i in range(count):
-        a = 2 * math.pi * i / count + course * 0.31
-        rr = rr0 + rnd.uniform(-0.05, 0.05)
-        m.add(box(0.075, ln, 0.055), mat if i % 3 else WREATH2,
+        a = 2 * math.pi * i / count + course * 0.21
+        rr = rr0 + rnd.uniform(-0.035, 0.035)
+        m.add(leaf_quad(wd, ln), mat if i % 3 else WREATH2,
               at=(rr * math.cos(a), WY + rr * math.sin(a),
-                  WZ + 0.04 + 0.05 * course),
-              rot_z=a + math.pi / 2 + rnd.uniform(-0.55, 0.55),
-              rot_y=rnd.uniform(-0.35, 0.35),
-              rot_x=rnd.uniform(-0.30, 0.30))
+                  WZ + 0.03 + 0.028 * course),
+              # TANGENTIAL, not radial: rot_z = a + pi/2 pointed every leaf
+              # straight out from the centre and drew a starburst.
+              rot_z=a + rnd.uniform(-0.40, 0.40),
+              rot_y=rnd.uniform(-0.16, 0.16),
+              rot_x=rnd.uniform(-0.14, 0.14))
 
 for sx in (-1.75, 1.75):
     m.add(cylinder(0.24, 0.30, seg=14, r_top=0.20), VASE,
@@ -231,8 +272,8 @@ put("Living Fireplace", save5(m, "fireplace5"), FPOS, FROT)
 # (rgb 28,31,41) sd 3.8, middle 83.8 where one soft reflection crosses it.
 BEZEL = Material("lrbezel", "#0c0d10", roughness=0.35)
 SCREEN = Material("lrtvscreen", "#1c1f28", roughness=0.28, metallic=0.02)
-REFL = Material("lrtvrefl", "#3c4450", roughness=0.22, metallic=0.02)
-REFL2 = Material("lrtvrefl2", "#2a303a", roughness=0.24, metallic=0.02)
+REFL = Material("lrtvrefl", "#2b313b", roughness=0.24, metallic=0.02)
+REFL2 = Material("lrtvrefl2", "#242a33", roughness=0.26, metallic=0.02)
 BAR = Material("lrbar", "#2a2b2e", roughness=0.7)
 
 TVW, TVH = 6.62, 3.72
@@ -241,10 +282,15 @@ m = Model()
 m.add(box(TVW, TVH, 0.11), BEZEL, at=(TVX, TVY0, TVZ + 0.05))
 IW, IH = TVW - 0.13, TVH - 0.13
 m.add(box(IW, IH, 0.02), SCREEN, at=(TVX, TVY0 + 0.065, TVZ + 0.155))
-# one soft off-axis reflection, low contrast, nowhere near the edges
-m.add(box(IW * 0.42, IH * 0.44, 0.008), REFL2,
-      at=(TVX + 0.9, TVY0 + IH * 0.55, TVZ + 0.166), rot_z=math.radians(-6))
-m.add(box(IW * 0.26, IH * 0.22, 0.008), REFL,
-      at=(TVX + 1.15, TVY0 + IH * 0.62, TVZ + 0.172), rot_z=math.radians(-6))
+# ONE soft off-axis reflection.  Round 5a stacked two small bright plates on
+# the panel and they read as a grey rectangle floating in the middle of the
+# screen -- exactly the "full-bleed picture" fault in miniature.  It is now a
+# single wide band, nearly the panel's own value (photo f: 31.4 on the left
+# half, 83.8 where the reflection crosses), spanning most of the width so its
+# ends fall off the panel's live area rather than closing into a rectangle.
+m.add(box(IW * 0.86, IH * 0.30, 0.008), REFL2,
+      at=(TVX + 0.05, TVY0 + IH * 0.52, TVZ + 0.166), rot_z=math.radians(-4))
+m.add(box(IW * 0.62, IH * 0.14, 0.008), REFL,
+      at=(TVX + 0.30, TVY0 + IH * 0.56, TVZ + 0.172), rot_z=math.radians(-4))
 m.add(box(4.10, 0.24, 0.20), BAR, at=(TVX, TVY0 - 0.42, TVZ + 0.10))
 put_in_place("Living TV", m, save5(m, "tv5"))

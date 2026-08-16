@@ -626,7 +626,7 @@ def plate5(poly, z0, h, bevel=0.055, rise=0.30, tilt=(0.0, 0.0), grain=None,
 
 # ======================================================================= walls
 def wall_skin(m, edge, color, y0, y1, gaps=(), inset=0.035, thick=0.014,
-              rough=0.95):
+              rough=0.95, tex=None):
     """A plain NON-emissive albedo skin over one whole wall face of the room
     polygon.  ROOM-BRIEF "give each wall its own albedo": one sun and no bounce
     leaves the four walls 100+ bytes apart at a single wall_color, and this is
@@ -637,8 +637,16 @@ def wall_skin(m, edge, color, y0, y1, gaps=(), inset=0.035, thick=0.014,
     `gaps` are (t0, t1) spans along the edge to leave open (window/door cuts),
     given in the edge's own offset parameter.
     """
-    mat = Material("lrskin" + color.lstrip("#"), color, roughness=rough,
-                   metallic=0.0, double_sided=False)
+    if tex is None:
+        mat = Material("lrskin" + color.lstrip("#"), color, roughness=rough,
+                       metallic=0.0, double_sided=False)
+    else:
+        # ROOM-BRIEF: "do not ship a skin as flat colour" -- three rooms shipped
+        # skins metering sd 0.00 against photographed walls at 3.55-26.4.  The
+        # tile is what puts variation at the scale the eye reads; `tex_lift`
+        # keeps the MEAN exactly where the two-point probe solved it.
+        mat = TMaterial("lrskin" + color.lstrip("#"), color, tex=tex,
+                        roughness=rough, metallic=0.0, double_sided=False)
     a, b = EDGES[edge]
     nrm, L = edge_normal(a, b)
     dx, dz = (b[0] - a[0]) / L, (b[1] - a[1]) / L
@@ -660,9 +668,20 @@ def wall_skin(m, edge, color, y0, y1, gaps=(), inset=0.035, thick=0.014,
              (p1[0], y1, p1[1]), (p0[0], y1, p0[1]),
              (q0[0], y0, q0[1]), (q1[0], y0, q1[1]),
              (q1[0], y1, q1[1]), (q0[0], y1, q0[1])]
-        m.add(Part(v, [(0, 1, 2), (0, 2, 3),          # room-facing
-                       (5, 4, 7), (5, 7, 6),          # back
-                       (4, 5, 1), (4, 1, 0),
-                       (3, 2, 6), (3, 6, 7),
-                       (1, 5, 6), (1, 6, 2),
-                       (4, 0, 3), (4, 3, 7)]), mat)
+        part = Part(v, [(0, 1, 2), (0, 2, 3),          # room-facing
+                        (5, 4, 7), (5, 7, 6),          # back
+                        (4, 5, 1), (4, 1, 0),
+                        (3, 2, 6), (3, 6, 7),
+                        (1, 5, 6), (1, 6, 2),
+                        (4, 0, 3), (4, 3, 7)])
+        if tex is not None:
+            # UV in the wall's OWN plane (offset along the edge, height up), so
+            # the tile never stretches and never seams at a window gap.
+            r = tex.repeat
+            part.uvs = [(t0 / r, y0 / r), (t1 / r, y0 / r),
+                        (t1 / r, y1 / r), (t0 / r, y1 / r),
+                        (t0 / r, y0 / r), (t1 / r, y0 / r),
+                        (t1 / r, y1 / r), (t0 / r, y1 / r)]
+        m.add(part, mat)
+        if tex is not None:
+            m._parts[-1][0].uvs = part.uvs

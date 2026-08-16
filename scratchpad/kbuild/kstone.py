@@ -75,6 +75,35 @@ def top_sheet(w_ft, h_ft, ppf, seed, **kw):
     return Sheet(w_ft, h_ft, ppf, seed, **kw)
 
 
+def lip_sheet(w_ft, h_ft, ppf, seed, **kw):
+    """The island's front lip -- the same stone seen on a VERTICAL face.
+
+    ROUND 4b.  The lip was cut from the top's own sheet, so it carried the top's
+    albedo (~182) onto a west-facing face and rendered at 82-120 while the top
+    beside it rendered 212: a charcoal band ringing the hero object, and part of
+    why the island still read stained at close range.  Photo F's lip meters
+    204.5 / sd 23.0 -- essentially the top's value, because a polished lip
+    catches the room.
+
+    Solved against the island's own white stile on the SAME face, which is
+    albedo 236 + emissive 117 and renders 197.6: so the lip is authored in
+    ALBEDO directly (slope 1 / bias 0) near white and given a matching emissive
+    floor.  The vein contrast is halved -- a 1.5 in band shown a third of the
+    top's veining reads as dirt, not stone.
+    """
+    kw.setdefault("ground", 228.0)
+    kw.setdefault("slope", 1.0)
+    kw.setdefault("bias", 0.0)
+    kw.setdefault("vein", 30.0)
+    kw.setdefault("cloud", 5.0)
+    kw.setdefault("grain", 2.4)
+    kw.setdefault("scale", 2.6)
+    kw.setdefault("roughness", 0.50)
+    kw.setdefault("emissive", "#6c6c6c")
+    kw.setdefault("name", "lip")
+    return Sheet(w_ft, h_ft, ppf, seed, **kw)
+
+
 def splash_sheet(w_ft, h_ft, ppf, seed, **kw):
     """Backsplash marble: quieter than a top -- a slab cut from the calm part of
     the same stone, and sitting in the cabinets' shade."""

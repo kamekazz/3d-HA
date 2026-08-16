@@ -94,7 +94,11 @@ TRIM      = Material("trim",    "#f6f5f2", roughness=0.55, emissive="#6d6d6d")
 # returns) -- the faces you look at are rasterised tone fields, see TOPS/SPLASH
 # below.  Both are set to the middle of their palette so an edge never steps
 # away from the face it belongs to.
-QUARTZ    = Material("quartz",  "#aeaeab", roughness=0.46, emissive="#1a1a1a")
+# ROUND 4b: the counter LIPS are the only faces QUARTZ still shows, and a lip is
+# a VERTICAL face.  Measured on the island's south end at 182.3 against photo F's
+# island lip at 204.5, so it comes up ~20.  (The island's own west lip was far
+# worse -- see kstone.lip_sheet.)
+QUARTZ    = Material("quartz",  "#bcbcb9", roughness=0.46, emissive="#3a3a3a")
 VEIN      = Material("vein",    "#a4a9ad", roughness=0.48, emissive="#1c1c1c")
 MARBLE    = Material("marble",  "#d7d7d4", roughness=0.52, emissive="#303030")
 # ROUND 3: both blacks carry a small emissive floor.  With none, a face turned
@@ -122,7 +126,9 @@ WOODBLK   = Material("woodblk", "#8d6a4b", roughness=0.75, emissive="#372a1d")
 # ROUND 4: follows wall_color down (#eae6de -> #bcbdbf).  This paints the
 # peninsula half wall's back and the opening jambs; left at round 3's value
 # it would now read as a lighter panel standing in a darker room.
-WALLPT    = Material("wallpt",  "#c9cacd", roughness=0.94, emissive="#464646")
+# ROUND 4b: follows wall_color's second move as well -- same value, R-B -4 -> -8,
+# because the room's walls metered R-B -3.0 against the photo's -6..-11.
+WALLPT    = Material("wallpt",  "#c5cacd", roughness=0.94, emissive="#464646")
 
 FT = 1.0
 
@@ -172,10 +178,17 @@ SHADOWLN  = Material("shadowln", "#b9b6b0", roughness=0.85, emissive="#2c2c2c")
 # but left it perfectly flat (sd 2.4) against photo A's 54.7-57.7.  These are the
 # five steps of a vertical sheen ramp -- a tall black steel panel always carries
 # one, and it is the only thing that stops a 6 ft slab reading as a painted card.
-SIDE = [Material(f"side{i}", c, roughness=0.26, metallic=0.38, emissive=e)
-        for i, (c, e) in enumerate((("#393a3c", "#252627"), ("#424345", "#2b2c2e"),
-                                    ("#4d4e50", "#333436"), ("#454648", "#2d2e30"),
-                                    ("#3d3e40", "#282929")))]
+# ROUND 4b -- the bands were built and they DID NOT WORK: the face re-metered
+# 48.4 / sd 1.4, i.e. still a painted card.  Cause, found by re-reading the
+# materials rather than the geometry: at metallic 0.38 / roughness 0.26 the face
+# is dominated by the environment specular, which is the same everywhere on a
+# flat plane, so a 20-byte albedo spread moved the render by ~1.4.  Metalness is
+# cut to 0.06 and roughness opened to 0.44 so the DIFFUSE term (which is what
+# albedo drives) carries the band, and the ramp is widened 20 -> 52 bytes.
+SIDE = [Material(f"side{i}", c, roughness=0.44, metallic=0.06, emissive=e)
+        for i, (c, e) in enumerate((("#2c2d2f", "#191a1b"), ("#3a3b3e", "#202124"),
+                                    ("#4a4c50", "#292b2e"), ("#5a5d62", "#313338"),
+                                    ("#43454a", "#252629")))]
 
 # the can trim must sit at CEIL's own value, not CEIL_TRIM's: a down-facing
 # disc with the trim's dimmer emissive read as a grey hole in the plaster.

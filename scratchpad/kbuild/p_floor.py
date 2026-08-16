@@ -43,10 +43,20 @@ BASE_DARK = "#3c4044"        # the plank gaps: grout / butt joint
 PITCH = 0.62                 # 7.4 in planks
 GAP = 0.022
 
-GRAIN_AMP = 10.5             # render bytes, peak fibre
-GRAIN_FINE = 3.0
+# ROUND 4b: 10.5 gave plank interiors sd 4.2-8.3 against the photo's 7.0-12.0
+# (3 clean plank interiors in photo F, one per lighting zone: 12.0 / 9.1 / 7.0 --
+# the sd really is ~constant with zone, so it is a material property and the
+# "23.5" an earlier round chased was a crop that mixed zones).
+GRAIN_AMP = 19.0             # render bytes, peak fibre
+GRAIN_FINE = 4.2
 
-AO_MAX = 0.32                # deepest contact shadow, as a fraction of value
+# ROUND 4b: 0.32 measured 24.8% darkening at the island's visible contact edge
+# against the brief's 34% target.  Also see `rects` below -- the island's rect
+# was its CARCASE, and the counter overhangs it by 1.10 ft on the seating side,
+# so the whole first band of the falloff was hidden under the counter.  That is
+# the brief's "the ramp must extend outside the piece's footprint" defect in its
+# other form: here the footprint that matters is the one you can SEE from above.
+AO_MAX = 0.40                # deepest contact shadow, as a fraction of value
 
 # Render response of a floor-facing surface, measured in round 3: albedo 65.5
 # (the mid plank at GAIN 0.560) landed on 113.6 on open floor.  Used to apply

@@ -42,9 +42,13 @@ def build():
     bx(m, QUARTZ, CX0, CX1, ICB, CT, CZ0, CZ1)
     sheet = kstone.Sheet(5.6, 5.6, 105, 31337)
     sheet.plane(m, "+y", CT, CX0, CX1, CZ0, CZ1, su=0.05, sw=0.02)
-    # the veining rolls over the front edge too (its own strip of the sheet)
-    sheet.plane(m, "-x", CX0 - 0.002, CZ0, CZ1, ICB + 0.005, CT,
-                su=0.05, sw=5.44)
+    # The veining rolls over the front edge too -- but off its OWN sheet.
+    # ROUND 4b: cutting the lip from the top's sheet put the top's albedo on a
+    # west-facing vertical face, where it rendered 82-120 against photo F's
+    # 204.5 -- a charcoal band round the whole hero object.  See kstone.lip_sheet.
+    lip = kstone.lip_sheet(5.6, 0.5, 105, 8821)
+    lip.plane(m, "-x", CX0 - 0.002, CZ0, CZ1, ICB + 0.005, CT,
+              su=0.05, sw=0.18)
 
     # ---- east (working) face: 3 drawers | beverage fridge | door
     for (a, b) in ((TOE + 0.03, TOE + 0.86), (TOE + 0.92, TOE + 1.72),

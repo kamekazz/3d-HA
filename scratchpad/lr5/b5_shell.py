@@ -50,7 +50,7 @@ BANDS = {
 EDGE_OF = {"n": N, "w": W, "e": E, "s": S}
 
 # clean bare-wall boxes, each checked against an m5 _boxes.png overlay
-BOX = {"look_n": (690, 125, 1080, 200),
+BOX = {"look_n": (690, 137, 1080, 200),
        "look_w": (390, 195, 700, 330),
        "look_e": (700, 200, 1000, 480),
        "look_s": (340, 150, 430, 500)}
@@ -59,11 +59,28 @@ POSES = json.loads(subprocess.check_output(
     [PY, "-m", "roomkit.rooms", "5", "--poses-only"], cwd=TOOLS))
 
 
-def build(colors):
+# ROOM-BRIEF, per-wall skins: "do not ship a skin as flat colour".  Round 5's
+# first pass did exactly that -- W/E/S metered sd 0.00 and |d1| 0.00, perfect
+# algebraic paint, against photo f's own walls at sd 8.0 / |d1| 0.54 (north,
+# clean, n=16500) and sd 13.8 / |d1| 1.71 (east).  A painted plaster wall's
+# variation is LARGE-scale (|d1|/sd 0.05-0.12 in the photo), so the tile is a
+# soft blurred field, not sensor noise, and `tex_lift` keeps the mean exactly
+# where the two-point probe put it.
+T_WALL = Tex(noise_tile(64, 0.79, 1.0, seed=131, blur=3), 3.20, "plaster")
+LW = tex_lift(T_WALL)
+
+
+def lift(hexc, f):
+    r, g, b = (int(hexc[i:i + 2], 16) for i in (1, 3, 5))
+    return "#%02x%02x%02x" % tuple(min(255, int(round(c * f))) for c in (r, g, b))
+
+
+def build(colors, tex=T_WALL):
     m = Model()
     for w, edge in EDGE_OF.items():
+        c = lift(colors[w], LW) if tex is not None else colors[w]
         for (y0, y1, gaps) in BANDS[edge]:
-            wall_skin(m, edge, colors[w], y0, y1, gaps)
+            wall_skin(m, edge, c, y0, y1, gaps, tex=tex)
     return m
 
 
