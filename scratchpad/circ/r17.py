@@ -52,8 +52,8 @@ WELL = (4.10, 8.05, 7.70, 16.70)   # the stairwell footprint, local
 
 # ---------------------------------------------------------------- materials
 PLANK = [Material("h17pl%d" % i, c, roughness=0.90) for i, c in enumerate(
-    ("#343331", "#3f3e3c", "#474643", "#50504c", "#575651", "#3b3a38",
-     "#484744", "#414040"))]
+    ("#484744", "#514f4c", "#5a5854", "#605e5a", "#666460", "#4d4b48",
+     "#5b5955", "#535250"))]
 WOOL = Material("h17wool", "#ded9cf", roughness=0.98)
 WOOL2 = Material("h17wool2", "#cec9be", roughness=0.98)
 POT = Material("h17pot", "#eeece7", roughness=0.55)
@@ -190,9 +190,9 @@ def piece_runner():
     metered 190.9 / sd 24.8)."""
     m = Model()
     x0, x1, z0, z1 = 0.85, 3.35, 2.40, 12.20
-    contact_shadow(m, (x0 + x1) / 2, (z0 + z1) / 2, 1.35, 4.70, y=0.020,
-                   strength=0.12, room=(W, D))
-    bx(m, WOOL, x0, x1, 0.026, 0.086, z0, z1)
+    contact_shadow(m, (x0 + x1) / 2, (z0 + z1) / 2, 1.42, 4.90, y=0.050,
+                   strength=0.42, room=(W, D))
+    bx(m, WOOL, x0, x1, 0.056, 0.116, z0, z1)
     # chunky braid: fat rolls across the width, readable at 50 degrees
     # shallow rolls: the first pass used r=0.055 cylinders and their shaded
     # undersides read as hard black stripes, nothing like the photo's soft knit
@@ -200,7 +200,7 @@ def piece_runner():
     for i in range(n):
         z = z0 + 0.07 + i * 0.26
         m.add(cylinder(0.030, x1 - x0 - 0.10, 8), (WOOL if i % 2 else WOOL2),
-              at=((x0 + x1) / 2, 0.080, z + 0.06), rot_z=R(90))
+              at=((x0 + x1) / 2, 0.110, z + 0.06), rot_z=R(90))
     return m
 
 
@@ -236,7 +236,7 @@ def blade(m, mat, cx, cy, cz, ang, lean, h, w):
 
 
 def snake_plant(m, cx, cz, pot_mat, seed, stand_h=1.15, scale=1.0):
-    contact_shadow(m, cx, cz, 0.78, 0.78, y=0.026, strength=0.20, room=(W, D))
+    contact_shadow(m, cx, cz, 0.86, 0.86, y=0.050, strength=0.46, room=(W, D))
     plant_stand(m, cx, cz, 0.50, stand_h, BLACKMET)
     m.add(cylinder(0.46, 0.80 * scale, 16, r_top=0.40), pot_mat,
           at=(cx, stand_h, cz))
@@ -306,7 +306,7 @@ def piece_skins(colors):
 
 
 # ===================================================================== main
-SKINS = {"n": "#b4b4b6", "s": "#b4b4b6", "e": "#b4b4b6", "w": "#b4b4b6"}
+SKINS = {"n": "#6b6b6b", "s": "#f1f1f1", "e": "#c8c8c8", "w": "#a4a4a4"}
 
 WANT_OPENINGS = [
     ("passage", 0, MBED[0], MBED[1] - MBED[0], 0.0, PASS_TOP),

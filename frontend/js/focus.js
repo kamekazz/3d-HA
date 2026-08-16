@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { camera, controls, flyTo, getViewPose, MIN_ZOOM, MAX_ZOOM } from './scene.js';
 import { roomMeshes, setLevel, getLevel, setRoomOpacity } from './house.js';
 import { setFocusMarkerScope } from './devices.js';
+import { setObjectFocusScope } from './objects.js';
 import { hideAllLabels } from './labels.js';
 
 let focusedRoomId = null;
@@ -44,6 +45,7 @@ function roomEdges(mesh) {
 function restoreLevelVisuals(level) {
   for (const mesh of roomMeshes.values()) {
     if (mesh.userData.level !== level) continue;
+    mesh.visible = true;
     setRoomOpacity(mesh, 1.0);
     mesh.userData.pickable = true;
     const edges = roomEdges(mesh);
@@ -70,15 +72,21 @@ export function enterFocus(roomId) {
   setLevel(level);
   setActiveLevelButton(level);
 
+  // Siblings are HIDDEN, not ghosted. Ghosting at opacity 0.04 still drew every
+  // wall, slab and edge — and a transparent mesh costs more than an opaque one
+  // (no early-Z, plus depth sorting and blending), so the old "isolate" mode
+  // actually made the scene slower than the full floor. Hiding skips the draw
+  // entirely. setObjectFocusScope does the same for the room's furniture, which
+  // is the bulk of the geometry.
   for (const sib of roomMeshes.values()) {
     if (sib === mesh || sib.userData.level !== level) continue;
-    setRoomOpacity(sib, 0.04);
+    sib.visible = false;
     sib.userData.pickable = false;
-    const edges = roomEdges(sib);
-    if (edges) edges.visible = false;
   }
+  mesh.visible = true;
   setRoomOpacity(mesh, 1.0);
   setFocusMarkerScope({ level, roomId });
+  setObjectFocusScope({ level, roomId });
   // no showRoomLabels here: the room panel carries the info; hover still
   // pops a single label
 
@@ -114,6 +122,7 @@ export function exitFocus({ flyBack = true } = {}) {
   const mesh = roomMeshes.get(focusedRoomId);
   if (mesh) restoreLevelVisuals(mesh.userData.level);
   setFocusMarkerScope(null);
+  setObjectFocusScope(null);
   hideAllLabels();
   focusedRoomId = null;
 

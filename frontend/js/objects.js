@@ -7,6 +7,39 @@ import { getInstance } from './models.js';
 
 export const objects3d = new Map(); // object_id -> root Group
 
+// Furniture is by far the heaviest thing in the scene — hundreds of GLB models
+// against a handful of room shells — so it, not the walls, decides the frame
+// rate. Room focus therefore hides every other room's furniture outright rather
+// than fading it: a ghosted mesh still draws, and a transparent one costs MORE
+// than an opaque one (no early-Z, plus depth sorting and blending).
+//
+// Mirrors devices.js: this module is the SINGLE writer of object visibility, so
+// house.js deliberately skips `kind: 'object'` in its setLevel sweep. Level
+// visibility still comes free from the parent floor group.
+let houseModeActive = false;
+let focusScope = null; // { level, roomId } | null
+
+function syncObjectVisibility(root) {
+  const ud = root.userData;
+  const focusHidden = !!focusScope &&
+    ud.level === focusScope.level && ud.roomId !== focusScope.roomId;
+  root.visible = !houseModeActive && !focusHidden;
+}
+
+export function applyAllObjectVisibility() {
+  for (const o of objects3d.values()) syncObjectVisibility(o);
+}
+
+export function setObjectFocusScope(scope) {
+  focusScope = scope;
+  applyAllObjectVisibility();
+}
+
+window.addEventListener('levelChanged', (e) => {
+  houseModeActive = e.detail.houseMode;
+  applyAllObjectVisibility();
+});
+
 function makePlaceholder() {
   return new THREE.Mesh(
     new THREE.BoxGeometry(1, 1, 1),
@@ -25,6 +58,7 @@ export function buildObjects(house) {
         const root = makeObject(o, room, floor);
         group.add(root);
         objects3d.set(o.id, root);
+        syncObjectVisibility(root); // a rebuild during focus must not un-hide it
       }
     }
   }

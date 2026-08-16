@@ -318,63 +318,159 @@ def bottle(m, mat, x, z, r, h, y=0.0, cap=None, seg=8):
 
 
 _SH_PAL = {}
+SHADOW_Y = 0.050        # see docstring: 0.018 still loses, 0.05 wins
 
 
-def soft_shadow(m, cx, cz, rx, rz, floor="#5a5957", strength=0.55, y=0.022,
-                steps=10, seg=20, n=2.7, room=None, tone="#1d1d1c"):
-    """A smooth radial contact shadow as ONE layer of concentric filled annuli.
+def soft_shadow(m, cx, cz, rx, rz, floor=None, strength=0.58, spill=0.62,
+                y=SHADOW_Y, steps=10, seg=26, n=2.7, room=None, tone="#121211"):
+    """A smooth radial contact shadow: ONE coplanar layer of ALPHA-BLENDED
+    concentric annuli.
 
-    kit.contact_shadow stacks 12 translucent quads 0.0013 ft apart; measured on
-    this scene they z-fight into faint crescents and read as no shadow at all.
-    These rings are opaque and coplanar -- no blending, no depth fight -- and the
-    colour ramps from `tone` at the centre to exactly `floor` at the rim, so the
-    outer edge disappears instead of drawing a bullseye outline.
+    Three things had to be true at once and no earlier version had all three.
+
+    1. It has to WIN THE DEPTH FIGHT.  The room slab is drawn with
+       `polygonOffsetFactor -1` (house.js), which pulls it toward the camera in
+       the depth buffer, so a decal laid just above it loses.  kit.contact_shadow
+       sits at y=0.012 and 0.005-0.018 all z-fight into faint crescents; 0.05 is
+       the height that clears it at dollhouse range.
+    2. It must not be a BULLSEYE.  Round 2 stacked hard-edged rings and the
+       critic called it worse than no shadow, so the annuli here are
+       non-overlapping, 14 of them, on a smooth (1-u^2)^1.7 alpha ramp that
+       reaches 0 at the rim -- there is no outer outline to see.
+    3. It must not ERASE THE FLOOR.  The opaque-colour version this replaces
+       painted `mix(floor_color, tone)` over the slab, which killed the plank
+       texture and -- because the authored floor_color is lighter than the
+       textured render -- left a *pale* disc round every piece.  Alpha over the
+       real slab darkens whatever is under it and the planks read straight
+       through.
+
+    4. It must actually SPILL PAST THE PIECE.  This is what killed the previous
+       attempt and it is easy to miss: `rx, rz` are the piece's own half-extents,
+       so a ramp that runs 0 -> 1 across `rx` puts every dark ring UNDER the
+       piece, where nothing can see it, and leaves the ring that is visible at
+       alpha 0.03.  Here the core is a solid superellipse at the FOOTPRINT and
+       the ramp happens over an extra `spill` FEET outside it -- so the shadow is
+       full strength where the piece touches the floor and fades over ~0.6 ft,
+       which is what a soft contact shadow looks like.
+
+    `strength` is the alpha at the contact edge, so 0.58 is a 58% darkening
+    there: a 15% darkening was measured invisible at dollhouse distance.
+    `floor` is accepted and ignored (kept so old call sites still work).
     """
-    def ring_pts(s):
+    def mat_for(a):
+        key = (tone, round(a, 3))
+        if key not in _SH_PAL:
+            _SH_PAL[key] = Material("csh%d" % len(_SH_PAL), tone,
+                                    roughness=0.99, metallic=0.0,
+                                    opacity=round(max(a, 0.01), 3))
+        return _SH_PAL[key]
+
+    def ring_pts(gx, gz):
         out = []
         for k in range(seg):
             t = 2 * math.pi * k / seg
             ct, st = math.cos(t), math.sin(t)
-            px = cx + rx * s * math.copysign(abs(ct) ** (2.0 / n), ct)
-            pz = cz + rz * s * math.copysign(abs(st) ** (2.0 / n), st)
+            px = cx + gx * math.copysign(abs(ct) ** (2.0 / n), ct)
+            pz = cz + gz * math.copysign(abs(st) ** (2.0 / n), st)
             if room:
                 px = min(max(px, 0.04), room[0] - 0.04)
                 pz = min(max(pz, 0.04), room[1] - 0.04)
             out.append((px, y, pz))
         return out
 
-    def mat_for(u):
-        a = strength * ((1.0 - u) ** 2.4)
-        key = (floor, tone, round(a, 3))
-        if key not in _SH_PAL:
-            _SH_PAL[key] = Material("csh%d" % (len(_SH_PAL),),
-                                    mix(floor, tone, a), roughness=0.97)
-        return _SH_PAL[key]
-
-    prev = ring_pts(1.0 / steps)
+    # solid core over the footprint -- visible under legs, plinths and rims
+    prev = ring_pts(rx, rz)
     m.add(Part([(cx, y, cz)] + prev,
                [(0, 1 + (k + 1) % seg, 1 + k) for k in range(seg)], smooth=True),
-          mat_for(0.0))
-    for i in range(1, steps):
-        cur = ring_pts((i + 1.0) / steps)
+          mat_for(strength))
+    for i in range(steps):
+        t = (i + 1.0) / steps
+        cur = ring_pts(rx + spill * t, rz + spill * t)
         v = prev + cur
-        t = []
+        tris = []
         for k in range(seg):
             a, b = k, (k + 1) % seg
-            t += [(a, seg + b, seg + a), (a, b, seg + b)]
-        m.add(Part(v, t, smooth=True), mat_for(i / float(steps)))
+            tris += [(a, seg + b, seg + a), (a, b, seg + b)]
+        # alpha at the OUTER edge of this band; smooth fall to 0 at rx+spill
+        m.add(Part(v, tris, smooth=True), mat_for(strength * (1.0 - t) ** 1.5))
         prev = cur
 
 
 def rug(m, x0, x1, z0, z1, color="#eceae6", pile=0.075, shadow=0.30):
     """A bath mat: puffy sagged pile, a slightly darker rolled edge so the
-    silhouette is not a flat white rectangle, and its own radial shadow."""
+    silhouette is not a flat white rectangle, and its own radial shadow.
+
+    The mat body starts just ABOVE the shadow plane so the two never fight; the
+    shadow only shows where it spills past the mat's edge.
+    """
     cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
     rx, rz = (x1 - x0) / 2, (z1 - z0) / 2
-    soft_shadow(m, cx, cz, rx * 1.11, rz * 1.13, strength=shadow, y=0.020)
+    soft_shadow(m, cx, cz, rx, rz, strength=shadow, spill=0.42, n=3.6, steps=7)
+    y0 = SHADOW_Y + 0.004
     RM = Material("rugm" + color.lstrip("#"), color, roughness=0.99)
     RE = Material("ruge" + color.lstrip("#"), mix(color, "#8d8a85", 0.34),
                   roughness=0.99)
-    bx(m, RE, x0, x1, 0.0, 0.040, z0, z1)                    # rolled edge
+    bx(m, RE, x0, x1, y0, y0 + 0.042, z0, z1)                # rolled edge
     m.add(sag_plane(x1 - x0 - 0.10, z1 - z0 - 0.10, sag=-pile, nx=6, nz=6,
-                    y=0.0, edge_drop=0.016), RM, at=(cx, 0.040, cz))
+                    y=0.0, edge_drop=0.016), RM, at=(cx, y0 + 0.042, cz))
+
+
+# ------------------------------------------------------- tiled wall faces
+def tile_face(m, mat, plane, w, a0, a1, y0, y1, tw, th, gap=0.028,
+              stagger=0.5, facing=1, jitter=None):
+    """Rows of flat tile QUADS standing proud of a grout plane.
+
+    Boxes cost 24 verts a tile and a subway wall is ~150 tiles; a quad costs 4
+    and the grout line is the gap between them, which is all the eye reads at
+    dollhouse range.  `plane` 'xy' -> face at z = w (n/s walls); 'zy' -> at x = w.
+    `facing` +1/-1 is the axis direction the tile face must point.
+    """
+    rows = int((y1 - y0) / th) + 1
+    for r in range(rows):
+        yy0 = y0 + r * th
+        yy1 = min(yy0 + th - gap, y1)
+        if yy1 - yy0 < 0.02:
+            continue
+        off = (stagger * tw) if (r % 2) else 0.0
+        a = a0 - off
+        while a < a1:
+            ta0, ta1 = max(a, a0), min(a + tw - gap, a1)
+            a += tw
+            if ta1 - ta0 < 0.04:
+                continue
+            c = mat if jitter is None else jitter(r, ta0)
+            if plane == "xy":
+                p = [(ta0, yy0, w), (ta1, yy0, w), (ta1, yy1, w), (ta0, yy1, w)]
+                if facing < 0:
+                    p = p[::-1]
+            else:
+                p = [(w, yy0, ta0), (w, yy0, ta1), (w, yy1, ta1), (w, yy1, ta0)]
+                if facing > 0:
+                    p = p[::-1]
+            m.add(quad(*p), c)
+
+
+def hex_pan(m, mat, grout, x0, x1, z0, z1, y, r=0.135, gap=0.022):
+    """Hexagon mosaic floor, as flat hex quads over a grout plane."""
+    rect_down(m, grout, x0, x1, y, z0, z1)
+    dx = r * 1.732
+    dz = r * 1.5
+    row = 0
+    z = z0 + r
+    while z < z1 + r:
+        x = x0 + (dx / 2 if row % 2 else 0) + dx / 2
+        while x < x1 + dx:
+            pts, ok = [], True
+            for k in range(6):
+                a = math.pi / 6 + k * math.pi / 3
+                px = x + (r - gap) * math.cos(a)
+                pz = z + (r - gap) * math.sin(a)
+                if not (x0 - 0.01 <= px <= x1 + 0.01 and z0 - 0.01 <= pz <= z1 + 0.01):
+                    ok = False
+                pts.append((min(max(px, x0), x1), y + 0.004, min(max(pz, z0), z1)))
+            if ok:
+                m.add(Part([(x, y + 0.004, z)] + pts,
+                           [(0, 1 + (k + 1) % 6, 1 + k) for k in range(6)]), mat)
+            x += dx
+        z += dz
+        row += 1

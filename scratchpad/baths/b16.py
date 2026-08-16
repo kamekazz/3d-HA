@@ -192,30 +192,42 @@ def build_shower():
     bx(m, MARB, x0 + 0.20, x0 + 0.215, 0.0, 7.10, z0, z1)
     # ---- marble back (north) slab
     bx(m, MARB, x0, x1, 0.0, 7.10, z0, z0 + 0.16)
-    # veining: chains of short staggered segments that wander down the slab.
-    # Long straight bars read as tape stuck on the wall; hairlines read as
-    # scratches through the glass in front of them.
+    # Veining.  Round 1 of this piece drew each vein step as an axis-aligned
+    # BOX 0.25 x 0.25 ft, which renders as a column of grey pixels -- static,
+    # not marble.  A vein is a thin line that WANDERS, so each step here is a
+    # slanted quad of constant half-width (0.012-0.028 ft, i.e. 1/7 to 1/3 in)
+    # joined end to end, with a fainter hairline family behind the bold one.
     rn = Rnd(7717)
 
-    def vein_chain(u0, u1, ymax, place):
-        u, y, n = rn.f(u0, u1), ymax, 0
-        while y > 0.25 and n < 40:
-            du, dy = rn.f(-0.17, 0.17), rn.f(0.16, 0.30)
-            t = rn.f(0.040, 0.085)
-            place(min(max(min(u, u + du), u0), u1),
-                  min(max(max(u, u + du) + t, u0 + t), u1), y - dy, y)
-            u = min(max(u + du, u0), u1)
-            y -= dy * 0.92
-            n += 1
+    def vein_chain(u0, u1, ymax, seg_quad, w0, w1, mat, steps=34):
+        u, y = rn.f(u0 + 0.4, u1 - 0.4), ymax
+        du = rn.f(-0.10, 0.10)
+        for _ in range(steps):
+            if y < 0.22:
+                break
+            du = max(-0.34, min(0.34, du + rn.f(-0.13, 0.13)))
+            dy = rn.f(0.20, 0.40)
+            nu = min(max(u + du, u0), u1)
+            seg_quad(u, y, nu, y - dy, rn.f(w0, w1), mat)
+            u, y = nu, y - dy
 
-    for _ in range(4):
-        vein_chain(x0 + 0.30, x1 - 0.30, 7.0,
-                   lambda a, b, c, d: bx(m, VEIN, a, b, c, d,
-                                         z0 + 0.16, z0 + 0.172))
-    for _ in range(3):
-        vein_chain(z0 + 0.30, z1 - 0.30, 6.8,
-                   lambda a, b, c, d: bx(m, VEIN, x0 + 0.215, x0 + 0.227,
-                                         c, d, a, b))
+    def north_seg(a0, y0, a1, y1, w, mat):
+        zq = z0 + 0.168
+        m.add(quad((a0 - w, y0, zq), (a0 + w, y0, zq),
+                   (a1 + w, y1, zq), (a1 - w, y1, zq)), mat)
+
+    def west_seg(a0, y0, a1, y1, w, mat):
+        xq = x0 + 0.222
+        m.add(quad((xq, y0, a0 - w), (xq, y0, a0 + w),
+                   (xq, y1, a1 + w), (xq, y1, a1 - w)), mat)
+
+    VEINF = Material("mbveinf", "#dededf", roughness=0.40)     # hairlines
+    for (segf, a, b, top) in ((north_seg, x0 + 0.25, x1 - 0.25, 7.02),
+                              (west_seg, z0 + 0.25, z1 - 0.25, 6.82)):
+        for _ in range(3):
+            vein_chain(a, b, top, segf, 0.016, 0.032, VEIN)
+        for _ in range(5):
+            vein_chain(a, b, top - rn.f(0.0, 1.4), segf, 0.006, 0.013, VEINF)
     # ---- pan + curb
     PAN = Material("mbpan", "#f2f2f0", roughness=0.42)
     bx(m, PAN, x0 + 0.215, x1, 0.0, 0.30, z0 + 0.17, z1)
@@ -281,7 +293,7 @@ def build_tub():
     the north window with the east window down its side (photo 2)."""
     m = Model()
     cx, cz = TUB_C
-    soft_shadow(m, cx, cz, 1.52, 3.05, strength=0.48, room=(W, D))
+    soft_shadow(m, cx, cz, 1.52, 3.05, strength=0.74, room=(W, D))
     # one continuous flared skin -- stacked slabs terrace into a pancake stack
     oval_tub(m, SANI, Material("mbtubin", "#e9e9e8", roughness=0.36),
              cx, cz, 2.74, 5.64, 2.30, wall=0.19, seg=32)
@@ -294,7 +306,7 @@ def build_tub():
     m.add(cylinder(0.075, 0.28, 8), BLK, at=(fx - 0.24, 1.95, fz))
     # a wooden stool with a potted plant south of the filler (photo 1)
     sx, sz = 14.12, 6.35
-    soft_shadow(m, sx, sz, 0.62, 0.62, strength=0.44, room=(W, D))
+    soft_shadow(m, sx, sz, 0.62, 0.62, strength=0.66, room=(W, D))
     for (ox, oz) in ((-0.34, -0.30), (0.34, -0.30), (-0.34, 0.30), (0.34, 0.30)):
         m.add(cylinder(0.055, 1.55, 6), WOODST, at=(sx + ox, 0.0, sz + oz))
     m.add(cylinder(0.52, 0.13, 14), WOODST, at=(sx, 1.55, sz))
@@ -323,7 +335,7 @@ def build_vanity():
     m = Model()
     x0, x1, z0, z1 = VAN
     soft_shadow(m, (x0 + x1) / 2, z0 + 0.92, (x1 - x0) * 0.53, 1.15,
-                strength=0.48, room=(W, D))
+                strength=0.74, room=(W, D))
     TOE, BODY, TOP = 0.42, 2.92, 3.04
     # legs + carcass (the real one stands on short square legs -- photo A)
     for lx in (x0 + 0.08, x1 - 0.20):
@@ -408,7 +420,7 @@ def build_toilet():
     m = Model()
     tx = TOI_X
     zs = D - 0.06
-    soft_shadow(m, tx, zs - 1.10, 0.85, 1.28, strength=0.46,
+    soft_shadow(m, tx, zs - 1.10, 0.85, 1.28, strength=0.70,
                 room=(W, D))
     m.add(rounded_box(1.05, 1.14, 1.30, r=0.26, seg=3), SANI,
           at=(tx, 0.0, zs - 1.05))                       # pedestal
@@ -430,7 +442,7 @@ def build_toilet():
         m.add(cylinder(0.14, 0.32, 10), col, at=(tx + ox, 0.0, zs - 1.10))
     bx(m, BLK, tx - 1.42, tx - 0.92, 0.28, 0.34, zs - 1.28, zs - 0.92)
     # small white bin
-    soft_shadow(m, tx - 1.85, zs - 0.60, 0.46, 0.46, strength=0.38, room=(W, D))
+    soft_shadow(m, tx - 1.85, zs - 0.60, 0.46, 0.46, strength=0.60, room=(W, D))
     m.add(cylinder(0.36, 0.95, 12, r_top=0.32),
           Material("mbbin", "#eeedea", roughness=0.6), at=(tx - 1.85, 0.0, zs - 0.60))
     return m
@@ -445,7 +457,7 @@ def build_console():
     z0, z1 = CAB_Z
     x0, x1 = 0.06, 1.41
     cz = (z0 + z1) / 2
-    soft_shadow(m, (x0 + x1) / 2, cz, 0.82, 1.58, strength=0.48,
+    soft_shadow(m, (x0 + x1) / 2, cz, 0.82, 1.58, strength=0.74,
                 room=(W, D))
     for lz in (z0 + 0.05, z1 - 0.17):
         for lx in (x0 + 0.02, x1 - 0.14):
@@ -498,7 +510,7 @@ def build_console():
         bx(m, BLOSSOM, 0.090, 0.101, by, by + s, bz, bz + s)
     # air-purifier tower on its four-leg stool, north of the console (photo 1)
     dx, dz = 0.78, 5.85
-    soft_shadow(m, dx, dz, 0.56, 0.56, strength=0.42, room=(W, D))
+    soft_shadow(m, dx, dz, 0.56, 0.56, strength=0.64, room=(W, D))
     for (ox, oz) in ((-0.28, -0.26), (0.28, -0.26), (-0.28, 0.26), (0.28, 0.26)):
         m.add(cylinder(0.045, 0.62, 6), WHT, at=(dx + ox, 0.0, dz + oz))
     m.add(cylinder(0.42, 0.10, 14), WHT, at=(dx, 0.62, dz))
@@ -540,8 +552,22 @@ def build_towels():
         bx(m, BLK, xw - 0.28, xw - 0.04, 4.50, 4.72, bz - 0.05, bz + 0.05)
     m.add(cylinder(0.038, b1 - b0, 8), BLK, at=(xw - 0.24, 4.62, b0),
           rot_x=R(-90))
-    bx(m, TOWEL_T, xw - 0.32, xw - 0.14, 2.55, 4.70, b0 + 0.18, b1 - 0.18)
-    bx(m, TOWEL_T, xw - 0.35, xw - 0.26, 4.34, 4.72, b0 + 0.18, b1 - 0.18)
+    # The bath sheet.  A single slab renders as a flat grey PANEL on the wall
+    # (that is exactly the "reads as a mis-mapped plane" complaint), so the
+    # hanging face is built as vertical folds of alternating depth and shade
+    # with a rolled-over top -- the silhouette, not the colour, is what makes it
+    # read as cloth from the dollhouse camera.
+    TOWEL_TS = Material("mbtowts", mix("#c8c0bb", "#8e8781", 0.30),
+                        roughness=0.97)
+    nf = 7
+    for i in range(nf):
+        fa = b0 + 0.18 + i * (b1 - b0 - 0.36) / nf
+        fb = fa + (b1 - b0 - 0.36) / nf
+        deep = 0.075 if i % 2 == 0 else 0.020
+        bx(m, TOWEL_T if i % 2 == 0 else TOWEL_TS,
+           xw - 0.26 - deep, xw - 0.13, 2.55, 4.70, fa + 0.008, fb - 0.008)
+    bx(m, TOWEL_T, xw - 0.35, xw - 0.24, 4.34, 4.74, b0 + 0.18, b1 - 0.18)
+    bx(m, TOWEL_TS, xw - 0.36, xw - 0.30, 4.30, 4.40, b0 + 0.18, b1 - 0.18)
     # wall thermostat/return plate the photo shows high on this wall
     bx(m, Material("mbplate2", "#f2f0ec", roughness=0.55),
        xw - 0.045, xw - 0.020, 4.05, 4.55, 9.55, 9.95)
@@ -551,10 +577,10 @@ def build_towels():
 # ====================================================================== rugs
 def build_rugs():
     m = Model()
-    rug(m, 4.05, 9.45, 8.85, 10.70, RUGW, shadow=0.32)     # in front of vanity
-    rug(m, 10.60, 12.10, 9.25, 10.30, RUGW, shadow=0.24)   # in front of toilet
-    rug(m, 9.20, 12.30, 6.85, 8.55, RUGW, shadow=0.28)     # beside the tub
-    rug(m, 4.00, 8.05, 4.85, 7.75, RUGW, shadow=0.32)      # outside the shower
+    rug(m, 4.05, 9.45, 8.85, 10.70, RUGW, shadow=0.44)     # in front of vanity
+    rug(m, 10.60, 12.10, 9.25, 10.30, RUGW, shadow=0.34)   # in front of toilet
+    rug(m, 9.20, 12.30, 6.85, 8.55, RUGW, shadow=0.40)     # beside the tub
+    rug(m, 4.00, 8.05, 4.85, 7.75, RUGW, shadow=0.44)      # outside the shower
     return m
 
 

@@ -358,9 +358,12 @@ export function setLevel(level) {
   for (const [lvl, group] of floorGroups) {
     group.visible = houseMode ? true : (level === 'all' || lvl === level);
     for (const child of group.children) {
-      // markers and label sprites own their visibility (devices.js/labels.js)
-      if (child.userData.kind === 'device' || child.isSprite) continue;
-      child.visible = !houseMode; // rooms + objects hidden only in House mode
+      // markers, label sprites and furniture own their own visibility
+      // (devices.js / labels.js / objects.js) — objects.js needs to keep other
+      // rooms' furniture hidden during room focus, which this sweep would undo
+      if (child.userData.kind === 'device' || child.userData.kind === 'object'
+          || child.isSprite) continue;
+      child.visible = !houseMode; // rooms hidden only in House mode
     }
   }
   for (const g of stairGroups) { // stairs show on both levels they connect
