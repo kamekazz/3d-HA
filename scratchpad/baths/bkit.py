@@ -317,13 +317,61 @@ def bottle(m, mat, x, z, r, h, y=0.0, cap=None, seg=8):
         m.add(cylinder(r * 0.55, h * 0.13, seg), cap, at=(x, y + h, z))
 
 
+_SH_PAL = {}
+
+
+def soft_shadow(m, cx, cz, rx, rz, floor="#5a5957", strength=0.55, y=0.022,
+                steps=10, seg=20, n=2.7, room=None, tone="#1d1d1c"):
+    """A smooth radial contact shadow as ONE layer of concentric filled annuli.
+
+    kit.contact_shadow stacks 12 translucent quads 0.0013 ft apart; measured on
+    this scene they z-fight into faint crescents and read as no shadow at all.
+    These rings are opaque and coplanar -- no blending, no depth fight -- and the
+    colour ramps from `tone` at the centre to exactly `floor` at the rim, so the
+    outer edge disappears instead of drawing a bullseye outline.
+    """
+    def ring_pts(s):
+        out = []
+        for k in range(seg):
+            t = 2 * math.pi * k / seg
+            ct, st = math.cos(t), math.sin(t)
+            px = cx + rx * s * math.copysign(abs(ct) ** (2.0 / n), ct)
+            pz = cz + rz * s * math.copysign(abs(st) ** (2.0 / n), st)
+            if room:
+                px = min(max(px, 0.04), room[0] - 0.04)
+                pz = min(max(pz, 0.04), room[1] - 0.04)
+            out.append((px, y, pz))
+        return out
+
+    def mat_for(u):
+        a = strength * ((1.0 - u) ** 2.4)
+        key = (floor, tone, round(a, 3))
+        if key not in _SH_PAL:
+            _SH_PAL[key] = Material("csh%d" % (len(_SH_PAL),),
+                                    mix(floor, tone, a), roughness=0.97)
+        return _SH_PAL[key]
+
+    prev = ring_pts(1.0 / steps)
+    m.add(Part([(cx, y, cz)] + prev,
+               [(0, 1 + (k + 1) % seg, 1 + k) for k in range(seg)], smooth=True),
+          mat_for(0.0))
+    for i in range(1, steps):
+        cur = ring_pts((i + 1.0) / steps)
+        v = prev + cur
+        t = []
+        for k in range(seg):
+            a, b = k, (k + 1) % seg
+            t += [(a, seg + b, seg + a), (a, b, seg + b)]
+        m.add(Part(v, t, smooth=True), mat_for(i / float(steps)))
+        prev = cur
+
+
 def rug(m, x0, x1, z0, z1, color="#eceae6", pile=0.075, shadow=0.30):
     """A bath mat: puffy sagged pile, a slightly darker rolled edge so the
     silhouette is not a flat white rectangle, and its own radial shadow."""
     cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
     rx, rz = (x1 - x0) / 2, (z1 - z0) / 2
-    contact_shadow(m, cx, cz, rx * 1.30, rz * 1.38, y=0.006,
-                   strength=shadow, steps=10)
+    soft_shadow(m, cx, cz, rx * 1.11, rz * 1.13, strength=shadow, y=0.020)
     RM = Material("rugm" + color.lstrip("#"), color, roughness=0.99)
     RE = Material("ruge" + color.lstrip("#"), mix(color, "#8d8a85", 0.34),
                   roughness=0.99)

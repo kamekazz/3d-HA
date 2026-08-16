@@ -109,15 +109,20 @@ def fridge():
     # frame.  A tall black-steel panel 1.6 ft from the camera always carries a
     # vertical sheen ramp, so it gets one: five bands, brightest at eye height
     # where the window falls on it, plus a lighter leading edge.
-    zt = 0.0
     bands = ((0.00, 1.05, 0), (1.05, 2.35, 1), (2.35, 3.70, 2),
              (3.70, 4.95, 3), (4.95, 5.92, 4))
+    # NOTE the bands stand PROUD of the carcase (x1 .. x1+0.010).  A first pass
+    # put them flush at x1 and they z-fought the body into a dithered moire that
+    # metered 22.4 -- worse than the flat 41.9 they were meant to fix.
+    zsp = [FRZ, FRZ + 1.05, FRZ + 2.15, ZW - 0.02]
     for (ya, yb, i) in bands:
-        bx(m, SIDE[i], x1 - 0.014, x1, ya, yb, FRZ, ZW - 0.02)
+        for k in range(3):
+            j = min(4, max(0, i + (1, 0, -1)[k]))
+            bx(m, SIDE[j], x1, x1 + 0.010, ya, yb, zsp[k], zsp[k + 1])
     # the front arris catches the most light of anything on the piece
-    bx(m, SIDE[2], x1 - 0.018, x1, 0.10, 5.86, FRZ, FRZ + 0.09)
+    bx(m, SIDE[2], x1, x1 + 0.014, 0.10, 5.86, FRZ, FRZ + 0.09)
     # and a faint horizontal seam at the freezer-drawer line, as on the front
-    bx(m, SIDE[0], x1 - 0.016, x1, 2.12, 2.20, FRZ, ZW - 0.02)
+    bx(m, SIDE[0], x1, x1 + 0.012, 2.12, 2.20, FRZ, ZW - 0.02)
     return m
 
 

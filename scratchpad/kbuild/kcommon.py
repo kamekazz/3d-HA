@@ -119,7 +119,10 @@ GREEN     = Material("green",   "#5d7f4e", roughness=0.85, emissive="#28331f")
 WOODBLK   = Material("woodblk", "#8d6a4b", roughness=0.75, emissive="#372a1d")
 # the app paints its own walls; this matches them for the bits of wall we build
 # ourselves (the peninsula half-wall's back, opening jambs).
-WALLPT    = Material("wallpt",  "#eeeae2", roughness=0.94, emissive="#4e4e4e")
+# ROUND 4: follows wall_color down (#eae6de -> #bcbdbf).  This paints the
+# peninsula half wall's back and the opening jambs; left at round 3's value
+# it would now read as a lighter panel standing in a darker room.
+WALLPT    = Material("wallpt",  "#c9cacd", roughness=0.94, emissive="#464646")
 
 FT = 1.0
 
@@ -170,12 +173,14 @@ SHADOWLN  = Material("shadowln", "#b9b6b0", roughness=0.85, emissive="#2c2c2c")
 # five steps of a vertical sheen ramp -- a tall black steel panel always carries
 # one, and it is the only thing that stops a 6 ft slab reading as a painted card.
 SIDE = [Material(f"side{i}", c, roughness=0.26, metallic=0.38, emissive=e)
-        for i, (c, e) in enumerate((("#41454c", "#2b2e34"), ("#4b5058", "#32363d"),
-                                    ("#585e67", "#3c4048"), ("#4e535b", "#34383f"),
-                                    ("#454a52", "#2e3138")))]
+        for i, (c, e) in enumerate((("#393a3c", "#252627"), ("#424345", "#2b2c2e"),
+                                    ("#4d4e50", "#333436"), ("#454648", "#2d2e30"),
+                                    ("#3d3e40", "#282929")))]
 
-CEIL_TRIM_1S = Material("ceiltrim1s", "#f7f7f5", roughness=0.70,
-                        emissive="#8b8b8b", double_sided=False)
+# the can trim must sit at CEIL's own value, not CEIL_TRIM's: a down-facing
+# disc with the trim's dimmer emissive read as a grey hole in the plaster.
+CEIL_TRIM_1S = Material("ceiltrim1s", "#fbfbfa", roughness=0.88,
+                        emissive="#a8a8a8", double_sided=False)
 
 
 def disc_down(radius, y, cx, cz, seg=20):

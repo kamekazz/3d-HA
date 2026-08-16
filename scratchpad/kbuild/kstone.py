@@ -27,7 +27,7 @@ SPL_SLOPE, SPL_BIAS = 0.89, -24.6
 
 # Global trims, so the whole stone program moves in one place after a probe.
 TOP_GROUND = 206.0        # render value of clean white ground on a top
-SPL_GROUND = 183.0        # ... and on a backsplash (lands ~178 after the net)
+SPL_GROUND = 167.0        # ... and on a backsplash (lands ~178 after the net)
 
 _LAYERS = ((1.0, 0.032, 1.00),      # (frequency, width in FEET, amplitude)
            (2.05, 0.021, 0.86),

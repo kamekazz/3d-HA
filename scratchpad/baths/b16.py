@@ -61,7 +61,7 @@ from bkit import (Model, Material, box, rounded_box, cylinder, prism, quad,
                   sag_plane, torus, Part, bx, rect_down, disc_down, ring_down,
                   ceiling, baseboards, door_unit, window_unit, contact_shadow,
                   wall_skin, oval_face, oval_ring, oval_tub, sweep_shell,
-                  tube, bottle, rug, openings,
+                  tube, bottle, rug, openings, soft_shadow,
                   save_here, surfaces, Rnd, R, mix,
                   TRIM, TRIM_D, CEIL, CEIL_FLAT, CAN_CONE, LENS, VENT,
                   WHITEWD, BLACKMET, CHROME, GLASS, MARBLE, PORC,
@@ -281,7 +281,7 @@ def build_tub():
     the north window with the east window down its side (photo 2)."""
     m = Model()
     cx, cz = TUB_C
-    contact_shadow(m, cx, cz, 1.72, 3.15, y=0.010, strength=0.30, room=(W, D))
+    soft_shadow(m, cx, cz, 1.52, 3.05, strength=0.48, room=(W, D))
     # one continuous flared skin -- stacked slabs terrace into a pancake stack
     oval_tub(m, SANI, Material("mbtubin", "#e9e9e8", roughness=0.36),
              cx, cz, 2.74, 5.64, 2.30, wall=0.19, seg=32)
@@ -294,7 +294,7 @@ def build_tub():
     m.add(cylinder(0.075, 0.28, 8), BLK, at=(fx - 0.24, 1.95, fz))
     # a wooden stool with a potted plant south of the filler (photo 1)
     sx, sz = 14.12, 6.35
-    contact_shadow(m, sx, sz, 0.62, 0.62, y=0.010, strength=0.20, room=(W, D))
+    soft_shadow(m, sx, sz, 0.62, 0.62, strength=0.44, room=(W, D))
     for (ox, oz) in ((-0.34, -0.30), (0.34, -0.30), (-0.34, 0.30), (0.34, 0.30)):
         m.add(cylinder(0.055, 1.55, 6), WOODST, at=(sx + ox, 0.0, sz + oz))
     m.add(cylinder(0.52, 0.13, 14), WOODST, at=(sx, 1.55, sz))
@@ -322,8 +322,8 @@ def build_vanity():
     mirrors, a sconce and a towel ring at each outer end (photo A / photo 3)."""
     m = Model()
     x0, x1, z0, z1 = VAN
-    contact_shadow(m, (x0 + x1) / 2, z0 + 0.95, (x1 - x0) * 0.55, 1.55,
-                   y=0.010, strength=0.25, room=(W, D))
+    soft_shadow(m, (x0 + x1) / 2, z0 + 0.92, (x1 - x0) * 0.53, 1.15,
+                strength=0.48, room=(W, D))
     TOE, BODY, TOP = 0.42, 2.92, 3.04
     # legs + carcass (the real one stands on short square legs -- photo A)
     for lx in (x0 + 0.08, x1 - 0.20):
@@ -408,8 +408,8 @@ def build_toilet():
     m = Model()
     tx = TOI_X
     zs = D - 0.06
-    contact_shadow(m, tx, zs - 1.15, 0.95, 1.30, y=0.010, strength=0.23,
-                   room=(W, D))
+    soft_shadow(m, tx, zs - 1.10, 0.85, 1.28, strength=0.46,
+                room=(W, D))
     m.add(rounded_box(1.05, 1.14, 1.30, r=0.26, seg=3), SANI,
           at=(tx, 0.0, zs - 1.05))                       # pedestal
     m.add(rounded_box(1.28, 0.30, 1.62, r=0.42, seg=4), SANI,
@@ -430,7 +430,7 @@ def build_toilet():
         m.add(cylinder(0.14, 0.32, 10), col, at=(tx + ox, 0.0, zs - 1.10))
     bx(m, BLK, tx - 1.42, tx - 0.92, 0.28, 0.34, zs - 1.28, zs - 0.92)
     # small white bin
-    contact_shadow(m, tx - 1.85, zs - 0.60, 0.42, 0.42, y=0.010, strength=0.16)
+    soft_shadow(m, tx - 1.85, zs - 0.60, 0.46, 0.46, strength=0.38, room=(W, D))
     m.add(cylinder(0.36, 0.95, 12, r_top=0.32),
           Material("mbbin", "#eeedea", roughness=0.6), at=(tx - 1.85, 0.0, zs - 0.60))
     return m
@@ -445,8 +445,8 @@ def build_console():
     z0, z1 = CAB_Z
     x0, x1 = 0.06, 1.41
     cz = (z0 + z1) / 2
-    contact_shadow(m, (x0 + x1) / 2, cz, 0.85, 1.62, y=0.010, strength=0.24,
-                   room=(W, D))
+    soft_shadow(m, (x0 + x1) / 2, cz, 0.82, 1.58, strength=0.48,
+                room=(W, D))
     for lz in (z0 + 0.05, z1 - 0.17):
         for lx in (x0 + 0.02, x1 - 0.14):
             bx(m, WHT, lx, lx + 0.12, 0.0, 0.32, lz, lz + 0.12)
@@ -498,7 +498,7 @@ def build_console():
         bx(m, BLOSSOM, 0.090, 0.101, by, by + s, bz, bz + s)
     # air-purifier tower on its four-leg stool, north of the console (photo 1)
     dx, dz = 0.78, 5.85
-    contact_shadow(m, dx, dz, 0.58, 0.58, y=0.010, strength=0.18, room=(W, D))
+    soft_shadow(m, dx, dz, 0.56, 0.56, strength=0.42, room=(W, D))
     for (ox, oz) in ((-0.28, -0.26), (0.28, -0.26), (-0.28, 0.26), (0.28, 0.26)):
         m.add(cylinder(0.045, 0.62, 6), WHT, at=(dx + ox, 0.0, dz + oz))
     m.add(cylinder(0.42, 0.10, 14), WHT, at=(dx, 0.62, dz))
@@ -561,7 +561,7 @@ def build_rugs():
 # ====================================================================== main
 def main(skins=None):
     print("room 16 Master Bath. -- furnishing pass")
-    surfaces(ROOM, wall_color=WALLC, floor_color="#6f6d6b", floor_texture="wood")
+    surfaces(ROOM, wall_color=WALLC, floor_color="#5a5957", floor_texture="wood")
     build_openings()
     out = []
     out.append(save_here("Master Bath Ceiling", build_ceiling(), ROOM))

@@ -68,7 +68,7 @@ def rug():
     bx(m, pal[5], x0, x1, 0.0, 0.038, z0, z1)
 
     TW, TD = 1.32, 1.76
-    weave = kfield.loop_weave(TW, TD, 132, 4242, ground=131.0, loop=96.0,
+    weave = kfield.loop_weave(TW, TD, 132, 4242, ground=111.0, loop=108.0,
                               density=0.50, pitch_in=0.42)
     rmat = TexMaterial("rugweave", png_gray(weave, levels=64), roughness=0.97,
                        emissive="#151413", mip=False)
