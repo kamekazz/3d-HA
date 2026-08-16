@@ -14,6 +14,8 @@ white panel-front one on the east wall.
 Fronts face SOUTH (+z).  x 5.75 .. 14.87, z -0.20 .. 2.20.
 """
 from kcommon import *   # noqa
+from ktex import TexModel
+import kstone
 
 ZW = 0.0             # wall plane
 ZBACK = -0.17        # painted back of the half wall (living-room side)
@@ -30,7 +32,7 @@ SZ0, SZ1 = 0.42, 1.84
 
 
 def build():
-    m = Model()
+    m = TexModel()
 
     # ---- the half wall's painted back + the jambs of the two openings ------
     bx(m, WALLPT, HW0, HW1, 0.0, HWY, ZBACK, ZW)
@@ -54,7 +56,8 @@ def build():
 
     # ---- backsplash east of the pass-through (that corner stays full height)
     bx(m, MARBLE, HW1, X1, CT, UP0, ZW, ZW + 0.055)
-    splash_stone(m, "+z", ZW + 0.055, HW1, X1, CT, UP0, 8821)
+    spl = kstone.splash_sheet(1.6, 1.7, 88, 8821)
+    spl.plane(m, "+z", ZW + 0.056, HW1, X1, CT, UP0, su=0.05, sw=0.05)
 
     # ---- carcase + toe kick
     bx(m, WHITE_LO, X0, X1, TOE, CB, ZW + 0.06, ZB)
@@ -64,10 +67,12 @@ def build():
     for (a, b, c, d) in ((X0, SX0, ZBACK - 0.03, ZC), (SX1, X1, ZBACK - 0.03, ZC),
                          (SX0, SX1, ZBACK - 0.03, SZ0), (SX0, SX1, SZ1, ZC)):
         bx(m, QUARTZ, a, b, CB, CT, c, d)
-    for (a, b, sd) in ((X0, SX0, 5501), (SX1, X1, 5507)):
-        top_stone(m, CT, a, b, ZBACK, ZC, sd)
-    for (a, b, sd) in ((ZBACK, SZ0, 5511), (SZ1, ZC, 5517)):
-        top_stone(m, CT, SX0, SX1, a, b, sd)
+    # ROUND 4: one 4.6 x 6.2 ft quartz sheet, four windows -- see kstone.py
+    top = kstone.Sheet(4.6, 6.2, 76, 5501)
+    for (a, b, sw) in ((X0, SX0, 0.05), (SX1, X1, 2.50)):
+        top.plane(m, "+y", CT, a, b, ZBACK, ZC, su=0.05, sw=sw)
+    for (a, b, sw) in ((ZBACK, SZ0, 5.00), (SZ1, ZC, 5.72)):
+        top.plane(m, "+y", CT, SX0, SX1, a, b, su=0.05, sw=sw)
     # low marble curb along the pass-through side, as in photo F
     bx(m, MARBLE, HW0, HW1, CT, CT + 0.34, ZBACK - 0.03, ZBACK + 0.10)
 

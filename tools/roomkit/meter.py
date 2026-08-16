@@ -1,5 +1,19 @@
 """Meter how bright each interior wall of an EMPTY room actually renders.
 
+*** ONLY VALID ON AN UNFURNISHED ROOM. ***
+
+The centre patch is bare wall only while the room is empty. Run this on a
+furnished room and the patch lands on cabinetry, glass, art or an island, and
+the "wall spread" it prints is a spread across furniture. That is exactly what
+happened to the Kitchen: this tool reported a spread of 54-58 bytes, which was
+quoted in two build reports, while three clean bare-wall samples in the same
+room (n=60,000 / 80,600 / 76,680) all came back at 208.1 — a true spread of
+about 16. The conclusions drawn from the 54 were wrong.
+
+Every patch it samples now prints its sd, and a warning fires when the sd says
+the patch cannot be flat wall. To meter a furnished room, pick clean bare-wall
+boxes by hand and verify them with an overlay (see scratchpad/lr5/m.py).
+
 Every builder so far has independently discovered that walls facing away from
 the sun render far darker than the photographs, and each has papered over it
 with a per-room emissive "wall wash" — which critics then flagged as visible
@@ -67,6 +81,17 @@ def main():
     print(json.dumps(out, indent=2))
     print(f"\nroom {a.room}: brightest wall {max(means):.0f}, darkest {min(means):.0f}, "
           f"spread {max(means) - min(means):.0f} bytes")
+
+    # A flat painted wall renders essentially sd 0 here. Anything above a couple
+    # of bytes means the patch is sitting on furniture, and the spread above is
+    # meaningless — see the module docstring.
+    dirty = {k: v["sd"] for k, v in out.items() if v["sd"] > 2.0}
+    if dirty:
+        print("\n*** WARNING: these patches are NOT bare wall ***")
+        for k, sd in dirty.items():
+            print(f"    {k}: sd {sd} — patch contains furniture, glass or art")
+        print("    The spread above is a spread across objects, not walls.")
+        print("    Meter this room by hand with verified clean boxes instead.")
     print(f"shots in {tmp}")
 
 

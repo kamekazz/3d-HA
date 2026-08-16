@@ -8,6 +8,8 @@ stool, apron and blinds that dress three genuine openings.
 """
 from kcommon import *   # noqa
 from kcommon import _rng, edge_info
+from ktex import TexModel, TexMaterial, png_gray, tex_plane
+import kfield
 
 BAY = [(E_BAY_N, 0.53, 2.03), (E_BAY_F, 0.45, 5.04), (E_BAY_S, 0.53, 2.03)]
 WY0, WY1 = 2.20, 6.50        # opening elevation .. head
@@ -41,49 +43,37 @@ def window():
 def rug():
     """The runner in front of the range (photos A and F).
 
-    ROUND 3.  Round 1 made it big bright flecks on a dark ground ("confetti");
-    round 2 inverted that into a flat light-grey pepper field and the critic read
-    it as terrazzo.  Cropping photo F at 2.5x settles it: the rug is a HIGH
-    CONTRAST loop weave -- a cream ground carrying dense near-black loops laid in
-    rows, with a bound dark edge and a short fringe on the ends.  Measured in the
-    photo at 123.7 / sd 36.7; a pepper field cannot reach that spread, so this is
-    a rasterised lattice field with real black in it.
+    ROUND 4 -- REGRESSION FIX.  Round 3 built ~1200 individually rotated loop
+    quads and the critic measured the result WARM (R-B went -1.9 -> +6.9) and
+    too coarse (sd 50.5 -> 56.7 against photo F's honest 39.0): "warm confetti",
+    and 392 KB of it.  Round 2's finer neutral speckle read closer to a woven
+    mat, so this goes back to that scale and stays strictly neutral.
+
+    A 2.5x crop of photo F shows a pale neutral ground carrying dense SMALL dark
+    loops on a jittered offset lattice with visible weave rows -- marks about a
+    third of round 3's.  That is a 1.32 x 1.76 ft tiling image at 132 px/ft
+    (0.09 in per texel) on one quad: 17 KB, and finer than the geometry could
+    ever be, since a 3 px mark cannot survive being drawn as a quad.
+
+    The image is authored in ALBEDO, not render value -- round 3 measured this
+    surface at 116.6 from a #141414..#847f76 ramp, so the ramp's own endpoints
+    are the calibration and the contrast is simply pulled in to land sd ~40.
     """
-    m = Model()
+    m = TexModel()
     x0, x1 = 9.95, 12.55
     z0, z1 = 3.70, 8.90
 
-    # near-black -> cream; the ground sits at 4..6 and the loops at 0..2, which
-    # is what gives the photo's sd 36.7.  A one-tone pepper field cannot.
     pal = ramp("#141414", "#847f76", 7, "rug", roughness=0.97,
                emissive_lo="#070707", emissive_hi="#1e1c1a")
     bx(m, pal[5], x0, x1, 0.0, 0.038, z0, z1)
 
-    # The GROUND is rasterised (cheap, and it needs no fine detail); the LOOPS
-    # are individual rotated quads.  Rasterising the loops too made them square
-    # and clumpy -- a mark only 3 px across cannot survive being quantised onto
-    # a grid, and the result read as digital camouflage rather than weave.
-    def ground(u, w):
-        g = fbm(u * 6.5, w * 6.5, 991, 3)
-        return 4 if g < 0.34 else (5 if g < 0.74 else 6)
-
-    raster(m, pal, "+y", 0.038, x0 + 0.06, x1 - 0.06, z0 + 0.11, z1 - 0.11,
-           0.055, ground, lift=0.002)
-
-    PX, PZ = 0.072, 0.064        # the loop lattice, ~0.85 in pitch
-    r = _rng(4242)
-    nx, nz = int((x1 - x0 - 0.22) / PX), int((z1 - z0 - 0.30) / PZ)
-    for i in range(nx):
-        for j in range(nz):
-            u = x0 + 0.11 + (i + 0.5) * PX + (r() - 0.5) * PX * 0.55
-            w = z0 + 0.15 + (j + 0.5) * PZ + (r() - 0.5) * PZ * 0.55
-            dens = 0.29 + 0.19 * fbm((u - x0) * 1.9, (w - z0) * 1.9, 771, 3)
-            if r() > dens:
-                continue
-            a, b = PX * (0.46 + r() * 0.30), PZ * (0.40 + r() * 0.26)
-            mat = pal[0] if r() < 0.66 else pal[2]
-            m.add(quad((-a, 0, -b), (-a, 0, b), (a, 0, b), (a, 0, -b)), mat,
-                  at=(u, 0.0425, w), rot_y=r() * 3.14159)
+    TW, TD = 1.32, 1.76
+    weave = kfield.loop_weave(TW, TD, 132, 4242, ground=131.0, loop=96.0,
+                              density=0.50, pitch_in=0.42)
+    rmat = TexMaterial("rugweave", png_gray(weave, levels=64), roughness=0.97,
+                       emissive="#151413", mip=False)
+    tex_plane(m, rmat, "+y", 0.042, x0 + 0.06, x1 - 0.06, z0 + 0.11, z1 - 0.11,
+              rep=((x1 - x0 - 0.12) / TW, (z1 - z0 - 0.22) / TD))
 
     # bound (whipped) edge all round, and a short fringe on the two ends
     edge = pal[1]
@@ -111,28 +101,70 @@ def counter_items():
     m.add(cylinder(0.075, 0.13, seg=10), BLACK, at=(13.30, 3.52, 4.94))
     m.add(box(0.045, 0.20, 0.50), BLACK, at=(13.30, 3.50, 4.94))
 
-    palette = [
-        ("#c98a86", 0.34, 0.58, 0.20), ("#eee6d4", 0.28, 0.50, 0.18),
-        ("#aec4d4", 0.32, 0.54, 0.22), ("#e2cf9c", 0.26, 0.44, 0.17),
-        ("#c3b0c4", 0.30, 0.56, 0.20), ("#e9e6e0", 0.24, 0.42, 0.17),
-        ("#a8c4b2", 0.28, 0.50, 0.20), ("#dcc3b3", 0.26, 0.48, 0.19),
-    ]
-    z = 6.95
+    # ---- THE PILE ----------------------------------------------------------
+    # ROUND 4.  Round 3 laid eight bottles in a tidy evenly-spaced row; a 3x
+    # crop of photo F shows a TWO-DEEP chaotic pile against the backsplash --
+    # tall cracker/cereal boxes standing at the back, a big yellow-green chip
+    # bag standing behind them, a cracker box lying FLAT at the front, a crowd
+    # of supplement bottles two rows deep with coloured caps, a teal cloth
+    # draped over the front edge, and the knife block hard against them.
+    # So: a back row of boxes, a front row of bottles at random depths, and
+    # nothing on a shared centre line.
     rnd = _rng(99)
-    for i, (col, w, h, d) in enumerate(palette):
-        mat = Material(f"pk{i}", col, roughness=0.72, emissive="#333333")
-        x = XWL - 0.34 - rnd() * 0.55
-        bx(m, mat, x - w / 2, x + w / 2, CT, CT + h, z, z + d)
-        z += d + 0.055
-    for i in range(6):
-        mat = Material(f"jr{i}", ["#e6e3dc", "#cfd8d4", "#e9d7b8"][i % 3],
-                       roughness=0.5, emissive="#3a3a3a")
-        m.add(cylinder(0.11 + 0.02 * (i % 3), 0.42 + 0.10 * (i % 2), seg=12), mat,
-              at=(XWL - 0.55 - 0.30 * (i % 2), CT, 7.10 + i * 0.24))
-    m.add(box(0.62, 0.85, 0.42), WOODBLK, at=(XWL - 0.62, CT, 9.65))
+
+    def mat(name, col, rough=0.72, em="#333333"):
+        return Material(name, col, roughness=rough, emissive=em)
+
+    # back row: boxes standing against the backsplash, jittered and touching
+    boxes = [("#d8cfc0", 0.30, 0.72, 0.14), ("#c8ac7e", 0.26, 0.62, 0.13),
+             ("#b98f8b", 0.30, 0.66, 0.15), ("#8f6f8c", 0.24, 0.56, 0.13),
+             ("#d9d3c6", 0.28, 0.70, 0.14), ("#c6b48f", 0.22, 0.52, 0.12)]
+    z = 6.92
+    for i, (col, w, h, d) in enumerate(boxes):
+        x = XWL - 0.16 - d / 2 - rnd() * 0.10
+        bx(m, mat(f"bx{i}", col), x - d / 2, x + d / 2, CT, CT + h,
+           z, z + w)
+        z += w - 0.02 - rnd() * 0.03
+
+    # the chip bag: a tapered prism with a crimped top, standing behind
+    bag = mat("chipbag", "#c9cf6a", 0.62, "#3c3f22")
+    bx(m, bag, XWL - 0.62, XWL - 0.20, CT, CT + 0.86, 7.72, 8.22)
+    bx(m, bag, XWL - 0.52, XWL - 0.30, CT + 0.86, CT + 1.04, 7.80, 8.14)
+    bx(m, bag, XWL - 0.50, XWL - 0.32, CT + 1.04, CT + 1.10, 7.86, 8.08)
+
+    # a cracker box lying FLAT at the front of the pile (photo F's blue one)
+    bx(m, mat("thins", "#5f7fa8"), XCF + 0.10, XCF + 0.72, CT, CT + 0.17,
+       7.05, 7.74)
+    bx(m, mat("thinslid", "#8fa7c4"), XCF + 0.12, XCF + 0.70, CT + 0.17,
+       CT + 0.19, 7.08, 7.71)
+
+    # the bottle crowd: two ragged rows, mixed heights, coloured caps
+    # materials are pooled, not built per item: Model.add groups by material, so
+    # 28 unique materials would be 28 primitives for 28 small cylinders.
+    caps = [mat(f"cap{k}", c, 0.6, "#2e2e2e") for k, c in
+            enumerate(("#d98f6a", "#cf7f9c", "#e0b45c", "#9fb6c6", "#d4d0c6",
+                       "#c98fa8"))]
+    bodies = [mat(f"btl{k}", c, 0.5, "#3a3a3a") for k, c in
+              enumerate(("#e8e5de", "#eae2d0", "#e6e9ea"))]
+    for i in range(14):
+        r = 0.095 + 0.035 * rnd()
+        h = 0.30 + 0.26 * rnd()
+        x = XWL - 0.42 - rnd() * 0.72
+        zc = 7.02 + i * 0.155 + (rnd() - 0.5) * 0.16
+        m.add(cylinder(r, h, seg=12), bodies[i % 3], at=(x, CT, zc))
+        m.add(cylinder(r * 0.86, 0.07, seg=10), caps[i % len(caps)],
+              at=(x, CT + h, zc))
+
+    # the teal cloth draped over the counter edge in front of the pile
+    cloth = mat("cloth", "#7fb5ad", 0.95, "#2b3b39")
+    bx(m, cloth, XCF + 0.02, XCF + 0.40, CT, CT + 0.05, 8.28, 8.86)
+    bx(m, cloth, XCF + 0.02, XCF + 0.08, CT - 0.30, CT + 0.03, 8.34, 8.80)
+
+    # the wooden knife block, hard against the south end of the pile
+    m.add(box(0.62, 0.85, 0.42), WOODBLK, at=(XWL - 0.62, CT, 9.42))
     for i in range(5):
         m.add(box(0.05, 0.34, 0.05), TRIM,
-              at=(XWL - 0.86 + i * 0.115, CT + 0.80, 9.58), rot_x=-0.13)
+              at=(XWL - 0.86 + i * 0.115, CT + 0.80, 9.35), rot_x=-0.13)
 
     # dark serving bowls + a small plant on the peninsula, by the sink (photo F)
     m.add(cylinder(0.36, 0.20, seg=18, r_top=0.44), BLACK, at=(12.30, CT, 1.05))

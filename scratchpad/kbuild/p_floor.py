@@ -1,151 +1,169 @@
-"""Kitchen Floor -- the plank floor AND every contact shadow in the room.
+"""Kitchen Floor -- planks, grain and every contact shadow, in ONE image.
 
-Two critic defects live here.
+ROUND 4.  Round 3's floor was 1.26 MB: one box per plank plus ~64 000 raster
+quads of contact shadow, quantised onto 15 translucent alpha steps.  It carried
+two of the critic's remaining defects.
 
-  * "The floor is not a material -- measured tonal spread sigma 9.5 against the
-    photo's 27.3."  The app's slab is one flat colour under a faint wood
-    texture; the photo is 7-8 in planks in five distinct greys with visible butt
-    joints.  So the slab gets covered with real plank geometry: a dark base
-    layer showing through 0.036 ft gaps as grout/butt lines, and one box per
-    plank with a tone drawn from a five-step grey palette plus jitter.
+  * "The floor has no grain."  Plank interiors metered sd 3.7-8.6 against the
+    photo's 7.4-11.2 in EVERY lighting zone -- all our variance was plank-to-
+    plank tone steps, so it read as flat grey rectangles.  (The photo's floor sd
+    is a constant ~11 in every zone; the 23.5 an earlier round chased came from
+    a crop that mixed three lighting zones, and is not a material property.)
+  * "Contact shadows too weak" -- a smooth 15% darkening (101.6 -> 120.0) that is
+    invisible at dollhouse and plan distance.
 
-  * "Nothing has a contact shadow -- island, stools, fridge, trash can all
-    float."  The app renders NO shadows for generated geometry, so every piece
-    that meets the floor gets a soft dark decal baked in here, the same trick
-    the master bedroom's Rug uses for the bed.  Three nested tones make the
-    falloff read as soft rather than as a printed rectangle.
+Both are now baked into a single 952 x 1071 px greyscale image at 64 px/ft --
+0.19 in per texel -- laid on TWO quads (the main rectangle and the bay
+trapezoid).  Planks, butt joints, fibre and shadow are all in the one OPAQUE
+layer, which is what makes the shadow reliable: a translucent decal over varying
+planks has to win a depth sort against them, and an earlier round-4 pass proved
+an alpha overlay can silently lose it and render nothing at all (verified by
+painting it pure red and finding no red pixel anywhere in the room).  One image
+also means the shadow can be as deep as the photo without costing a byte.
 
 Named "Kitchen Floor" on purpose: objects.js SURFACE_RE makes anything with
 "floor" in its name unpickable, so this room-sized plane cannot swallow the
 room's clicks (verify with roomkit.check_pick).
 """
+import numpy as np
+
 from kcommon import *   # noqa
 from kcommon import _rng
+from ktex import TexModel, TexMaterial, png_gray, tex_plane, tex_quad
+import kfield
 
-# Plank tone palette, sRGB.  GAIN trims the whole set at once after metering
-# the render against the photo.
-#
-# ROUND 3 -- REGRESSION FIX.  Round 1 metered sigma 9.5 and read plastic; round 2
-# over-corrected to 127.7 / sd 23.7 against the photo's 114.1 / sd 16.2, and the
-# critic's words were "near-white planks now abut charcoal in a patchwork the
-# real uniform grey oak never does".  Two changes: the palette is much NARROWER
-# (a 1.42 spread instead of 1.94), and neighbouring columns are drawn by a
-# RANDOM WALK over the palette rather than independently, so no plank can sit
-# five steps away from the one beside it.  Aiming at the photo's numbers, not
-# past them.
+PPF = 64                     # texels per foot
+LEVELS = 64                  # tone quantisation; the grain dithers the steps
+
+# Plank tone palette, sRGB albedo.  GAIN trims the whole set at once.
 GAIN = 0.560
 PLANKS = ["#5c6165", "#666b6f", "#70757a", "#7a7f84", "#83888d", "#8d9297"]
-
-BASE_DARK = "#3c4044"        # shows through the plank gaps: grout / butt joint
-
-# Contact shadows are no longer nested rectangles -- see Shadows in kraster.py.
-# This is the ramp the smooth field is quantised onto: 12 steps of a gentle
-# multiplier on the mid plank tone.  The app's tone curve is steep down here, so
-# a shadow that looks right in hex reads as a black pond on screen.
-AO_N = 15
-AO_MAX_ALPHA = 0.44          # how dark the deepest contact shadow gets
+BASE_DARK = "#3c4044"        # the plank gaps: grout / butt joint
 
 PITCH = 0.62                 # 7.4 in planks
-GAP = 0.020
-Y0, Y1 = 0.0, 0.026          # base slab / plank top
+GAP = 0.022
+
+GRAIN_AMP = 10.5             # render bytes, peak fibre
+GRAIN_FINE = 3.0
+
+AO_MAX = 0.32                # deepest contact shadow, as a fraction of value
+
+# Render response of a floor-facing surface, measured in round 3: albedo 65.5
+# (the mid plank at GAIN 0.560) landed on 113.6 on open floor.  Used to apply
+# the contact shadow in RENDER space and convert back, so "30% darker" means
+# 30% darker on screen rather than 30% less albedo.
+SLOPE, BIAS = 0.89, 55.3
+
+Y_TOP = 0.026                # the plank surface
 
 
 def _dim(hex_c, k):
     c = hex_c.lstrip("#")
-    return "#" + "".join(f"{min(255, max(0, int(int(c[i:i+2], 16) * k))):02x}"
-                         for i in (0, 2, 4))
+    return [min(255, max(0, int(int(c[i:i + 2], 16) * k))) for i in (0, 2, 4)]
 
 
-def _mat(hex_c, name):
-    # no emissive: the floor faces up and collects the sky/hemisphere directly,
-    # which is exactly why round 1's floor came out 40 points too bright.
-    return Material(name, _dim(hex_c, GAIN), roughness=0.72)
+def _lum(rgb):
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
 
 
-# bay facets: at x < 2.28 the room narrows along both angled walls
 def _zrange(x):
+    """The bay narrows along both angled walls at x < 2.28."""
     if x >= XW_WEST:
         return ZW_NORTH, ZW_SOUTH
     t = (XW_WEST - x) * (1.16 / 2.28)
     return 3.35 + t, 11.16 - t
 
 
-def _clip(x0, x1, z0, z1):
-    """Keep an AO decal inside the room so it never pokes through a wall."""
-    x0, x1 = max(x0, 0.02), min(x1, XW_EAST - 0.02)
-    if x1 > XW_WEST:
-        x0 = max(x0, XW_WEST + 0.02) if x1 - XW_WEST > 0.2 else x0
-    return x0, x1, max(z0, 0.02), min(z1, ZW_SOUTH - 0.02)
+BAY_QUAD = [(XW_WEST, 3.37), (0.05, 4.53), (0.05, 9.98), (XW_WEST, 11.14)]
 
 
-def _inside(x, z):
-    """The room polygon, for clipping the shadow raster at the bay."""
-    if x >= XW_WEST:
-        return ZW_NORTH + 0.01 <= z <= ZW_SOUTH - 0.01
-    if x < 0.02:
-        return False
-    zlo, zhi = _zrange(x)
-    return zlo + 0.02 <= z <= zhi - 0.02
+def plank_image():
+    """Albedo image of the whole floor: planks, joints, grain, contact shadow."""
+    nx = int(round(XW_EAST * PPF))
+    nz = int(round(ZW_SOUTH * PPF))
+    dark = _lum(_dim(BASE_DARK, GAIN))
+    tone = np.full((nz, nx), dark)
 
+    xs = (np.arange(nx) + 0.5) / PPF
+    zs = (np.arange(nz) + 0.5) / PPF
 
-def build():
-    m = Model()
-    base = Material("plankbase", _dim(BASE_DARK, GAIN), roughness=0.85)
-    mats = [_mat(c, f"pl{i}") for i, c in enumerate(PLANKS)]
-    # translucent, NOT opaque: see Shadows.bake
-    aomats = shadow_ramp(AO_N, "#21252a", AO_MAX_ALPHA)
-
-    # ---- base layer (what the gaps show) -- built to the polygon so nothing
-    # pokes out past the bay's angled walls into the next room
-    bx(m, base, XW_WEST, XW_EAST, Y0, Y1 - 0.004, ZW_NORTH, ZW_SOUTH)
-    bay = [(XW_WEST, 3.35), (0.0, 4.51), (0.0, 10.0), (XW_WEST, 11.16)]
-    m.add(prism(bay, Y1 - 0.004), base, at=(0, Y0, 0))
-
-    # ---- planks, running north-south like the photo's.  Tone is a RANDOM WALK
-    # across the palette so adjacent boards stay within a step or two of each
-    # other -- round 2 drew them independently and the critic read the result as
-    # a light/dark patchwork.
+    # ---- planks.  Same layout rule as round 3 (which the critic accepted):
+    # 7.4 in boards running NORTH-SOUTH, butt joints staggered column to column,
+    # and the tone drawn by a RANDOM WALK across a narrow six-step palette so no
+    # board sits five steps from its neighbour.
     rnd = _rng(20260816)
-    idx = len(PLANKS) // 2
-
+    pal = [_lum(_dim(c, GAIN)) for c in PLANKS]
+    idx = len(pal) // 2
     x = XW_EAST
     col = 0
     while x > 0.001:
-        x0 = max(0.0, x - PITCH)
-        x1 = x
+        x0, x1 = max(0.0, x - PITCH), x
         zlo, zhi = _zrange(x0 + 0.001)
-        # stagger the butt joints column to column so no two line up
         z = zlo - (0.4 + rnd() * 3.4) if col else zlo
+        ia = np.searchsorted(xs, x0 + GAP / 2)
+        ib = np.searchsorted(xs, x1 - GAP / 2)
         while z < zhi:
             ln = 3.1 + rnd() * 3.4
             a, b = max(z, zlo), min(z + ln, zhi)
             r = rnd()
             step = -1 if r < 0.36 else (1 if r > 0.64 else 0)
-            idx = max(0, min(len(PLANKS) - 1, idx + step))
+            idx = max(0, min(len(pal) - 1, idx + step))
             if b - a > 0.25:
-                bx(m, mats[idx], x0 + GAP / 2, x1 - GAP / 2, Y1 - 0.010, Y1,
-                   a + GAP / 2, b - GAP / 2)
+                ja = np.searchsorted(zs, a + GAP / 2)
+                jb = np.searchsorted(zs, b - GAP / 2)
+                tone[ja:jb, ia:ib] = pal[idx]
             z += ln
         x -= PITCH
         col += 1
 
-    # ---- contact shadows: ONE smooth field over the whole floor -------------
-    # Round 2 baked five nested hard-edged rectangles per object and the critic
-    # called them "bullseye decals painted on the planks, worse than no shadow".
-    # Shadows.bake rasterises an exponential distance falloff through the same
-    # quantiser the stone uses: round corners, irregular contours, no rings.
-    sh = (Shadows()
-          .rect(6.35, 8.95, 5.48, 10.52, reach=0.52)            # island box
-          .disc(4.51, 6.78, 0.58, reach=0.30)                   # stool north
-          .disc(4.51, 9.30, 0.58, reach=0.30)                   # stool south
-          .rect(9.93, 12.92, 13.72, ZW_SOUTH, reach=0.44)       # fridge
-          .disc(1.15, 5.30, 0.58, reach=0.28)                   # step bin
-          .rect(5.75, XW_EAST, ZW_NORTH, 2.20, reach=0.38)      # peninsula
-          .rect(12.87, XW_EAST, 2.20, 10.60, reach=0.38)        # east run
-          .rect(5.90, 12.95, 14.74, ZW_SOUTH, reach=0.38)       # south run
-          .rect(12.80, XW_EAST, 4.30, 6.80, reach=0.30))        # range
-    sh.bake(m, aomats, Y1, 0.0, XW_EAST, ZW_NORTH, ZW_SOUTH, cell=0.062,
-            mask=_inside, lift=0.003)
+    # ---- grain: dark fibre stretched ~14:1 up the board, plus the cathedral
+    # figure.  This is the whole point of the rebuild -- round 3's plank
+    # interiors were flat, so all the floor's variance sat at board scale.
+    g = kfield.plank_grain(XW_EAST, ZW_SOUTH, PPF, 4242, amp=GRAIN_AMP,
+                           fine=GRAIN_FINE)
+    tone = tone + g * (tone > dark + 1)          # never in the joints
+
+    # ---- contact shadows: the same exponential distance field as round 3 (its
+    # smoothness was confirmed good), applied in render space and ~2x deeper.
+    rects = [(6.35, 8.95, 5.48, 10.52, 0.62, 1.00),      # island box
+             (9.93, 12.92, 13.72, ZW_SOUTH, 0.50, 0.95),  # fridge
+             (5.75, XW_EAST, ZW_NORTH, 2.20, 0.44, 0.92),  # peninsula
+             (12.87, XW_EAST, 2.20, 10.60, 0.44, 0.92),   # east run
+             (5.90, 12.95, 14.74, ZW_SOUTH, 0.44, 0.92),  # south run
+             (12.80, XW_EAST, 4.30, 6.80, 0.34, 0.88)]    # range
+    discs = [(4.51, 6.78, 0.58, 0.34, 0.92),             # stool north
+             (4.51, 9.30, 0.58, 0.34, 0.92),             # stool south
+             (1.15, 5.30, 0.58, 0.32, 0.92)]             # step bin
+    ao = kfield.shadow_alpha(rects, discs, 0.0, XW_EAST, ZW_NORTH, ZW_SOUTH,
+                             PPF, max_alpha=1.0) / 255.0
+
+    r = SLOPE * tone + BIAS
+    r = r * (1.0 - AO_MAX * ao)
+    return np.clip((r - BIAS) / SLOPE, 0, 255)
+
+
+def build():
+    m = TexModel()
+    mat = TexMaterial("plank", png_gray(plank_image(), levels=LEVELS),
+                      roughness=0.72, mip=False)
+
+    def uv(x, z):
+        return (x / XW_EAST, z / ZW_SOUTH)
+
+    tex_plane(m, mat, "+y", Y_TOP, XW_WEST, XW_EAST, ZW_NORTH, ZW_SOUTH,
+              uvrect=(*uv(XW_WEST, ZW_NORTH), *uv(XW_EAST, ZW_SOUTH)))
+    pts = [(x, Y_TOP, z) for (x, z) in BAY_QUAD]
+    a, b, c = pts[0], pts[1], pts[2]
+    if ((b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2])) < 0:
+        pts = pts[::-1]
+    tex_quad(m, mat, pts, [uv(p[0], p[2]) for p in pts])
+
+    # a thin dark skirt under the plank plane, so no sliver of the app's own slab
+    # shows at a wall line or along the bay's two angled facets
+    base = Material("plankbase", "#22262a", roughness=0.85)
+    bx(m, base, XW_WEST, XW_EAST, 0.0, Y_TOP - 0.004, ZW_NORTH, ZW_SOUTH)
+    m.add(prism([(XW_WEST, 3.35), (0.0, 4.51), (0.0, 10.0), (XW_WEST, 11.16)],
+                Y_TOP - 0.004), base, at=(0, 0.0, 0))
     return m
 
 

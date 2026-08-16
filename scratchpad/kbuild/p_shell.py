@@ -48,15 +48,21 @@ def ceiling():
             edge_box(m, CEIL_TRIM, i, 8.63, 8.76, 0.185, u0, u1)
             edge_box(m, CEIL_TRIM, i, 8.76, Y, 0.100, u0, u1)
 
-    # ---- six recessed cans, back-projected off photos A and F
+    # ---- six recessed cans, back-projected off photos A and F.
+    # ROUND 4: FLAT DOWN-FACING DISCS, not cylinders.  The ceiling plane is
+    # one-sided so the dollhouse camera can see into the room; that left the
+    # cans as the only ceiling geometry visible from above, and the critic read
+    # six white cylinders as "golf balls on the counters and floor".  A 2.6x
+    # crop of photo F shows the real cans as an almost flush ring in the
+    # plaster anyway, with no visible housing.
     for (cx, cz) in ((12.10, 2.55), (12.35, 8.10), (7.30, 3.30),
                      (7.05, 9.40), (5.35, 13.60), (11.60, 13.90)):
-        m.add(cylinder(0.30, 0.045, seg=20), CEIL_TRIM, at=(cx, Y - 0.045, cz))
-        m.add(cylinder(0.235, 0.010, seg=20), GLOW, at=(cx, Y - 0.050, cz))
+        m.add(disc_down(0.30, Y - 0.004, cx, cz), CEIL_TRIM_1S)
+        m.add(disc_down(0.235, Y - 0.012, cx, cz), GLOW)
 
     # the round ceiling diffuser photo F shows at the living-room end
-    m.add(cylinder(0.50, 0.040, seg=24), CEIL_TRIM, at=(4.10, Y - 0.040, 2.05))
-    m.add(cylinder(0.40, 0.018, seg=24), CEIL_TRIM, at=(4.10, Y - 0.055, 2.05))
+    m.add(disc_down(0.50, Y - 0.004, 4.10, 2.05, seg=24), CEIL_TRIM_1S)
+    m.add(disc_down(0.40, Y - 0.016, 4.10, 2.05, seg=24), CEIL_TRIM_1S)
     return m
 
 

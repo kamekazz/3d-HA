@@ -8,6 +8,8 @@ work aisle to the range wall, a 3.10 ft aisle to the peninsula and to the fridge
 run, and the two stools tuck into the mouth of the west bay.
 """
 from kcommon import *   # noqa
+from ktex import TexModel
+import kstone
 
 CX0, CX1 = 5.25, 9.15        # counter (1.10 ft seating overhang to the west)
 CZ0, CZ1 = 5.30, 10.70
@@ -17,7 +19,7 @@ ICB = 2.86                   # counter underside
 
 
 def build():
-    m = Model()
+    m = TexModel()
 
     # carcase + toe kick (recessed on the working side only)
     bx(m, WHITE_LO, BX0, BX1, TOE, ICB, BZ0, BZ1)
@@ -26,17 +28,23 @@ def build():
     bx(m, WHITE, BX0, BX1, 0.0, TOE, BZ0, BZ0 + 0.10)
     bx(m, WHITE, BX0, BX1, 0.0, TOE, BZ1 - 0.10, BZ1)
 
-    # ---- quartz top: this is the biggest single surface in the room, and the
-    # critic metered it as plain white paint.  Heavy continuous veining.
+    # ---- quartz top ---------------------------------------------------------
+    # ROUND 4.  Round 3 rasterised this as 0.034 ft cells: right tone (204.4
+    # against the photo's 205.0) but wrong SPATIAL statistics -- high-pass energy
+    # above 9 px measured 0.25 against the photo's 0.33-0.48, because the only
+    # way to carry that variance on a 0.4 in grid is a handful of fat branches.
+    # It read as a cracked, stained slab and cost 1.47 MB.
+    #
+    # It is now ONE textured quad off a 5.6 x 5.6 ft greyscale sheet at 105
+    # px/ft -- 0.11 in per texel, four times finer than the photo's own detail --
+    # carrying a four-octave level-set net of 0.008-0.030 ft wisps.  Same tone,
+    # ~3.5x the line density at a third the width and contrast, 106 KB.
     bx(m, QUARTZ, CX0, CX1, ICB, CT, CZ0, CZ1)
-    # ROUND 3: the critic metered this at 222.6 / sd 18.2 against photo F's
-    # 204.7 / sd 25.6 -- too bright and too even.  It is now the same rasterised
-    # cloud + vein-net field as every other stone surface in the room, on a
-    # palette whose albedo is pulled well down because horizontal quartz clips
-    # under direct sun in this renderer.
-    top_stone(m, CT, CX0, CX1, CZ0, CZ1, 31337, cell=0.034)
-    # the veining rolls over the front edge too
-    top_stone(m, CX0, CZ0, CZ1, ICB + 0.005, CT, 31341, cell=0.045, face="-x")
+    sheet = kstone.Sheet(5.6, 5.6, 105, 31337)
+    sheet.plane(m, "+y", CT, CX0, CX1, CZ0, CZ1, su=0.05, sw=0.02)
+    # the veining rolls over the front edge too (its own strip of the sheet)
+    sheet.plane(m, "-x", CX0 - 0.002, CZ0, CZ1, ICB + 0.005, CT,
+                su=0.05, sw=5.44)
 
     # ---- east (working) face: 3 drawers | beverage fridge | door
     for (a, b) in ((TOE + 0.03, TOE + 0.86), (TOE + 0.92, TOE + 1.72),

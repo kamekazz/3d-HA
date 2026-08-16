@@ -274,11 +274,61 @@ tone variation, prefer a coarser cell size, a tiled texture, or vertex colours
 over more geometry. Merge parts that share a material — `Model.add` already
 groups by material, so fewer `Material` instances means fewer primitives.
 
+**Tone fields are the usual culprit.** Rasterising a gradient into cells buys
+surface variation at brutal cost — the Kitchen went 4.5 → 5.88 MB doing it, and
+a critic then judged the result a *perceptual regression* on the hero surface, so
+the megabytes bought nothing. Prefer a tiled texture or vertex colours; they also
+give finer spatial detail, which is what the eye actually reads (see the
+scale-blind section above).
+
 Check yourself before reporting done:
 ```
 ls -S backend/uploads/models/*.glb | head
 du -ch backend/uploads/models/*.glb | tail -1
 ```
+
+## sd is SCALE-BLIND. Measure fine-scale gradient too, or you will build plastic
+
+This is the most important measurement lesson in the project, and it explains why
+rooms kept passing their numbers and failing their critics.
+
+**Standard deviation does not know what scale the variation is at.** A surface
+with a few big soft patches and a surface with real fabric grain can meter the
+same sd. Every fabric and masonry surface in the Living Room was tuned until its
+sd matched the photograph, and the critic still called the whole room plastic —
+correctly. Measured as **mean |Δ| between adjacent pixels**:
+
+| surface | render | photo |
+|---|---|---|
+| upholstery | 1.62 | 11.84 |
+| stone | 0.47 | 1.77 |
+| rug | 2.76 | 8.56 |
+
+Normalised as `|d1| / sd`, the render sat at **0.070** where the photo is
+**0.324–0.394**. Same sd, 7× less texture at the scale a human actually sees.
+
+**So report both**: the sd AND `mean|Δ|` (or the ratio `|d1|/sd`, target ≈0.3 for
+fabric). Sample at NATIVE render resolution — measuring an upsampled crop
+inflates sd and will flatter you (one report's rug sd of 20.5 was really 10.9).
+
+## Never delete content to improve a number
+
+The same round produced two regressions, both from optimising a metric:
+
+- The east canvas was re-toned until its value ratio to the wall was "right",
+  and ended up **sd 0.0 — a blank slab**. The previous round's canvas had sd 47.4
+  against the photo's 43.2. The earlier critic's "reads as a panel" complaint was
+  never about value; it was about the canvas being a featureless rectangle. The
+  fix made the actual defect total.
+- The stone's chamfer was deleted because restoring it pushed sd from 6 to 13-18.
+  But the photo meters sd 9.6 *while carrying heavy relief*, because its relief
+  is large-scale with soft gradients. The right move was a shallower bevel, not
+  no bevel.
+
+If hitting a number requires removing detail, the number is the wrong target.
+Say so in your report and propose the metric you think is right — the brief
+already tells you a critic's finding is not automatically correct, and that
+applies to the metric a critic names as much as to the defect it names.
 
 ## How to meter honestly — this has now gone wrong twice
 

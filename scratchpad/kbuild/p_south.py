@@ -10,6 +10,8 @@ Fronts face NORTH (-z).  The opening through to Dining is a real cut hole at
 x 2.58..5.58 (p_openings.py, edge 0).
 """
 from kcommon import *   # noqa
+from ktex import TexModel
+import kstone
 
 ZW = ZW_SOUTH           # 16.74, the real wall
 ZB = ZW - 2.00          # base carcase front
@@ -21,16 +23,18 @@ FRZ = ZW - 2.95                 # fridge front
 
 
 def cabinets():
-    m = Model()
+    m = TexModel()
     # ---- backsplash (ROUND 3: rasterised cloud field, not stick veins)
     bx(m, MARBLE, CX0, CX1, CT, UP0, ZW - 0.055, ZW)
-    splash_stone(m, "-z", ZW - 0.055, CX0, CX1, CT, UP0, 6613)
+    spl = kstone.splash_sheet(4.2, 1.7, 84, 6613)
+    spl.plane(m, "-z", ZW - 0.056, CX0, CX1, CT, UP0, su=0.05, sw=0.05)
 
     # ---- base run + counter
     bx(m, WHITE_LO, CX0, CX1, TOE, CB, ZB, ZW)
     bx(m, BLACK, CX0, CX1, 0.0, TOE, ZB + 0.12, ZW)
     bx(m, QUARTZ, CX0, CX1, CB, CT, ZC, ZW)
-    top_stone(m, CT, CX0, CX1, ZC + 0.02, ZW, 6619)
+    top = kstone.Sheet(4.2, 2.3, 86, 6619)
+    top.plane(m, "+y", CT, CX0, CX1, ZC + 0.02, ZW, su=0.05, sw=0.05)
     bx(m, WHITE, CX0 - 0.10, CX0, 0.0, CT, ZC, ZW)
 
     for (a, b) in ((CX0 + 0.05, CX0 + 1.95), (CX0 + 2.02, CX1 - 0.05)):
@@ -98,9 +102,22 @@ def fridge():
     bx(m, APPL, xm + 0.24, x1 - 0.26, 3.62, 5.28, FRZ - 0.086, FRZ - 0.076)
     bx(m, scr, xm + 0.30, x1 - 0.32, 3.74, 5.16, FRZ - 0.092, FRZ - 0.086)
     bx(m, APPL_HI, x0, x1, 5.86, 5.98, FRZ + 0.02, ZW)
-    # the side that faces the hallway opening: keep it a lit charcoal, not a
-    # hole -- this is the exact face the critic photographed
-    bx(m, APPL_HI, x1 - 0.012, x1, 0.0, 5.92, FRZ, ZW - 0.02)
+    # ---- the east side face --------------------------------------------------
+    # ROUND 4.  Round 3 lifted this off pure black (0 -> 41.9) and stopped
+    # there; the critic re-measured it at 41.9 / sd 2.4 against photo A's
+    # 54.7-57.7 and, worse, PERFECTLY FLAT while filling ~40% of the south-east
+    # frame.  A tall black-steel panel 1.6 ft from the camera always carries a
+    # vertical sheen ramp, so it gets one: five bands, brightest at eye height
+    # where the window falls on it, plus a lighter leading edge.
+    zt = 0.0
+    bands = ((0.00, 1.05, 0), (1.05, 2.35, 1), (2.35, 3.70, 2),
+             (3.70, 4.95, 3), (4.95, 5.92, 4))
+    for (ya, yb, i) in bands:
+        bx(m, SIDE[i], x1 - 0.014, x1, ya, yb, FRZ, ZW - 0.02)
+    # the front arris catches the most light of anything on the piece
+    bx(m, SIDE[2], x1 - 0.018, x1, 0.10, 5.86, FRZ, FRZ + 0.09)
+    # and a faint horizontal seam at the freezer-drawer line, as on the front
+    bx(m, SIDE[0], x1 - 0.016, x1, 2.12, 2.20, FRZ, ZW - 0.02)
     return m
 
 

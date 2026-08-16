@@ -52,7 +52,7 @@ import sys
 
 sys.path.insert(0, r"C:\Users\Manuel\Desktop\Pro\3d HA\tools")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from roomkit.glb import Model, Material, box, rounded_box, cylinder, prism, quad, sag_plane, torus  # noqa
+from roomkit.glb import Model, Material, Part, box, rounded_box, cylinder, prism, quad, sag_plane, torus  # noqa
 from roomkit.place import place  # noqa
 from kraster import (ramp, raster, stone_field, Veins, Shadows, shadow_ramp,  # noqa
                      fbm, vnoise, khash, rng as krng)
@@ -164,6 +164,37 @@ APPL_LO   = Material("appllo",  "#1b1d20", roughness=0.30, metallic=0.34,
 APPL_HI   = Material("applhi",  "#3a3d42", roughness=0.22, metallic=0.42,
                      emissive="#232529")
 SHADOWLN  = Material("shadowln", "#b9b6b0", roughness=0.85, emissive="#2c2c2c")
+# ROUND 4.  The fridge's east side face is 1.6 ft from the stock south-east
+# camera and fills ~40% of that frame; round 3 lifted it off pure black to 41.9
+# but left it perfectly flat (sd 2.4) against photo A's 54.7-57.7.  These are the
+# five steps of a vertical sheen ramp -- a tall black steel panel always carries
+# one, and it is the only thing that stops a 6 ft slab reading as a painted card.
+SIDE = [Material(f"side{i}", c, roughness=0.26, metallic=0.38, emissive=e)
+        for i, (c, e) in enumerate((("#41454c", "#2b2e34"), ("#4b5058", "#32363d"),
+                                    ("#585e67", "#3c4048"), ("#4e535b", "#34383f"),
+                                    ("#454a52", "#2e3138")))]
+
+CEIL_TRIM_1S = Material("ceiltrim1s", "#f7f7f5", roughness=0.70,
+                        emissive="#8b8b8b", double_sided=False)
+
+
+def disc_down(radius, y, cx, cz, seg=20):
+    """A flat disc whose single face points DOWN.
+
+    Recessed cans were built as short cylinders.  The ceiling plane is
+    one-sided (it must be, or it hides the room from the dollhouse camera), so
+    from above the cans were the only thing left -- and the critic read six
+    white cylinders hovering over the counters and floor as golf balls.  A disc
+    with only a downward face is invisible from every camera above the ceiling
+    and identical from every camera below it.
+    """
+    import math as _m
+    v = [(cx, y, cz)]
+    for i in range(seg):
+        a = 2 * _m.pi * i / seg
+        v.append((cx + radius * _m.cos(a), y, cz + radius * _m.sin(a)))
+    t = [(0, 1 + i, 1 + (i + 1) % seg) for i in range(seg)]
+    return Part(v, t)
 
 
 # ---------------------------------------------------------------- helpers

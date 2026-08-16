@@ -13,6 +13,8 @@ Round-2 fixes carried here:
   * counter and backsplash carry real Calacatta veining at ~6 in spacing
 """
 from kcommon import *   # noqa
+from ktex import TexModel
+import kstone
 
 XW = XW_EAST         # wall plane 14.87
 XB = 12.87           # base carcase front
@@ -25,21 +27,25 @@ END = 10.45                  # finished end panel starts
 
 
 def build():
-    m = Model()
+    m = TexModel()
 
     # ---------------------------------------------------- backsplash (marble)
     # ROUND 3, the critic's headline defect: this was a flat mid-grey field
     # (163 / sd 5.1) with pale stick-marks.  It is now a rasterised cloud field.
+    # ROUND 4: one 10.8 x 1.7 ft marble sheet at 76 px/ft (0.16 in per texel)
+    # instead of 0.052 ft raster cells -- same tone, finer net, 1/30th the bytes.
     bx(m, MARBLE, XW - 0.055, XW, CT, UP0, 0.0, Z1)
-    splash_stone(m, "-x", XW - 0.055, 0.0, Z1, CT, UP0, 4211)
+    spl = kstone.splash_sheet(10.8, 1.7, 76, 4211)
+    spl.plane(m, "-x", XW - 0.056, 0.0, Z1, CT, UP0, su=0.05, sw=0.05)
 
     # ---------------------------------------------------- base run
     for (a, b) in ((Z0, RG0), (RG1, Z1)):
         bx(m, WHITE_LO, XB, XW, TOE, CB, a, b)
         bx(m, BLACK, XB + 0.12, XW, 0.0, TOE, a, b)
-    for (a, b) in ((Z0, RG0), (RG1, Z1)):
+    top = kstone.Sheet(2.4, 6.4, 82, 9137)
+    for (a, b, sw) in ((Z0, RG0, 0.05), (RG1, Z1, 2.35)):
         bx(m, QUARTZ, XC, XW, CB, CT, a, b)
-        top_stone(m, CT, XC + 0.02, XW, a, b, 9137 + int(a * 10))
+        top.plane(m, "+y", CT, XC + 0.02, XW, a, b, su=0.05, sw=sw)
 
     # base cabinet north of the range: two doors
     two_door(m, WHITE, "-x", XB, Z0 + 0.05, RG0 - 0.04, TOE + 0.03, CB - 0.03,
@@ -69,8 +75,11 @@ def build():
                  pull_y=0.13, kind="v")
     # short cabinet over the microwave
     bx(m, WHITE_LO, XU, XW, 5.98, UP1, RG0, RG1)
+    # ROUND 4: this one cabinet has KNOBS, not bars.  A 4x crop of photo F over
+    # the microwave shows two small round black knobs low on the meeting stiles,
+    # while every other upper door in the same crop carries a vertical bar.
     two_door(m, WHITE, "-x", XU, RG0 + 0.03, RG1 - 0.03, 6.01, UP1 - 0.03,
-             pull_y=0.20, kind="v")
+             pull_y=0.16, kind="k")
     for (a, b) in ((RG1, 8.70), (8.70, 10.50)):
         bx(m, WHITE_LO, XU, XW, UP0, UP1, a, b)
         two_door(m, WHITE, "-x", XU, a + 0.03, b - 0.03, UP0 + 0.03, UP1 - 0.03,
