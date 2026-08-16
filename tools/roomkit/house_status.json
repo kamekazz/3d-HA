@@ -2,9 +2,9 @@
   "_note": "Whole-house gauntlet status. Update state/round/note/render per room as critics report, then run: python -m roomkit.house_progress",
   "headline": "The real house, rebuilt room by room until a critic stops telling them apart",
   "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. The bar for the overall look is The Sims 4's dollhouse build view; the bar for each room is the photograph of that actual room.",
-  "stamp": "round 2 · geometry re-traced house-wide · exterior finished",
-  "hero": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\625d3716-8337-4ad2-9a27-d9fa0142326d\\scratchpad\\shots\\ext_v3.png",
-  "hero_label": "The exterior, finished against the photograph: light-grey architectural roof, near-black front door, river-rock foundation beds with boxwood and perennials, the SUV in the driveway, bin, porch planters and path lights.",
+  "stamp": "round 2 built on 3 rooms · paused at the API session limit",
+  "hero": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\625d3716-8337-4ad2-9a27-d9fa0142326d\\scratchpad\\shots\\doll_L1_r2.png",
+  "hero_label": "First floor as it stands: Dining with its real bay, Kitchen, and Living Room with the fireplace on the chimney chase — daylight coming through openings that are actually cut. The garage and hallway are still the bare shells everything started as.",
   "rooms": [
     {
       "id": 14,
@@ -14,27 +14,27 @@
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Master bedroom.jpg",
       "render": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\625d3716-8337-4ad2-9a27-d9fa0142326d\\scratchpad\\shots\\r3_final.png",
       "render_label": "round 3",
-      "note": "Round 3 rebuilt from measurement, not guesswork. The bed was proved to be a QUEEN, not a king, by three independent photo anchors — which also explained why the wall art 'looked huge': the ruler was wrong, not the canvas. The 15 ft north wall is now solved as one budget (dresser, window, bed, nightstand) so the long-standing collision between the dresser, the window and the headboard is gone. Vault ridge moved off-centre to sit over the bed, matching the photo's asymmetric gable. Builder also found and fixed a real bug in the screenshot harness: the camera pose never waited for its target to converge, so every earlier comparison was framed slightly off. — Footprint has since been re-traced, so this room's furniture needs re-placing before it can be judged again."
+      "note": "Three rounds of careful measurement — the bed was proved a queen, not a king, by three photo anchors, and the vault ridge was measured to sit over the bed. The re-trace then rotated the room's long axis 90 degrees, so every wall assignment has to be re-derived. The measurement work carries over; the placement does not."
     },
     {
       "id": 6,
       "name": "Kitchen",
-      "state": "building",
+      "state": "judging",
       "round": 2,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Kitchen A.jpg",
-      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\kitchen_ref_A.png",
-      "render_label": "round 1 — rejected",
-      "note": "Round 2 in progress: re-placing every piece into the re-traced footprint and fixing the critic's list. The fake internal wall and its 190 sq ft of dead floor are gone with the re-trace."
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\kitchen_r2_photoA.png",
+      "render_label": "round 2 — awaiting critic",
+      "note": "Round 2: the fake internal wall and its 190 sq ft of dead floor are gone with the re-trace, the fridge run stands against the real wall, and real cut openings mean you now look over the peninsula half-wall at the living room fireplace the way photos C and F do. Floor rebuilt as 7.4 in planks in six greys (tonal spread 24-51 against the photo's 27.3, where round 1 was 9.5), contact shadows baked under everything, black knobs on doors. Wall-value spread within the room 93 -> 56 bytes with no emissive wash."
     },
     {
       "id": 5,
       "name": "Living Room",
-      "state": "building",
+      "state": "judging",
       "round": 2,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Living Room A.jpg",
-      "note": "Round 2 in progress: re-placing every piece into the re-traced footprint and fixing the critic's list. The north wall lost 10 ft, so what round 1 packed onto it has to be re-derived from the photos.",
-      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\lr5\\final_ref.png",
-      "render_label": "round 1"
+      "note": "Round 2 made a structural correction: the floor plan draws the north-west chamfer as a thickened wall — a chimney chase — and two photos show the stone breast on a wall angled to the TV wall. The fireplace belongs there, not on the north wall, which freed that wall to hold exactly what the plan draws. Stone rebuilt as a jittered Voronoi tessellation rather than courses of rectangles. Pickability recovered from 33% to 61% by naming the rug as a surface.",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\lr5\\r2_ref.png",
+      "render_label": "round 2 — awaiting critic"
     },
     {
       "id": 4,
@@ -42,19 +42,19 @@
       "state": "pending",
       "round": 1,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Dining A.jpg",
-      "note": "15 pieces including a real tray ceiling with a medallion, chair rail and picture-frame wainscot, eight parsons chairs, a black six-arm chandelier, and blinds at 44 percent with lawn and porch rail visible through the gap. Orientation was derived rather than assumed by cross-referencing all four photos against the house layout. — Footprint has since been re-traced, so this room's furniture needs re-placing before it can be judged again.",
+      "note": "Round 1 built. Footprint since re-traced to 14.6 x 13.1 with a real canted east bay — which solves round 1's stated limitation that the geometry could not hold the bay. Needs re-placing into it.",
       "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\final_corner_ne.png",
       "render_label": "round 1"
     },
     {
       "id": 15,
       "name": "Rios Room",
-      "state": "pending",
+      "state": "fail",
       "round": 1,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Rios room.jpg",
       "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots15\\final_doorway.png",
       "render_label": "round 1 — rejected",
-      "note": "Critic: FAIL. Biggest gap is the windows — built 6.15 ft tall where the photo measures about 4.8 ft, so they read as French doors, which crushes the apparent ceiling height and makes the whole room look oversized. The rubber plant intersects the window, the birdcage and the north wall. Nothing casts a contact shadow. — Footprint has since been re-traced, so this room's furniture needs re-placing before it can be judged again."
+      "note": "Critic FAILED round 1: windows built 6.15 ft tall against ~4.8 measured, so they read as French doors and made the room look oversized. The re-trace then shrank the room from 15.5 x 16 to 12.5 x 11.7 — vindicating the critic. Needs re-placing plus the 12-item list."
     },
     {
       "id": 8,
@@ -150,7 +150,8 @@
     "Accuracy bar": "the photograph of each actual room",
     "Objects placed": "85 across 5 rooms",
     "Wall-light spread": "222-125 bytes -> 238-158 after the app-level lighting fix",
-    "First floor": "~1,250 sq ft living + 443 sq ft garage"
+    "First floor": "~1,250 sq ft living + 443 sq ft garage",
+    "Paused": "API session limit; nothing half-applied"
   },
   "footer": "Renders are taken from the running app at 127.0.0.1:5000 — the same Three.js scene the Home Assistant dashboard draws, with device markers hidden for the comparison."
 }
