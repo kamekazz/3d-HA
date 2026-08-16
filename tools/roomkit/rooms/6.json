@@ -1,30 +1,83 @@
 {
   "_note": "Placement map for room 6 (Kitchen), first floor, level 1 -- ROUND 2. All coordinates are ROOM-LOCAL feet from the footprint min corner: exactly what roomkit.place takes. Every piece is authored DIRECTLY in room-local coordinates and placed at rot 0; `pos` is the model bbox centre in x/z with pos.y = the height its min-Y sits at. Build scripts live in scratchpad/kbuild/ (kcommon.py + p_*.py, idempotent by piece name). Read tools/roomkit/ROOM-BRIEF.md first.",
-
   "_round2": "The footprint was RE-TRACED after round 1 failed: the room went from a 19 x 27.5 rect to a 14.87 x 16.74 POLYGON with a three-facet bay on the west wall, and its anchor moved (+5.31, +7.24). Everything was re-derived. Round 1's fake partial wall (which carried the south cabinet run) is GONE -- there is no dead floor left to hide. Six other critic defects were fixed; see _critic_fixes.",
-
   "_room": {
     "id": 6,
-    "bbox": { "x": [0, 14.87], "z": [0, 16.74] },
-    "polygon_local": [[14.87,16.74],[2.28,16.74],[2.28,11.16],[0,10],[0,4.51],[2.28,3.35],[2.28,0],[14.87,0]],
-    "usable_rect": { "x": [2.28, 14.87], "z": [0, 16.74] },
+    "bbox": {
+      "x": [
+        0,
+        14.87
+      ],
+      "z": [
+        0,
+        16.74
+      ]
+    },
+    "polygon_local": [
+      [
+        14.87,
+        16.74
+      ],
+      [
+        2.28,
+        16.74
+      ],
+      [
+        2.28,
+        11.16
+      ],
+      [
+        0,
+        10
+      ],
+      [
+        0,
+        4.51
+      ],
+      [
+        2.28,
+        3.35
+      ],
+      [
+        2.28,
+        0
+      ],
+      [
+        14.87,
+        0
+      ]
+    ],
+    "usable_rect": {
+      "x": [
+        2.28,
+        14.87
+      ],
+      "z": [
+        0,
+        16.74
+      ]
+    },
     "bay": "west wall, three facets, protruding 2.28 ft: angled 3.35->4.51, flat face x=0 from z 4.51..10.0, angled 10.0->11.16",
     "wall_height": 9.0,
     "slab_world_y": 8.0,
-    "origin_world": [-4.19, 8.0, 4.74],
+    "origin_world": [
+      -4.19,
+      8.0,
+      4.74
+    ],
     "edge_index": {
       "0": "SOUTH  (14.87,16.74)->(2.28,16.74)  offset runs EAST->WEST",
       "1": "west wall, south segment",
-      "2": "bay south facet", "3": "bay front (x=0)", "4": "bay north facet",
+      "2": "bay south facet",
+      "3": "bay front (x=0)",
+      "4": "bay north facet",
       "5": "west wall, north segment",
       "6": "NORTH  (2.28,0)->(14.87,0)  offset runs WEST->EAST",
       "7": "EAST   (14.87,0)->(14.87,16.74)  offset runs NORTH->SOUTH"
     },
     "neighbours": "NORTH = Living Room (room 5) -- the sink peninsula is a half wall onto it and photos C/F look straight over it at the stone fireplace. EAST = first-floor hallway (room 12) with the staircase, which photo A shows past the south end of the range run. SOUTH = Dining (room 4). WEST = exterior; that is where the bay is."
   },
-
   "_orientation_evidence": "Photos C and F face NORTH (stone fireplace + TV + sofa beyond the counter = the living room) and both put the range wall on the RIGHT, so the range wall is the EAST wall. Photo A (the PRIMARY, the one roomkit.sbs pairs against) is the reverse view, facing SOUTH from over the sink: east is on its left, which is why the range run recedes left, the fridge wall faces the camera, the staircase shows through an opening at the SE, and the bay is the bright window on the right. The re-traced polygon confirms all of it -- the bay is on the west wall exactly where photos B and C put it.",
-
   "_openings": {
     "built_by": "scratchpad/kbuild/p_openings.py (deletes and re-creates every opening on room 6, so it is re-runnable)",
     "note": "house.js buildRoom cuts a REAL hole per opening row (shape.holes.push) and fills it with a translucent panel unless type == 'door'. Type is free text, so these use 'passage'/'window' -- both render the glass panel, which at 22% opacity reads as open air. THE PASS-THROUGH IS THE CRITIC'S #1 DEFECT FIXED: from inside the kitchen you now look over the peninsula straight into the living room and its stone fireplace, because the living room's own south wall presents its back face to us and FrontSide culls it.",
@@ -38,7 +91,6 @@
       "edge 2 off 0.53 w 1.50 y 2.20 h 4.30 window -- bay, south facet"
     ]
   },
-
   "_surfaces": {
     "set_with": "PATCH /api/house/room/6",
     "wall_color": "#eae6de",
@@ -47,75 +99,227 @@
     "floor_texture": "wood",
     "note": "wall_color was pulled down from round 1's #f3f0ea: the sunlit north wall metered 238 against the photo's 220. floor_color barely matters now -- Kitchen Floor lays real plank geometry over the slab -- but it is set dark so any sliver at a wall line matches."
   },
-
   "_tone_note": "daylight.js was fixed app-wide between rounds (hemisphere ground + daytime IBL raised), so EVERY emissive round 1 metered is now too bright. Re-metered from the render against the photo and re-tuned: white door 220->207 (photo 209-216), island quartz top 236->223 (photo 209), ceiling 220->208 (photo 205), floor 160/sigma6 -> 120-136/sigma 24-51 (photo 87-115, sigma 24-32). Horizontal quartz tops clip hard under direct sun in this renderer -- the QUARTZ albedo had to come down to #cdcdca to land 223, and pushing further greys the counters out in shade. There is NO room-filling emissive wall wash in this room; the only walls we paint ourselves are the peninsula half wall's back and the opening jambs (WALLPT).",
-
   "pieces": {
     "Kitchen Floor": {
-      "size_ft": [14.87, 0.03, 16.74], "pos": [7.435, 0.012, 8.370], "rot": 0,
-      "note": "NEW in round 2, and it carries TWO critic fixes. (a) The floor is a material now: a dark base slab showing through 0.02 ft gaps as grout/butt joints, with one box per plank -- 7.4 in wide, 3-6 ft long, butt joints staggered column to column, running NORTH-SOUTH as in every photo -- tinted from a six-step grey palette. Metered 120-136 mean at sigma 24-51 against the critic's complaint of sigma 9.5 vs the photo's 27.3. (b) EVERY CONTACT SHADOW IN THE ROOM is baked in here (island, both stools, fridge, step bin, all three cabinet runs, the range), as five nested tones stepping 0.96 -> 0.815 of the mid plank tone. The app's tone curve is steep down there -- a first attempt at hex values that looked right rendered as black ponds. Named 'Kitchen Floor' so objects.js SURFACE_RE keeps it unpickable; check with roomkit.check_pick. Everything that stands on the floor is placed at y = FLOOR_TOP = 0.046, the top of this piece."
+      "size_ft": [
+        14.87,
+        0.03,
+        16.74
+      ],
+      "pos": [
+        7.435,
+        0.012,
+        8.37
+      ],
+      "rot": 0,
+      "note": "NEW in round 2, and it carries TWO critic fixes. (a) The floor is a material now: a dark base slab showing through 0.02 ft gaps as grout/butt joints, with one box per plank -- 7.4 in wide, 3-6 ft long, butt joints staggered column to column, running NORTH-SOUTH as in every photo -- tinted from a six-step grey palette. Metered 120-136 mean at sigma 24-51 against the critic's complaint of sigma 9.5 vs the photo's 27.3. (b) EVERY CONTACT SHADOW IN THE ROOM is baked in here (island, both stools, fridge, step bin, all three cabinet runs, the range), as five nested tones stepping 0.96 -> 0.815 of the mid plank tone. The app's tone curve is steep down there -- a first attempt at hex values that looked right rendered as black ponds. Named 'Kitchen Floor' so objects.js SURFACE_RE keeps it unpickable; check with roomkit.check_pick. Everything that stands on the floor is placed at y = FLOOR_TOP = 0.046, the top of this piece.",
+      "note_r3": "ROUND 3: contact shadows rebuilt as one kraster.Shadows field covering all nine occluders, rasterised at 0.062 ft onto 15 TRANSLUCENT steps (alpha 0 -> 0.44) so the boundary cannot show as a tone step. Plank palette narrowed and plank tone drawn by a random walk; GAIN 0.635 -> 0.560."
     },
     "Kitchen Ceiling": {
-      "size_ft": [14.87, 0.45, 16.74], "pos": [7.435, 8.520, 8.370], "rot": 0,
+      "size_ft": [
+        14.87,
+        0.45,
+        16.74
+      ],
+      "pos": [
+        7.435,
+        8.52,
+        8.37
+      ],
+      "rot": 0,
       "note": "Flat white plane at y 8.97 drawn as TWO downward-facing quads (main rect + bay) with a double_sided=false material, so it is solid at eye level and invisible from above -- check with the plan pose, you must still see the floor. Three-step crown round all eight polygon edges, stopping at the three cased openings. SIX recessed cans (round 1 had ten in a room 10 ft too deep and a critic counted them), plus the round diffuser photo F shows at the living-room end."
     },
     "Kitchen Baseboards": {
-      "size_ft": [14.87, 0.46, 16.74], "pos": [7.435, 0.046, 8.370], "rot": 0,
+      "size_ft": [
+        14.87,
+        0.46,
+        16.74
+      ],
+      "pos": [
+        7.435,
+        0.046,
+        8.37
+      ],
+      "rot": 0,
       "note": "White 5.5 in skirting, 0.075 ft proud, on all eight polygon edges including the two angled bay facets, with a slim chamfer cap. Interrupted at the three cased openings."
     },
-
     "Kitchen Cabinets North": {
-      "size_ft": [12.54, 7.74, 2.42], "pos": [8.600, 0.046, 1.011], "rot": 0,
-      "note": "THE SINK PENINSULA, AND THE HALF WALL. Fronts face SOUTH. The app's wall below the pass-through (y 0..3.30) is a zero-thickness plane, so this piece gives it a painted back (z -0.17..0), jambs, a header and the walk-through casing -- it reads solid from the living room too. Counter x 5.75..14.87 at y 2.88..3.00 spanning z -0.20..2.20, capping the wall, with the low marble curb photo F shows along the pass-through side. Run west->east: end panel, BLACK DISHWASHER x 5.90..7.90 (critic defect #2: photo F shows a black front immediately LEFT of the sink; round 1 had a white panel-front one on the east wall), sink base x 7.90..10.85 with an undermount stainless sink at x 8.35..10.45 and the black gooseneck faucet + soap dispenser, then drawer-over-two-door and the corner base. Backsplash only east of x 13.48, where the wall stays full height."
+      "size_ft": [
+        12.54,
+        7.74,
+        2.42
+      ],
+      "pos": [
+        8.6,
+        0.046,
+        1.011
+      ],
+      "rot": 0,
+      "note": "THE SINK PENINSULA, AND THE HALF WALL. Fronts face SOUTH. The app's wall below the pass-through (y 0..3.30) is a zero-thickness plane, so this piece gives it a painted back (z -0.17..0), jambs, a header and the walk-through casing -- it reads solid from the living room too. Counter x 5.75..14.87 at y 2.88..3.00 spanning z -0.20..2.20, capping the wall, with the low marble curb photo F shows along the pass-through side. Run west->east: end panel, BLACK DISHWASHER x 5.90..7.90 (critic defect #2: photo F shows a black front immediately LEFT of the sink; round 1 had a white panel-front one on the east wall), sink base x 7.90..10.85 with an undermount stainless sink at x 8.35..10.45 and the black gooseneck faucet + soap dispenser, then drawer-over-two-door and the corner base. Backsplash only east of x 13.48, where the wall stays full height.",
+      "note_r3": "ROUND 3: stone fields on the peninsula top and the corner backsplash; the living-room walk-through is a cased_opening and the pass-through has painted drywall returns; the dishwasher uses the APPL blacks."
     },
     "Kitchen Cabinets East": {
-      "size_ft": [2.19, 8.55, 15.10], "pos": [13.774, 0.046, 7.550], "rot": 0,
-      "note": "THE HERO WALL (photo A left / photo F right). Against x=14.87, fronts face WEST, run z 2.20..10.60. Base carcase x 12.87..14.87, quartz counter to x 12.72 at y 2.88..3.00, marble backsplash y 3.00..4.50, uppers x 13.77..14.87 y 4.50..8.10. z layout north->south: 2.20..4.30 two-door base, 4.30..6.80 RANGE SLOT (counter and uppers both cut), 6.80..9.36 drawer over two-door, 9.42..10.45 drawer over door, 10.45..10.60 finished end panel. STEPPED CROWN y 8.10..8.55 in four runs projecting 0.09/0.19/0.27/0.20 ft -- critic defect #8 was that round 1's crown was a thin flat cap where the photo's projects ~3 in in multiple steps. Everything past z 10.60 is bare wall and then the cased hallway opening (z 11.55..14.95) whose casing is part of this piece."
+      "size_ft": [
+        2.19,
+        8.55,
+        15.1
+      ],
+      "pos": [
+        13.774,
+        0.046,
+        7.55
+      ],
+      "rot": 0,
+      "note": "THE HERO WALL (photo A left / photo F right). Against x=14.87, fronts face WEST, run z 2.20..10.60. Base carcase x 12.87..14.87, quartz counter to x 12.72 at y 2.88..3.00, marble backsplash y 3.00..4.50, uppers x 13.77..14.87 y 4.50..8.10. z layout north->south: 2.20..4.30 two-door base, 4.30..6.80 RANGE SLOT (counter and uppers both cut), 6.80..9.36 drawer over two-door, 9.42..10.45 drawer over door, 10.45..10.60 finished end panel. STEPPED CROWN y 8.10..8.55 in four runs projecting 0.09/0.19/0.27/0.20 ft -- critic defect #8 was that round 1's crown was a thin flat cap where the photo's projects ~3 in in multiple steps. Everything past z 10.60 is bare wall and then the cased hallway opening (z 11.55..14.95) whose casing is part of this piece.",
+      "note_r3": "ROUND 3: bar pulls restored on every upper door; built-up crown_run; the hallway opening is a cased_opening with real jamb linings; backsplash and counters are rasterised stone."
     },
     "Kitchen Range": {
-      "size_ft": [2.47, 5.96, 2.50], "pos": [13.637, 0.046, 5.550], "rot": 0,
-      "note": "Black freestanding gas range AND the black over-range microwave in ONE model so they stay aligned in the cabinet slot. Range front x 12.70, cooktop glass at 2.99 with five cast-iron grates, tall black backguard y 2.99..3.72 with a display, five knobs, two grey towels over the door handle. Microwave x 13.52..14.87, y 4.50..5.96, bottom flush with the flanking uppers -- exactly the stack photos A and F both show."
+      "size_ft": [
+        2.47,
+        5.96,
+        2.5
+      ],
+      "pos": [
+        13.637,
+        0.046,
+        5.55
+      ],
+      "rot": 0,
+      "note": "Black freestanding gas range AND the black over-range microwave in ONE model so they stay aligned in the cabinet slot. Range front x 12.70, cooktop glass at 2.99 with five cast-iron grates, tall black backguard y 2.99..3.72 with a display, five knobs, two grey towels over the door handle. Microwave x 13.52..14.87, y 4.50..5.96, bottom flush with the flanking uppers -- exactly the stack photos A and F both show.",
+      "note_r3": "ROUND 3: continuous grate sections instead of crossed-bar stars, grey terry towels with a fold and a hem band, APPL body, and a blinds reflection in the microwave door."
     },
     "Kitchen Cabinets South": {
-      "size_ft": [10.61, 8.55, 2.19], "pos": [7.735, 0.046, 15.643], "rot": 0,
-      "note": "The far wall of photo A, now against the REAL south wall (z 16.74). Round 1 stood a fake 9 ft partial wall across the room here because the traced footprint was 10 ft too deep, and a critic called the remainder 'a room someone stopped furnishing'; the re-trace removed the need and the fake wall is gone. Counter run x 5.90..9.90 (drawers over two-door bases, uppers, marble backsplash) carrying the stainless coffee machine and toaster from photos B/C, then the fridge bay x 9.90..12.95 with a bridge cabinet over it at y 6.30..8.10, then plain wall x 12.95..14.87 -- the grey return photo A shows. Same four-step crown as the east run. Also carries the casing of the cut opening through to Dining at x 2.58..5.58."
+      "size_ft": [
+        10.61,
+        8.55,
+        2.19
+      ],
+      "pos": [
+        7.735,
+        0.046,
+        15.643
+      ],
+      "rot": 0,
+      "note": "The far wall of photo A, now against the REAL south wall (z 16.74). Round 1 stood a fake 9 ft partial wall across the room here because the traced footprint was 10 ft too deep, and a critic called the remainder 'a room someone stopped furnishing'; the re-trace removed the need and the fake wall is gone. Counter run x 5.90..9.90 (drawers over two-door bases, uppers, marble backsplash) carrying the stainless coffee machine and toaster from photos B/C, then the fridge bay x 9.90..12.95 with a bridge cabinet over it at y 6.30..8.10, then plain wall x 12.95..14.87 -- the grey return photo A shows. Same four-step crown as the east run. Also carries the casing of the cut opening through to Dining at x 2.58..5.58.",
+      "note_r3": "ROUND 3: same crown and stone changes; the Dining opening is a cased_opening."
     },
     "Kitchen Fridge": {
-      "size_ft": [2.99, 5.98, 3.15], "pos": [11.425, 0.046, 15.165], "rot": 0,
-      "note": "Black french-door refrigerator, front at z 13.79, standing proud of the cabinet bay. Freezer drawer to y 2.14, two upper doors above, black bar handles, and the pale touchscreen panel on the right-hand door that photo A shows lit."
+      "size_ft": [
+        2.99,
+        5.98,
+        3.15
+      ],
+      "pos": [
+        11.425,
+        0.046,
+        15.165
+      ],
+      "rot": 0,
+      "note": "Black french-door refrigerator, front at z 13.79, standing proud of the cabinet bay. Freezer drawer to y 2.14, two upper doors above, black bar handles, and the pale touchscreen panel on the right-hand door that photo A shows lit.",
+      "note_r3": "ROUND 3: APPL charcoal with sheen bands. This piece was the critic's 'pure black surface'."
     },
-
     "Kitchen Island": {
-      "size_ft": [3.93, 4.16, 5.40], "pos": [7.184, 0.046, 8.000], "rot": 0,
-      "note": "Quartz top x 5.25..9.15, z 5.30..10.70 on a white shaker box x 6.35..8.95, z 5.48..10.52, so the seating overhang on the WEST side is 1.10 ft. SIZING IS AISLE-DRIVEN: the usable floor is only x 2.28..14.87 and the east counter's front edge is 12.72, so this leaves a 3.57 ft work aisle to the range wall, 3.10 ft to the peninsula and 3.09 ft to the fridge front, and the two stools tuck into the mouth of the west bay. EAST (working) face carries three drawers, the two-door glass beverage fridge photo B shows, then a door. West face and both ends are decorative raised panels. The black paper-towel stand is the photo's hero prop and is part of this model; the 4.16 bbox height is that stand, the counter is 3.00."
+      "size_ft": [
+        3.93,
+        4.16,
+        5.4
+      ],
+      "pos": [
+        7.184,
+        0.046,
+        8.0
+      ],
+      "rot": 0,
+      "note": "Quartz top x 5.25..9.15, z 5.30..10.70 on a white shaker box x 6.35..8.95, z 5.48..10.52, so the seating overhang on the WEST side is 1.10 ft. SIZING IS AISLE-DRIVEN: the usable floor is only x 2.28..14.87 and the east counter's front edge is 12.72, so this leaves a 3.57 ft work aisle to the range wall, 3.10 ft to the peninsula and 3.09 ft to the fridge front, and the two stools tuck into the mouth of the west bay. EAST (working) face carries three drawers, the two-door glass beverage fridge photo B shows, then a door. West face and both ends are decorative raised panels. The black paper-towel stand is the photo's hero prop and is part of this model; the 4.16 bbox height is that stand, the counter is 3.00.",
+      "note_r3": "ROUND 3: the top is a rasterised stone field at 0.034 ft cells, metering 204.4 / sd 20.2."
     },
     "Kitchen Stool North": {
-      "size_ft": [1.34, 3.17, 1.48], "pos": [4.480, 0.046, 6.780], "rot": 0,
+      "size_ft": [
+        1.34,
+        3.17,
+        1.48
+      ],
+      "pos": [
+        4.48,
+        0.046,
+        6.78
+      ],
+      "rot": 0,
       "note": "Light-grey barrel-back counter stool on a black steel CANTILEVER sled -- authored facing east in room coordinates, so rot stays 0. Seat top 2.16, crown 3.17. The base is an open C each side with no rear leg: round 1 closed the loop and it read as a four-leg bar stool, not the photo's sled. Round 2 added a darker liner inside the barrel, because with no shadows in this renderer the whole stool came back as one white blob at dollhouse distance."
     },
     "Kitchen Stool South": {
-      "size_ft": [1.34, 3.17, 1.48], "pos": [4.480, 0.046, 9.300], "rot": 0,
+      "size_ft": [
+        1.34,
+        3.17,
+        1.48
+      ],
+      "pos": [
+        4.48,
+        0.046,
+        9.3
+      ],
+      "rot": 0,
       "note": "Same model, 2.52 ft further south. Two stools is what photos A, C and F all show."
     },
-
     "Kitchen Window West": {
-      "size_ft": [2.20, 4.80, 7.57], "pos": [1.098, 1.860, 7.255], "rot": 0,
+      "size_ft": [
+        2.2,
+        4.8,
+        7.57
+      ],
+      "pos": [
+        1.098,
+        1.86,
+        7.255
+      ],
+      "rot": 0,
       "note": "THE BAY IS REAL NOW. Round 1 could only build a flat stand-in because the footprint was a rectangle; the re-trace gave the three facets back and p_openings.py cuts a genuine window hole in each (edges 4, 3, 2 at y 2.20..6.50). This piece is only the dressing: casing, stool, apron, a faint inner pane and white 2 in horizontal blinds on all three facets, placed along each edge with edge_box() so the two angled facets get correctly rotated trim."
     },
     "Kitchen Rug": {
-      "size_ft": [2.60, 0.04, 5.20], "pos": [11.250, 0.048, 6.300], "rot": 0,
-      "note": "The flecked runner in front of the range, x 9.95..12.55, z 3.70..8.90. pos.y clears Kitchen Floor's top (0.046), not just the app slab. Mid-grey ground with 2600 small dark flecks: round 1 used big bright flecks on a dark ground and it read as confetti; the photo's runner is a light loop weave with dark speckle, slightly LIGHTER than the floor."
+      "size_ft": [
+        2.6,
+        0.04,
+        5.2
+      ],
+      "pos": [
+        11.25,
+        0.048,
+        6.3
+      ],
+      "rot": 0,
+      "note": "The flecked runner in front of the range, x 9.95..12.55, z 3.70..8.90. pos.y clears Kitchen Floor's top (0.046), not just the app slab. Mid-grey ground with 2600 small dark flecks: round 1 used big bright flecks on a dark ground and it read as confetti; the photo's runner is a light loop weave with dark speckle, slightly LIGHTER than the floor.",
+      "note_r3": "ROUND 3: rebuilt as a cream/taupe woven ground with ~1200 individually rotated near-black loop quads, a bound dark edge and a fringe on both ends."
     },
     "Kitchen Counter Items": {
-      "size_ft": [3.70, 1.14, 9.45], "pos": [12.710, 3.046, 5.135], "rot": 0,
+      "size_ft": [
+        3.7,
+        1.14,
+        9.45
+      ],
+      "pos": [
+        12.71,
+        3.046,
+        5.135
+      ],
+      "rot": 0,
       "note": "The clutter band photos A and F both show, and most of what stops the east counter reading as an empty white shelf: the white kettle on the front-left burner, eight muted supplement/cereal boxes and six jars along the counter south of the range, a wooden knife block, and the two black serving bowls plus the potted plant on the peninsula by the sink. Colours are deliberately desaturated -- round 1 used photo-saturated hues and the boxes read as toy blocks."
     },
     "Kitchen Trash Can": {
-      "size_ft": [1.24, 2.20, 1.22], "pos": [1.150, 0.046, 5.300], "rot": 0,
+      "size_ft": [
+        1.24,
+        2.2,
+        1.22
+      ],
+      "pos": [
+        1.15,
+        0.046,
+        5.3
+      ],
+      "rot": 0,
       "note": "Brushed-steel step bin standing IN the bay at its north end, which is where photo C puts it."
     }
   },
-
   "_critic_fixes": {
     "1 sealed off": "FIXED -- real cut openings, not model geometry. Two on the north wall (a floor-to-header walk-through beside the bay and the 7.45 ft pass-through over the peninsula half wall), one to the hallway on the east, one to Dining on the south, three bay windows on the west. From inside the kitchen you now see the living room's stone fireplace over the counter, as photos C and F do.",
     "2 dishwasher": "FIXED -- moved off the east wall to the peninsula, immediately west of the sink, and given a black front (photo F).",
@@ -128,14 +332,67 @@
     "9 cabinet-to-counter value": "IMPROVED -- upper door 207 / island top 223, delta 16, against the critic's measured delta 32 and the photo's 10. Horizontal quartz clips under direct sun in this renderer; closing the last 6 points would need an albedo dark enough to grey the counters out in shade.",
     "10 recessed cans": "FIXED -- six, down from ten."
   },
-
-  "_camera_note": "Photo A is the PRIMARY (roomkit.sbs pairs against it) and is an ultra-wide phone shot; camera.fov in shot.py is VERTICAL, so a portrait 960x1200 frame needs ~104 to reach a ~90 deg horizontal field. Closest match: pos [5.21, 13.5, 6.04] target [5.21, 10.5, 20.24] fov 104 size 960x1200 (world coords, --level 1 --day) -- standing over the sink looking south, as the photographer did. Photo F view: pos [-1.59, 13.6, 18.74] target [5.31, 11.6, 6.24] fov 80 size 900x1200. Dollhouse: pos [13.63, 38.64, 27.98] target [3.21, 10.5, 13.11] fov 44 size 1200x900. Note the stock corner_se pose puts the camera inside the fridge.",
-
+  "_camera_note": "Photo A is the PRIMARY (roomkit.sbs pairs against it) and is an ultra-wide phone shot; camera.fov in shot.py is VERTICAL, so a portrait 960x1200 frame needs ~104 to reach a ~90 deg horizontal field. Closest match: pos [5.21, 13.5, 6.04] target [5.21, 10.5, 20.24] fov 104 size 960x1200 (world coords, --level 1 --day) -- standing over the sink looking south, as the photographer did. Photo F view: pos [-1.59, 13.6, 18.74] target [5.31, 11.6, 6.24] fov 80 size 900x1200. Dollhouse: pos [13.63, 38.64, 27.98] target [3.21, 10.5, 13.11] fov 44 size 1200x900. Note the stock corner_se pose puts the camera inside the fridge. Round 3 added a close east-wall pose for metering the backsplash and cooktop: pos [4.81, 12.0, 10.24] target [10.68, 11.6, 10.24] fov 52 size 900x700.",
   "_known_gaps": [
-    "The app's opening panel is a 22%-opacity pane, not a hole -- the three cased openings (living room walk-through, hallway, Dining) carry a faint glass sheet. It reads as open air from inside the kitchen but it is visible as a pale slab when looked at square-on, e.g. the Dining opening in the photo-A pose.",
-    "Horizontal quartz tops clip under direct sun: the island top sits 14 above the photo even at a #cdcdca albedo.",
-    "Backsplash marble metered 196 against the photo's 179.",
-    "The room is still flatter than the photos: no shadows and no bounce, so shaker relief and cabinet-to-wall separation rely on albedo steps plus 0.028 ft proud rails.",
-    "Stool sled is black; photo F's reads as bright chrome while photos A and C read black, and black was kept."
+    "The three cased openings are real holes with no panel, but what shows through the Dining one is the neighbouring room's flat wall panel, which still reads as a pale slab at that angle. That is another room's geometry.",
+    "Backsplash sd is 12.0 against the photo's 19.0. The rest would need either clipping the cloud field at the white end or veining hard enough to read as camouflage at close range, which is what an earlier round-3 pass did before it was pulled back.",
+    "The stone is quantised onto 0.034-0.052 ft cells, so closer than about 3 ft the vein edges step. The island top, the hero surface, is the finest at 0.034 ft.",
+    "The room's GLB payload is 6.2 MB across 15 pieces, up from 4.5 MB; the floor (1.29 MB) and the island (1.47 MB) are the bulk. That is the price of the tone fields, and the cell sizes are single constants if it has to come down.",
+    "Stool sled is black; photo F's reads as bright chrome while photos A and C read black."
+  ],
+  "_round3": "Round 2 was FAILED by a critic on surfaces, hardware and artifacts; the geometry was confirmed correct and was NOT touched (footprint, aisles 3.10/3.57 ft, fridge run tight to the real south wall, pass-through open to the living room, black dishwasher west of the sink, six cans, nothing intersecting the bay). Round 3 rebuilt the surface program. The one new shared module is scratchpad/kbuild/kraster.py: a tone-field RASTERISER. Round 2 drew every texture as discrete marks -- veins as little boxes walking across the slab, contact shadows as five nested rectangles, the rug as flecks -- where the photograph has a continuous FIELD. kraster samples field(u,w) -> t in [0,1], quantises it onto a palette, and merges equal-tone cells into one quad per run, so a surface gets a real gradient at close to a plain plane's triangle count and the quantisation contours are irregular: no rings, no bands, no stripes. Every quad's winding is checked against the face normal it is supposed to carry.",
+  "_metering_r3": {
+    "_how": "photo patches cropped with scratchpad/kbuild/crop.py; render patches from the same region of the matching pose, --level 1 --day; luminance 0.2126/0.7152/0.0722.",
+    "island top": {
+      "photo_F": "205.0 / sd 24.9",
+      "round2": "222.6 / sd 18.2",
+      "round3": "204.4 / sd 20.2"
+    },
+    "backsplash": {
+      "photo_F": "173.4 / sd 19.0",
+      "round2": "163.0 / sd 5.1",
+      "round3": "173.1 / sd 12.0"
+    },
+    "upper door": {
+      "photo_F": "205.8 / sd 10.9",
+      "round3": "207.0 / sd 6.8"
+    },
+    "counter": {
+      "round3": "208.8 / sd 8.8"
+    },
+    "floor": {
+      "photo_A": "116.4 / sd 23.5",
+      "round2": "127.7 / sd 23.7",
+      "round3": "117.3 / sd 32.1; open floor clear of any contact shadow 113.6 / sd 7.8"
+    },
+    "rug": {
+      "photo_A": "121.4 / sd 51.5",
+      "photo_F": "123.7 / sd 36.7",
+      "round3": "116.6 / sd 54.4"
+    },
+    "fridge side, corner_se pose": {
+      "photo_A fridge door": "54.7",
+      "round2": "0, pure black",
+      "round3": "41.9"
+    },
+    "wall spread, roomkit.meter": "54 bytes against round 2's 55 -- no emissive wall wash added"
+  },
+  "_critic_fixes_r3": {
+    "1 stone program": "REBUILT. veins() is deleted. top_stone()/splash_stone() in kcommon.py drive kraster.stone_field: a low-frequency cloud (the mottling), fine grain (stops large flats reading as paint), and a kraster.Veins distance field -- a branching NET of soft strokes with a short step and high meander so they curve instead of running as straight diagonals. The palettes TOPS/SPLASH are 16-step ramps calibrated on this renderer's measured response (albedo 74 lands on 110, 192 on 215, 205 on 222.6; slope about 0.89 low and 0.58 in the highlights), so the field albedo and the vein-core albedo are each solved for the rendered value the photo wants.",
+    "2 island too bright": "222.6 -> 204.4 against the photo's 205.0, sd 18.2 -> 20.2 against 24.9. Done with albedo, not exposure: the TOPS ramp tops out at #b9b9b6.",
+    "3 upper hardware REGRESSION": "FIXED, after re-cropping photo F at 2x rather than trusting the finding. Every upper door carries a black vertical bar pull low on the meeting stile; base doors have small round knobs and drawers horizontal bars. two_door() takes kind= and every upper call site passes 'v'.",
+    "4 contact shadows REGRESSION": "REBUILT as kraster.Shadows: one exponential distance field over the whole floor covering all nine occluders at once, rasterised at 0.062 ft cells onto 15 TRANSLUCENT steps. The translucency is the point -- an opaque decal paints one flat tone over planks that are themselves varying, so its outline shows as a tone discontinuity however fine the falloff is, which is why the first round-3 attempt still read as a stepped patch. Alpha darkens what is underneath instead. Measured 102 under the island against 116 on open floor with no visible boundary.",
+    "5 floor contrast REGRESSION": "127.7 / sd 23.7 -> 117.3 / sd 32.1 against the photo's 116.4 / sd 23.5; on open floor away from any contact shadow 113.6. The palette is narrower (six greys spanning 1.64x, was 1.94x) and plank tone is drawn by a RANDOM WALK across it so no board sits five steps from its neighbour, which is what made round 2 a patchwork. GAIN 0.635 -> 0.560.",
+    "6 pure black surface": "DIAGNOSED AND FIXED, but the critic's diagnosis was wrong. probe.py raycast that pixel: it is the FRIDGE's east side face 1.6 ft from the stock corner_se camera, material side = DoubleSide. Not an inverted normal -- every roomkit Material defaults to double_sided=True. The cause is albedo: #141517 with no emissive is linear 0.006 and a face turned away from this scene's single sun lands on literally 0. BLACK and GLASSBLK now carry an emissive floor and appliances use APPL/APPL_LO/APPL_HI with sheen bands. That face meters 41.9 against photo A's fridge door at 54.7.",
+    "7 cased openings": "cased_opening() builds each one with jamb linings and a head lining running AWAY from the room into the wall cavity, so the casing stays flush with the wall plane and in the same plane as the baseboard; the linings are drawn in SHADOWLN a few steps below the casing white, because this renderer has no shadow to sell a reveal. Applied to the hallway opening, the Dining opening and the living-room walk-through; the pass-through over the peninsula gets painted drywall returns instead, which is what photo F shows. What is visible THROUGH the Dining opening is another agent's Dining-room wall panel 17.5 ft away, not our geometry.",
+    "8 range rug": "REBUILT from a 2.5x crop of photo F: a cream/taupe woven ground (rasterised) carrying about 1200 individually rotated near-black loop quads on a 0.85 in lattice, plus the bound dark edge and a short fringe on both ends. 116.6 / sd 54.4 against photo A's 121.4 / sd 51.5. The loops are real geometry, not raster cells -- a 3 px mark cannot survive quantisation onto a grid, and the first attempt read as digital camouflage.",
+    "9 cooktop and towels": "The five crossed-bar 'stars' are replaced by two continuous rectangular grate sections plus a centre one, each a perimeter frame with parallel ribs over recessed burner caps. The towels are mid-grey terry (albedo #6f7274, was #9b9e9f) folded over the handle with the front panel hanging lower than the back, a crease and a pale hem band.",
+    "10 crown": "crown_run(): five members projecting 0.30 ft past the door faces over a 0.62 ft height, sitting on a dark SHADOWLN reveal. Applied to both the east and south upper runs.",
+    "11 wall value split": "NOT FIXED -- see _disagreements_r3."
+  },
+  "_disagreements_r3": [
+    "The critic diagnosed the black slab as 'a one-sided face turned away from every light -- fix its winding'. It is not a winding bug: every Material in roomkit/glb.py defaults to double_sided=True and the raycast confirms side = DoubleSide on the hit face. It is an albedo problem and is fixed as one. The rasteriser does still verify winding per quad, because that class of bug is easy to introduce.",
+    "'Lighten the backsplash to counter value.' Photo F does not put them at the same value: a clean backsplash patch under the uppers measures 173.4 while the island top in open light measures 205.0 and an upper door 205.8. It is the same stone at the same albedo, sitting in the cabinets' shade. Ours lands at 173.1 against a counter at 208.8 -- the same 35-point gap the photo has. Lifting it to counter value would have been wrong; what was wrong was the sd, and that is fixed (5.1 -> 12.0).",
+    "Item 11, the wall behind the fridge reading grey against the bay wall. roomkit.meter still puts the room's wall spread at 54 bytes (round 2: 55). The residue is physical: the app has one sun, so an interior face turned toward it renders brighter than one turned away, and the photos do the same thing (photo F's near wall 220 against photo A's far wall 138). Photo A also shows a grey wall return to the right of the fridge. The only lever left is an emissive wall wash, which the brief told me to keep out, so it is reported rather than papered over."
   ]
 }

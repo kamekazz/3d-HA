@@ -29,11 +29,14 @@ def build():
     # ---- quartz top: this is the biggest single surface in the room, and the
     # critic metered it as plain white paint.  Heavy continuous veining.
     bx(m, QUARTZ, CX0, CX1, ICB, CT, CZ0, CZ1)
-    veins(m, VEIN, "+y", CT + 0.005, CX0 + 0.12, CX1 - 0.12, CZ0 + 0.15,
-          CZ1 - 0.15, 31337, thin=0.072, spacing=0.62, angle=1.05)
-    # a little veining rolls over the front edge too
-    veins(m, VEIN, "-x", CX0 + 0.004, CZ0 + 0.2, CZ1 - 0.2, ICB + 0.02,
-          CT - 0.02, 31341, thin=0.026, spacing=0.9, angle=0.5)
+    # ROUND 3: the critic metered this at 222.6 / sd 18.2 against photo F's
+    # 204.7 / sd 25.6 -- too bright and too even.  It is now the same rasterised
+    # cloud + vein-net field as every other stone surface in the room, on a
+    # palette whose albedo is pulled well down because horizontal quartz clips
+    # under direct sun in this renderer.
+    top_stone(m, CT, CX0, CX1, CZ0, CZ1, 31337, cell=0.034)
+    # the veining rolls over the front edge too
+    top_stone(m, CX0, CZ0, CZ1, ICB + 0.005, CT, 31341, cell=0.045, face="-x")
 
     # ---- east (working) face: 3 drawers | beverage fridge | door
     for (a, b) in ((TOE + 0.03, TOE + 0.86), (TOE + 0.92, TOE + 1.72),

@@ -132,6 +132,131 @@ judged, and these are the mistakes they found. Do not repeat them.
 6. **Density.** The real rooms are lived in. Renders came back tidier and
    emptier than the photos in every case.
 
+## What round 2 got wrong — the newer lessons
+
+1. **A critic's finding is not automatically right. Verify it against the photo
+   before you act on it.** Round 1's critic said the kitchen's upper cabinets
+   should have round knobs; round 2 dutifully changed all ~30 doors, and round
+   2's critic found photo F unambiguously shows **bar pulls on every upper door**
+   and knobs only on base doors. A wrong finding got built because nobody
+   re-checked the photo. If you disagree with a finding, say so in your report
+   with the evidence — that is a valid outcome.
+2. **Contact shadows must be a smooth gradient, not nested rings.** Round 2 baked
+   them as five hard-edged concentric outlines, which read as bullseye decals
+   painted on the floor — the critic called it worse than no shadow at close
+   range. Use a radial-falloff texture on a single quad; `environment.js` has a
+   working `makeShadowTexture()` to copy the idea from.
+3. **Match the photo's spread, don't just beat the old number.** Round 1's floor
+   measured sigma 9.5 against the photo's 16.2 and read plastic; round 2 "fixed"
+   it to 23.7 and reads as a random light/dark patchwork. Overshooting is not
+   closer. Meter the photo, then meter yours, then aim at the photo's value.
+4. **Pure black surfaces mean inverted normals.** A one-sided face turned away
+   from every light renders solid black and reads as a hole in the room. If you
+   see a black slab in a render, check the winding of the piece you just placed.
+
+## Wall-to-wall brightness spread: a known limit, not your bug
+
+Every critic so far has flagged that the walls of one painted room render at
+different values (Living Room measured north 212 / west 158 / east 119; a real
+room's walls sit within ~30). Understand what this is before you try to fix it:
+
+The scene has **one directional sun and no bounce light**. A wall facing away
+from it gets only hemisphere + IBL. `daylight.js` was already raised once to
+close the gap, and raising it further was measured and rejected — at IBL 1.9 an
+empty room's spread improved only 80 → 71 bytes while the exterior roof and
+siding visibly flattened. So a residual 50–80 byte spread is the renderer's
+limit, not a defect in your room.
+
+**Do not fight it with emissive.** Two rounds of builders did, and both were
+rejected: room-filling emissive boxes read as hard-edged rectangles, and
+emissive on room-scale *runs* (crown, baseboards) makes them glow as bright fins
+against the darker walls — which is a large part of why a room reads as
+partitions rather than a room. The "no emissive box" rule covers trim runs too.
+
+What you CAN legitimately do, in increasing order of effort:
+
+1. Pick a `wall_color` that lands the room's **average** near the photo rather
+   than tuning to one wall, and let the spread sit. Know the cost: a builder
+   doing exactly this got the four-wall average to 157.5 against the photo's
+   160.3, but its north wall then sat at 218 — brighter than the photo's
+   ceiling. With one colour and a 112-byte spread you cannot win everywhere.
+2. **Give each wall its own albedo.** One `wall_color` serves all of them, but
+   nothing stops you skinning a wall with a full-height, edge-to-edge GLB plane
+   in a different colour, so a wall the sun never reaches is simply painted
+   lighter. This is NOT the rejected "wall wash": that failed because it was
+   **emissive** (so it glowed at night and read as light rather than paint) and
+   because it covered only part of the wall, showing hard rectangular edges.
+   A plain non-emissive skin covering a whole wall face is just a painted
+   surface, and it is the only way to bring all four walls near the photo.
+   If you do it: no emissive, cover the wall corner to corner, and match the
+   `roughness` of the room wall (0.95) or the seam will show — see the note
+   above about pieces and walls not rendering alike.
+
+## A GLB piece and a room wall do NOT render the same at the same albedo
+
+Measured on the master bedroom: an object's material collects roughly **1.7×**
+what a room wall of the same authored colour does. Solving a ceiling gable on the
+wall's number left a visible seam across the room.
+
+`models.js` and `scene.js` set the same `envMapIntensity`, so this is not an app
+bug — it is material authoring. Room walls are built at `roughness 0.95`;
+`roomkit.glb`'s `Material` defaults to `0.85`, and a smoother surface picks up
+more environment specular. Metalness matters even more (glTF's own default
+`metallicFactor` is 1.0 — always set it explicitly).
+
+**So: never assume equal albedo gives equal render.** When a piece has to match a
+room surface — a ceiling meeting a wall, baseboards meeting a floor — render both
+and meter them against each other, and match `roughness` as well as colour.
+
+Related, from the same build: the analytic tone inverse in `build/room14/tone.py`
+no longer predicts the render after the lighting change. Two-point log-linear
+fits measured off real renders are what work now.
+
+## Payload budget — this loads on a tablet, all at once
+
+`buildHouse` loads **every** room's models on every rebuild. There is no
+per-floor lazy loading. So a room's GLB payload is not a local cost, it is a
+whole-app cost.
+
+Current: **20 MB across 109 models.** The Kitchen alone reached 6.2 MB in round 3
+(its floor 1.29 MB, its island 1.47 MB) chasing surface texture through
+rasterised tone fields. Seventeen rooms at that weight would be ~100 MB and the
+dashboard would stop being usable — which counts as breaking the app.
+
+**Budget: aim for ≤1.5 MB per room and ≤300 KB per piece.** If a surface needs
+tone variation, prefer a coarser cell size, a tiled texture, or vertex colours
+over more geometry. Merge parts that share a material — `Model.add` already
+groups by material, so fewer `Material` instances means fewer primitives.
+
+Check yourself before reporting done:
+```
+ls -S backend/uploads/models/*.glb | head
+du -ch backend/uploads/models/*.glb | tail -1
+```
+
+## How to meter honestly — this has now gone wrong twice
+
+Numbers in build reports have been misleading, not because anyone faked them but
+because of two sampling mistakes. Both were caught by a critic re-measuring.
+
+1. **Sample a CLEAN field, not a region with objects in it.** A round-3 builder
+   reported the fireplace stone at a stone/wall ratio of 0.98 and concluded it
+   matched the photo. The critic re-measured clean lit stone only and got
+   1.10–1.15 — the builder's photo sample had swallowed the wreath and the
+   firebox shadow. Same error made a stone field look like sd 31 when clean
+   stone in the render is sd 34 against the photo's 8.
+2. **Report EVERY wall, not the favourable ones.** The same builder re-toned the
+   walls and reported "average 169, against the photo's 155–171". The critic
+   found that averaged only the two brightest walls: the east wall actually
+   meters 95–98 and the south 92–135 against the photo's 156–161. The re-tone
+   made the two dark walls *worse* while the headline number improved.
+
+So: when you report a value, say which surface, how big the sample was, and give
+the range across all four walls — not one number. And when you pick a single
+`wall_color` for a room whose walls are lit very differently, choose it so the
+**average across all of them** lands near the photo; optimising the bright walls
+pushes the dark ones further away.
+
 ## Room-scale surfaces must be named so they stay unclickable
 
 A floor plane over the slab, a ceiling, an emissive wall wash, a baseboard run —

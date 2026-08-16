@@ -182,6 +182,13 @@ function recomputeTarget() {
   // measured by `roomkit.meter` (an empty room ran 222 down to 125 on one paint
   // colour). Night end left at 0.05 so the dark house and roomlights.js's glow
   // are untouched.
+  // 1.15 is a measured compromise, not a guess. Raising it compresses the
+  // wall-to-wall spread inside a room (the residual complaint from every critic)
+  // but flattens the exterior: at 1.9 an empty room's spread only improved
+  // 80 -> 71 bytes while the roof and siding visibly lost their relief. The
+  // remaining spread is the honest limit of one directional sun with no bounce
+  // light, and must NOT be fought with per-room emissive panels — that is what
+  // produced the glowing trim and hard-edged wall washes critics rejected.
   target.envIntensity =
     THREE.MathUtils.lerp(1.15, 0.05, target.nightFactor) * w.hemiX;
 

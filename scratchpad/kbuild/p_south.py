@@ -22,17 +22,15 @@ FRZ = ZW - 2.95                 # fridge front
 
 def cabinets():
     m = Model()
-    # ---- backsplash
+    # ---- backsplash (ROUND 3: rasterised cloud field, not stick veins)
     bx(m, MARBLE, CX0, CX1, CT, UP0, ZW - 0.055, ZW)
-    veins(m, VEIN, "-z", ZW - 0.055, CX0 + 0.25, CX1 - 0.25, CT + 0.2, UP0 - 0.2,
-          6613, thin=0.038, spacing=0.55, angle=1.15)
+    splash_stone(m, "-z", ZW - 0.055, CX0, CX1, CT, UP0, 6613)
 
     # ---- base run + counter
     bx(m, WHITE_LO, CX0, CX1, TOE, CB, ZB, ZW)
     bx(m, BLACK, CX0, CX1, 0.0, TOE, ZB + 0.12, ZW)
     bx(m, QUARTZ, CX0, CX1, CB, CT, ZC, ZW)
-    veins(m, VEIN, "+y", CT + 0.005, CX0 + 0.25, CX1 - 0.25, ZC + 0.2, ZW - 0.2,
-          6619, thin=0.062, spacing=0.62, angle=0.95)
+    top_stone(m, CT, CX0, CX1, ZC + 0.02, ZW, 6619)
     bx(m, WHITE, CX0 - 0.10, CX0, 0.0, CT, ZC, ZW)
 
     for (a, b) in ((CX0 + 0.05, CX0 + 1.95), (CX0 + 2.02, CX1 - 0.05)):
@@ -41,21 +39,21 @@ def cabinets():
         two_door(m, WHITE, "-z", ZB, a, b, TOE + 0.03, CB - 0.68,
                  panel=WHITE_LO, pull_y=0.86)
         bx(m, WHITE_LO, a, b, UP0, UP1, ZU, ZW)
+        # bar pulls on the uppers -- photo F, see two_door()
         two_door(m, WHITE, "-z", ZU, a + 0.03, b - 0.03, UP0 + 0.03, UP1 - 0.03,
-                 pull_y=0.13)
+                 pull_y=0.13, kind="v")
     bx(m, WHITE, CX0, CX1, UP0 - 0.03, UP0, ZU - 0.03, ZW)
 
     # ---- bridge cabinet over the fridge bay + finished flanking panels
     bx(m, WHITE_LO, FX0, FX1, 6.30, UP1, ZU - 0.62, ZW)
     two_door(m, WHITE, "-z", ZU - 0.62, FX0 + 0.05, FX1 - 0.05, 6.33, UP1 - 0.03,
-             pull_y=0.17)
+             pull_y=0.20, kind="v")
     bx(m, WHITE, FX0 - 0.09, FX0, 0.0, UP1, ZU - 0.62, ZW)
     bx(m, WHITE, FX1, FX1 + 0.09, 0.0, UP1, ZU - 0.62, ZW)
 
-    # ---- stepped crown right across the run
-    for (dz, y0, y1) in ((0.09, UP1, 8.22), (0.19, 8.22, 8.36),
-                         (0.27, 8.36, 8.48), (0.20, 8.48, CR1)):
-        bx(m, TRIM, CX0 - 0.12, FX1 + 0.09, y0, y1, ZU - 0.62 - dz, ZW)
+    # ---- built-up crown right across the run (ROUND 3: chunky, shadow line)
+    crown_run(m, TRIM, "-z", ZW, ZW - (ZU - 0.62), CX0 - 0.12, FX1 + 0.09, UP1,
+              shadow=SHADOWLN, proj=0.30, h=0.62)
 
     # ---- small appliances (photos B/C: stainless coffee machine + toaster)
     bx(m, STEEL, CX0 + 0.55, CX0 + 1.55, CT, CT + 1.05, ZW - 1.14, ZW - 0.28)
@@ -65,29 +63,44 @@ def cabinets():
     bx(m, STEEL, CX0 + 2.10, CX0 + 3.10, CT, CT + 0.72, ZW - 1.02, ZW - 0.36)
     bx(m, BLACK, CX0 + 2.16, CX0 + 3.04, CT + 0.72, CT + 0.76, ZW - 0.98, ZW - 0.40)
 
-    # ---- casing on the cut opening through to Dining (x 2.58 .. 5.58)
-    for (a, b) in ((2.43, 2.60), (5.56, 5.73)):
-        bx(m, TRIM, a, b, 0.0, 7.32, ZW - 0.14, ZW)
-    bx(m, TRIM, 2.43, 5.73, 7.20, 7.32, ZW - 0.14, ZW)
+    # ---- cased opening through to Dining (x 2.58 .. 5.58), with real jamb
+    # returns so it reads as a doorway rather than a pale slab of the next room
+    cased_opening(m, TRIM, "-z", ZW, 2.58, 5.58, 7.20, depth=0.42, casing=0.28,
+                  shadow=SHADOWLN)
     return m
 
 
 def fridge():
+    """ROUND 3: the fridge is what the critic found as "a large PURE BLACK
+    surface filling much of the frame" from the south-east pose.  It is not an
+    inverted normal -- probe.py raycast the pixel and it is this piece's east
+    side face, 1.6 ft from that camera, every material doubleSided.  The cause
+    is albedo: #141517 with no emissive is linear 0.006, and a face turned away
+    from the single sun lands on literally 0.  The photos' black appliances
+    measure 55-134 with grazing reflection, so the body now uses APPL (a lifted
+    charcoal with an emissive floor) and the doors carry a lighter sheen band.
+    """
     m = Model()
     x0, x1 = FX0 + 0.03, FX1 - 0.03
-    body = Material("fridgeblk", "#141517", roughness=0.30, metallic=0.35)
-    bx(m, body, x0, x1, 0.0, 5.92, FRZ, ZW)
-    bx(m, GLASSBLK, x0 + 0.03, x1 - 0.03, 0.10, 2.14, FRZ - 0.075, FRZ)
+    bx(m, APPL, x0, x1, 0.0, 5.92, FRZ, ZW)
+    bx(m, APPL_LO, x0 + 0.03, x1 - 0.03, 0.10, 2.14, FRZ - 0.075, FRZ)
+    bx(m, APPL_HI, x0 + 0.05, x1 - 0.05, 1.62, 1.80, FRZ - 0.079, FRZ - 0.072)
     bx(m, PULL, x0 + 0.20, x1 - 0.20, 1.86, 1.98, FRZ - 0.20, FRZ - 0.08)
     xm = (x0 + x1) / 2.0
     for (a, b) in ((x0 + 0.03, xm - 0.02), (xm + 0.02, x1 - 0.03)):
-        bx(m, GLASSBLK, a, b, 2.24, 5.86, FRZ - 0.075, FRZ)
+        bx(m, APPL_LO, a, b, 2.24, 5.86, FRZ - 0.075, FRZ)
+        # a broad soft sheen band across the doors: black steel is never flat
+        bx(m, APPL_HI, a + 0.04, b - 0.04, 4.30, 4.62, FRZ - 0.079, FRZ - 0.072)
+        bx(m, APPL, a + 0.04, b - 0.04, 4.62, 5.05, FRZ - 0.079, FRZ - 0.072)
     bx(m, PULL, xm - 0.30, xm - 0.22, 3.55, 5.55, FRZ - 0.20, FRZ - 0.08)
     bx(m, PULL, xm + 0.22, xm + 0.30, 3.55, 5.55, FRZ - 0.20, FRZ - 0.08)
     scr = Material("screen", "#cfd8dd", roughness=0.18, emissive="#7c868c")
-    bx(m, body, xm + 0.24, x1 - 0.26, 3.62, 5.28, FRZ - 0.086, FRZ - 0.076)
+    bx(m, APPL, xm + 0.24, x1 - 0.26, 3.62, 5.28, FRZ - 0.086, FRZ - 0.076)
     bx(m, scr, xm + 0.30, x1 - 0.32, 3.74, 5.16, FRZ - 0.092, FRZ - 0.086)
-    bx(m, body, x0, x1, 5.86, 5.98, FRZ + 0.02, ZW)
+    bx(m, APPL_HI, x0, x1, 5.86, 5.98, FRZ + 0.02, ZW)
+    # the side that faces the hallway opening: keep it a lit charcoal, not a
+    # hole -- this is the exact face the critic photographed
+    bx(m, APPL_HI, x1 - 0.012, x1, 0.0, 5.92, FRZ, ZW - 0.02)
     return m
 
 

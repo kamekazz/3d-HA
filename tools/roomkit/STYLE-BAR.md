@@ -34,6 +34,24 @@ other half: what the room has to look like as a *dollhouse*, seen from the
 8. **Clean neutral backdrop.** Ours is the app's single-floor studio gradient,
    which is already right. Do not fight it.
 
+## Choose the dollhouse angle to match where the room's content is
+
+Room walls are `FrontSide` with inward normals, so **the two walls nearest the
+camera are culled** — that is what lets you see in, and it is the same
+two-walls-standing look the Sims shots have. The consequence: a fixed camera
+angle culls a fixed pair of walls, and if the room's content lives on that pair
+you lose it.
+
+Worse, **placed objects are never culled**. A window unit, art or cabinetry on a
+culled wall is left hanging in mid-air with no wall behind it, which reads as a
+bug rather than a cutaway.
+
+So shoot the diagonal *opposite* the content. `roomkit.rooms <id> --poses-only`
+now gives `doll_se`, `doll_sw`, `doll_ne`, `doll_nw` (and `doll` = `doll_se` for
+compatibility). Pick the one whose culled pair is the two walls you do not care
+about, and say in your report which you used — a critic comparing a different
+quadrant is not looking at the same room you built.
+
 ## How to shoot the dollhouse comparison
 
 ```

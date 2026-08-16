@@ -28,9 +28,10 @@ def build():
     m = Model()
 
     # ---------------------------------------------------- backsplash (marble)
+    # ROUND 3, the critic's headline defect: this was a flat mid-grey field
+    # (163 / sd 5.1) with pale stick-marks.  It is now a rasterised cloud field.
     bx(m, MARBLE, XW - 0.055, XW, CT, UP0, 0.0, Z1)
-    veins(m, VEIN, "-x", XW - 0.055, 0.25, Z1 - 0.25, CT + 0.2, UP0 - 0.2, 4211,
-          thin=0.038, spacing=0.55, angle=1.15)
+    splash_stone(m, "-x", XW - 0.055, 0.0, Z1, CT, UP0, 4211)
 
     # ---------------------------------------------------- base run
     for (a, b) in ((Z0, RG0), (RG1, Z1)):
@@ -38,8 +39,7 @@ def build():
         bx(m, BLACK, XB + 0.12, XW, 0.0, TOE, a, b)
     for (a, b) in ((Z0, RG0), (RG1, Z1)):
         bx(m, QUARTZ, XC, XW, CB, CT, a, b)
-        veins(m, VEIN, "+y", CT + 0.005, XC + 0.2, XW - 0.2, a + 0.25, b - 0.25,
-              9137 + int(a * 10), thin=0.062, spacing=0.62, angle=0.95)
+        top_stone(m, CT, XC + 0.02, XW, a, b, 9137 + int(a * 10))
 
     # base cabinet north of the range: two doors
     two_door(m, WHITE, "-x", XB, Z0 + 0.05, RG0 - 0.04, TOE + 0.03, CB - 0.03,
@@ -59,33 +59,37 @@ def build():
     bx(m, QUARTZ, XC, XW, CB, CT, END, Z1)
 
     # ---------------------------------------------------- wall cabinets
+    # UPPER doors get VERTICAL BAR PULLS.  Round 1 had them, round 1's critic
+    # wrongly called for knobs, round 2 changed all ~30 doors, and round 2's
+    # critic re-checked photo F: bar pulls on every upper, knobs on base doors
+    # only.  Verified again against the photo before restoring them.
     for (a, b) in ((0.10, 1.95), (1.95, RG0)):
         bx(m, WHITE_LO, XU, XW, UP0, UP1, a, b)
         two_door(m, WHITE, "-x", XU, a + 0.03, b - 0.03, UP0 + 0.03, UP1 - 0.03,
-                 pull_y=0.13)
+                 pull_y=0.13, kind="v")
     # short cabinet over the microwave
     bx(m, WHITE_LO, XU, XW, 5.98, UP1, RG0, RG1)
     two_door(m, WHITE, "-x", XU, RG0 + 0.03, RG1 - 0.03, 6.01, UP1 - 0.03,
-             pull_y=0.16)
+             pull_y=0.20, kind="v")
     for (a, b) in ((RG1, 8.70), (8.70, 10.50)):
         bx(m, WHITE_LO, XU, XW, UP0, UP1, a, b)
         two_door(m, WHITE, "-x", XU, a + 0.03, b - 0.03, UP0 + 0.03, UP1 - 0.03,
-                 pull_y=0.13)
+                 pull_y=0.13, kind="v")
     bx(m, WHITE, XU - 0.03, XW, UP0 - 0.03, UP0, 0.10, 10.50)
 
-    # ------------------------------------------- stepped crown over the uppers
-    # photo F's crown projects ~3 in in three steps; round 1's was a 1 in flat
-    # cap and a critic named it.
-    for (dx, y0, y1) in ((0.09, UP1, 8.22), (0.19, 8.22, 8.36),
-                         (0.27, 8.36, 8.48), (0.20, 8.48, CR1)):
-        bx(m, TRIM, XU - dx, XW, y0, y1, 0.06, 10.56)
+    # ------------------------------------------- built-up crown over the uppers
+    # Round 2's four thin steps totalled 0.27 ft of projection and still read as
+    # "a thin band"; photo F's is a deep built-up stack with a hard shadow line.
+    crown_run(m, TRIM, "-x", XW, XW - XU, 0.06, 10.56, UP1, shadow=SHADOWLN,
+              proj=0.30, h=0.62)
     # crown + carcase return down the open south end of the wall run
-    bx(m, TRIM, XU - 0.27, XW, UP0, UP1, 10.50, 10.56)
+    bx(m, TRIM, XU - 0.30, XW, UP0, UP1, 10.50, 10.56)
 
     # ---------------------------------- casing on the hallway opening (photo A)
-    for (a, b) in ((11.40, 11.57), (14.93, 15.10)):
-        bx(m, TRIM, XW - 0.14, XW, 0.0, 7.32, a, b)
-    bx(m, TRIM, XW - 0.14, XW, 7.20, 7.32, 11.40, 15.10)
+    # Built with real jamb returns now: the app cuts a genuine hole and draws no
+    # panel, so an unframed hole reads as a flat pale slab of the next room.
+    cased_opening(m, TRIM, "-x", XW, 11.55, 14.95, 7.20, depth=0.46,
+                  casing=0.40, shadow=SHADOWLN)
     return m
 
 

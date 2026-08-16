@@ -12,7 +12,9 @@
     "9":  { "name": "Laundry",             "photos": ["Laundry.jpg", "Laundry room and garage door right next to it.jpg"] },
     "10": { "name": "Pantry",              "photos": ["pantry door.jpg", "Pantry and garage door.jpg"] },
     "12": { "name": "First floor hallway", "photos": ["First floor hallway.jpg", "First floor hallway Entryway.jpg", "First floor hallway and Stairs.jpg", "First floor hallway Stairs to Second Floor.jpg", "Bottom of the stairs And front door.jpg"] },
-    "23": { "name": "Bathroom",            "photos": ["First-floor bathroom.jpg", "Bathroom.jpg", "Bathroom A.jpg"] },
+    "22": { "name": "Office printers",     "photos": ["First-floor bathroom.jpg"],
+            "_note": "The file name is wrong: this is the printer nook off the office, not a bathroom. Identified during the shell pass — the office's charcoal wainscot frames the doorway in the shot." },
+    "23": { "name": "Bathroom",            "photos": ["Bathroom.jpg", "Bathroom A.jpg"] },
 
     "13": { "name": "Guest Room",          "photos": ["Guest Room.jpg", "Guest Room TV and Door.jpg", "Guest Room Closet.jpg"] },
     "14": { "name": "Master Bed",          "photos": ["Master bedroom.jpg", "Master Bed 1.jpg", "Master Bed 2.jpg", "Master Bed 3.jpg"] },
@@ -29,7 +31,6 @@
     "3":  "Backyard — outdoor pad, environment.js handles it",
     "7":  "Garage — only seen through doorways in the laundry/pantry photos",
     "11": "Frontyard — outdoor pad",
-    "22": "Office printers — nook off the office",
     "24": "Bathroom closet",
     "25": "Room 7 — unnamed 2F strip, likely the stair landing",
     "18": "House — the level-10 placeholder holding the shell model"

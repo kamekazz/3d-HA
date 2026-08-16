@@ -1,0 +1,81 @@
+{
+  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
+  "_room_note": "Hallway (2F) -- 'Second-floor hallway.jpg'. NO CROWN in this room; every shot shows a clean drywall corner at the ceiling. The stairwell is the level-1 stair (world x 14.6..18.4 / z 14.3..24.5) = local x 4.1..7.9 / z 7.7..16.7, and the defining piece is the white capped KNEE WALL round it (solid half wall, no spindles -- that is what the photo shows on this floor). Four door units: guest room and room 25 west, master bath and master closet east.",
+  "_room": {
+    "id": 17,
+    "name": "Hallway",
+    "floor": {
+      "id": 3,
+      "name": "Second floor.",
+      "level": 2
+    },
+    "rect_world": {
+      "x": [
+        10.5,
+        18.6
+      ],
+      "z": [
+        6.6,
+        23.3
+      ]
+    },
+    "size_ft": [
+      8.1,
+      16.7
+    ],
+    "wall_height": 8.0
+  },
+  "_surfaces": {
+    "wall_color": "#d4d6d7",
+    "floor_color": "#6b6967",
+    "floor_texture": "wood",
+    "wall_texture": null
+  },
+  "_camera": {
+    "judge_from": "doll_nw",
+    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
+  },
+  "pieces": {
+    "Hall2F Balustrade": {
+      "pos_room_local_ft": [
+        5.865,
+        0.0,
+        12.11
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Hall2F Baseboards": {
+      "pos_room_local_ft": [
+        4.05,
+        0.0,
+        8.35
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Hall2F Ceiling": {
+      "pos_room_local_ft": [
+        4.05,
+        7.875,
+        8.35
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Hall2F Floor Runner": {
+      "pos_room_local_ft": [
+        2.35,
+        0.008,
+        7.0
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    }
+  },
+  "_gaps": [
+    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
+    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
+    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
+  ]
+}

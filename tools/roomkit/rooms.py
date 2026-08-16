@@ -133,17 +133,29 @@ def poses_for(f, size=(1100, 850)):
     span = max(w, d)
     plan = pose(_l2w(f, cx, span * 1.25 + h, cz), _l2w(f, cx, 0, cz), 45, [900, 900])
 
-    # The dollhouse shot: a 50-degree orbit looking down into the room from the
-    # south-east, framed so the whole footprint fits. This is the Sims-4 angle.
+    # The dollhouse shot: a 50-degree orbit looking down into the room, framed so
+    # the whole footprint fits. This is the Sims-4 angle.
+    #
+    # There are four of them on purpose. Room walls are FrontSide with inward
+    # normals, so the two walls NEAREST the camera are culled — that is what
+    # lets you see in. Pick the quadrant whose culled pair is the two walls you
+    # do NOT care about: a single fixed south-east angle culls the south and east
+    # walls, and in a room whose content is on those walls you lose it. Worse,
+    # placed objects are never culled, so a window unit on a culled wall is left
+    # hanging in mid-air. Shoot the diagonal opposite the content.
     el = math.radians(DOLL_ELEV)
-    az = math.radians(35)               # off the south axis, toward the east
     dist = span * 1.45 + h
-    doll = pose(
-        _l2w(f, cx + dist * math.cos(el) * math.sin(az), h + dist * math.sin(el),
-             cz + dist * math.cos(el) * math.cos(az)),
-        _l2w(f, cx, h * 0.28, cz), 42, [1200, 900])
+    dolls = {}
+    for key, az_deg in (("doll_se", 35), ("doll_sw", -35),
+                        ("doll_ne", 145), ("doll_nw", -145)):
+        az = math.radians(az_deg)
+        dolls[key] = pose(
+            _l2w(f, cx + dist * math.cos(el) * math.sin(az), h + dist * math.sin(el),
+                 cz + dist * math.cos(el) * math.cos(az)),
+            _l2w(f, cx, h * 0.28, cz), 42, [1200, 900])
+    dolls["doll"] = dolls["doll_se"]   # backwards-compatible default
 
-    return {**corners, **walls, "plan": plan, "doll": doll}
+    return {**corners, **walls, "plan": plan, **dolls}
 
 
 def floor_doll_pose(house, level, size=(1400, 950), az_deg=35.0, el_deg=DOLL_ELEV):

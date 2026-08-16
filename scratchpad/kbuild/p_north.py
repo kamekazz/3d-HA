@@ -40,11 +40,21 @@ def build():
     bx(m, TRIM, 2.43 - 0.10, 2.43, 0.0, 7.70, ZBACK, ZW)     # walk-through casing
     bx(m, TRIM, 5.58, 5.58 + 0.10, 0.0, 7.70, ZBACK, ZW)
     bx(m, TRIM, 2.33, 5.68, 7.60, 7.70, ZBACK, ZW)
+    # ROUND 3: the walk-through gets real jamb returns on the kitchen side too,
+    # so it reads as a hole through a wall of thickness rather than as a pale
+    # slab of the living room.  Casing is narrow here -- the west wall corner is
+    # only 0.15 ft away.
+    cased_opening(m, TRIM, "+z", ZW, 2.43, 5.58, 7.60, depth=0.40, casing=0.13,
+                  shadow=SHADOWLN)
+    # drywall returns round the pass-through itself (photo F: no casing there,
+    # just the wall thickness turning the corner)
+    for (a, b) in ((HW0, HW0 + 0.075), (HW1 - 0.075, HW1)):
+        bx(m, SHADOWLN, a, b, HWY, 7.60, ZW - 0.40, ZW)
+    bx(m, SHADOWLN, HW0, HW1, 7.525, 7.60, ZW - 0.40, ZW)
 
     # ---- backsplash east of the pass-through (that corner stays full height)
     bx(m, MARBLE, HW1, X1, CT, UP0, ZW, ZW + 0.055)
-    veins(m, VEIN, "+z", ZW + 0.055, HW1 + 0.2, X1 - 0.2, CT + 0.2, UP0 - 0.2,
-          8821, thin=0.038, spacing=0.55, angle=1.15)
+    splash_stone(m, "+z", ZW + 0.055, HW1, X1, CT, UP0, 8821)
 
     # ---- carcase + toe kick
     bx(m, WHITE_LO, X0, X1, TOE, CB, ZW + 0.06, ZB)
@@ -54,9 +64,10 @@ def build():
     for (a, b, c, d) in ((X0, SX0, ZBACK - 0.03, ZC), (SX1, X1, ZBACK - 0.03, ZC),
                          (SX0, SX1, ZBACK - 0.03, SZ0), (SX0, SX1, SZ1, ZC)):
         bx(m, QUARTZ, a, b, CB, CT, c, d)
-    for (a, b, sd) in ((X0 + 0.3, SX0 - 0.2, 5501), (SX1 + 0.2, X1 - 0.3, 5507)):
-        veins(m, VEIN, "+y", CT + 0.005, a, b, ZBACK + 0.15, ZC - 0.15, sd,
-              thin=0.062, spacing=0.62, angle=1.15)
+    for (a, b, sd) in ((X0, SX0, 5501), (SX1, X1, 5507)):
+        top_stone(m, CT, a, b, ZBACK, ZC, sd)
+    for (a, b, sd) in ((ZBACK, SZ0, 5511), (SZ1, ZC, 5517)):
+        top_stone(m, CT, SX0, SX1, a, b, sd)
     # low marble curb along the pass-through side, as in photo F
     bx(m, MARBLE, HW0, HW1, CT, CT + 0.34, ZBACK - 0.03, ZBACK + 0.10)
 
@@ -82,9 +93,10 @@ def build():
     m.add(box(0.10, 0.05, 0.16), BLACK, at=(fx - 0.62, CT + 0.32, fz + 0.06))
 
     # ---- BLACK dishwasher, immediately west of the sink (photo F) ----------
-    DWM = Material("dwblack", "#141517", roughness=0.34, metallic=0.38)
+    DWM = APPL
     door(m, DWM, "+z", ZB, DW0 + 0.04, DW1 - 0.04, 0.30, CB - 0.02,
-         rail=0.075, depth=0.030, proud=0.016, panel=GLASSBLK)
+         rail=0.075, depth=0.030, proud=0.016, panel=APPL_LO)
+    bx(m, APPL_HI, DW0 + 0.10, DW1 - 0.10, 1.55, 1.78, ZB + 0.030, ZB + 0.036)
     bx(m, DWM, DW0 + 0.10, DW1 - 0.10, CB - 0.20, CB - 0.10, ZB + 0.06, ZB + 0.16)
     bx(m, PULL, DW0 + 0.14, DW1 - 0.14, CB - 0.19, CB - 0.11, ZB + 0.13, ZB + 0.19)
     ctrl = Material("dwctrl", "#3a3d41", roughness=0.4)

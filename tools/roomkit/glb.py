@@ -298,14 +298,21 @@ def cylinder(radius, h, seg=24, anchor="base", r_top=None):
         a = 2 * math.pi * s / seg
         v.append((radius * math.cos(a), y0, radius * math.sin(a)))
         v.append((r_top * math.cos(a), y1, r_top * math.sin(a)))
+    # Winding: every face outward. This was inverted on all three surfaces --
+    # the side wall faced the axis, the bottom cap faced UP and the top cap
+    # faced DOWN -- which went unnoticed for a long time because Material
+    # defaults to double_sided. It bites the moment a piece needs one-sided
+    # faces: a ceiling built with double_sided=False (so its slopes cull when
+    # seen from above) left one bright emissive disc per recessed can shining
+    # up through the culled ceiling and projecting onto the floor below.
     for s in range(seg):
         b, n = 2 * s, 2 * ((s + 1) % seg)
-        t += [(b, n, b + 1), (b + 1, n, n + 1)]
+        t += [(b, b + 1, n), (b + 1, n + 1, n)]
     cb, ct = len(v), len(v) + 1
     v += [(0.0, y0, 0.0), (0.0, y1, 0.0)]
     for s in range(seg):
         b, n = 2 * s, 2 * ((s + 1) % seg)
-        t += [(cb, n, b), (ct, b + 1, n + 1)]
+        t += [(cb, b, n), (ct, n + 1, b + 1)]
     return Part(v, t, smooth=True)
 
 

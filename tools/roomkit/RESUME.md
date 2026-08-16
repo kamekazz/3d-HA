@@ -20,7 +20,7 @@ consistent. Pick up from the list at the bottom.
 | 5 | Living Room | **round 2 built, NOT yet judged** | fireplace moved to the NW chamfer (chimney chase in the plan). Two cased openings were converted to type `passage` after it finished. |
 | 4 | Dining | round 1 built, geometry re-traced under it | **needs re-place.** Now 14.6 × 13.1 polygon with a real east bay — round 1's faked flat bay can become real. |
 | 15 | Rios Room | round 1 FAILED by critic, geometry re-traced under it | **needs re-place + the critic's 12-item list.** Windows are the big one: built 6.15 ft tall, measured ~4.8. Delete `Rios Wall Wash`. |
-| 14 | Master Bed | round 3 built, geometry re-traced under it | **needs re-place — the long axis rotated 90°.** Preserve round 3's findings: the bed is a QUEEN, art is 4.44 ft at scale 0.857. `poses.json`'s `ref` pose is for the OLD room and now frames wrongly. |
+| 14 | Master Bed | **round 4 re-placed into the rotated footprint, NOT yet judged** | Dresser moved to the WEST wall (the plan + Master Bed 2 prove it) and the long-standing headboard-wall collision is gone; vault re-derived (ridge N–S at x 10.50, peak 14.6, 32.2°/33.4°); 7 REAL openings cut (4 windows, 2 doors, 1 passage); contact shadows added; every tone re-metered — wall 239→225, floor 199→140 so rug/floor is 1.68 like the photo. Build/re-place with `build/room14/r4_place.py`. `poses.json`'s `ref` is still for the OLD room — use the pose in `layout.json._room._camera_warning`. |
 | 8, 13, 16, 26, 23, 12, 17, 27, 9, 10, 1, 2 | everything else | **never built** | photos mapped in `photos.json` |
 
 ## What changed app-wide (and why re-metering matters)
@@ -47,6 +47,28 @@ space in three r160, which rendered the treeline pale mint).
 
 The house-shell GLB (`backend/uploads/models/model_3.glb`) had its roof texture
 renormalised and its front door darkened; backups are beside it.
+
+## Geometry corrected after the re-trace
+
+**Room 14's entry vestibule was ~7.9 ft too far west** and has been moved. Two
+independent derivations (a critic and the round-5 builder, both using
+`plan_retrace.py`'s own transform — the one that reproduces all four blue window
+marks within 0.05 ft) put it at local **x 15.73–20.51, hard against the east
+wall**, where the re-trace had it at x 7.86–15.58, centred. Applied via PATCH;
+level 2 re-verified with zero overlapping cells, and the vestibule now meets the
+2F hallway across its full width instead of over 3.2 ft.
+
+The anchor and bounding box did not change, so furniture in the main area was
+unaffected. Round 5's own notes flag that `r5_shadows.FEET`, the TV x position
+and `r4_room.POLY` edge indices were derived against the OLD leg and need
+re-checking.
+
+**A library bug was fixed in `glb.py`:** `cylinder()` wound all three surfaces
+inward — the side wall faced the axis and both end caps were inverted. It never
+showed because `Material` defaults to double-sided, but it put a bright emissive
+disc per recessed can shining up through a one-sided ceiling. Fixed and verified
+(0 wrongly-facing triangles). Existing GLBs are baked with the old winding;
+rebuild a piece to pick up the fix.
 
 ## Known open items
 

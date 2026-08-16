@@ -2,143 +2,174 @@
   "_note": "Whole-house gauntlet status. Update state/round/note/render per room as critics report, then run: python -m roomkit.house_progress",
   "headline": "The real house, rebuilt room by room until a critic stops telling them apart",
   "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. The bar for the overall look is The Sims 4's dollhouse build view; the bar for each room is the photograph of that actual room.",
-  "stamp": "round 2 built on 3 rooms · paused at the API session limit",
-  "hero": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\625d3716-8337-4ad2-9a27-d9fa0142326d\\scratchpad\\shots\\doll_L1_r2.png",
-  "hero_label": "First floor as it stands: Dining with its real bay, Kitchen, and Living Room with the fireplace on the chimney chase — daylight coming through openings that are actually cut. The garage and hallway are still the bare shells everything started as.",
+  "stamp": "every room shelled · living room round 4 · 19 MB payload, down from 27",
+  "hero": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\625d3716-8337-4ad2-9a27-d9fa0142326d\\scratchpad\\shots\\L2_final.png",
+  "hero_label": "Second floor, with the entry vestibule moved to where the floor plan actually puts it.",
   "rooms": [
     {
       "id": 14,
       "name": "Master Bedroom",
-      "state": "pending",
-      "round": 3,
+      "state": "judging",
+      "round": 5,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Master bedroom.jpg",
-      "render": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\625d3716-8337-4ad2-9a27-d9fa0142326d\\scratchpad\\shots\\r3_final.png",
-      "render_label": "round 3",
-      "note": "Three rounds of careful measurement — the bed was proved a queen, not a king, by three photo anchors, and the vault ridge was measured to sit over the bed. The re-trace then rotated the room's long axis 90 degrees, so every wall assignment has to be re-derived. The measurement work carries over; the placement does not."
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\r5\\final_ref.png",
+      "render_label": "round 5 — awaiting critic",
+      "note": "The bed is a KING. Round 3 had 'proved' a queen from photo anchors and that was carried for three rounds; the measurement had been taken against a headboard 25 degrees off square, foreshortened by a quarter. Re-measured against objects at the same depth, the shams are 36-inch king pillows. The invented white chest was deleted for the armchair the photo and plan both show, a TV added, soft surfaces given real texture, and the room slimmed from 3.41 MB to 1.74 MB. It also found a bug in the shared GLB library and independently confirmed the entry vestibule was misplaced."
     },
     {
       "id": 6,
       "name": "Kitchen",
       "state": "judging",
-      "round": 2,
+      "round": 3,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Kitchen A.jpg",
-      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\kitchen_r2_photoA.png",
-      "render_label": "round 2 — awaiting critic",
-      "note": "Round 2: the fake internal wall and its 190 sq ft of dead floor are gone with the re-trace, the fridge run stands against the real wall, and real cut openings mean you now look over the peninsula half-wall at the living room fireplace the way photos C and F do. Floor rebuilt as 7.4 in planks in six greys (tonal spread 24-51 against the photo's 27.3, where round 1 was 9.5), contact shadows baked under everything, black knobs on doors. Wall-value spread within the room 93 -> 56 bytes with no emissive wash."
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\r3\\final_A.png",
+      "render_label": "round 3 — awaiting critic",
+      "note": "Round 3 found one root cause behind four separate defects: round 2 drew marks where the photo has a field. A tone-field rasteriser replaced the vein-drawing, and the surfaces now land on the photograph — backsplash 173.1 against 173.4, island top 204.4 against 205.0, floor 117.3 against 116.4. It also pushed back on three findings with evidence, including refuting the 'inverted normals' diagnosis by raycasting the pixel: the black slab was the fridge's dark side face receiving no sun, an albedo problem, not a winding bug. And it re-cropped the photo at 2x before restoring the upper-cabinet bar pulls that a wrong critic finding had replaced with knobs."
     },
     {
       "id": 5,
       "name": "Living Room",
       "state": "judging",
-      "round": 2,
+      "round": 4,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Living Room A.jpg",
-      "note": "Round 2 made a structural correction: the floor plan draws the north-west chamfer as a thickened wall — a chimney chase — and two photos show the stone breast on a wall angled to the TV wall. The fireplace belongs there, not on the north wall, which freed that wall to hold exactly what the plan draws. Stone rebuilt as a jittered Voronoi tessellation rather than courses of rectangles. Pickability recovered from 33% to 61% by naming the rug as a surface.",
-      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\lr5\\r2_ref.png",
-      "render_label": "round 2 — awaiting critic"
+      "note": "Round 4 fixed the metering problem itself: it built a tool that writes a visual overlay of every sample box so each is eyeballed before being quoted, and threw out two of its own samples that way. The stone's dark web turned out not to be the joint colour but the pillow rims, which face sideways and catch no light — replaced with flat tilted plates in 0.85 ft courses, and clean-field spread fell from 34.2 to 5.5-6.0 against the photo's 5.7-11.5. All four walls are now reported with sample sizes. It also found the rug's 'hard seams' were not the rug at all but the coffee table's contact-shadow decal, drawn with a hard core under an open X-frame. Payload cut from 6.4 MB to 1.83 MB.",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\lr5\\r4_ref.png",
+      "render_label": "round 4 — awaiting critic"
     },
     {
       "id": 4,
       "name": "Dining",
-      "state": "pending",
-      "round": 1,
+      "state": "judging",
+      "round": 2,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Dining A.jpg",
-      "note": "Round 1 built. Footprint since re-traced to 14.6 x 13.1 with a real canted east bay — which solves round 1's stated limitation that the geometry could not hold the bay. Needs re-placing into it.",
-      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\final_corner_ne.png",
-      "render_label": "round 1"
+      "note": "Rebuilt into the re-traced polygon. Verified orientation three independent ways and confirmed round 1 had it right. The bay is real now, so its three windows sit on the actual canted facets as cut holes, and both doorways are true passages — and it registered the kitchen doorway to the exact world span room 6 had already cut on its own side, so the two rooms' holes align instead of each showing the other's jamb. The 7.8 ft table fits without being shrunk: at that size the west end chair sits in the bay mouth exactly where the photo puts it.",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots4\\final_A.png",
+      "render_label": "round 2 — awaiting critic"
     },
     {
       "id": 15,
       "name": "Rios Room",
-      "state": "fail",
-      "round": 1,
+      "state": "judging",
+      "round": 2,
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Rios room.jpg",
-      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots15\\final_doorway.png",
-      "render_label": "round 1 — rejected",
-      "note": "Critic FAILED round 1: windows built 6.15 ft tall against ~4.8 measured, so they read as French doors and made the room look oversized. The re-trace then shrank the room from 15.5 x 16 to 12.5 x 11.7 — vindicating the critic. Needs re-placing plus the 12-item list."
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots15r2\\final.png",
+      "render_label": "round 2 — awaiting critic",
+      "note": "Round 2 found the room was 180 degrees out, not merely too big: re-deriving orientation from the floor plan against two adjacencies puts the windows on the SOUTH wall. It also found there are two rubber trees, one at each end of the window wall, which is why round 1's corner never resolved. Windows rebuilt to 4.85 ft tall with a 1 ft header as measured, cut as real openings; the room-filling emissive wall wash deleted rather than re-tuned, and the room now meters within a few points of an empty room of the same size — it is no longer compensating for the renderer."
     },
     {
       "id": 8,
       "name": "Office",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Office A.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 13,
       "name": "Guest Room",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Guest Room.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 16,
       "name": "Master Bathroom",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Master Bath. 1.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 26,
       "name": "Second-floor bathroom",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Second floor bathroom.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 23,
       "name": "First-floor bathroom",
-      "state": "pending",
-      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\First-floor bathroom.jpg",
-      "note": ""
+      "state": "judging",
+      "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Bathroom.jpg",
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 12,
       "name": "First-floor hallway & stairs",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\First floor hallway.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 17,
       "name": "Second-floor hallway",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Second-floor hallway.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 27,
       "name": "Master Closet",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Walk in the closet to Master Bedroom.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 9,
       "name": "Laundry",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Laundry.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 10,
       "name": "Pantry",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\pantry door.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 1,
       "name": "Movie Room",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Movie room.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
     },
     {
       "id": 2,
       "name": "Arcade Room",
-      "state": "pending",
+      "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Arcade Room.jpg",
-      "note": ""
+      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "round": 1,
+      "render_label": "shell pass"
+    },
+    {
+      "id": 7,
+      "name": "Garage",
+      "state": "judging",
+      "round": 1,
+      "note": "Shell only, deliberately: ceiling, flush fixtures, a concrete curb instead of skirting, and a 16 ft sectional garage door. It wants a car and wall storage."
     }
   ],
   "facts": {
@@ -151,7 +182,9 @@
     "Objects placed": "85 across 5 rooms",
     "Wall-light spread": "222-125 bytes -> 238-158 after the app-level lighting fix",
     "First floor": "~1,250 sq ft living + 443 sq ft garage",
-    "Paused": "API session limit; nothing half-applied"
+    "Paused": "API session limit; nothing half-applied",
+    "Rooms with a shell": "all 17 photographed rooms + garage",
+    "Furniture objects": "154 across 21 rooms"
   },
   "footer": "Renders are taken from the running app at 127.0.0.1:5000 — the same Three.js scene the Home Assistant dashboard draws, with device markers hidden for the comparison."
 }

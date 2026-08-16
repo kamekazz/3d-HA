@@ -1,4 +1,4 @@
-"""Shared materials + helpers for the room-6 (Kitchen) build -- ROUND 2.
+"""Shared materials + helpers for the room-6 (Kitchen) build -- ROUND 3.
 
 The footprint was re-traced under round 1: the room is now 14.87 x 16.74 ft and
 a POLYGON (three-facet bay on the west wall), anchored 5.31/7.24 ft away from
@@ -22,14 +22,40 @@ ROUND-2 CHANGES TO THE SHARED LAYER
   * VEINING: round 1's veins were 0.29 in wide and 15 tone steps off the field,
     so they vanished past 6 ft.  `veins()` now draws a soft halo plus a dark
     core at ~0.5 ft spacing, which is what the Calacatta-look tops really do.
+
+ROUND-3 CHANGES TO THE SHARED LAYER  (round 2 was failed by a critic)
+  * STONE.  `veins()` is GONE.  Every quartz top and marble backsplash is now a
+    rasterised tone field -- broad soft grey cloud + fine grain + a connected
+    net of soft veins -- built by kraster.py and driven through `top_stone()` /
+    `splash_stone()`.  The critic metered round 2's backsplash at 163 / sd 5.1
+    against photo F's 173.4 / sd 19.0 and called it "a flat mid-grey field with
+    a scatter of pale straight stick-marks".  It now meters 173.1 / sd 12.0, and
+    the island top 204.4 / sd 20.2 against the photo's 205.0 / sd 24.9 (it was
+    222.6 / sd 18.2).
+  * HARDWARE, REGRESSION FIXED.  Photo F was re-cropped at 2x: every UPPER door
+    carries a black vertical bar pull and only the BASE doors have knobs.  Round
+    1 had this right, round 1's critic wrongly called for knobs everywhere, and
+    round 2 built it.  `two_door(..., kind="v")` restores the uppers.
+  * CROWN.  `crown_run()` -- five members, 0.30 ft past the door faces, 0.62 ft
+    tall, over a dark reveal.  Round 2's four thin steps still read as a band.
+  * CASED OPENINGS.  `cased_opening()` gives each one real jamb linings (running
+    away from the room, into the wall cavity, so the casing stays flush with the
+    wall plane) drawn a few tone steps below the casing, since this renderer has
+    no shadows to sell the reveal.
+  * BLACKS.  BLACK/GLASSBLK carry an emissive floor and appliances use APPL*: a
+    face turned away from the single sun was rendering at literally 0, which is
+    the "large PURE BLACK surface" the critic found from the south-east pose.
 """
 import math
 import os
 import sys
 
 sys.path.insert(0, r"C:\Users\Manuel\Desktop\Pro\3d HA\tools")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from roomkit.glb import Model, Material, box, rounded_box, cylinder, prism, quad, sag_plane, torus  # noqa
 from roomkit.place import place  # noqa
+from kraster import (ramp, raster, stone_field, Veins, Shadows, shadow_ramp,  # noqa
+                     fbm, vnoise, khash, rng as krng)
 
 OUT = os.path.dirname(os.path.abspath(__file__))
 
@@ -64,13 +90,20 @@ EM_W = "#757575"
 WHITE     = Material("white",   "#eeece8", roughness=0.52, emissive=EM_W)
 WHITE_LO  = Material("whitelo", "#dbd8d3", roughness=0.55, emissive="#565656")
 TRIM      = Material("trim",    "#f6f5f2", roughness=0.55, emissive="#6d6d6d")
-QUARTZ    = Material("quartz",  "#cdcdca", roughness=0.46, emissive="#242424")
-VEINH     = Material("veinh",   "#c0c3c5", roughness=0.47, emissive="#202020")
+# QUARTZ / MARBLE are now only the EDGES of a stone surface (front lips, ends,
+# returns) -- the faces you look at are rasterised tone fields, see TOPS/SPLASH
+# below.  Both are set to the middle of their palette so an edge never steps
+# away from the face it belongs to.
+QUARTZ    = Material("quartz",  "#aeaeab", roughness=0.46, emissive="#1a1a1a")
 VEIN      = Material("vein",    "#a4a9ad", roughness=0.48, emissive="#1c1c1c")
-VEINC     = Material("veinc",   "#979ea3", roughness=0.48, emissive="#1a1a1a")
-MARBLE    = Material("marble",  "#cfcfcd", roughness=0.52, emissive="#1e1e1e")
-BLACK     = Material("black",   "#191a1c", roughness=0.40, metallic=0.25)
-GLASSBLK  = Material("blkglass", "#0c0d0f", roughness=0.14, metallic=0.35)
+MARBLE    = Material("marble",  "#d7d7d4", roughness=0.52, emissive="#303030")
+# ROUND 3: both blacks carry a small emissive floor.  With none, a face turned
+# away from this scene's single sun renders at literally 0 and reads as a hole
+# in the room -- see APPL below and p_south.fridge().
+BLACK     = Material("black",   "#1e2023", roughness=0.40, metallic=0.25,
+                     emissive="#121314")
+GLASSBLK  = Material("blkglass", "#141619", roughness=0.14, metallic=0.35,
+                     emissive="#0e0f11")
 PULL      = Material("pull",    "#202226", roughness=0.32, metallic=0.55)
 STEEL     = Material("steel",   "#c0c3c7", roughness=0.28, metallic=0.70,
                      emissive="#414141")
@@ -89,6 +122,48 @@ WOODBLK   = Material("woodblk", "#8d6a4b", roughness=0.75, emissive="#372a1d")
 WALLPT    = Material("wallpt",  "#eeeae2", roughness=0.94, emissive="#4e4e4e")
 
 FT = 1.0
+
+# --------------------------------------------------------- ROUND 3: the stone
+# The round-2 critic's headline defect: "the backsplash renders as a flat
+# mid-grey field (mean 163, sd 5.1) with a scatter of pale straight stick-marks;
+# photo F's is near-white marble at essentially counter value with broad soft
+# clouding (167 / sd 41)".  Same for the island top, 18 points too bright at
+# half the photo's spread.  Both surfaces are ~40% of the pixels in the two hero
+# views, so they are rebuilt as rasterised TONE FIELDS (kraster.py): broad soft
+# grey cloud, fine grain, and a connected net of soft veins -- no sticks.
+#
+# Two palettes, both 14 steps, shared by every stone surface in the room so the
+# exporter still emits one primitive per tone.  Calibrated by rendering and
+# metering, not by eye:
+#   island top   render 222.6 / sd 18.2  ->  photo F 205.0 / sd 24.9
+#   backsplash   render 163.0 / sd  5.1  ->  photo F 173.4 / sd 19.0
+# The tops clip hard under direct sun in this renderer, so their albedo runs
+# well below the value they land on.
+# Calibrated against this renderer's response curve, measured on our own
+# surfaces: albedo 74 lands on 110, albedo 192 on 215, albedo 205 on 222.6 --
+# so the slope is ~0.89 down low and ~0.58 up in the highlights.  To put the
+# field on the photo's 205 the albedo has to be 175, and to put a vein core on
+# the photo's 155 it has to be 125.  Those two points fix the ramp.
+TOP_N = 16
+TOPS = ramp("#6f757b", "#b9b9b6", TOP_N, "top", roughness=0.46,
+            emissive_lo="#101010", emissive_hi="#1a1a1a")
+SPL_N = 16
+SPLASH = ramp("#7a7f85", "#ededea", SPL_N, "spl", roughness=0.52,
+              emissive_lo="#1a1a1a", emissive_hi="#3a3a3a")
+
+# Appliance black.  #141517 with no emissive renders at literally 0 on a face
+# turned away from the sun -- the round-2 critic found a "pure black surface
+# filling much of the frame" from the south-east pose, which is the fridge side
+# 1.6 ft from the camera.  The photos' black appliances measure 55-134 with
+# strong grazing reflection, never 0, so the appliance blacks carry a small
+# emissive floor and a lighter sheen tone for the reflective faces.
+APPL      = Material("appl",    "#26282b", roughness=0.34, metallic=0.30,
+                     emissive="#161719")
+APPL_LO   = Material("appllo",  "#1b1d20", roughness=0.30, metallic=0.34,
+                     emissive="#101113")
+APPL_HI   = Material("applhi",  "#3a3d42", roughness=0.22, metallic=0.42,
+                     emissive="#232529")
+SHADOWLN  = Material("shadowln", "#b9b6b0", roughness=0.85, emissive="#2c2c2c")
 
 
 # ---------------------------------------------------------------- helpers
@@ -175,85 +250,126 @@ def door(m, mat, face, at, u0, u1, y0, y1, depth=0.055, rail=0.135,
                     uc + s * (L / 2 - 0.005), yc - 0.030, yc + 0.030)
 
 
-def two_door(m, mat, face, at, u0, u1, y0, y1, pull_y=0.88, **kw):
-    """A pair of shaker doors, knobs on the meeting stiles."""
+def two_door(m, mat, face, at, u0, u1, y0, y1, pull_y=0.88, kind="k", **kw):
+    """A pair of shaker doors with hardware on the meeting stiles.
+
+    ROUND-3 REGRESSION FIX.  Round 1 put vertical BAR PULLS on the upper doors,
+    which is what photo F actually shows; round 1's critic called for knobs,
+    round 2 changed all ~30 doors, and round 2's critic re-checked the photo and
+    found bar pulls on every upper door with knobs only on base doors.  Photo F
+    (crop: docs/photos-jpg/Kitchen F.jpg, upper run) confirms it -- so `kind`
+    is now explicit at every call site: "v" for uppers, "k" for base doors.
+    """
     mid = (u0 + u1) / 2.0
     g = 0.014
-    door(m, mat, face, at, u0, mid - g, y0, y1, pull=("k", 0.86),
+    door(m, mat, face, at, u0, mid - g, y0, y1, pull=(kind, 0.86),
          pull_y=pull_y, **kw)
-    door(m, mat, face, at, mid + g, u1, y0, y1, pull=("k", 0.14),
+    door(m, mat, face, at, mid + g, u1, y0, y1, pull=(kind, 0.14),
          pull_y=pull_y, **kw)
 
 
-def veins(m, mat, face, at, u0, u1, w0, w1, seeds, thin=0.045, count=None,
-          step=0.34, core=None, spacing=0.95, angle=None):
-    """Calacatta veining on a flat surface: near-parallel drifting veins.
+def crown_run(m, mat, face, at, front, u0, u1, y0, shadow=None, proj=0.34,
+              h=0.62):
+    """Chunky built-up cabinet crown: fillet, cove, ogee, cap + a shadow line.
 
-    Round 1 drew 0.29 in hairlines only 15 tone steps off the field, and a
-    critic metered the tops as "plain white paint" past 6 ft.  The first round-2
-    attempt over-corrected into a scribble -- veins that wandered freely and
-    crossed each other read as pencil scratches, not stone.
+    Round 2's was four thin steps totalling 0.27 ft of projection and the critic
+    still read it as "a thin band"; photo F's is a deep built-up stack with a
+    hard dark line where it meets the door faces.
 
-    Real Calacatta-look quartz runs a family of roughly PARALLEL veins with a
-    soft grey halo, a thinner darker core along part of it, and short feathers
-    peeling off at a shallow angle.  That is what this draws: one base direction
-    per slab, low meander, `spacing` ft apart.  face '+y' = a horizontal top.
+    `at` is the WALL plane the cabinets hang on, `front` how far the door faces
+    already stand off it, and `proj` how much further the widest crown member
+    projects past those doors.  Every member is drawn back to the wall so the
+    run reads solid from below.
     """
-    rnd = _rng(seeds)
-    span_u, span_w = u1 - u0, w1 - w0
-    if span_u <= 0.05 or span_w <= 0.05:
-        return
-    core = core or VEINC
-    if count is None:
-        count = max(2, int(math.hypot(span_u, span_w) / spacing))
-    base = angle if angle is not None else (0.55 + rnd() * 0.55)
+    axis, d = _AX[face]
+    steps = ((0.02, 0.000, 0.055),      # tight fillet against the door face
+             (proj * 0.40, 0.055, 0.190),
+             (proj * 0.72, 0.190, 0.330),
+             (proj * 1.00, 0.330, 0.470),
+             (proj * 0.84, 0.470, h))
 
-    # Each vein is three coplanar-ish layers -- a broad soft halo, the vein
-    # proper, then a thin dark core -- so `layer` lifts them off each other by
-    # 2.5 thou of a foot.  Without that they z-fight and the whole thing renders
-    # as one flat hairline, which is what the first two round-2 builds did.
-    def lay(mt, mu, mw, ang, ln, t, layer=1):
-        off = 0.0022 * layer
-        if face == "+y":
-            m.add(box(ln, 0.003, t), mt, at=(mu, at + off, mw), rot_y=-ang)
-        elif face in ("-x", "+x"):
-            d = (0.003 + off) if face == "+x" else -(0.003 + off)
-            m.add(box(0.003, t, ln), mt, at=(at + d, mw, mu), rot_x=-ang)
+    def put(mt, off, a, b):
+        lo, hi = at, at + d * (front + off)
+        if axis == 0:
+            bx(m, mt, min(lo, hi), max(lo, hi), y0 + a, y0 + b, u0, u1)
         else:
-            d = (0.003 + off) if face == "+z" else -(0.003 + off)
-            m.add(box(ln, t, 0.003), mt, at=(mu, mw, at + d), rot_z=ang)
+            bx(m, mt, u0, u1, y0 + a, y0 + b, min(lo, hi), max(lo, hi))
 
-    def walk(u, w, ang, wide, steps, with_core):
-        for _s in range(steps):
-            ang += (rnd() - 0.5) * 0.20
-            nu, nw = u + math.cos(ang) * step, w + math.sin(ang) * step
-            if not (u0 <= nu <= u1 and w0 <= nw <= w1):
-                break
-            mu, mw = (u + nu) / 2.0, (w + nw) / 2.0
-            t = wide * (0.75 + rnd() * 0.5)
-            if with_core:
-                lay(VEINH, mu, mw, ang, step * 1.35, t * (2.4 + rnd() * 1.4), 0)
-            lay(mat, mu, mw, ang, step * 1.22, t, 1)
-            if with_core and rnd() < 0.88:
-                lay(core, mu, mw, ang, step * 1.34, t * 0.52, 2)
-            u, w = nu, nw
-        return u, w, ang
+    if shadow is not None:                       # dark reveal under the crown
+        put(shadow, 0.055, -0.045, 0.002)
+    for off, a, b in steps:
+        put(mat, off, a, b)
 
-    for i in range(count):
-        ang = base + (rnd() - 0.5) * 0.55
-        # spread the starts along the edge the veins run away from
-        t0 = (i + 0.35 + (rnd() - 0.5) * 0.5) / max(count, 1)
-        if rnd() < 0.5:
-            u, w = u0 + span_u * t0, w0
+
+def cased_opening(m, mat, face, at, u0, u1, y1, depth=0.46, casing=0.42,
+                  proud=0.055, shadow=None):
+    """A cased opening built as a REAL thickness: jamb returns + head + casing.
+
+    The app cuts a genuine hole for a `passage` opening and draws no panel, so
+    what the round-2 critic read as "a pale translucent slab" is the far room's
+    bare wall seen through an unframed hole.  A doorway only reads as a doorway
+    when it has depth, so this stands a lining `depth` ft into the room on both
+    jambs and the head, and lays casing on the room face around it.
+
+    `at` is the wall plane, `face` points INTO the room, `u0..u1` the hole.
+    """
+    axis, d = _AX[face]
+
+    def put(mt, o0, o1, uu0, uu1, yy0, yy1):
+        """o* = distance into the room from the wall plane; uu* along the wall."""
+        lo, hi = at + d * o0, at + d * o1
+        if axis == 0:
+            bx(m, mt, min(lo, hi), max(lo, hi), yy0, yy1, uu0, uu1)
         else:
-            u, w = u0, w0 + span_w * t0
-        wide = thin * (0.75 + rnd() * 0.6)
-        eu, ew, ea = walk(u, w, ang, wide, 60, True)
-        # one short feather peeling off the vein at a shallow angle
-        if rnd() < 0.7:
-            walk((u + eu) / 2, (w + ew) / 2, ea + (0.35 + rnd() * 0.35) *
-                 (1 if rnd() < 0.5 else -1), wide * 0.42,
-                 3 + int(rnd() * 4), False)
+            bx(m, mt, uu0, uu1, yy0, yy1, min(lo, hi), max(lo, hi))
+
+    # The jamb lining runs AWAY from the room, into the wall cavity between the
+    # two rooms -- that is where a real jamb is, and it keeps the casing flush
+    # with the room's wall plane (a lining projecting inward would leave the
+    # casing floating half a foot off the wall, above the baseboard).
+    # This renderer has no shadows, so the depth of the reveal has to come from
+    # albedo: the jamb is drawn a few steps below the casing, which is what a
+    # real jamb reads as anyway.
+    jamb = shadow or mat
+    t = 0.075
+    put(jamb, 0.0, -depth, u0, u0 + t, 0.0, y1)          # jamb lining, side 1
+    put(jamb, 0.0, -depth, u1 - t, u1, 0.0, y1)          # jamb lining, side 2
+    put(jamb, 0.0, -depth, u0, u1, y1 - t, y1)           # head lining
+    # casing on the room face, flush with the wall plane and standing proud
+    put(mat, 0.0, proud, u0 - casing, u0 + t, 0.0, y1 + casing)
+    put(mat, 0.0, proud, u1 - t, u1 + casing, 0.0, y1 + casing)
+    put(mat, 0.0, proud, u0 - casing, u1 + casing, y1 - t, y1 + casing)
+
+
+# ------------------------------------------------------- ROUND 3 stone facades
+# Every quartz top and every marble backsplash in the room goes through one of
+# these two, so the whole stone program is tuned in one place.
+
+def top_stone(m, at, u0, u1, w0, w1, seed, cell=0.044, base=0.855, face="+y"):
+    """A quartz top: cloudy white ground under a soft vein net.
+
+    A short `step` with a high `meander` is what keeps the veins CURVING.  The
+    first round-3 pass used step 0.20 / meander 0.44 and the veins came out as
+    long straight diagonals with branches -- a palm frond, not stone.
+    """
+    v = Veins(u0, u1, w0, w1, seed, count=max(5, int((u1 - u0 + w1 - w0) / 0.85)),
+              step=0.125, width=0.085, meander=0.80, branch=1.1)
+    stone_field(m, TOPS, face, at, u0, u1, w0, w1, seed, cell=cell,
+                base=base, cloud=0.52, cloud_scale=0.72, grain=0.155,
+                grain_scale=5.2, veins=v, vein_amp=0.80)
+
+
+def splash_stone(m, face, at, u0, u1, w0, w1, seed, cell=0.052, base=0.86):
+    """The backsplash.  The critic metered ours at 163 / sd 5.1 against photo F's
+    173.4 / sd 19.0 and asked for "counter value with broad soft clouding" -- so
+    this is nearly all cloud: the veining is half the width and a third of the
+    depth of the tops', because a backsplash slab is cut from the quieter part
+    of the same stone and sits in the cabinets' shade."""
+    v = Veins(u0, u1, w0, w1, seed, count=max(4, int((u1 - u0) / 1.15)),
+              step=0.115, width=0.055, meander=0.85, branch=0.7)
+    stone_field(m, SPLASH, face, at, u0, u1, w0, w1, seed, cell=cell,
+                base=base, cloud=0.66, cloud_scale=0.78, grain=0.19,
+                grain_scale=5.6, veins=v, vein_amp=0.42)
 
 
 def _rng(seed):

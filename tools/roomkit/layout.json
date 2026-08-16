@@ -1,155 +1,189 @@
 {
-  "_note": "Placement map for room 14 (Master Bed). All coordinates are ROOM-LOCAL feet from the footprint min corner — exactly what roomkit.place takes. Read tools/roomkit/BRIEF.md first. Author every piece facing +z (south, toward the camera); rot then aims it: 0 = back to the NORTH wall, 90 = back to the WEST wall, 180 = back to the SOUTH wall, 270 = back to the EAST wall.",
+  "_note": "Placement map for room 14 (Master Bed). All coordinates are ROOM-LOCAL feet from the footprint min corner — exactly what roomkit.place takes. Read tools/roomkit/BRIEF.md first, then tools/roomkit/build/room14/r4_room.py, which is the machine-readable version of everything in this file. Author every piece facing +z (south, toward the camera); rot then aims it: 0 = back to the NORTH wall, 90 = back to the WEST wall, 180 = back to the SOUTH wall, 270 = back to the EAST wall.",
+  "_round4": "ROUND 4 — the footprint was RE-TRACED under round 3 and the room's long axis ROTATED 90 degrees. Was 15 x 23.5 ft running north-south; is now 20.51 x 18.68 running EAST-WEST, with a new entry vestibule off the south wall and the anchor moved (-7.9, +8.1) ft. Every wall assignment in this file was re-derived from scratch (see _wall_derivation). The headline change: THE DRESSER IS NO LONGER ON THE HEADBOARD WALL. Round 2 and 3 spent themselves solving a four-way collision on one 15 ft wall; the re-trace gives the dresser its own 13.26 ft west wall and the collision simply stops existing. Also this round: real cut openings replace the flush-decal windows, a vaulted ceiling re-derived for the rotated room, contact shadows under every piece, four readable pillows, and every tone value re-metered after the daylight.js change. Build scripts: tools/roomkit/build/room14/r4_*.py; run r4_place.py to rebuild + re-place + re-cut everything idempotently.",
   "_room": {
     "id": 14,
-    "_stale_warning": "This block still described the pre-retrace 26.5 ft room in round 2. It now matches GET /api/house: the room was re-traced to 15 x 16 ft plus the entry leg, and rooms.points is NOT null any more.",
     "main_area": {
       "x": [
         0,
-        15
+        20.51
       ],
       "z": [
         0,
-        16
+        13.26
       ]
     },
-    "entry_leg": {
+    "entry_vestibule": {
       "x": [
-        9,
-        15
+        7.86,
+        15.58
       ],
       "z": [
-        16,
-        23.5
+        13.26,
+        18.68
       ]
     },
     "points": [
       [
+        20.51,
+        13.26
+      ],
+      [
+        15.58,
+        13.26
+      ],
+      [
+        15.58,
+        18.68
+      ],
+      [
+        7.86,
+        18.68
+      ],
+      [
+        7.86,
+        13.26
+      ],
+      [
+        0,
+        13.26
+      ],
+      [
         0,
         0
       ],
       [
-        15,
+        20.51,
         0
-      ],
-      [
-        15,
-        23.5
-      ],
-      [
-        9,
-        23.5
-      ],
-      [
-        9,
-        16
-      ],
-      [
-        0,
-        16
       ]
     ],
+    "_edge_index": "opening.edge_index counts edges in the order above, edge i running points[i] -> points[i+1]: 0 south-east (x 15.58..20.51), 1 vestibule east, 2 vestibule south (to the 2F hallway), 3 vestibule west, 4 south-west (x 0..7.86), 5 WEST, 6 NORTH, 7 EAST.",
     "wall_height": 8.0,
+    "slab_world_y": 18.0,
+    "origin_world": [
+      -1.89,
+      18.0,
+      -12.38
+    ],
     "walls": {
       "north_z": 0,
-      "south_z": 16,
+      "south_z": 18.68,
       "west_x": 0,
-      "east_x": 15
+      "east_x": 20.51
     },
-    "camera_ref": {
-      "at_local": [
-        12.0,
-        16.8
-      ],
-      "eye_ft": 5.6,
-      "world": {
-        "pos": [
-          18.0,
-          23.6,
-          -3.7
-        ],
-        "target": [
-          13.0,
-          21.8,
-          -16.0
-        ],
-        "fov": 78
-      }
-    },
-    "_north_wall_budget": "The 15 ft north wall is FULL and every piece on it is solved together - move one and you have to re-solve the rest: dresser 0.03..4.17 | gap 0.38 | Window North 4.55..6.65 | gap 0.38 | bed 7.03..12.48 | nightstand 12.50..14.70. Round 2's three unresolved collisions (art over the window, dresser slab over the window jamb, dresser into the bed rail) were all one problem: a 6.6 ft KING left no room for the other three pieces.",
-    "_camera_warning": "The ref pose is NOT the photo's camera. The photo is a much wider lens from a different spot - the ref pose projects the NW wall-top corner to photo (358,544) where the photo has it at (437,413), and the photo's west wall reads nearly square-on. Overlaying projected geometry on the PHOTO is worthless; overlay it on the RENDER to check what you built, and size everything by RATIO against an object measured in the photo."
+    "_wall_derivation": "NOT GUESSED. (1) plan_retrace.py records the plan-px -> model-ft transform for `docs/floor plan/Second Floor Plan App.png`; inverting it puts the Apple-Home scan's own furniture icons and its blue window marks into room-local feet: bed x 6.85..13.95 z 0.20..7.77 with the pillows against z=0; nightstands x 4.82..6.74 and x 14.10..16.09; DRESSER x 0.21..1.66 z 3.32..8.50 (the WEST wall); armchair x 1.05..4.93 z 0.24..4.08; desk x 17.65..20.33 z 0.49..4.73 (the EAST wall); dark chest x 18.81..20.29 z 8.46..11.65 (also EAST); windows at north x 1.77..4.64, north x 15.83..18.55, east z 1.40..4.40, west z 9.19..12.09. (2) The primary photo agrees: camera in the vestibule near local (10.5, 16) looking north, +x to the RIGHT of frame, and left-to-right the photo reads west window (very oblique, cut by the frame) -> dresser + mirror -> the room's NW CORNER -> narrow window with the pale armchair in front of it -> bed + canvas -> nightstand -> NE corner -> the big window over the desk -> the dark chest. Projecting the plan positions through a pinhole at (10.5,16) yawed 12 deg west of north puts the NW corner at photo x 424 (photo: 424-435), the dresser at 186..364 (photo: 200..415) and the north window at 465..536 (photo: 490..575). (3) `Master Bed 2.jpg` closes it: shot from the room's east side looking west it shows door | TV | door, then a corner, then a narrow window IMMEDIATELY past that corner, then the dresser + mirror with the potted plant on it — i.e. edge 4, the corner at (0,13.26), Window West at z 9.19..12.09, the Dresser at z 3.32..8.50.",
+    "_north_wall_budget": "The headboard wall is now 20.51 ft and for the first time nothing on it collides. 0.00..1.77 blank (NW corner return) | 1.77..4.64 Window North, the plan's own 2.87 ft opening | 4.64..7.73 blank 3.09 ft, where the photo's pale upholstered armchair stands (not built) | 7.73..13.08 Bed, queen 5.35 centred on x 10.40 which is the plan's own bed centre | 8.18..12.62 Wall Art 4.44, centred on the bed above the headboard | 13.08..13.10 a 0.02 ft reveal | 13.10..15.30 Nightstand 2.20 | 15.30..15.83 0.53 ft | 15.83..18.55 Window North East, the plan's second 2.72 ft opening | 18.55..20.51 blank (NE corner return). Round 2/3's three unresolved collisions (art over the window, dresser slab over the window jamb, dresser into the bed rail) were all one problem — four pieces on a 15 ft wall — and the re-trace dissolves it by moving the dresser to the west wall and adding 5.5 ft of wall.",
+    "_west_wall_budget": "13.26 ft, z increasing away from the north wall: 0.74..2.16 Tall Chest (NW corner) | 3.84..7.98 Dresser + mirror (the plan puts the real one at 3.32..8.50) | 9.19..12.09 Window West. Nothing overlaps.",
+    "_east_wall_budget": "13.26 ft: 0.21..5.01 Desk under Window East (opening z 1.40..4.40, sill 2.50, desk top 2.45) | ~3.4..5.0 Chair pulled out of the kneehole | 8.36..11.76 Foreground Chest.",
+    "_camera_warning": "poses.json's `ref` was authored for the OLD room and frames wrongly now — DO NOT use it and DO NOT edit poses.json. Round 4 judged from --pose-json {\"pos\":[8.71,23.5,4.22],\"target\":[7.71,22.40,-11.78],\"fov\":88,\"size\":[900,1200]} — world coords for an eye 5.5 ft above the slab standing at local (10.6, 16.6) inside the entry vestibule, yawed ~4 deg west of north, which is where the photographer stood. It is still a much narrower lens than the photo (the photo is an ultrawide, ~106 deg horizontal); overlaying projected geometry on the PHOTO is worthless, overlay it on the RENDER and size everything by RATIO against an object measured in the photo."
   },
-  "_windows_note": "Windows are built as GLB pieces sitting flush on the inside wall face — frame + blinds + a bright pane. We deliberately do NOT cut real openings: the app's opening panels render a hardcoded teal translucent slab, and the only viewpoint being judged is from inside the room, where a flush window reads correctly.",
+  "_openings_note": "ROUND 4 CUTS REAL OPENINGS. house.js now cuts a genuine hole in the wall shape and fills a `window` with proper glass, a `door` with a painted panel and a `passage` with nothing — so round 2/3's flush decals are gone. Seven openings, all from the plan: 4 windows (edge 6 off 1.77 w 2.87 / edge 6 off 15.83 w 2.72 / edge 7 off 1.40 w 3.00 / edge 5 off 1.17 w 2.90), 2 doors on edge 4 (off 0.00 w 2.93 and off 5.31 w 2.55 — the plan draws a door leaf across x 4.93..7.86 and Master Bed 2 shows the second one beside the (0,13.26) corner), and a passage on edge 2 (off 0.15 w 3.00) into the 2F hallway. The GLB window pieces are now casing + stool + apron + blind + a blown-out pane only. THE PANE IS DELIBERATE: the judged view is single-floor presentation mode, where floorview.js swaps the sky for a dark studio backdrop, so a bare hole reads as a BLACK rectangle — the opposite of the photo's blown-out windows. The hole carries the dollhouse read from outside; the pane carries the interior read.",
+  "_tone_note": "EVERY VALUE IN THIS FILE WAS RE-METERED IN ROUND 4 and the round-2/3 numbers were all too bright — daylight.js raised the hemisphere ground and the daytime IBL after round 3. Three things were learned re-doing it, and they are worth more than the numbers: (a) tone.py's analytic exposure-1.15 -> ACES inverse NO LONGER PREDICTS THE RENDER. It is still right for reading the photo, but solving a material through it overshoots; the round-4 materials are solved on two-point log-linear fits measured off real renders instead (see r4_base.FIT and r4_ceiling's _L0/_B0/_L1/_B1). (b) An object's material collects ~1.7x the light a ROOM WALL of the same albedo and orientation does — models.js sets envMapIntensity on model materials. A gable infill solved on the wall's own number came out 238 against a 225 wall and left a visible seam across the whole room. (c) A DOWNWARD-facing plane still collects almost nothing (0.095), which is why the ceiling is the one surface that legitimately needs emissive. NO room-filling emissive box was added — critics flagged those as hard-edged panels.",
+  "_metered_round4": {
+    "_pose": "the comparison pose in _room._camera_warning, --day, level 2",
+    "north wall": 225,
+    "gable infill": 221,
+    "ceiling west eave..ridge": "233..216",
+    "ceiling east ridge..eave": "216..227",
+    "floor": 140,
+    "rug": 235,
+    "baseboard face": 226,
+    "duvet": 246,
+    "bed frame": 178,
+    "nightstand": 175,
+    "blind": 231,
+    "wall art": 185,
+    "_photo_targets": "photo north wall 174.5, so as ratios: ceiling 0.96..1.08, floor 0.64, rug 1.077, baseboard ~1.00, duvet 1.10, bed frame 0.72, art 0.799 lum / 0.108 saturation. Render ratios: ceiling 0.96..1.04, floor 0.62, rug 1.044, baseboard 1.00, duvet 1.09, bed frame 0.79, art 0.82 / 0.132. rug/floor is 1.68 against the photo's 1.68 — round 3's 'the render is bright and flat next to the photo' is fixed, and it was fixed by DARKENING THE FLOOR AND THE WALL, not by brightening the rug."
+  },
+  "_room_surfaces": {
+    "note": "Set with PATCH /api/house/room/14, not by a GLB.",
+    "wall_color": "#bdbdba — reads as a mid grey in the editor but RENDERS at 225. Was #f3f2ef, which rendered 239 and left no headroom at all: duvet, blinds, baseboard, rug and wall all clipped into one white field.",
+    "floor_color": "#696765 with the 'wood' floor_texture — renders 140. Was #a8a4a1 rendering 199, i.e. 0.98 of the rug where the photo is 0.60. This single change is most of the global-contrast fix."
+  },
   "pieces": {
     "Ceiling": {
       "size_ft": [
-        15.0,
-        6.62,
-        23.5
+        20.51,
+        6.72,
+        18.68
       ],
       "pos": [
-        7.5,
+        10.255,
         7.88,
-        11.75
+        9.34
       ],
       "rot": 0,
-      "note": "AS BUILT (round 3): the RIDGE MOVED OFF CENTRE, local x 7.5 -> x 9.0; peak still 14.5 ft, eaves 8.0. h(x) = 8 + 6.5*x/9.0 west of the ridge (8.67:12, 35.8 deg) and 8 + 6.5*(15-x)/6.0 east (13.0:12, 47.3 deg) - TWO UNEQUAL SLOPES, which is what round 2 failed on ('a steep symmetric triangle'). MEASURED, not guessed: in the photo the gable's apex is at x 712 while the wall art's centre is 748 and the headboard's centre 745 - the apex sits over the BED, 0.6 ft west of the art, not over the middle of the room. With the queen bed re-solved to centre x 9.75 that puts the ridge at 9.0-9.4; 9.0 is used because it keeps the vault above the Ceiling Fan (x 7.5) at 13.42 ft, still a workable downrod. Peak stays 14.5: the apex is ~358 px above the eave line in the photo at ~53 px/ft on the north wall = 6.75 ft of rise over an 8 ft wall. Verified by projecting the built gable through the ref camera and overlaying it on the RENDER (scratchpad build/proj.py + overlay.py): the rendered fold lands exactly on the projected rake, apex at render (621,66), rakes to (269,408) and (933,371). COVERAGE follows the room's real L polygon now that rooms.points is no longer NULL - west slope over x 0..9 z 0..16, east slope over x 9..15 z 0..23.5, plus four vertical gable infills: north z=0 full width, main-south z=16 (x 0..9), leg-south z=23.5 (x 9..15) and the leg's west wall x=9 (z 16..23.5, y 8..14.5). WINDING IS CHECKED, NOT ASSUMED: the first round-3 build had the north gable wound backwards and you saw the sky through it, so _fan() takes the normal of the first triangle and flips the whole fan if it points the wrong way. TONE IS UNCHANGED from round 2 (the critic passed the tone) and was read straight back out of the round-2 GLB: base #f3f3f4, emissive #fffefc, strength = radiance_for_byte(target) - 0.045, the 0.045 being all the light a downward plane collects in this scene. West bands eave->ridge 1.11/0.98/0.91/0.82/0.76/0.72 = bytes 234,231,229,226,224,222; east ridge->eave 0.48/0.49/0.52/0.54 = 207,207,210,212. Gables carry their value in ALBEDO (#d5d4d3, token emissive x0.09) because they are vertical and collect 0.72. Recessed cans at (3.9,2.3),(3.3,9.4),(11.7,7.0),(12.2,19.0): rim #d8d6d2 at the band's strength, aperture #fbfbfa solved for band+10 bytes, rotated into the slope plane with rot_z = +35.8 deg west / -47.3 deg east."
+      "note": "ROUND 5 rebuilt from r4_ceiling as r5_ceiling.py for ONE bug fix and nothing else: the six recessed cans rendered as white blobs on the FLOOR from the dollhouse poses. roomkit.glb.cylinder() winds both end caps the same way, so its bottom cap faces UP; with double_sided=False (which the ceiling needs so its slopes cull from above) that left one bright emissive disc per can facing up through the culled ceiling, and at a 50 deg dollhouse elevation a disc 14 ft up projects onto the floor. Each can is now a single explicitly-wound DOWN-facing disc. REBUILT for the rotated room (r4_ceiling.py). RIDGE RUNS NORTH-SOUTH at local x 10.50, peak 14.60, eaves 8.00; west slope 32.2 deg (7.54:12), east 33.4 deg (7.91:12). h(x) = 8 + 6.6*x/10.50 west of the ridge and 8 + 6.6*(20.51-x)/10.01 east. HOW THE RIDGE WAS RE-DERIVED: round 3's two measured facts both survive — the gable's apex sits OVER THE BED (photo x ~712) and the apex stands ~358 px above the eave line at ~53 px/ft on the north wall, i.e. 6.6-6.75 ft of rise over an 8 ft wall. What does NOT survive is round 3's 35.8/47.3 deg split: that asymmetry was forced by squeezing an apex-over-the-bed into a 15 ft wall and is an artifact of the wrong footprint. On the real 20.51 ft wall the NW corner projects to photo x ~427 and the NE corner to ~980, so the apex at 712 sits at 51.5% of the wall = local x 10.56; the plan's bed centre is 10.40 and the room centre 10.255, and all three agree inside 0.3 ft. The pitch RELATIONSHIP is kept — the ridge is still east of the room centre so the west plane is still the shallower one — it is just no longer extreme. 32-33 deg is a 7.6:12 roof, which is how a house like this is framed. COVERAGE follows the real L: slopes run z 0..18.68 over the vestibule's x band (7.86..15.58) and z 0..13.26 elsewhere, plus six vertical infills — the full north gable, two main-south trapezoids either side of the vestibule, the vestibule's own south gable which crosses the ridge, and the vestibule's two side walls. WINDING IS CHECKED, NOT ASSUMED: _fan() takes the normal of the first triangle and flips the whole fan if it points the wrong way (round 3 once shipped the north gable backwards and you saw sky through it). TONE: slope bands carry emissive (a downward plane collects only 0.095 here) at photo ratios 1.075..0.962 west and 0.962..1.010 east of a 225 wall; the vertical gable infills carry pure ALBEDO and no emissive at all, solved on the measured object-material curve — see _tone_note (b). Six recessed cans lie in the slope planes, rotated by the slope angle."
     },
     "Baseboards": {
       "size_ft": [
-        15.0,
+        20.67,
         0.46,
-        23.5
+        18.84
       ],
       "pos": [
-        7.5,
+        10.255,
         0.0,
-        11.75
+        9.34
       ],
       "rot": 0,
-      "note": "AS BUILT and VERIFIED IN THE LIVE APP (round 3). status.json round 2 said 'not built yet' - that is WRONG: object 18 / model 19 has been in room 14 all along and renders correctly. Checked with a dedicated close-up, --pose-json {\"pos\":[14.0,22.0,-8.5], \"target\":[6.6,18.6,-13.0],\"fov\":60,\"size\":[900,700]} - the white skirting runs the west wall, wraps the NW corner and continues along the north wall behind the dresser, with the crisp flat face and thin cap described below. NOT rebuilt this round. Round-2 record, still accurate: white 5.5 in x 0.84 in skirting on the inside face of all SIX perimeter walls - north z=0 x0..15, west x=0 z0..16, main-south z=16 x0..9, east x=15 z0..23.5, leg-west x=9 z16..23.5, leg-south z=23.5 x9..15 with a 3 ft door gap at x 10.5..13.5. No board across the leg->room opening at z=16, x 9..15 (that is the doorway); the two runs meeting the outside corner at (9,16) run 0.08 ft past it so the board wraps the jamb. Profile is extruded, not a slab: the face is held FLAT for 4.8 in and the chamfer squeezed into a 0.7 in cap. VALUE METERED: albedo #ffffff plus emissive #757575 standing in for the bounce light the app does not render - measured face a flat 212 over the board's full 17 px against a 188 wall (+24, the step the photo shows), cap 234."
+      "note": "REBUILT for the new perimeter (r4_base.py): white 4.8 in flat face plus a 0.7 in cap, 0.070 ft off the wall, on the interior face of all EIGHT edges of the L, with gaps at the two south-west doors and the vestibule passage — 9 runs. Runs 0.08 ft past every outside corner so the board wraps the jamb. VALUE IS NOW ALBEDO, NOT EMISSIVE: round 2 drove it with emissive #757575 to sit 24 bytes over a 188 wall, but after the daylight.js change a plain #ffffff board on this wall renders past 250 all by itself, so emissive could only clip it. Solved instead on a two-point fit measured off real renders (linear albedo 0.6795 -> byte 245, 0.3813 -> 223) at 1.031 of the wall: face #b9b9b9, cap #cbcbcb, metered 226 against a 225 wall — the photo has board and wall within a byte or two of each other (174 vs 174)."
+    },
+    "Master Floor Shadows": {
+      "size_ft": [
+        21.51,
+        0.0,
+        12.87
+      ],
+      "pos": [
+        10.248,
+        0.05,
+        5.905
+      ],
+      "rot": 0,
+      "note": "NEW in round 4 — the round-1/round-3 critics' most-repeated finding was that nothing in this house has a contact shadow except what the Rug bakes, so everything floats. Soft dark decals on the slab under Dresser, Tall Chest, Nightstand, Desk, Foreground Chest, Chair and the head of the Bed (the part that overhangs the rug). Built as SIX NESTED translucent black frames (core alpha 0.42 falling to 0.03 at 0.72 ft of pad) rather than stacked quads, so nothing is coplanar and there is no z-fighting; at four rings the falloff still read as a grey mat with a visible step. Named with 'floor' in it ON PURPOSE: objects.js's SURFACE_RE makes it unpickable, which a room-wide decal must be or it swallows every click in the room. TWO TRAPS, both hit: (a) pos.y 0.005 renders NOTHING — house.js draws the room slab at y 0.01 and objects.js writes pos.y into the same space, so the decal was under the floor; (b) 0.018 still loses, because the slab carries polygonOffsetFactor -1 which pulls it toward the camera in depth by more than a few thousandths of a foot. 0.05 ft (0.6 in) wins and is not visible as a lift from any pose this room is judged from. Footprints are hard-coded in r4_shadows.FEET — re-run it if anything moves."
     },
     "Bed": {
       "size_ft": [
-        5.49,
-        4.55,
-        7.62
+        7.1,
+        4.42,
+        7.6
       ],
       "pos": [
-        9.75,
+        10.4,
         0.0,
-        3.82
+        3.875
       ],
       "rot": 0,
-      "note": "AS BUILT (round 3, full rebuild): it is a QUEEN on a LOW platform with ONE shallow drawer. Round 2's 6.6 ft king on a deep two-drawer plinth is the 'too big and too tall' failure. Frame 5.35 ft wide x 7.30 long, headboard 4.55 ft tall, side and foot rails top out at 1.15, deck 1.12, slim 0.86 ft mattress (top 1.98), duvet top 2.07, one 0.60 ft drawer front recessed between the foot posts with a single bar pull. MEASURED off the photo - three independent anchors that all land on 55-58 px/ft at the head of the bed: (a) the two euro shams span photo x 575..825 = 250 px and two shams are 52 in = 4.33 ft -> 57.7 px/ft; (b) the nightstand beside it is 128 px tall (photo y 742..870) and a nightstand is 2.2 ft -> 58 px/ft; (c) the two sleeping pillows span 565..830 = 265 px -> 61 px/ft. At that scale the headboard (photo x 605..886 = 281 px, y 616..872 = 256 px) is 5.0-5.3 ft wide and 4.6-4.8 ft tall: a stock queen panel headboard, 63 x 55 in. At the FOOT the SE post runs photo y 880..960 = 80 px at ~72 px/ft -> a 1.1 ft foot rail, and the mattress top is 173 px above the floor -> ~2.2 ft, i.e. a slim mattress on a low frame. POSITION: the nightstand has to fit between the bed and the east wall and the canvas has to clear Window North, which pins the bed to centre x 9.75 (rails 7.03..12.48) - and that is what makes the off-centre ridge, the canvas placement and the window move all consistent at once. pos.z 3.82 puts the headboard's back face at local z 0.28. TONE: three greys so the frame separates from the bedding the way the photo does (photo headboard mean 162 vs duvet 192 = 0.84) - plank field #8f9298, stiles/rails/posts #7b7e84, reveals #5c6065; measured in the render headboard 173 and duvet 192 against a 213 wall = 0.90. THE DUVET IS HAND-MESHED, NOT sag_plane: sag_plane domes the whole panel and that dome renders as a pale elliptical blob in the middle of the bed under this hemisphere term; the replacement is flat on top with a smoothstep fall confined to the outer 0.42 ft, plus low wrinkles."
+      "note": "REBUILT AS A KING (r5_bed.py). Mattress 6.33 x 6.67, frame 6.75, headboard 7.10 spanning the plan's own bed icon x 6.85..13.95, overall length 7.55, headboard 4.42 (measured against the nightstand at 64.5 px/ft). The photo's headboard is a horizontal PLANK field between two end stiles under a top cap that OVERHANGS both sides and projects forward. TWO storage drawers in the foot plinth, not one. The knit coverlet, the quilted grey-piped shams and the sleeping pillows are TONE FIELDS. pos.z 3.875 lands the headboard's back face at local z 0.075."
     },
     "Rug": {
       "size_ft": [
-        7.0,
-        0.112,
-        8.7
-      ],
-      "pos": [
-        9.05,
-        0.004,
-        6.65
-      ],
-      "rot": 0,
-      "note": "AS BUILT (round 3, full rebuild): pile 7.00 x 8.70 ft at local x 5.55..12.55, z 2.30..11.00. Round 2 was 10.05 x 7.05 of one perfectly regular rib field running edge to edge and the critic read it as corrugated board. SIZE is off the photo: the rug's east edge stops just short of the nightstand (rug at photo x ~895, nightstand feet at 920), i.e. at the bed's east rail, and it runs ~1.4 ft west of the bed's west rail. TEXTURE: the photo's rug is not one rib field, it is broad ~0.6 ft horizontal BANDS - some flat cut pile, some looped, some chevroned. Built as ONE smooth height field (56 x 420, ~24.6k verts, averaged normals so there are no facets) with a per-band profile, a 0.145 ft loop pitch, ~0.021 ft peak-to-valley (about half round 2's 0.028) and a per-row jitter of +/-0.0045 ft so no two rows repeat. The perimeter tapers to zero over 0.10 ft and is serrated vertex-by-vertex. VALUE: base #c1c1c0 measures 208 against a 213 wall = 0.98, matching the photo's 172/176 = 0.98. Note the rug cannot out-contrast the photo's floor - the photo has floor 104 / rug 172 (1.65x) while this app renders the floor at 0.98 of the rug, so the separation is carried by the fake contact shadow, not by brightness. FAKE AO (the app renders no shadows at all): #aaaaa9 within 0.55 ft of the bed and #919191 under it, keyed to the bed at local x 7.025..12.475, z 0.15..7.45 - re-run the build if the bed moves. WATCH THE BACKING: it must top out at model y 0, not above the pile. The first round-3 build gave it height PILE+0.02-SKIRT, the backing swallowed the whole pile and the rug rendered as a flat grey mat with white specks. pos.y stays 0.004, NOT 0.010: house.js draws the room slab at y 0.01 and objects.js writes pos.y into the same space, so 0.010 is coplanar with the floor."
-    },
-    "Wall Art": {
-      "size_ft": [
-        4.44,
-        4.07,
-        0.11
+        8.9,
+        0.062,
+        9.8
       ],
       "pos": [
         9.75,
-        5.55,
+        0.045,
+        7.45
+      ],
+      "rot": 0,
+      "note": "REBUILT as a tone field (r5_rug.py): 1.13 MB -> 0.14 MB and sigma 3.6 -> 15.3. Pile x 5.30..14.20, z 2.55..12.35, re-sized for the king (~1 ft past the west rail, level with the nightstand on the east, 4.7 ft past the foot). Banded flat/looped/chevron pile with a per-band pitch jitter - a fixed repeat renders as a venetian blind. The bed's contact shadow is baked into the field. pos.y 0.045 keeps the backing clear of the slab's polygonOffset."
+    },
+    "Wall Art": {
+      "size_ft": [
+        5.95,
+        5.45,
+        0.062
+      ],
+      "pos": [
+        10.4,
+        5.76,
         0.06
       ],
       "rot": 0,
-      "note": "AS BUILT (round 3): the SAME GLB as round 2 - the critic said 'the painting itself is close' - re-placed at scale 0.857 and moved with the bed, so 5.18 x 4.75 ft becomes 4.44 x 4.07. MEASURED against the headboard, the only trustworthy ruler in the photo: the canvas quad is TL(631,355) TR(872,302) BR(859,527) BL(629,544) = mean 235.5 wide x 207 tall, the headboard is photo x 605..886 = 281 px, so canvas/headboard = 0.838 -> 0.838 x 5.30 ft = 4.44 ft, and the gap from the canvas's bottom to the headboard's top is 53/281 = 0.189 -> 1.00 ft, hence pos.y = headboard top 4.55 + 1.00 = 5.55. Its own aspect measures H/W 0.879 in the photo against 0.917 for the uniformly scaled model - 4% out, inside the measurement error, not worth a rebuild. ROUND 2'S SIZE WAS NOT WRONG IN ITSELF: its canvas/headboard ratio was 0.806 against the photo's 0.809. It looked far too large because the BED it was scaled to was a king. Fix the ruler and the painting comes right. *** THE ROUND-2 COLLISION IS RESOLVED: *** the canvas now spans 7.53..11.97 and Window North moved west to 4.55..6.65, so there is 0.88 ft of clear white wall between them and the canvas no longer has to stand 0.42 ft proud of the wall to occlude a window - pos.z is back to 0.06. Pigment is untouched round-2 work: authored as PHOTO PIXELS inverted through the renderer's exposure-1.15 -> ACES -> sRGB chain with the full 3x3 matrices, metered at lum/wall 0.757 vs the photo's 0.756 and mean saturation 0.145 vs 0.150."
+      "note": "RE-SAMPLED FROM THE PHOTOGRAPH (r5_art.py): the canvas's four corners in Master bedroom.jpg are un-keystoned, area-averaged into a 69 x 109 grid, quantised to 10 tones and merged into runs - 1.43 MB -> 0.32 MB for the same painting. The photo ratios round 2 measured still hold (canvas/headboard 0.83, gap 0.19 of the headboard width); the headboard changed 5.30 -> 7.10, so the canvas goes 4.44 -> 5.95 wide and the gap 1.00 -> 1.34, i.e. pos.y 5.76. Palette solved backwards through tone.radiance_for_byte off a measured render: metered 161.5 +/- 30.1 against a 221 wall = 0.730 (photo 0.742 +/- 37.3). TRAP: the stretcher box's front face must NOT be coplanar with the paint plane - at 0.055 they z-fought and the canvas metered 191 flat."
     },
     "Nightstand": {
       "size_ft": [
@@ -158,54 +192,40 @@
         1.6
       ],
       "pos": [
-        13.6,
+        15.05,
         0.0,
         1.5
       ],
       "rot": 0,
-      "note": "Grey two-drawer nightstand right of the bed with a small white table lamp on top. MOVED (same GLB, no rebuild) from x 11.9 to 13.6 - it spans 12.50..14.70 - because the queen bed's east rail is now at 12.48. Its 2.2 ft height is one of the three photo anchors that sized the bed: photo y 742..870 = 128 px -> 58 px/ft."
+      "note": "Unchanged GLB, moved east to x 13.95..16.15 now the king's rail is at 13.95. It overlaps Window North East's x band (15.83) by 0.32 ft, but its top is 2.10 and the sill is 2.20, so nothing collides."
     },
     "Dresser": {
       "size_ft": [
-        4.14,
-        5.51,
-        1.57
+        1.595,
+        6.44,
+        5.0
       ],
       "pos": [
-        2.1,
+        0.873,
         0.0,
-        0.835
-      ],
-      "rot": 0,
-      "note": "AS BUILT (round 3, rebuild): case 4.00 x 2.72 x 1.42 ft on 0.26 ft feet, top slab 4.14 x 1.52, six drawers 2 cols x 3 rows with a dark reveal and a short bar pull each, mirror 2.96 x 2.42 outer with 0.20 rails standing on the slab and offset 0.10 ft left of the case centre. Narrowed 4.50 -> 4.00 so the 15 ft north wall can hold dresser + window + queen + nightstand (see _room._north_wall_budget); that, plus the bed shrinking to a queen and moving east, is the 'crowds the bed' fix - the gap from the dresser's right end to the bed's west rail is now 2.86 ft, and round 2's overlap of the window jamb is gone. Photo proportions: the dresser top slab spans photo x 209..405 and its feet reach y 800 from a slab front edge at y 645 (h/w 0.79 on a face that is foreshortened, so true 4.0 x 3.08 ft overall); the mirror spans 206..352 x 511..630 = 0.74 of the dresser's width, h/w 0.815. MIRROR - round 2's failure was NOT its mean value (metered 0.85 of the wall against the photo's 0.88) but its lack of RANGE: one flat pale slab reads as a switched-off TV. In the photo the pane runs 60..215 - the left ~55% is a blown-out reflected window with slats, the right side is dark clutter. Now painted in layers: base #b7bcc3, reflected wall #cbcfd5, a big reflected window #f7f9fb at 52% x 66% of the pane with 11 #dde2e8 slats, and #5b6069 blocks for the dark stack low-right, the vault shadow along the top and a shadow band along the bottom, all at roughness 0.08-0.22 so the pane also catches a specular. OVERSHOOT WARNING: the first round-3 set (base #cbd0d6, wall #e2e5e9) metered 0.94 of the wall and read as a blank white hole - 0.85 with range is the target, not 0.94 flat. Drawer front metered 138 against a 220 wall = 0.63 against the photo's 118/177 = 0.667."
-    },
-    "Tall Chest": {
-      "size_ft": [
-        1.28,
-        4.2,
-        1.42
-      ],
-      "pos": [
-        0.78,
-        0.0,
-        3.55
+        5.91
       ],
       "rot": 90,
-      "note": "AS BUILT (round 2): narrow white/cream four-drawer chest against the WEST wall, front facing east, with the photo's potted plant on top. Case 1.42 w x 3.35 h x 1.28 d; the 4.20 bbox height is the plant. Sits at z 2.84..4.26, i.e. hard against Window West's left edge at z 4.32 -- that is as far south as it goes, and as far as it can go before it stops overlapping the dresser's left end in the ref view (it is 2.7 ft nearer the camera, so it clips the dresser's first ~0.7 ft). Clear of Window North at local x 5.3."
+      "note": "REBUILT (r5_dresser.py). WEST WALL CONFIRMED by the round-4 critic with a better argument than the builder's: the dresser mirror reflects the north window, the red canvas AND the bed headboard, and a mirror cannot reflect the wall it hangs on. Round 4's GLB had SIX drawers where the photo has FOUR - two over one over one - and read as flat plastic grey. Now four drawers, dark bar pulls, tapered legs and a weathered plank-grain TONE FIELD (metered sd 52 across the piece). Case 4.90 x 2.62 x 1.45 off the plan icon (x 0.21..1.66, z 3.32..8.50); near-square mirror 3.55 x 3.30 painted in layers with the reflected window, canvas and headboard."
     },
     "Desk": {
       "size_ft": [
-        4.8,
+        2.01,
         3.13,
-        2.01
+        4.8
       ],
       "pos": [
-        25.15,
+        19.3,
         0.0,
-        8.6
+        2.61
       ],
       "rot": 270,
-      "note": "White/light panel-end desk against the east wall under the big window; drawer pedestal at the SOUTH (camera) end, modesty panel between. AS BUILT: carcase is 4.8 x 2.45 x 2.0 ft; the 3.13 bbox height is the tallest bottle of desktop clutter, the desk itself tops out at 2.45 ft, right at the Window East sill (y 2.4). pos.x pulled in from 25.4 to 25.15 so the back rail clears the flush window frame at local x 26.145."
+      "note": "Unchanged GLB. Still the east wall under the big window and still rot 270, but re-solved to the plan's own desk footprint (x 17.65..20.33, z 0.49..4.73): placed at x 18.295..20.305, z 0.21..5.01, centred on the opening at z 2.90. pos.x is pulled in to 19.30 so the back rail clears Window East's apron, which is why r4_windows keeps the apron only 0.055 ft proud of the wall. Carcase 4.8 x 2.45 x 2.0; the 3.13 bbox height is the tallest bottle of desktop clutter, and the 2.45 top runs just under the 2.50 sill."
     },
     "Chair": {
       "size_ft": [
@@ -214,68 +234,110 @@
         2.34
       ],
       "pos": [
-        13.35,
+        17.5,
         0.0,
-        8.9
+        4.2
       ],
-      "rot": 105,
-      "note": "Black mesh task chair on a five-star castor base, pulled slightly out of the kneehole. ROT CHANGED from 270 to 110: 270 put the chair's BACK to the desk. It faces the desk (east = 90) with a 20 deg turn off square, which is what the photo shows. Tall waisted mesh back, crown 3.81 ft. ROUND 3: moved from (12.2, 7.0) to (13.35, 8.9) and rot 110 -> 105, tucked further into the desk kneehole - at its old spot it stood inside the queen bed's foot once the bed moved east to 9.75. The photo shows clear floor between the bed's east rail and the chair."
+      "rot": 100,
+      "note": "Unchanged GLB, moved to (17.50, 4.20) rot 100 — pulled out of the desk kneehole, facing the desk (rot 90 faces east) with a 10 deg turn off square. Well clear of the bed's east rail at 13.08. KNOWN MISMATCH, not fixed: this is a black mesh task chair on castors and the photo shows a tall upholstered chair with a rounded button back and nailhead trim. Re-modelling it was out of scope for a re-place round."
     },
     "Foreground Chest": {
       "size_ft": [
-        3.4,
+        1.8,
         4.2,
-        1.8
+        3.4
       ],
       "pos": [
-        25.3,
+        19.52,
         0.0,
-        13.2
+        10.06
       ],
       "rot": 270,
-      "note": "Dark charcoal chest of drawers near the doorway — the piece cropped at the right edge of the photo."
+      "note": "Dark charcoal chest, unchanged GLB, moved to the EAST wall at x 18.62..20.42, z 8.36..11.76 — exactly the plan's own dark-chest icon (18.81..20.29, 8.46..11.65). It is the piece cropped at the right edge of the primary photo, and from the round-4 comparison pose it falls just outside the frame; it is squarely in shot from the dollhouse pose."
     },
     "Window North": {
       "size_ft": [
-        2.24,
-        5.5,
-        0.36
+        3.49,
+        5.28,
+        0.34
       ],
       "pos": [
-        5.6,
+        3.205,
         1.8,
-        0.2
+        0.174
       ],
       "rot": 0,
-      "note": "AS BUILT: same GLB, MOVED to local x 5.6 so the trim spans 4.55..6.65 (it was placed at 5.3, and round 2's 6.55 entry was itself stale). This is the piece that resolves round 2's art/window collision: the canvas needs unbroken white wall on both sides, and the photo puts the window's right jamb clear of the headboard's left end (photo window 497..600, headboard starts 605; the headboard sits 0.4 ft nearer the camera than the wall, which shrinks the apparent gap by ~0.1 ft). The right jamb 6.65 is now 0.38 ft west of the bed's west rail (7.03) and 0.88 ft west of the canvas's left edge (7.53). Geometry unchanged: narrow single sash, 2.10 x 5.50 ft of trim (glass 1.58 x 4.72), apron bottom y 1.80, sill 2.21, glass top 6.93, cap top 7.30; it projects 1:2.6 in the ref view against the photo's 28x71 px = 1:2.54."
+      "opening": {
+        "edge_index": 6,
+        "offset": 1.77,
+        "width": 2.87,
+        "elevation": 2.2,
+        "height": 4.6
+      },
+      "note": "REBUILT as casing + stool + apron + blind + a blown pane over a REAL cut opening (r4_windows.py). Size and position are the plan's own window mark, x 1.77..4.64 — an ordinary 2.87 ft sash, not the 4-5 ft units round 2 guessed at. The apron is only 0.055 ft proud so a desk or dresser can back onto a wall; the stool projects 0.34. Blind covers the top 86% with a head rail, tilted slats at a 0.15 ft pitch and a darker #b4b4b4 strip BEHIND each slat: without that strip the whole blind clipped to one flat 247 block, because every albedo over ~0.5 saturates on this wall, so the slat lines have to be cut by a genuinely darker surface rather than by shading. Metered 231."
+    },
+    "Window North East": {
+      "size_ft": [
+        3.34,
+        5.28,
+        0.34
+      ],
+      "pos": [
+        17.19,
+        1.8,
+        0.174
+      ],
+      "rot": 0,
+      "opening": {
+        "edge_index": 6,
+        "offset": 15.83,
+        "width": 2.72,
+        "elevation": 2.2,
+        "height": 4.6
+      },
+      "note": "NEW PIECE in round 4 — the re-traced plan shows a SECOND window on the headboard wall, x 15.83..18.55, just east of the nightstand. Same construction as Window North. It is only marginally visible in the primary photo (it falls behind the nightstand and the near edge of the big east window in that ultrawide frame), which is why rounds 1-3 never had it; the plan's blue window mark is unambiguous."
     },
     "Window East": {
       "size_ft": [
-        5.56,
-        4.88,
-        0.58
+        3.62,
+        5.08,
+        0.34
       ],
       "pos": [
-        26.19,
-        2.09,
-        8.8
+        20.336,
+        2.1,
+        2.9
       ],
       "rot": 270,
-      "note": "AS BUILT: the big one over the desk, 5.42 x 4.88 ft of trim (glass 4.90 x 4.10), sill 2.50 so the desk top runs just under it. Blind covers 86% — the uncovered strip at the bottom shows greenery over siding through the glass, as in the photo — plus two small objects on the deep 0.58 ft stool."
+      "opening": {
+        "edge_index": 7,
+        "offset": 1.4,
+        "width": 3.0,
+        "elevation": 2.5,
+        "height": 4.4
+      },
+      "note": "The one over the desk. Sill 2.50 so the desk top (2.45) runs just under it. Round 2 built this 5.42 ft wide off the photo; the plan says 3.00, and the plan is a scan of the actual house. The photo makes it look wider because it is on a receding wall seen at ~50 deg off the camera axis and cropped by the frame."
     },
     "Window West": {
       "size_ft": [
-        4.36,
-        4.24,
-        0.55
+        3.52,
+        5.18,
+        0.34
       ],
       "pos": [
-        0.295,
-        2.33,
-        6.8
+        0.174,
+        1.9,
+        10.64
       ],
       "rot": 90,
-      "note": "AS BUILT: its own unit, NOT a clone of North — wider and shorter (trim 4.22 x 4.24, glass 3.70 x 3.30), with a 0.55 ft projecting stool over a deep 0.46 ft apron board, which is what the photo shows under it. Blind fully lowered."
+      "opening": {
+        "edge_index": 5,
+        "offset": 1.17,
+        "width": 2.9,
+        "elevation": 2.3,
+        "height": 4.5
+      },
+      "note": "West wall, z 9.19..12.09 — the very oblique window cut by the left edge of the primary photo, and the one Master Bed 2 shows sitting immediately past the corner from the door/TV wall. South of the Dresser (which ends at z 7.98), so nothing overlaps."
     },
     "Ceiling Fan": {
       "size_ft": [
@@ -284,18 +346,203 @@
         4.26
       ],
       "pos": [
-        7.5,
-        8.1,
-        6.0
+        9.6,
+        8.69,
+        7.0
       ],
       "rot": 0,
-      "note": "White five-blade fan with a light kit, hanging from the vault. y is the BOTTOM of the fixture (the glass lens). AS BUILT: 4.60 ft blade span; hub is a smooth 48-seg drum d 0.75 x h 0.30 with the blade irons on its TOP rim and one shallow frosted pan d 0.63 x h 0.125 flush underneath — 0.47 ft of hub total, no collar, no globe. Blade chord 0.41 ft, pitch 7.5 deg. The 5.44 ft bbox height is mostly DOWNROD: the vault at local x 11.0 is 14.382 ft above the slab, so the rod runs from the 9.671 blade plane up to 14.382 and a sloped-ceiling canopy tilted 22.4 deg caps it — the canopy rim reaching 14.63 is deliberate, it buries in the slope. Moving pos.x changes the ceiling height above the fan; re-derive the rod length if you do. ROUND 3: pos.y LOWERED 9.06 -> 8.10 because the ridge moved to x 9.0 and the vault above the fan (x 7.5) dropped from 14.382 to 13.42 ft. The rod length is baked into the GLB, so the whole fixture drops by the same 0.96 ft and the canopy still buries in the slope; the blade plane is now 8.71 ft, a normal hanging height. The canopy's 22.4 deg tilt was cut for a 40.9 deg slope and the west slope is now 35.8 deg - the mismatch is buried in the ceiling and not worth a rebuild. Still: do NOT move pos.x without re-deriving the rod length."
+      "note": "Unchanged GLB. y is the BOTTOM of the fixture (the glass lens). Hung just WEST of the ridge at x 9.60 where the new vault is 14.03 ft: pos.y 8.69 puts the canopy top at 14.13, buried 0.10 ft in the slope, and the blade plane at 9.31 ft. Moved south to z 7.00 so the blades (4.60 ft span, x 7.30..11.90) clear the headboard and hang over the open floor at the foot of the bed, which is what the photo shows. THE ROD LENGTH IS BAKED INTO THE GLB — do not move pos.x without re-deriving pos.y from h(x). The canopy's 22.4 deg tilt was cut for a 40.9 deg slope and the west slope is now 32.2; the mismatch is buried in the ceiling and not worth a rebuild."
+    },
+    "Master Armchair": {
+      "size_ft": [
+        2.72,
+        2.83,
+        2.8
+      ],
+      "pos": [
+        3.3,
+        0.0,
+        1.85
+      ],
+      "rot": 18,
+      "note": "NEW. Replaces the invented white Tall Chest, which round 4's own note admitted was inference and which stood exactly where the photo has this chair. The plan's armchair icon is x 1.05..4.93, z 0.24..4.08 - in front of Window North - and the photo shows a pale cream chair there with a rounded back and tapered wooden legs. Photo patch 196.6 / wall 176.2 = 1.116; the fabric field is parked a little under that so the weave has somewhere to go before it clips."
+    },
+    "Master Lean Panels": {
+      "size_ft": [
+        1.1,
+        3.55,
+        2.02
+      ],
+      "pos": [
+        0.62,
+        0.0,
+        1.7
+      ],
+      "rot": 90,
+      "note": "NEW. Three pale slabs leaning on the west wall in the NW corner - the stack of mattress/headboard panels the photo shows beside the dresser, and the other half of what the Tall Chest was standing in for."
+    },
+    "Master TV": {
+      "size_ft": [
+        4.62,
+        3.14,
+        0.23
+      ],
+      "pos": [
+        5.2,
+        2.825,
+        13.151
+      ],
+      "rot": 180,
+      "note": "NEW, from Master Bed 2.jpg - the largest object on that wall and, in a Home Assistant house, a controllable device. Sized off the two doors flanking it in that photo (6.67 ft leaves at 178 px and 97 px -> 26.7 and 14.5 px/ft): panel ~3.9 ft tall x ~5.1 ft along the wall, i.e. a 65-70 in set, bottom ~3.3 ft off the floor, over a white soundbar. PLACEMENT CAVEAT: centred at x 5.20 so it sits inside x 2.55..7.86, which the FLOOR PLAN draws as solid wall. It overlaps the model's second door opening (edge 4, x 4.93..7.86), which the plan does not have - the plan's only door on this wall is at x 0.72..3.59, matching the model's other opening. Openings were confirmed in round 4 and were left alone."
+    },
+    "Master Dresser Clutter": {
+      "size_ft": [
+        2.16,
+        1.56,
+        0.62
+      ],
+      "pos": [
+        0.95,
+        3.04,
+        5.2
+      ],
+      "rot": 90,
+      "note": "Kraft shopping bag, a heap of folded dark/mid/pale laundry and a second cloth pile - what the photo has all over this dresser top."
+    },
+    "Master Plant": {
+      "size_ft": [
+        0.9,
+        1.03,
+        0.68
+      ],
+      "pos": [
+        0.85,
+        3.04,
+        3.95
+      ],
+      "rot": 0,
+      "note": "The potted plant on the dresser's north end."
+    },
+    "Master Lamp Small": {
+      "size_ft": [
+        0.84,
+        1.36,
+        0.83
+      ],
+      "pos": [
+        0.88,
+        3.04,
+        8.0
+      ],
+      "rot": 0,
+      "note": "Second lamp, dresser south end."
+    },
+    "Master Bin": {
+      "size_ft": [
+        1.02,
+        1.04,
+        1.0
+      ],
+      "pos": [
+        0.65,
+        0.0,
+        9.11
+      ],
+      "rot": 0,
+      "note": "The white bin on the floor by the dresser."
+    },
+    "Master Nightstand Props": {
+      "size_ft": [
+        1.34,
+        0.96,
+        0.73
+      ],
+      "pos": [
+        14.8,
+        2.1,
+        1.62
+      ],
+      "rot": 6,
+      "note": "Tablet on a stand, water bottle, puck speaker."
+    },
+    "Master Sill Cushion": {
+      "size_ft": [
+        1.32,
+        1.0,
+        0.34
+      ],
+      "pos": [
+        20.1,
+        2.52,
+        3.9
+      ],
+      "rot": 270,
+      "note": "The zigzag cushion on the east window sill."
+    },
+    "Master Floor Vent A": {
+      "size_ft": [
+        0.98,
+        0.03,
+        0.42
+      ],
+      "pos": [
+        17.3,
+        0.012,
+        1.1
+      ],
+      "rot": 0,
+      "note": "Floor grille by the nightstand. Named with 'floor' so objects.js keeps it unpickable."
+    },
+    "Master Floor Vent B": {
+      "size_ft": [
+        0.42,
+        0.03,
+        0.98
+      ],
+      "pos": [
+        1.1,
+        0.012,
+        11.4
+      ],
+      "rot": 90,
+      "note": "Floor grille on the west side."
+    },
+    "Master Laundry": {
+      "size_ft": [
+        1.4,
+        1.9,
+        1.12
+      ],
+      "pos": [
+        1.1,
+        0.0,
+        12.51
+      ],
+      "rot": 8,
+      "note": "Hamper with a stack of folded laundry."
     }
   },
-  "_room_surfaces": {
-    "note": "Set by the Shell piece with PATCH /api/house/room/14, not by a GLB.",
-    "floor_color": "grey wood-plank — use the 'wood' floor_texture tinted grey",
-    "wall_color": "warm white"
-  },
-  "_round3": "Round 3 closed: Bed (queen rebuild), Wall Art (rescaled 0.857 + moved), Rug (rebuilt, banded), Dresser (rebuilt, narrower, bright layered mirror), Ceiling (ridge off centre at x 9.0), Baseboards (verified already built - status.json was stale). Knock-on moves: Window North -> 5.6, Nightstand -> 13.6, Ceiling Fan -> y 8.10, Chair -> (13.35, 8.9). TOOL FIX made this round, in tools/roomkit/shot.py: the pose-convergence loop only tested camera.position, and on the re-assert the camera is already AT pose.pos, so it broke on frame 1 while controls.target was still lerping away from floorview's recenterFloor goal. Every shot came out yawed off the pose by however little the tween managed in the trailing 300 ms - i.e. worse the heavier the scene. The loop now waits on controls.target too. If your renders ever look mysteriously rotated or zoomed at a correct camera position, that is the mechanism. Build scripts for this round: scratchpad build/b_bed.py, b_rug.py, b_dresser.py, b_ceiling.py, plus proj.py (analytic ref camera), overlay.py and tone.py (exposure 1.15 -> ACES -> sRGB inverse)."
+  "_still_wrong": [
+    "THE ENTRY VESTIBULE IS ABOUT 7.9 FT OFF THE PLAN - see _vestibule_finding. Moving it is out of a builder's remit; until it moves, no pose can reproduce the primary photo's vantage.",
+    "The model's second door on edge 4 (x 4.93..7.86) is not in the floor plan, which draws that wall solid; the TV is centred on plan-solid wall and overlaps it. Openings were confirmed in round 4 and were left alone.",
+    "Chair is still a black mesh task chair; the photo shows a tall upholstered nailhead chair. 181 KB, the third-largest piece in the room.",
+    "The coverlet meters sigma 6.3..8.5 on small patches against the photo's ~10..14 - better than round 4's 2.8 but not there. See _metered_round5._read for why.",
+    "Nightstand, Desk and Foreground Chest are still round-2 GLBs at ~0.78 of the wall against the photo's 0.67..0.72.",
+    "The room is 1.74 MB against the 1.5 MB aim (was 3.41 MB). Bed 342 KB and Wall Art 318 KB are both over the 300 KB per-piece cap; Chair 181 KB is a round-2 piece.",
+    "The comparison pose is 88 deg vertical where the photo is an ultrawide, so the render always reads further away and tidier."
+  ],
+  "_round5": "ROUND 5 - the bed, the textures and the density. (1) THE BED IS A KING. Round 3 'proved' a queen off the photo and rounds 3-4 carried it, while THIS FILE contradicted itself: _wall_derivation records the plan's bed icon at x 6.85..13.95 (7.10 ft) and _north_wall_budget then built a 5.35 ft queen inside it. The queen reading was a camera artifact - the photo is shot from the room's EAST side, so the headboard is ~25 deg off square and foreshortens by a quarter. Re-measured against things at the SAME depth: the two shams span 235 px where the headboard cap spans 283 px for 7.10 ft (39.9 px/ft), so each sham is 2.95 ft - a 36 in KING pillow. (2) EVERY SOFT SURFACE IS NOW A TONE FIELD (build/room14/r5_raster.py), not a height field. Round 4 metered rug sigma 3.6 / duvet 2.8 against the photo's ~18 local / ~12; this scene has one sun and a large isotropic hemisphere term, so a 20 deg normal tilt buys nothing - contrast has to be ALBEDO. Round 5 meters rug 15.3, duvet 6.3..8.5 local / 17.1 broad, shams 5.7..6.5 local / 14.0 broad. (3) The invented white Tall Chest is DELETED and the photo's pale ARMCHAIR + LEANING MATTRESS PANELS stand there instead. (4) Density: bags + folded laundry on the dresser, a plant, a second lamp, a bin, tablet/bottle/speaker on the nightstand, a sill cushion, two floor vents, a laundry hamper. (5) The wall TV from Master Bed 2 is built. (6) The dresser is rebuilt with FOUR drawers (two over one over one) and real plank grain. (8) BUG FIXED: the recessed cans rendered as white blobs on the FLOOR from the dollhouse poses - roomkit.glb.cylinder winds BOTH end caps the same way, so with double_sided=False the up-facing cap survived the ceiling's back-face cull. They are single down-facing discs now. PAYLOAD: the room went 3.41 MB -> 1.74 MB (rug 1.13 -> 0.14, wall art 1.43 -> 0.32). Build scripts: build/room14/r5_*.py; run r5_place.py.",
+  "_vestibule_finding": "INVESTIGATED, NOT CHANGED. The round-4 critic claimed the entry vestibule is ~8 ft off the plan. Re-derived independently from docs/floor plan/Second Floor Plan App.png through plan_retrace.py's own transform (local x = 20.513 + (461-px)/27.592, local z = (1720.5-py)/27.592 - the same transform that reproduces all four blue window marks to within 0.05 ft). Wall-pixel scans: the far-south wall at py 1196..1204 runs px 456..494, then a GAP px 494..575, then wall px 575..1032. That gap is the door to the 2F hallway and it sits at local x 16.38..19.32. The alcove containing it is bounded by the east wall (px 456..465 = local x 20.37..20.69) and a partition at px 593..601 (local x 15.44..15.73), i.e. local x 15.73..20.37, 4.64 ft wide, HARD AGAINST THE EAST WALL. The critic's 15.73..20.33 is right. The model puts the leg at x 7.86..15.58 (7.72 ft, centred) - about 7.9 ft too far west. What actually occupies x 7.86..15.73 in the plan is a separate walled nook that opens into the bedroom over only x 11.67..15.44 and has no hallway door. Corroboration from the photos: from an east alcove looking north the dark Foreground Chest on the east wall is immediately to the camera's right, which is exactly what Master Bed 1 shows, and the near-left wall return in the primary photo is the x=15.6 partition. GEOMETRY WAS NOT TOUCHED - moving it is out of a builder's remit and would leave an unassigned gap in the floor.",
+  "_metered_round5": {
+    "_pose": "the round-4 comparison pose in _room._camera_warning, --day, level 2",
+    "north wall": 221.3,
+    "wall art": "161.5 sd 30.1",
+    "duvet/coverlet": "228 broad, sd 17.1 broad / 6.3..8.5 on 56 px patches",
+    "shams": "237.5, sd 5.7..6.5 on 40 px patches / 14.0 broad",
+    "rug": "230, sd 15.3 broad / 12..19 on 56 px patches",
+    "floor": 139.5,
+    "dresser": "130.5 sd 52.0",
+    "_photo": "wall 176.2 sd 2.2; coverlet 192.9 sd 12.3 local; shams 193.0 sd 22.0; rug 142..204 with local sd 9..33; floor ~104; dresser drawer fronts 124..136; canvas 130.7 sd 37.3",
+    "_read": "Round 4's rug 3.6 / duvet 2.8 are gone: the rug's 15.3 is on the photo's number and the coverlet is 2.3x better but still short locally. The binding constraint is HEADROOM, not method - the photo's wall sits at 176/255 and ours at 221/255, so a coverlet at the photo's 1.095 of the wall would be byte 242 with 13 bytes of room above it. The coverlet mean is deliberately parked at 1.03 to buy the spread."
+  }
 }

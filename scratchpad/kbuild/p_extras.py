@@ -39,21 +39,64 @@ def window():
 
 
 def rug():
-    """The black/white flecked runner in front of the range (photos A and F)."""
+    """The runner in front of the range (photos A and F).
+
+    ROUND 3.  Round 1 made it big bright flecks on a dark ground ("confetti");
+    round 2 inverted that into a flat light-grey pepper field and the critic read
+    it as terrazzo.  Cropping photo F at 2.5x settles it: the rug is a HIGH
+    CONTRAST loop weave -- a cream ground carrying dense near-black loops laid in
+    rows, with a bound dark edge and a short fringe on the ends.  Measured in the
+    photo at 123.7 / sd 36.7; a pepper field cannot reach that spread, so this is
+    a rasterised lattice field with real black in it.
+    """
     m = Model()
     x0, x1 = 9.95, 12.55
     z0, z1 = 3.70, 8.90
-    base = Material("rugbase", "#616362", roughness=0.97, emissive="#242525")
-    dark = Material("rugdark", "#333534", roughness=0.97, emissive="#0d0d0d")
-    bx(m, base, x0, x1, 0.0, 0.040, z0, z1)
-    rnd = _rng(4242)
-    for _ in range(2600):
-        u = x0 + 0.10 + rnd() * (x1 - x0 - 0.20)
-        w = z0 + 0.10 + rnd() * (z1 - z0 - 0.20)
-        s = 0.010 + rnd() * 0.014
-        m.add(box(s, 0.004, s * 0.75), dark, at=(u, 0.038, w), rot_y=rnd() * 3.1)
-    bx(m, dark, x0, x1, 0.0, 0.042, z0, z0 + 0.14)
-    bx(m, dark, x0, x1, 0.0, 0.042, z1 - 0.14, z1)
+
+    # near-black -> cream; the ground sits at 4..6 and the loops at 0..2, which
+    # is what gives the photo's sd 36.7.  A one-tone pepper field cannot.
+    pal = ramp("#141414", "#847f76", 7, "rug", roughness=0.97,
+               emissive_lo="#070707", emissive_hi="#1e1c1a")
+    bx(m, pal[5], x0, x1, 0.0, 0.038, z0, z1)
+
+    # The GROUND is rasterised (cheap, and it needs no fine detail); the LOOPS
+    # are individual rotated quads.  Rasterising the loops too made them square
+    # and clumpy -- a mark only 3 px across cannot survive being quantised onto
+    # a grid, and the result read as digital camouflage rather than weave.
+    def ground(u, w):
+        g = fbm(u * 6.5, w * 6.5, 991, 3)
+        return 4 if g < 0.34 else (5 if g < 0.74 else 6)
+
+    raster(m, pal, "+y", 0.038, x0 + 0.06, x1 - 0.06, z0 + 0.11, z1 - 0.11,
+           0.055, ground, lift=0.002)
+
+    PX, PZ = 0.072, 0.064        # the loop lattice, ~0.85 in pitch
+    r = _rng(4242)
+    nx, nz = int((x1 - x0 - 0.22) / PX), int((z1 - z0 - 0.30) / PZ)
+    for i in range(nx):
+        for j in range(nz):
+            u = x0 + 0.11 + (i + 0.5) * PX + (r() - 0.5) * PX * 0.55
+            w = z0 + 0.15 + (j + 0.5) * PZ + (r() - 0.5) * PZ * 0.55
+            dens = 0.29 + 0.19 * fbm((u - x0) * 1.9, (w - z0) * 1.9, 771, 3)
+            if r() > dens:
+                continue
+            a, b = PX * (0.46 + r() * 0.30), PZ * (0.40 + r() * 0.26)
+            mat = pal[0] if r() < 0.66 else pal[2]
+            m.add(quad((-a, 0, -b), (-a, 0, b), (a, 0, b), (a, 0, -b)), mat,
+                  at=(u, 0.0425, w), rot_y=r() * 3.14159)
+
+    # bound (whipped) edge all round, and a short fringe on the two ends
+    edge = pal[1]
+    for (a, b, c, d) in ((x0, x1, z0, z0 + 0.075), (x0, x1, z1 - 0.075, z1),
+                         (x0, x0 + 0.055, z0, z1), (x1 - 0.055, x1, z0, z1)):
+        bx(m, edge, a, b, 0.0, 0.046, c, d)
+    fr = pal[4]
+    n = int((x1 - x0 - 0.20) / 0.058)
+    for k in range(n):
+        u = x0 + 0.10 + k * 0.058
+        L = 0.11 + 0.05 * ((k * 7) % 5) / 4.0
+        bx(m, fr, u, u + 0.030, 0.0, 0.013, z0 - L, z0)
+        bx(m, fr, u, u + 0.030, 0.0, 0.013, z1, z1 + L)
     return m
 
 

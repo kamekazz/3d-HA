@@ -23,20 +23,27 @@ from kcommon import *   # noqa
 from kcommon import _rng
 
 # Plank tone palette, sRGB.  GAIN trims the whole set at once after metering
-# the render against the photo (photo A floor 115, photo F floor 86, sigma
-# 24-32; the first round-2 build metered 160/30 at GAIN 0.90).
-GAIN = 0.67
-PLANKS = ["#4e5256", "#5d6166", "#6b6f74", "#7a7e83", "#8b8f94", "#9ba1a6"]
-WEIGHTS = [0.18, 0.22, 0.22, 0.18, 0.13, 0.07]
+# the render against the photo.
+#
+# ROUND 3 -- REGRESSION FIX.  Round 1 metered sigma 9.5 and read plastic; round 2
+# over-corrected to 127.7 / sd 23.7 against the photo's 114.1 / sd 16.2, and the
+# critic's words were "near-white planks now abut charcoal in a patchwork the
+# real uniform grey oak never does".  Two changes: the palette is much NARROWER
+# (a 1.42 spread instead of 1.94), and neighbouring columns are drawn by a
+# RANDOM WALK over the palette rather than independently, so no plank can sit
+# five steps away from the one beside it.  Aiming at the photo's numbers, not
+# past them.
+GAIN = 0.560
+PLANKS = ["#5c6165", "#666b6f", "#70757a", "#7a7f84", "#83888d", "#8d9297"]
 
-BASE_DARK = "#303337"        # shows through the plank gaps: grout / butt joint
+BASE_DARK = "#3c4044"        # shows through the plank gaps: grout / butt joint
 
-# Contact shadow ramp, as a multiplier on the mid plank tone.  The app's tone
-# curve is steep down here -- an albedo at 0.74 of the floor's rendered 0.48 of
-# it -- so a shadow that looks right in hex reads as a black pond on screen.
-# The first round-2 build did exactly that; these are five gentle steps.
-AO_STEPS = (0.960, 0.925, 0.890, 0.855, 0.815)
-AO_MID = "#6b6f74"
+# Contact shadows are no longer nested rectangles -- see Shadows in kraster.py.
+# This is the ramp the smooth field is quantised onto: 12 steps of a gentle
+# multiplier on the mid plank tone.  The app's tone curve is steep down here, so
+# a shadow that looks right in hex reads as a black pond on screen.
+AO_N = 15
+AO_MAX_ALPHA = 0.44          # how dark the deepest contact shadow gets
 
 PITCH = 0.62                 # 7.4 in planks
 GAP = 0.020
@@ -71,36 +78,22 @@ def _clip(x0, x1, z0, z1):
     return x0, x1, max(z0, 0.02), min(z1, ZW_SOUTH - 0.02)
 
 
-def _ramp(reach):
-    """Ring offsets from the outermost inward, one per AO_STEPS entry."""
-    n = len(AO_STEPS)
-    return [reach * (n - 1 - i) / (n - 1) for i in range(n)]
-
-
-def ao_rect(m, mats, x0, x1, z0, z1, reach=0.55, clip=True):
-    """Soft contact shadow under a rectangular footprint."""
-    for i, g in enumerate(_ramp(reach)):
-        a, b, c, d = (x0 - g, x1 + g, z0 - g, z1 + g)
-        if clip:
-            a, b, c, d = _clip(a, b, c, d)
-        if b - a < 0.02 or d - c < 0.02:
-            continue
-        bx(m, mats[i], a, b, Y1 + 0.002 + i * 0.0012,
-           Y1 + 0.0032 + i * 0.0012, c, d)
-
-
-def ao_disc(m, mats, cx, cz, r, reach=0.42):
-    for i, g in enumerate(_ramp(reach)):
-        m.add(cylinder(r + g, 0.0012, seg=20), mats[i],
-              at=(cx, Y1 + 0.002 + i * 0.0012, cz))
+def _inside(x, z):
+    """The room polygon, for clipping the shadow raster at the bay."""
+    if x >= XW_WEST:
+        return ZW_NORTH + 0.01 <= z <= ZW_SOUTH - 0.01
+    if x < 0.02:
+        return False
+    zlo, zhi = _zrange(x)
+    return zlo + 0.02 <= z <= zhi - 0.02
 
 
 def build():
     m = Model()
     base = Material("plankbase", _dim(BASE_DARK, GAIN), roughness=0.85)
     mats = [_mat(c, f"pl{i}") for i, c in enumerate(PLANKS)]
-    aomats = [Material(f"ao{i}", _dim(AO_MID, GAIN * k), roughness=0.76)
-              for i, k in enumerate(AO_STEPS)]
+    # translucent, NOT opaque: see Shadows.bake
+    aomats = shadow_ramp(AO_N, "#21252a", AO_MAX_ALPHA)
 
     # ---- base layer (what the gaps show) -- built to the polygon so nothing
     # pokes out past the bay's angled walls into the next room
@@ -108,20 +101,12 @@ def build():
     bay = [(XW_WEST, 3.35), (0.0, 4.51), (0.0, 10.0), (XW_WEST, 11.16)]
     m.add(prism(bay, Y1 - 0.004), base, at=(0, Y0, 0))
 
-    # ---- planks, running north-south like the photo's
-    rnd = _rng(20260815)
-    cum = []
-    s = 0.0
-    for w in WEIGHTS:
-        s += w
-        cum.append(s)
-
-    def pick():
-        r = rnd() * cum[-1]
-        for i, c in enumerate(cum):
-            if r <= c:
-                return i
-        return len(cum) - 1
+    # ---- planks, running north-south like the photo's.  Tone is a RANDOM WALK
+    # across the palette so adjacent boards stay within a step or two of each
+    # other -- round 2 drew them independently and the critic read the result as
+    # a light/dark patchwork.
+    rnd = _rng(20260816)
+    idx = len(PLANKS) // 2
 
     x = XW_EAST
     col = 0
@@ -134,24 +119,33 @@ def build():
         while z < zhi:
             ln = 3.1 + rnd() * 3.4
             a, b = max(z, zlo), min(z + ln, zhi)
+            r = rnd()
+            step = -1 if r < 0.36 else (1 if r > 0.64 else 0)
+            idx = max(0, min(len(PLANKS) - 1, idx + step))
             if b - a > 0.25:
-                mat = mats[pick()]
-                bx(m, mat, x0 + GAP / 2, x1 - GAP / 2, Y1 - 0.010, Y1,
+                bx(m, mats[idx], x0 + GAP / 2, x1 - GAP / 2, Y1 - 0.010, Y1,
                    a + GAP / 2, b - GAP / 2)
             z += ln
         x -= PITCH
         col += 1
 
-    # ---- contact shadows: every piece that meets this floor ---------------
-    ao_rect(m, aomats, 6.35, 8.95, 5.48, 10.52, reach=0.60)     # island box
-    ao_disc(m, aomats, 4.51, 6.78, 0.62, reach=0.34)            # stool north
-    ao_disc(m, aomats, 4.51, 9.30, 0.62, reach=0.34)            # stool south
-    ao_rect(m, aomats, 9.93, 12.92, 13.72, ZW_SOUTH, reach=0.50)  # fridge
-    ao_disc(m, aomats, 1.15, 5.30, 0.60, reach=0.30)            # step bin
-    ao_rect(m, aomats, 5.75, XW_EAST, ZW_NORTH, 2.20, reach=0.42)
-    ao_rect(m, aomats, 12.87, XW_EAST, 2.20, 10.60, reach=0.42)
-    ao_rect(m, aomats, 5.90, 12.95, 14.74, ZW_SOUTH, reach=0.42)
-    ao_rect(m, aomats, 12.80, XW_EAST, 4.30, 6.80, reach=0.34)  # range
+    # ---- contact shadows: ONE smooth field over the whole floor -------------
+    # Round 2 baked five nested hard-edged rectangles per object and the critic
+    # called them "bullseye decals painted on the planks, worse than no shadow".
+    # Shadows.bake rasterises an exponential distance falloff through the same
+    # quantiser the stone uses: round corners, irregular contours, no rings.
+    sh = (Shadows()
+          .rect(6.35, 8.95, 5.48, 10.52, reach=0.52)            # island box
+          .disc(4.51, 6.78, 0.58, reach=0.30)                   # stool north
+          .disc(4.51, 9.30, 0.58, reach=0.30)                   # stool south
+          .rect(9.93, 12.92, 13.72, ZW_SOUTH, reach=0.44)       # fridge
+          .disc(1.15, 5.30, 0.58, reach=0.28)                   # step bin
+          .rect(5.75, XW_EAST, ZW_NORTH, 2.20, reach=0.38)      # peninsula
+          .rect(12.87, XW_EAST, 2.20, 10.60, reach=0.38)        # east run
+          .rect(5.90, 12.95, 14.74, ZW_SOUTH, reach=0.38)       # south run
+          .rect(12.80, XW_EAST, 4.30, 6.80, reach=0.30))        # range
+    sh.bake(m, aomats, Y1, 0.0, XW_EAST, ZW_NORTH, ZW_SOUTH, cell=0.062,
+            mask=_inside, lift=0.003)
     return m
 
 
