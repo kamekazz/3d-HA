@@ -1,13 +1,13 @@
 {
-  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
-  "_room_note": "Laundry -- 'Laundry.jpg'. Top-load washer + front-load dryer against the north wall under white upper cabinets with a floating shelf and two woven baskets between them. Doors west (to the pantry/hall) and south (to the garage).",
+  "_note": "FURNISHING PASS. ORIENTATION CORRECTION: the washer/dryer run moved from the WEST end of the north wall to the EAST end -- see _evidence. Build script: scratchpad/util/l_main.py.",
   "_room": {
     "id": 9,
     "name": "Laundry",
     "floor": {
       "id": 2,
       "name": "First floor",
-      "level": 1
+      "level": 1,
+      "floor_height": 10.0
     },
     "rect_world": {
       "x": [
@@ -25,15 +25,44 @@
     ],
     "wall_height": 9.0
   },
+  "_evidence": [
+    "MEASURED (floor plan): the plan's appliance icon sits at world x 29.4-31.9, z 7.7-10.5 = local x 7.5-10.0, z 0.4-3.2 -- against the NORTH wall at the EAST end, with a partition drawn at local x 7.5. The 'Indoor garage door' hatch is at world x 21.8-26.5 = local x 0-4.6, i.e. the WEST end. The shell pass had the appliances at local x 0.05-6.0, sitting on top of the garage doorway.",
+    "MEASURED (Laundry.jpg + 'Laundry room and garage door right next to it.jpg'): top-load Samsung washer LEFT, front-load dryer RIGHT with a rose-gold facia band and a dark glass door; white shaker uppers with BLACK BAR PULLS and crown; a full-width white ledge under them carrying two woven baskets and a white box; a floating white shelf with three dark bottles under a framed print between the two cabinets; a woven box on the dryer top; a white floor register; tall white baseboard; grey wood-look plank floor.",
+    "NOT RECONCILABLE: no camera position inside an 11.0 x 5.7 ft rectangle reproduces the photo's geometry. The photo shows the appliance wall and the garage-door wall meeting at a corner immediately right of the dryer; the traced footprint merges the real mudroom and the laundry alcove and has no such corner. The floor plan was used as the tie-breaker for WHICH END each element sits on."
+  ],
   "_surfaces": {
     "wall_color": "#dbdbda",
     "floor_color": "#6b6967",
     "floor_texture": "wood",
-    "wall_texture": null
+    "per_wall_skin": {
+      "n": "#7f7f7e",
+      "w": "#b3b3b2",
+      "e": "#f2f2f1",
+      "s": "#fffffe"
+    }
   },
   "_camera": {
     "judge_from": "doll_sw",
-    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
+    "why": "doll_sw culls SOUTH+WEST and leaves NORTH (the appliance wall: washer, dryer, ledge, uppers, floating shelf, framed print) and EAST standing -- the north wall carries this room's entire content."
+  },
+  "_metered_srgb_luma": {
+    "_target": "photo 'Laundry room and garage door right next to it.jpg': wall 192.9 (n=99900, sd 12.9) and 186.1 (n=88000, sd 12.8) -> aim 189; floor 138.7 (n=89300, sd 13.4); ceiling 180.0 (n=85500, sd 4.4)",
+    "walls_before_skin": {
+      "north": "234.0 (n=64800)",
+      "west": "209.7 (n=155000)",
+      "east": "168.0 (n=103600)",
+      "south": "144.4 (n=162000)",
+      "spread": 89.6
+    },
+    "walls_after_skin": {
+      "north": "186.9 (n=100000, sd 0.0)",
+      "east": "183.3 (n=103600, sd 4.4)",
+      "west": "175.7 (n=53340, sd 3.3)",
+      "south": "168.7 (n=162000, sd 0.0)",
+      "spread": 18.2,
+      "avg": 178.7
+    },
+    "floor": "143.0 (n=57500, sd 3.0) against the photo's 138.7 (sd 13.4): mean within 4.3, but the plank texture is much flatter than the real LVP (sd 3.0 vs 13.4)"
   },
   "pieces": {
     "Laundry Baseboards": {
@@ -54,19 +83,56 @@
       "rot_y": 0.0,
       "scale": 1.0
     },
+    "Laundry Floor Marks": {
+      "pos_room_local_ft": [
+        5.5,
+        0.0,
+        2.665
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Laundry Hamper": {
+      "pos_room_local_ft": [
+        3.675,
+        0.0,
+        1.37
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Laundry Tall Cabinet": {
+      "pos_room_local_ft": [
+        1.09,
+        0.0,
+        1.287
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Laundry Wall Wash": {
+      "pos_room_local_ft": [
+        5.5,
+        0.0,
+        2.85
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
     "Laundry Washer Dryer": {
       "pos_room_local_ft": [
-        3.025,
+        8.18,
         0.0,
-        1.546
+        1.47
       ],
       "rot_y": 0.0,
       "scale": 1.0
     }
   },
   "_gaps": [
-    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
-    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
-    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
+    "The traced 11.0 x 5.7 ft footprint is not the shape of the real room (see _evidence), so the side-by-side is a content match, not a geometry match. No camera reproduces the photo.",
+    "The framed 'Wash Dry Fold' print and the left upper cabinet are hidden behind the alcove end panel from the reference camera; they are visible from doll_sw.",
+    "Woven baskets are modelled as banded boxes -- at close range they read as boxes, not wicker.",
+    "Floor sd 3.0 vs the photo's 13.4: the plank texture has far less variation than real LVP."
   ]
 }

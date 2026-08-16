@@ -97,6 +97,32 @@ shows them.
 **Never edit `poses.json`** — it is the master bedroom's and parallel agents race
 on it. Use `--pose-json` with what `roomkit.rooms` gives you.
 
+## Verify the room's ORIENTATION against the floor plan before you build anything
+
+**Six rooms in a row have had a structural error that the photographs alone
+could not catch**, and every one cost a full rebuild round:
+
+| room | error |
+|---|---|
+| Rios Room | the whole room was 180° out; windows on the wrong wall |
+| Guest Room | 180° out on Z; headboard, closet and dresser all on wrong walls |
+| Living Room | fireplace read as being on the north wall; it is on the chamfer |
+| Master Bed | dresser read as on the headboard wall; it is on the west wall |
+| Office | one window built where the plan shows two; a door invented on a party wall |
+| Arcade | door leaf drawn 2.4 ft from where the opening was actually cut |
+
+Photographs establish *detail* — colour, material, clutter, proportion. The plan
+establishes *which wall things are on*, and a wide phone lens flattens corners
+badly enough to fool a careful reader. Pin the room with adjacencies before you
+model anything: `roomkit.rooms --list` gives every room's world rect, and the
+plans are in `docs/floor plan/`. State your derivation in your report.
+
+Techniques that have worked: registering the plan image to world coordinates
+from three rooms whose rects are known and then sampling it as ASCII; a camera
+solve from identifiable points (one room got rms 1.16° and tested the rival
+hypotheses, which scored 18.3°); and reading a mirror — **a mirror cannot
+reflect the wall it hangs on**, which settled two rooms outright.
+
 ## What round 1 got wrong — read this before you build
 
 Five rooms were built and judged. Two independent critics failed both rooms they
@@ -173,6 +199,14 @@ emissive on room-scale *runs* (crown, baseboards) makes them glow as bright fins
 against the darker walls — which is a large part of why a room reads as
 partitions rather than a room. The "no emissive box" rule covers trim runs too.
 
+**UPDATE — this is now largely solved. Use per-wall albedo skins (option 2).**
+The Office (room 8) took its four walls from **N 234 / W 210 / E 171 / S 149,
+spread 85.5**, down to a **spread of 22.9** that way — real rooms sit within ~30,
+so that is the problem closed, not merely improved. Skin colours were solved from
+two-point log-linear fits measured off real renders, not from a formula. The
+residue is the one wall the sun never reaches (it capped ~20 below the others
+even with a pure-white skin); that part really is the renderer.
+
 What you CAN legitimately do, in increasing order of effort:
 
 1. Pick a `wall_color` that lands the room's **average** near the photo rather
@@ -180,7 +214,12 @@ What you CAN legitimately do, in increasing order of effort:
    doing exactly this got the four-wall average to 157.5 against the photo's
    160.3, but its north wall then sat at 218 — brighter than the photo's
    ceiling. With one colour and a 112-byte spread you cannot win everywhere.
-2. **Give each wall its own albedo.** One `wall_color` serves all of them, but
+2. **Give each wall its own albedo — all four of them.** Results so far, all
+   with non-emissive skins fitted from two-point probes: **garage 91.5 → 12.3**,
+   **laundry 89.6 → 18.2**, **office 85.5 → 22.9**, and the Guest Room, which
+   skinned only its two dark walls, **91 → 59**. Skin them all, including the
+   bright one — it usually needs bringing *down*, and that is most of the gain.
+   Fit each from a probe, never by eye. One `wall_color` serves all of them, but
    nothing stops you skinning a wall with a full-height, edge-to-edge GLB plane
    in a different colour, so a wall the sun never reaches is simply painted
    lighter. This is NOT the rejected "wall wash": that failed because it was
@@ -197,6 +236,13 @@ What you CAN legitimately do, in increasing order of effort:
 Measured on the master bedroom: an object's material collects roughly **1.7×**
 what a room wall of the same authored colour does. Solving a ceiling gable on the
 wall's number left a visible seam across the room.
+
+**Correction — that 1.7 is not a constant, it is orientation-dependent.** It was
+measured on one wall and generalised here in error. The garage measured the
+piece/wall response ratio on all four: **north 2.08, west 1.24, east 1.03, south
+1.02.** A surface facing the sun sees a big difference; one facing away sees
+almost none. So do not apply a single factor — probe the specific wall you need
+to match, on the orientation you need it on.
 
 `models.js` and `scene.js` set the same `envMapIntensity`, so this is not an app
 bug — it is material authoring. Room walls are built at `roughness 0.95`;
@@ -256,6 +302,23 @@ the range across all four walls — not one number. And when you pick a single
 `wall_color` for a room whose walls are lit very differently, choose it so the
 **average across all of them** lands near the photo; optimising the bright walls
 pushes the dark ones further away.
+
+## An opening between two rooms must be cut in BOTH rooms' walls
+
+Each room owns its own walls, so cutting a doorway in yours leaves the
+neighbour's wall standing in the hole — you look through your opening at their
+blank wall face, or at their jamb lining.
+
+Two rooms have hit this. The Dining room got it right: it set its kitchen
+doorway to the **exact world span room 6 had already cut on its own side**, so
+the two holes register. The Office got it wrong: it cut a passage into the
+printer nook but left room 22's north wall solid, so the hole shows the nook's
+wall rather than the nook.
+
+So: before cutting an opening on a shared wall, check whether the neighbour has
+one there (`roomkit.rooms <neighbour id>` reports its opening count; the DB has
+the spans). Match the world span exactly. If the neighbour is another agent's
+room and you must not touch it, say so in your report so it gets paired up.
 
 ## Room-scale surfaces must be named so they stay unclickable
 

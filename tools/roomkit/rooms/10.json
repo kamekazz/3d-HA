@@ -1,13 +1,13 @@
 {
-  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
-  "_room_note": "Pantry -- 'pantry door.jpg'. 3.1 x 5.7 ft. Ceiling + baseboards + surfaces, plus five open shelves on the east wall; the double doors themselves belong to hallway 12's 'Hall1F Baseboards' piece, so the skirting here is only gapped.",
+  "_note": "FURNISHING PASS. Both pantry photos show the doors CLOSED, so the entire interior is inference. Build script: scratchpad/util/p_main.py.",
   "_room": {
     "id": 10,
     "name": "Pantry",
     "floor": {
       "id": 2,
       "name": "First floor",
-      "level": 1
+      "level": 1,
+      "floor_height": 10.0
     },
     "rect_world": {
       "x": [
@@ -25,15 +25,31 @@
     ],
     "wall_height": 9.0
   },
+  "_evidence": [
+    "MEASURED ('pantry door.jpg', 'Pantry and garage door.jpg'): a pair of white six-panel leaves on the 5.7 ft WEST wall, facing the first-floor hallway. Both photos show them CLOSED, so there is no photograph of the inside of this room.",
+    "INFERRED (everything inside): five-tier white shelving on the east wall with steel standards, four short tiers on each 3.1 ft end wall, and ordinary dry-store stock -- boxes, cans, jars, woven baskets, paper towels, bottles -- plus a case of water, a sack and a folding step stool on the floor."
+  ],
   "_surfaces": {
     "wall_color": "#dcdcdb",
     "floor_color": "#6b6967",
     "floor_texture": "wood",
-    "wall_texture": null
+    "per_wall_skin": {
+      "n": "#848483",
+      "w": "#babab9",
+      "e": "#fbfbfa",
+      "s": "#fffffe"
+    }
   },
   "_camera": {
-    "judge_from": "doll",
-    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
+    "judge_from": "doll_nw",
+    "why": "The shelf run is on the EAST wall -- the wall you face through the double doors. doll_nw culls NORTH+WEST, so the east wall stands behind the shelving and you look in over the doorway wall. The shell pass recorded 'doll' (= doll_se), which culls the east wall and would leave every shelf hanging in mid-air."
+  },
+  "_metered_srgb_luma": {
+    "_target": "no interior photo; the laundry photo's 189 was used -- same paint, adjacent room",
+    "walls_after_skin": {
+      "west": "182.1 (n=144000, sd 0.0)"
+    },
+    "_note": "The west wall is the only one that yields a clean field -- the shelving covers the other three. The bare west wall metered 203.1 against the laundry's 209.7 on the same wall and the same paint (3% agreement), so the laundry's four-wall set was scaled by 203.1/209.7 to size these skins."
   },
   "pieces": {
     "Pantry Baseboards": {
@@ -53,11 +69,37 @@
       ],
       "rot_y": 0.0,
       "scale": 1.0
+    },
+    "Pantry Floor Stock": {
+      "pos_room_local_ft": [
+        2.075,
+        0.0,
+        2.966
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Pantry Shelves": {
+      "pos_room_local_ft": [
+        1.675,
+        0.95,
+        2.85
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Pantry Wall Wash": {
+      "pos_room_local_ft": [
+        1.55,
+        0.0,
+        2.85
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
     }
   },
   "_gaps": [
-    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
-    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
-    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
+    "Entirely inferred interior -- both photos show the doors closed.",
+    "Only the west wall gives a clean metering field; the other three are behind shelving."
   ]
 }

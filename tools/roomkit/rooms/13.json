@@ -1,81 +1,137 @@
 {
-  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
-  "_room_note": "Guest Room -- primary photo 'Guest Room.jpg'. WEST is exterior and carries the window (the floor plan draws it pale blue at local z 1.3..4.9); EAST is the 2F hallway (entry door); NORTH has the closet double doors with room 24 behind them; SOUTH is the headboard wall with room 25 behind. Chair rail at 3.32 ft, matching the photo. Defining pieces: the black platform bed and the black dresser. Judge from doll_nw or doll_sw -- doll_ne culls the window wall.",
+  "_note": "FURNISHING ROUND for room 13 (Guest Room), superseding the shell pass. Build scripts live in scratchpad/guest13/ -- gkit.py (helpers: puff, disjoint-annulus contact shadow, mottle/ramp, save_and_place; it imports scratchpad/shellpass/kit.py for ceiling/baseboards/door+window units), then g1_shell.py (openings + surfaces + Guest Ceiling + Guest Baseboards), g2_bed.py (bed group), g3_pieces.py (east/south/north/west walls + rug), g4_walls.py (per-wall albedo skins). Each is idempotent by piece name and re-runnable. shots.py holds the photo-1 camera + the doll poses; gprobe.py is the two-point wall probe; m.py meters any pixel box and writes a _boxes.png overlay. All coordinates are ROOM-LOCAL feet from the footprint's min corner. Pieces are authored facing +z and placed at rot 0 (everything is authored already in room coordinates).",
+
   "_room": {
     "id": 13,
     "name": "Guest Room",
-    "floor": {
-      "id": 3,
-      "name": "Second floor.",
-      "level": 2
-    },
-    "rect_world": {
-      "x": [
-        -1.9,
-        10.5
-      ],
-      "z": [
-        6.5,
-        17.3
-      ]
-    },
-    "size_ft": [
-      12.4,
-      10.8
-    ],
+    "floor": "Second floor (level 2), slab world y = 18.0",
+    "rect_world": { "x": [-1.9, 10.5], "z": [6.5, 17.3] },
+    "size_ft": [12.4, 10.8],
     "wall_height": 8.0
   },
-  "_surfaces": {
-    "wall_color": "#dedbd5",
-    "floor_color": "#6b6967",
-    "floor_texture": "wood",
-    "wall_texture": null
+
+  "_orientation": {
+    "verdict": "THE SHELL PASS WAS 180 DEGREES OUT ON Z. It put the headboard on the SOUTH wall, the closet doors on the NORTH and the dresser on the north wall east of the closet. The headboard is on the NORTH wall, the closet on the SOUTH, and the dresser on the EAST.",
+    "evidence": [
+      "FLOOR PLAN, 'docs/floor plan/Second Floor Plan App.png'. Registration fitted from three rooms whose world rects are known (Master Bath x 18.6..33.4 is the LEFTmost room on the plan, Rios Room z 22.7..34.4 the TOPmost, Master Bed z -12.4..6.3 the BOTTOMmost), giving plan-left = +x = EAST, plan-up = +z = SOUTH, 27.7 px/ft, orig_x = 975.4 - 27.7*wx, orig_y = 1378 - 27.7*wz. Sampling that grid at 0.25 ft prints the room: the drawn BED ICON spans world x 0.25..6.0, z 6.75..14.3 and its two PILLOW rounded-rectangles sit at z 6.8..7.8 -- the NORTH end. A nightstand rectangle sits at x -1.7..-0.1, z 6.8..8.8, i.e. beside those pillows in the north-west corner, which is where nightstands go. A 1.5 x 4.25 ft furniture rectangle stands against the EAST wall at world x 8.75..10.25, z 8.5..12.75 -- the dresser. The pale-blue window segment is on the WEST wall at world z 8.2..11.1.",
+      "PHOTO 1 CAMERA SOLVE. Seven identifiable points (the four bed corners, both window jambs and the north-west corner) were fitted for camera position + yaw under a pinhole model at the photo's ultrawide fov. Best fit: camera at room-local (10.9, 11.95) looking north swung 28.9 deg west, rms 1.16 deg over the seven points, with the bed coming out 5.4 x 7.3 ft -- a queen. That camera is 1.2 ft OUTSIDE the south-east corner, i.e. the photographer is standing back in the hallway looking in through the entry door. Forcing the camera to the closet doorway (local 6.3, 10.45) gives rms 18.3 deg and forcing it to the middle of the east wall gives a 5.7 ft long bed. So photo 1 looks NORTH: the wreath wall is NORTH and the window wall, on its left, is WEST.",
+      "PHOTO 2 ELEMENT ORDER. From the bed the order left-to-right is dresser+mirror, entry door, a wall corner, TV, closet doors. With the dresser on the east wall at z 1.9..6.8 and the door on the east wall at z 8.05..10.8, the azimuths from a camera on the bed are 98 / 125 / 131 (corner) / 138 / 164 -- exactly that order. Putting the entry door on the south wall instead puts the corner BEFORE the door, which photo 2 does not show.",
+      "THE ROUND MIRROR'S REFLECTION (photo 2) shows a window with blinds and a framed picture. Those are the two things on the WEST wall, so the mirror faces west and the dresser it hangs over is on the EAST wall.",
+      "PHOTO 3, shot from the head of the bed looking at the foot, shows -- left to right -- the TV on a receding plane, the closet bypass doors, two small frames, then the corner and the window. Facing south, left is east: so the south wall runs TV (east end), closet, frames (west end)."
+    ],
+    "disagreement_with_the_plan": "The plan draws the south-wall DOOR MARK (a thin double line, i.e. an opening) at world x -1.25..2.75, the WEST end of that wall, and draws the east portion x 7.25..11.5 with no wall at all. All three photos put the closet in the middle/east of the south wall with a blank picture wall at its west end, and put the entry door on the east wall. The photos were treated as binding and the plan's door mark as schematic; the plan's missing south-east wall stretch is read as the plan simply not drawing the corner where the doorway is."
   },
+
   "_camera": {
-    "judge_from": "doll_sw",
-    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
-  },
-  "pieces": {
-    "Guest Baseboards": {
-      "pos_room_local_ft": [
-        6.2,
-        0.0,
-        5.4
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Guest Bed": {
-      "pos_room_local_ft": [
-        5.6,
-        0.0,
-        7.13
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Guest Ceiling": {
-      "pos_room_local_ft": [
-        6.2,
-        7.54,
-        5.4
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Guest Dresser": {
-      "pos_room_local_ft": [
-        10.2,
-        0.0,
-        1.461
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
+    "judge_from": "doll_nw",
+    "why": "Walls are FrontSide with inward normals, so the two nearest the camera are culled and any object on them is left hanging in mid-air. This room's content is on the EAST wall (dresser, round mirror, dresser lamp and plant, entry door) and the SOUTH wall (closet bypass doors, wall TV, two frames). doll_nw culls NORTH and WEST, which carry only the wreath, the window unit and one small frame -- the cheapest pair to lose. doll_se would lose the dresser AND the closet wall, doll_ne the whole east wall.",
+    "reference_pose": {
+      "note": "Reproduces 'Guest Room.jpg'. The solved photographer position is 1.2 ft outside the south-east corner, but standing there renders the HALLWAY's own west wall (its inward normal faces the camera, so it is not culled) across the whole frame. The pose is therefore pulled just inside the east wall, in the door opening, keeping the solved yaw and a 100 deg vertical fov for the phone ultrawide. shot.py's flyTo only partly converges its target, so the target is pushed 200 ft out along the ray.",
+      "pos_world": [10.05, 23.30, 16.35],
+      "pos_room_local": [11.95, 5.30, 9.85],
+      "yaw_deg": -34.0,
+      "pitch_deg": -22.0,
+      "fov": 100,
+      "size": [900, 1200]
     }
   },
+
+  "_surfaces": {
+    "set_with": "PATCH /api/house/room/13 (g1_shell.py)",
+    "wall_color": "#c3c1bd",
+    "wall_texture": null,
+    "floor_color": "#525150",
+    "floor_texture": "wood",
+    "note": "Chosen from a TWO-POINT PROBE (gprobe.py), not by eye: at #d3d1cd the four clean wall patches read N 231.9 / S 136.8 / E 163.0 / W 197.1 and at #a9a7a3 they read 216.1 / 101.7 / 127.1 / 167.1, giving per-wall slopes of 0.375 (N) / 0.834 (S) / 0.853 (E) / 0.713 (W) render bytes per albedo byte. The floor was set the same way: #6d6b6a metered 144.4 against photo 1's clean floor at 108.4 and 104.7, so it was dropped to #525150, which now meters 108.9."
+  },
+
+  "openings": {
+    "_note": "REAL openings (house.js buildRoom -> shape.holes.push). All three are type `passage` -- a true hole with no app panel -- and each unit supplies its own glass / leaf, which is what build15r2 proved and what stops the app's 0.3 ft glass box sitting proud of the blinds. Edge order for a rect room is house.js's pts [[0,0],[W,0],[W,D],[0,D]]: 0 north (offset = local x), 1 east (offset = local z), 2 south (offset = W - local x), 3 west (offset = D - local z).",
+    "window_west": { "edge_index": 3, "offset": 6.25, "width": 2.8, "elevation": 2.55, "height": 3.9, "local": "west wall, z 1.75..4.55, sill 2.55" },
+    "entry_door_east": { "edge_index": 1, "offset": 8.05, "width": 2.73, "elevation": 0.0, "height": 6.78, "local": "east wall, z 8.05..10.78, onto the second-floor hallway" },
+    "closet_south": { "edge_index": 2, "offset": 4.05, "width": 4.8, "elevation": 0.0, "height": 6.78, "local": "south wall, x 3.55..8.35" }
+  },
+
+  "pieces": {
+    "Guest Ceiling": {
+      "pos": [6.2, 7.54, 5.4], "rot": 0, "kb": 61, "script": "g1_shell.py",
+      "note": "One-sided ceiling plane at 7.99 ft wound to face INTO the room (invisible from the plan pose -- the floor still reads), a three-step crown on all four walls, four recessed cans at (3.2,2.6) (8.9,2.6) (3.2,7.9) (8.9,7.9) off photo 1, the supply register photo 1 shows in the north-east corner and photo 3's smoke alarm. Emissive only on the downward plane and the can lenses; NO emissive on the crown."
+    },
+    "Guest Baseboards": {
+      "pos": [6.2, 0.0, 5.4], "rot": 0, "kb": 116, "script": "g1_shell.py",
+      "note": "6 1/4 in skirting + a chair rail with its top at 3.32 ft (photo 1 and 3 both show one) + a wainscot skin below it, all four walls, gapped at the entry door, the closet and the window casing; the skirting is put back under the window because a real one runs unbroken there. Also carries the window unit (stool, apron, casing, 22 tilted blind slats), the entry door leaf with its black lever, and the closet's two BYPASS leaves -- the west leaf hung 0.09 ft proud of the east one with a dark reveal behind them so the passage hole never shows daylight. CAUTION for anyone editing this: kit.wall_band measures its axis in ROOM x (n/s) or ROOM z (w/e) but kit._blit MIRRORS it on the s and w walls, so a run gap and a unit offset on those two walls are different numbers."
+    },
+    "Guest Wall Wash": {
+      "pos": [6.2, 0.0, 5.4], "rot": 0, "kb": 2, "script": "g4_walls.py",
+      "note": "TWO FLAT QUADS, one over the whole south wall and one over the whole east wall, 0.012 ft proud, roughness 0.95 to match house.js's wall material, NO EMISSIVE. This is ROOM-BRIEF option 2 ('give each wall its own albedo ... a plain non-emissive skin covering a whole wall face is just a painted surface'), not the emissive partial panel that was rejected twice. It is what closes the wall-to-wall spread from 91 bytes to 59. Fitted two-point: the south skin renders 128.7 at albedo 198.5 and 155.9 at 235.0 (slope 0.745); the east skin 124.7 at 164.0 and 169.8 at 218.2 (slope 0.832). Final #fdfcfa (south) and #eceae6 (east). Named into objects.js SURFACE_RE so it cannot steal the room's clicks."
+    },
+
+    "Guest Bed": {
+      "pos": [5.35, 0.0, 3.79], "rot": 0, "size_ft": [6.57, 4.07, 7.88], "kb": 119, "script": "g2_bed.py",
+      "note": "Black-stained panel bed, HEADBOARD ON THE NORTH WALL, occupying local x 2.55..8.15 and z 0.16..7.32. Headboard 3.95 ft with two recessed panels and a capped rail, footboard 1.80, side rails, four square posts, mattress top 2.05. Bedding: the quilted coverlet is a PUFF (a rounded cube, smooth-shaded) with 11 channel lines, not a sag_plane -- the first pass used a plane and read as a bare mattress. Over it, the pale blue knit throw across the foot third with a fall down the west side and one turned edge; the folded purple throw photo 2 leaves at the foot; and photo 1's pillow bank: two euro shams against the headboard, two standards in front, a grey-and-white STRIPED lumbar and the black-and-white FLORAL square in the front row where the photo puts them (the first pass buried both behind the standards and the bank read as a white blob). Contact shadow: disjoint annuli, eight bands on a gamma-1.5 falloff at one y, clipped to the room rect."
+    },
+    "Guest Night Table": {
+      "pos": [1.02, 0.0, 1.04], "rot": 0, "size_ft": [2.05, 3.72, 2.13], "kb": 36, "script": "g2_bed.py",
+      "note": "The small dark table in the NORTH-WEST corner between the headboard and the window (drawn on the floor plan, visible behind the headboard in photo 1), with photo 1's white drum lamp on a clear glass column and a small black frame leaning on the top."
+    },
+
+    "Guest Dresser": {
+      "pos": [11.59, 0.0, 4.35], "rot": 0, "size_ft": [1.82, 6.61, 6.08], "kb": 87, "script": "g3_pieces.py",
+      "note": "The black six-drawer double dresser on the EAST wall at local z 1.90..6.80, 1.54 deep, carcase 2.92 high on a plinth, three rows of two drawers with round black knobs, front facing WEST. On top, photo 1's kit: the white ceramic tray, a black metal photo frame, a small white drum lamp with a warm lens, and the variegated rubber plant in a white pot (20 stems, six-sided flat leaf quads on a double-sided material -- the first pass used extruded prisms and read as green shards)."
+    },
+    "Guest Mirror Round": {
+      "pos": [12.37, 4.04, 4.35], "rot": 0, "size_ft": [0.06, 2.28, 2.28], "kb": 13, "script": "g3_pieces.py",
+      "note": "The thin round mirror over the dresser (photo 2), 2.28 ft across, centre 5.18 ft, a flat disc facing -x with a rim band. NOTE: roomkit's cylinder() smooth-shades its end caps, so building this as a rotated cylinder rendered it as a white beach ball -- it is an explicit triangle fan instead."
+    },
+    "Guest TV": {
+      "pos": [10.57, 4.52, 10.71], "rot": 0, "size_ft": [3.18, 1.98, 0.07], "kb": 5, "script": "g3_pieces.py",
+      "note": "The wall-mounted panel photo 2 shows on the SOUTH wall east of the closet: local x 8.98..12.16, bottom 4.52, on a slim black bezel with a wall bracket. Screen off (photo 2 has it off)."
+    },
+    "Guest Wreath": {
+      "pos": [5.35, 4.64, 0.18], "rot": 0, "size_ft": [2.14, 2.16, 0.35], "kb": 31, "script": "g3_pieces.py",
+      "note": "The boxwood wreath centred over the headboard on the NORTH wall, centre 5.72 ft, 2.14 ft across: a dark torus core with 170 flat tilted leaf quads at three greens on double-sided materials. Round 1 used extruded leaf prisms and the torus dominated, so it read as a smooth green donut."
+    },
+    "Guest Art West": {
+      "pos": [0.04, 4.36, 5.75], "rot": 0, "size_ft": [0.08, 1.32, 1.62], "kb": 11, "script": "g3_pieces.py",
+      "note": "The collage frame on the WEST wall SOUTH of the window, centre local z 5.75 and 5.02 ft up -- both solved from photo 1's pinhole model (image x 95..195 maps to local z 5.12..6.13)."
+    },
+    "Guest Art South": {
+      "pos": [1.88, 4.54, 10.76], "rot": 0, "size_ft": [2.17, 1.02, 0.08], "kb": 19, "script": "g3_pieces.py",
+      "note": "The pair of small frames photo 3 shows on the SOUTH wall between the closet casing and the west corner, at local x 1.20 and 2.55, centre 5.05 ft."
+    },
+    "Guest Floor Rug": {
+      "pos": [9.55, 0.0, 5.55], "rot": 0, "size_ft": [2.66, 0.02, 5.66], "kb": 90, "script": "g3_pieces.py",
+      "note": "The white faux-sheepskin between the bed and the dresser (photo 1). Outline is the UNION OF TWO OVERLAPPING OVALS solved per ray, so it has the photo's two lobes and a waist rather than being an ellipse. Pile: 430 FLAT, LEVEL four-vert quads 0.15-0.29 ft across at five tones off a +/-4 ramp. It took three passes to get there -- 240 puffs 0.06 ft tall read as rubble from the doll pose, and flat quads tilted +/-13 deg read as crumpled paper, because with one overhead sun a 13 deg tilt is a 40-byte value swing. Named 'Floor Rug' ON PURPOSE so objects.js SURFACE_RE makes it scenery and it does not swallow the clicks over a fifth of the floor."
+    }
+  },
+
+  "_metered": {
+    "_how": "Every render number is from a patch whose box was checked against an m.py _boxes.png overlay; the four wall boxes all come back sd 0.0, i.e. bare wall. Photo numbers are from 'Guest Room.jpg' (the primary) unless stated. ALL FOUR WALLS are reported.",
+    "walls_render": { "north": 227.1, "south": 167.6, "east": 180.0, "west": 187.1, "average": 190.4, "spread": 59.5 },
+    "walls_photo": { "north": "227.7 (n=10800) and 198.0 (n=7500) -- the north wall has a real left-to-right gradient; mean 212.9", "west": 183.4, "east": 183.1, "south": "not visible in photo 1", "average_of_the_three": 193.1 },
+    "wainscot_render": { "west": 179.1, "south": 114.7 },
+    "wainscot_photo": "west lower wall 158.1 (n=8100) against west upper 183.4, i.e. the band should sit at ~0.86 of the wall above it. Render west is 0.96, render south 0.68.",
+    "floor": { "render": "108.9 sd 2.9 (n=11700)", "photo": "108.4 sd 8.7 (n=59400) and 104.7 sd 10.8 (n=50000)" },
+    "rug": { "render": "158.7 sd 15.2 (n=5934)", "photo": "149.9 sd 7.1 (n=11000)" },
+    "coverlet": { "render": "131.6 sd 27.8 (n=4773)", "photo": "140.4 sd 27.7 (n=7800)" },
+    "black_wood_horizontal": { "render": "62.0 sd 3.2 (n=4800, dresser top)", "photo": "58.5 (n=4950, dresser top)" },
+    "black_wood_vertical": { "render": "~44 (footboard face)", "photo": "11.9 sd 5.5 (n=6300, footboard face)" },
+    "pillow_bank": { "render": "204.7 sd 20.7", "photo": "212.5 sd 14.8 (lit euro sham)" }
+  },
+
+  "_verification": {
+    "check_pick": "python -m roomkit.check_pick 13 --level 2 -> OK, 24/49 floor samples (49%) resolve to the room, 25 to furniture, 12 objects placed.",
+    "payload": "room 13 = 0.563 MB over 12 objects; largest piece Guest Bed at 119 KB (cap 300). House total 22 MB.",
+    "shots": "scratchpad/guest13/shots/sC_ref.png (photo-1 viewpoint), sC_sbs.jpg (side by side), sC_doll_nw.png (THE dollhouse shot), sC_plan.png. Re-take with `python shots.py <tag> ref doll_nw plan` from scratchpad/guest13."
+  },
+
   "_gaps": [
-    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
-    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
-    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
+    "WALL SPREAD is 59.5 bytes (north 227.1, south 167.6) against the photo's ~45 (227.7 north to 183.1 east). That is the best any room here has reported -- the two skinned walls did most of it -- but the south wall cannot be lifted further: with a PURE WHITE skin it tops out at about 171, because its fitted slope is 0.745 and it starts from a base of 108. The north wall is also over the photo's north MEAN (227 vs 213); it matches only the photo's brightest north sample.",
+    "BLACK VERTICAL FACES render far too bright: 44 against the photo's 11.9. The photo's black wood has a 5:1 top-to-side ratio because the room's only light is from above; this scene's ambient floor gives 1.4:1. Darkening the albedo further would drop the horizontal faces below the photo's 58.5, which they currently match to within 4 bytes. Same one-sun-no-bounce limit the wall spread is.",
+    "THE FLOOR HAS NO GRAIN VARIANCE: 108.9 sd 2.9 against the photo's sd 8.7-10.8. The app's 'wood' floor_texture supplies plank lines but almost no tonal variation, and a rasterised tone field over the whole slab was traded away for payload.",
+    "THE ENTRY DOOR / SOUTH-EAST CORNER is the one place where the floor plan and the photos disagree (see _orientation.disagreement_with_the_plan). The door is modelled on the EAST wall because photo 2's element order requires it; the plan's blank stretch of south wall at local x 9.15..12.4 is not modelled as an opening. The consequence is that the reference pose has to stand INSIDE the room rather than at the solved photographer position 1.2 ft outside the corner.",
+    "THE BLUE THROW is a band across the foot with one turned edge; photo 1 drapes it diagonally from the upper right down over the near side. The diagonal was not attempted -- a rotated puff intersects the mattress.",
+    "NO DEVICE MARKERS were considered: room 13 has device_count 0 in the HA registry, so nothing was placed for them.",
+    "From doll_nw the WEST and NORTH walls are culled, so the window unit, Guest Art West and the wreath hang with no wall behind them. That is inherent to the cutaway; the quadrant was chosen so the three pieces lost are the cheapest three."
   ]
 }

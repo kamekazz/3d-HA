@@ -1,13 +1,65 @@
 {
-  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
-  "_room_note": "Movie Room -- 'Movie room.jpg'. Chair rail at 3.35 ft with a slightly deeper grey below, white crown, ten cans and four flush in-ceiling speaker grilles, the high basement window on the west wall. Defining pieces: the big black screen with its grey media console and two black sub boxes on the north wall, and the large cream rug. The rug is named 'Movie Floor Rug' so objects.js keeps it unpickable -- it covers most of the footprint and would otherwise swallow every click.",
+  "_note": "FURNISHING ROUND (follows the shell pass). Build scripts live in scratchpad/bsmt/ -- bkit.py holds the shared helpers (it imports scratchpad/shellpass/kit.py and adds puff/slab/barrel/nailheads), mv.py is this room and ar.py is room 2. Both are idempotent by piece name, so re-running rebuilds and re-places without duplicating. Run them from scratchpad/bsmt/.",
+  "_room_note": "Movie Room -- 'Movie room.jpg'. ORIENTATION, derived from docs/floor plan/Basement Floor Plan App.png (thresholded to an ASCII wall map; plan LEFT = world +X = EAST, plan TOP = world +Z, confirmed against the Garage/Frontyard footprints on the main floor) and cross-checked against the live `stairs` row: NORTH wall (local z=0, world z=11.4) is shared with the Arcade Room and carries the ~7.6 ft black screen, the grey/white media console, two black subs and the door to the Arcade at local x 13.35-16.05 (the plan's wall gap is world x 11.4-14.1); WEST wall (local x=0, world x=-1.9) is exterior and carries the L-sectional, the five-panel print and the high basement window; EAST wall is solid over z 0-16.6 -- the stair (DB row: world x 15.1-18.4, z 15.2-27.6 = local z 3.8-16.2, direction 'n') runs behind it -- and is OPEN over z 16.6-23.5, which is the foot of that stair and is exactly the black newel post in the photo's bottom-right; SOUTH wall is the exterior front wall, behind the camera. The shell pass drew its door leaf at 13.4-16.1 but the DB hole was at 11.03-14.03; the plan says the leaf was right, so the opening moved. Furniture positions (console, ottoman, both swivel chairs, the sectional's two legs) are the plan's own LiDAR blobs, not eyeballed.",
+  "_camera": {
+    "judge_from": "doll_se",
+    "why": "walls are FrontSide with inward normals, so the two nearest the camera are culled. This room's content is on the NORTH (screen) and WEST (sofa/art/window) walls, and doll_se is the only quadrant that leaves both standing. The shell pass said doll_sw, which culls the west wall and leaves the art and the window hanging in mid-air. doll_se also matches the level-0 whole-floor pose (roomkit.rooms --floor-doll 0, az 35).",
+    "reference_pose": {
+      "pos": [
+        13.5,
+        5.5,
+        33.7
+      ],
+      "target": [
+        3.6,
+        3.2,
+        12.0
+      ],
+      "fov": 80,
+      "size": [
+        900,
+        1200
+      ]
+    }
+  },
+  "_metered": {
+    "_how": "Rec.709 luminance of CLEAN plateaus in --day renders at level 0, read off vertical profiles (scratchpad/bsmt/prof.py) so every quoted band has sd<=1 unless noted. Photo values from scratchpad/bsmt/m.py, which writes a _boxes overlay of every sample.",
+    "render_ceiling": "207.9  n=15600 sd=0.0",
+    "render_wall_upper_north": "238.3  n=15600 sd=0.4   (CLIPPED - see gaps)",
+    "render_wall_upper_west": "202.9  n=25600 sd=0.0",
+    "render_wall_upper_east": "170.3  n=27200 sd=0.3",
+    "render_wall_upper_south": "144.6  n=46000 sd=0.0",
+    "render_wall_upper_AVERAGE_4": "189.0",
+    "render_wainscot_north": "238.3 (no separation, clipped)",
+    "render_wainscot_east": "132.7  n=13600 sd=0.1",
+    "render_wainscot_south": "107.8  n=18400 sd=8.4",
+    "render_wainscot_west": "not measurable - sofa and side table occlude it",
+    "render_floor_plank": "141.8  n>20000 sd=1.2-2.4",
+    "render_rug": "212.7  n=24700 sd=6.6",
+    "photo_ceiling": "188.9  n=40000 sd=3.8",
+    "photo_wall_upper": "175.3 n=18750 sd=6.6 (west, above the art) / 197.7 n=11900 sd=8.9 (west, mid) / 179.3 n=3528 sd=5.2 (north, above the screen) / 209.0 n=3420 sd=6.6 (north, right of it) -> mean 190.3",
+    "photo_wall_lower": "166.7 n=6600 sd=25.9 (west) / 172.1 n=2860 sd=23.9 (north)",
+    "photo_floor_plank": "152.1  n=4500 sd=3.7",
+    "photo_rug": "208.0  n=100000 sd=6.8",
+    "photo_screen_black": "11.9 n=11700 sd=4.8",
+    "photo_chair_ivory": "204.8 n=4800 sd=25.0",
+    "photo_ottoman_top": "206.9 n=13200 sd=5.1"
+  },
+  "_gaps": [
+    "The four upper walls run 238 / 203 / 170 / 145 -- a 93-byte spread against the photo's 175-209. The AVERAGE (189.0) lands on the photo's (190.3), which is what ROOM-BRIEF asks for, but the north wall (the one the sun at azimuth 155 faces) is CLIPPED: the wall and the authored-darker wainscot both meter 238, so the chair rail has no value step on that wall at all. Two authored values 45 apart (#dcdbd8 wall vs #b0aeaa wainscot) come out identical there, so no albedo skin fixes it either -- it is the tone curve saturating, not a colour choice.",
+    "The footprint is a rectangle but the real room is L-shaped: the plan shows it wrapping the top of the stairwell over world x 15.1-18.4, z 28.0-34.9 (local x 17-20.3, z 16.6-23.5). About 21 sq ft of real room is outside the footprint. Nothing was resized; the stairwell opening was cut on the east wall where that wrap begins.",
+    "The sectional's shape is the plan's LiDAR blob (a west leg at local z 11.7-19.2 and a south leg at x 2.1-12.7), not the photo -- the photo only shows the west leg and the near end of the south one.",
+    "The five-panel print is a blocked-out seascape, not the photo's artwork; same for the console doors and the pillow weave.",
+    "Not modelled: the white electrical panel and thermostat on the west wall, and the console's exact hardware."
+  ],
   "_room": {
     "id": 1,
     "name": "Movie Room",
     "floor": {
       "id": 1,
       "name": "Basement",
-      "level": 0
+      "level": 0,
+      "floor_height": 8.0
     },
     "rect_world": {
       "x": [
@@ -28,22 +80,61 @@
   "_surfaces": {
     "wall_color": "#dcdbd8",
     "floor_color": "#6b6967",
-    "floor_texture": "wood",
-    "wall_texture": null
+    "wall_texture": null,
+    "floor_texture": "wood"
   },
-  "_camera": {
-    "judge_from": "doll_sw",
-    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
-  },
+  "_openings": [
+    {
+      "edge_index": 0,
+      "elevation": 0.0,
+      "entity_id": null,
+      "height": 6.83,
+      "id": 3,
+      "offset": 13.35,
+      "type": "door",
+      "width": 2.700000000000001
+    },
+    {
+      "edge_index": 1,
+      "elevation": 0.0,
+      "entity_id": null,
+      "height": 7.2,
+      "id": 94,
+      "offset": 16.6,
+      "type": "passage",
+      "width": 6.849999999999999
+    },
+    {
+      "edge_index": 3,
+      "elevation": 5.5,
+      "entity_id": null,
+      "height": 1.8499999999999996,
+      "id": 95,
+      "offset": 14.5,
+      "type": "window",
+      "width": 3.5999999999999996
+    }
+  ],
   "pieces": {
+    "Movie Art Panels": {
+      "pos_room_local_ft": [
+        0.073,
+        4.05,
+        15.6
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 36.9
+    },
     "Movie Baseboards": {
       "pos_room_local_ft": [
         8.5,
         0.0,
-        11.75
+        11.865
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 39.1
     },
     "Movie Ceiling": {
       "pos_room_local_ft": [
@@ -52,30 +143,79 @@
         11.75
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 140.6
     },
     "Movie Floor Rug": {
       "pos_room_local_ft": [
-        8.5,
-        0.008,
-        13.3
+        8.075,
+        0.006,
+        14.28
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 213.6
+    },
+    "Movie Ottoman": {
+      "pos_room_local_ft": [
+        7.825,
+        0.0,
+        16.05
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 58.8
     },
     "Movie Screen Wall": {
       "pos_room_local_ft": [
-        7.75,
+        6.203,
         0.0,
-        1.167
+        1.255
       ],
       "rot_y": 0.0,
-      "scale": 1.0
+      "scale": 1.0,
+      "kb": 202.0
+    },
+    "Movie Sectional": {
+      "pos_room_local_ft": [
+        4.885,
+        0.0,
+        16.835
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 199.8
+    },
+    "Movie Side Table": {
+      "pos_room_local_ft": [
+        1.275,
+        0.0,
+        9.076
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 85.7
+    },
+    "Movie Stair Rail": {
+      "pos_room_local_ft": [
+        16.74,
+        0.0,
+        21.89
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 6.6
+    },
+    "Movie Swivel Chairs": {
+      "pos_room_local_ft": [
+        14.383,
+        0.0,
+        10.9
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0,
+      "kb": 129.2
     }
   },
-  "_gaps": [
-    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
-    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
-    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
-  ]
+  "_payload_kb": 1112.3
 }

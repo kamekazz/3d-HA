@@ -1,13 +1,13 @@
 {
-  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
-  "_room_note": "Garage -- no photo. Ceiling with four flush fixtures and NO crown, a poured concrete curb instead of skirting (named '... Baseboards' so it stays unpickable), concrete floor texture, a 16 ft sectional garage door with a row of lites on the SOUTH (street) wall and a person door north to the laundry. Deliberately empty otherwise -- it is the last room on the priority list.",
+  "_note": "FURNISHING PASS on top of the shell. NO INTERIOR PHOTO OF THIS GARAGE EXISTS -- see _evidence for what is measured and what is inferred. Build scripts: scratchpad/util/{gkit,g_west,g_east,g_main,g_bay,g_skin}.py, idempotent by piece name.",
   "_room": {
     "id": 7,
     "name": "Garage",
     "floor": {
       "id": 2,
       "name": "First floor",
-      "level": 1
+      "level": 1,
+      "floor_height": 10.0
     },
     "rect_world": {
       "x": [
@@ -25,15 +25,44 @@
     ],
     "wall_height": 9.0
   },
+  "_evidence": [
+    "MEASURED (docs/floor plan/Main Floor Plan App.png): 16.5 ft sectional door on the SOUTH (street/driveway) wall; person door to the laundry on the NORTH wall at local x 2.9-5.8; a step just inside that door (the plan's hatch at world x 21.8-26.5, z 13.0-14.7); a ~2.4 ft deep x 8.5 ft long storage run against the WEST wall (world x 19.2-21.6, z 20.5-29.0 = local x 0.3-2.7, z 7.5-16.0); two blobs hard against the EAST wall at local z 3.4-5.6 and z 16.2-18.6.",
+    "MEASURED (exterior photos): the sectional door is a single wide cream raised-panel door; a black BMW X5 is parked on the driveway -- environment.js already builds that SUV outside.",
+    "INFERRED (normal construction sense, no interior photo): WHAT the west run is (workbench with butcher-block top, pegboard and tools, red rolling tool chest, tall graphite cabinets, steel shelving); WHAT the two east blobs are (water heater north, wheelie bins south); the chest freezer, mower, ladders, shop vac, bike, scooter; the whole opener assembly (rail, motor head, torsion tube and springs, tracks, safety eyes, wall button); and the car.",
+    "The car is a LIGHT SILVER SALOON, deliberately NOT a second black SUV -- the household SUV is the one environment.js parks outside. The west bay is the 'stuff bay' (totes, soil bags, cooler, wheelbarrow, wagon, sports bin) because the 2.5 ft west storage run leaves only one comfortable parking bay in a 20.4 ft wide garage."
+  ],
   "_surfaces": {
     "wall_color": "#dad7d0",
-    "floor_color": "#8e8d89",
+    "floor_color": "#686764",
     "floor_texture": "concrete",
-    "wall_texture": null
+    "per_wall_skin": {
+      "n": "#797873",
+      "w": "#b2afaa",
+      "e": "#e8e5dd",
+      "s": "#fffcf3"
+    }
   },
   "_camera": {
-    "judge_from": "doll_nw",
-    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
+    "judge_from": "doll_ne",
+    "why": "Walls are FrontSide with inward normals, so the two nearest the camera are culled. doll_ne culls NORTH+EAST and leaves SOUTH (the 16.5 ft sectional door -- this room's defining feature) and WEST (the workbench / pegboard / cabinet / shelving run the floor plan draws there) standing. The shell pass recorded doll_nw, which keeps the sectional door but culls the west storage wall and would leave that whole run floating. The north wall is culled in both, but the laundry's own south wall stands right behind it, so the person door still reads as a door in a doorway. Everything on the culled east wall is floor-standing (water heater, freezer, mower, bins) -- nothing is wall-hung there."
+  },
+  "_metered_srgb_luma": {
+    "_target": "NO PHOTO of this room exists, so there is no photo mean to aim at. Values are reported for audit and for wall-to-wall consistency only.",
+    "walls_before_skin": {
+      "north": "233.1 (n=175000, sd 0.0)",
+      "west": "200.3 (n=245000, sd 0.2)",
+      "east": "167.9 (n=245000, sd 0.0)",
+      "south": "141.6 (n=15840, sd 0.5)",
+      "spread": 91.5
+    },
+    "walls_after_skin": {
+      "north": "179.8 (n=127500, sd 0.0)",
+      "east": "176.9 (n=59800, sd 0.0)",
+      "west": "173.6 (n=31200, sd 0.4)",
+      "south": "167.5 (n=4800, sd 0.0)",
+      "spread": 12.3
+    },
+    "floor": "141.8 (n=31500, sd 3.3) after floor_color #8e8d89 -> #686764; was 184.3 (sd 2.8)"
   },
   "pieces": {
     "Garage Baseboards": {
@@ -41,6 +70,51 @@
         10.2,
         0.0,
         10.85
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Bay Storage": {
+      "pos_room_local_ft": [
+        5.943,
+        -0.01,
+        16.423
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Bike": {
+      "pos_room_local_ft": [
+        17.474,
+        -0.015,
+        0.72
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Bins": {
+      "pos_room_local_ft": [
+        18.395,
+        0.0,
+        18.15
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Cabinets Tall": {
+      "pos_room_local_ft": [
+        1.107,
+        0.0,
+        3.7
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Car": {
+      "pos_room_local_ft": [
+        12.7,
+        0.0,
+        12.64
       ],
       "rot_y": 0.0,
       "scale": 1.0
@@ -62,11 +136,102 @@
       ],
       "rot_y": 0.0,
       "scale": 1.0
+    },
+    "Garage Floor Marks": {
+      "pos_room_local_ft": [
+        10.45,
+        0.0,
+        10.85
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Freezer": {
+      "pos_room_local_ft": [
+        19.115,
+        0.0,
+        8.55
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Ladder": {
+      "pos_room_local_ft": [
+        2.43,
+        -0.01,
+        18.774
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Mower": {
+      "pos_room_local_ft": [
+        18.691,
+        0.0,
+        13.66
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Opener": {
+      "pos_room_local_ft": [
+        10.2,
+        0.3,
+        10.79
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Shelving": {
+      "pos_room_local_ft": [
+        1.045,
+        0.0,
+        16.4
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Step": {
+      "pos_room_local_ft": [
+        4.58,
+        0.0,
+        1.04
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Wall Wash": {
+      "pos_room_local_ft": [
+        10.2,
+        0.0,
+        10.85
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Water Heater": {
+      "pos_room_local_ft": [
+        19.26,
+        0.0,
+        4.5
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
+    },
+    "Garage Workbench": {
+      "pos_room_local_ft": [
+        1.335,
+        0.0,
+        9.854
+      ],
+      "rot_y": 0.0,
+      "scale": 1.0
     }
   },
   "_gaps": [
-    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
-    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
-    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
+    "No interior photo exists, so nothing in this room is photo-verified except the sectional door and the plan-derived layout. A critic cannot fail it against a photo, and should not be told it matches one.",
+    "The two east-wall floor-plan blobs are identified by inference only (water heater / wheelie bins).",
+    "Floor sd is 3.3 -- the concrete texture is flat. No photo target exists to aim the spread at, so it was left alone rather than guessed at.",
+    "The south wall cannot be lifted above ~168 even with a pure-white skin (measured), so it sits 12 below the other three."
   ]
 }

@@ -1,72 +1,69 @@
 {
-  "_note": "SHELL PASS (not a furnishing round). Build scripts live in scratchpad/shellpass/ -- kit.py holds every shared helper and each r*.py is idempotent by piece name, so re-running rebuilds and re-places without duplicating. Every room got: a ONE-SIDED ceiling plane wound to face into the room (solid at eye level, invisible from the plan pose), a three-step crown where the photo shows one, recessed cans / fixtures / supply registers off the photo, a tall white baseboard run gapped at every doorway, door leaves and casings, and photo-derived wall/floor surfaces via PATCH /api/house/room/<id>. The '<Room> Ceiling' and '<Room> Baseboards' names match objects.js SURFACE_RE so they stay pickable:false; furniture names deliberately avoid it. NO EMISSIVE on any trim run -- only the downward ceiling plane carries emissive, because it collects almost no light in this renderer.",
-  "_room_note": "Office -- 'Office A.jpg'. The signature is the TWO-TONE wall: greige above a chair rail at 3.30 ft, charcoal #3e4145 wainscot below it, both built into 'Office Baseboards'. Tall window on the east (exterior) wall, a plain door and the glazed 15-lite french door photo B shows on the west, a cased opening south into the printer nook (room 22). Defining piece: the L desk with the ultrawide monitor, the mesh task chair and the second desk on the east wall.",
+  "_note": "FURNISHING PASS on top of the shell pass. Build scripts live in scratchpad/off8/ (o8kit.py = shared facts + wall-skin helper, o8_openings.py = the real cut openings, o8_shell.py = ceiling/trim/wainscot/windows/doors, o8_floor.py = the plank tone field, o8_desks.py, o8_stuff.py). Every script is idempotent by piece name, so re-running rebuilds and re-places without duplicating. 'Office Ceiling', 'Office Baseboards', 'Office Floor' and 'Office Wall Wash' match objects.js SURFACE_RE so they stay pickable:false; every furniture name deliberately avoids it. Verified with roomkit.check_pick 8 --level 1.",
+
+  "_orientation_derivation": "Room 8 world x 28.8..39.4, z -4.5..7.1 -> local x 0(W)..10.6(E), z 0(N)..11.6(S). Adjacencies from roomkit.rooms --list: room 23 Bathroom x 18.7..28.6 z -4.3..3.1 is WEST (covering local z 0..7.6); room 22 Office printers x 33.2..39.4 z 7.1..12.9 is SOUTH-EAST; room 9 Laundry x 21.9..32.9 z 7.3..13.0 is SOUTH-WEST; nothing exists at x>39.4 or z<-4.5, so NORTH and EAST are EXTERIOR. Cross-checked against docs/floor plan/Main Floor Plan App.png, which is rotated 180 from world (world +x -> image left, world +z -> image up; Frontyard z=35..43 is at the top of the plan and the backyard z=-22.5 at the bottom). At 22.6 px/ft the plan puts the office in the building's corner and draws TWO pale-blue window ticks on its left-hand (= world EAST) exterior edge, at local z 0.2-3.4 and 8.0-11.0, and no wall between local x 6 and the east wall on its upper (= world SOUTH) edge -- the cased opening to the printer nook. The DB already carried one opening, edge 3 (WEST) offset 1.01 width 3.0, i.e. local z 7.59-10.59: the 15-lite french door. Photo B confirms the wall order left-to-right (= clockwise from the camera in the NE corner): east desk, SOUTH wall with the nook opening, WEST wall with the french door, north-west with the L desk.",
+
   "_room": {
-    "id": 8,
-    "name": "Office",
-    "floor": {
-      "id": 2,
-      "name": "First floor",
-      "level": 1
-    },
-    "rect_world": {
-      "x": [
-        28.8,
-        39.4
-      ],
-      "z": [
-        -4.5,
-        7.1
-      ]
-    },
-    "size_ft": [
-      10.6,
-      11.6
-    ],
+    "id": 8, "name": "Office",
+    "floor": {"id": 2, "name": "First floor", "level": 1},
+    "rect_world": {"x": [28.8, 39.4], "z": [-4.5, 7.1]},
+    "size_ft": [10.6, 11.6],
     "wall_height": 9.0
   },
+
   "_surfaces": {
     "wall_color": "#dedbd4",
     "floor_color": "#6b6967",
     "floor_texture": "wood",
-    "wall_texture": null
+    "wall_texture": null,
+    "_note": "The room-level colours are unchanged; the visible surfaces are now GLB: 'Office Floor' (grey LVP planks, N-S, 0.58 ft wide) over the slab and 'Office Wall Wash' (per-wall non-emissive albedo skins) over the paint."
   },
+
+  "_openings": [
+    {"id": 5, "type": "door", "edge": 3, "wall": "west", "local_z": [7.59, 10.59], "elevation": 0.0, "height": 7.0, "note": "15-lite french door -- the room's only door"},
+    {"id": 91, "type": "window", "edge": 1, "wall": "east", "local_z": [0.45, 3.45], "elevation": 1.85, "height": 5.65},
+    {"id": 92, "type": "window", "edge": 1, "wall": "east", "local_z": [7.95, 10.95], "elevation": 1.85, "height": 5.65},
+    {"id": 102, "type": "passage", "edge": 2, "wall": "south", "local_x": [5.60, 8.90], "elevation": 0.0, "height": 7.2, "note": "cased opening into the printer nook, room 22"}
+  ],
+
   "_camera": {
     "judge_from": "doll_sw",
-    "why": "roomkit.rooms <id> --poses-only; walls are FrontSide with inward normals so the two nearest the camera are culled -- this quadrant leaves the walls that carry this room's content standing."
+    "why": "Walls are FrontSide with inward normals so the two nearest the camera are culled. doll_sw culls SOUTH and WEST; this room's content -- the framed print and the L desk on the north wall, both windows and the east workstation -- lives on NORTH and EAST, which stay standing. The west wall carries only the door (a real cut, so nothing floats when it is culled) and the south wall's cabinet/clock are occluded by the printer nook's own north wall from that angle anyway.",
+    "ref_pose": {"pos": [34.15, 14.35, 6.85], "target": [34.0, 8.9, -3.2], "fov": 103, "size": [900, 1200]}
   },
+
+  "_metered": {
+    "_method": "roomkit.shot --day, then scratchpad/lr5/m.py with an overlay of every sample box (shots/*_boxes.png). Photo values are from Office A.jpg, the primary reference; photo f is a brighter exposure (its floor meters 174 against A's 110) and was used only for geometry.",
+    "walls_above_rail_render": {"north": 188.7, "east": 184.8, "west": 184.0, "south": 165.8,
+      "_samples": "n=37400 / 30000 px clean patches in the look_n/e/w/s poses, north sampled off-centre to miss the print",
+      "_before_skins": {"north": 234.1, "west": 210.0, "east": 170.7, "south": 148.6},
+      "_photo": "Office A north wall 167.0 (n=12400) / 182.4 (n=10150) / 205.1 (n=8400) west-to-east, west wall 184.6 (n=30600) and 195.9 (n=22100); mean ~187"},
+    "wainscot_render": {"mean": 80.5, "sd": 5.7, "n": 1824, "_photo": {"mean": 82.9, "sd": 7.0, "n": 9900}},
+    "ceiling_render": {"mean": 184.6, "n": 11400, "_photo": {"mean": 181.1, "sd": 6.9, "n": 33000}},
+    "floor_render": {"mean": 105.2, "sd": 14.1, "n": 49400, "_photo": {"mean": 109.8, "sd": 13.9, "n": 50600}}
+  },
+
   "pieces": {
-    "Office Baseboards": {
-      "pos_room_local_ft": [
-        5.3,
-        0.0,
-        5.8
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Office Ceiling": {
-      "pos_room_local_ft": [
-        5.3,
-        8.54,
-        5.8
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Office Desks": {
-      "pos_room_local_ft": [
-        5.298,
-        0.0,
-        4.369
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    }
+    "Office Ceiling":          {"pos_room_local_ft": [5.300, 8.540, 5.800], "kb": 75.0, "what": "one-sided downward plane (own dimmer emissive: kit.CEIL rendered 208 against the photo's 181), three-step crown, five cans, supply register, smoke detector"},
+    "Office Baseboards":       {"pos_room_local_ft": [5.300, 0.000, 5.800], "kb": 145.2, "what": "skirting + charcoal wainscot + two-step chair rail at 3.30 ft on all four walls, gapped at every real opening; both east window units (casing, stool, apron, jamb returns, white 2in venetian blinds, daylight pane); the 15-lite french door leaf and casing; the nook's cased opening; five white outlet plates on the charcoal and a switch plate by the door"},
+    "Office Wall Wash":        {"pos_room_local_ft": [5.300, 3.140, 5.800], "kb": 13.9, "what": "per-wall NON-emissive albedo skins, rail to crown, corner to corner, holes at every opening, roughness 0.95 to match the room wall. n #86807a / e #f4f2ed / s #fbfaf6 / w #bfbdb6, solved from two-point log-linear fits measured off real renders"},
+    "Office Floor":            {"pos_room_local_ft": [5.300, 0.043, 5.800], "kb": 17.1, "what": "grey LVP plank tone field: 0.58 ft planks running north-south with staggered butt joints, 7 shared tones + a dark seam plane"},
+    "Office Desks":            {"pos_room_local_ft": [3.350, 0.000, 3.645], "kb": 193.4, "what": "the L desk wrapping the NW corner (north leg 0.3-6.35, west return to z 7.05, rounded inner corner) with the curved 34in ultrawide, keyboard/mouse on a black mat, headphone stand, white globe lamp, succulent, figures, a white 3-drawer pedestal, a tower on the floor, and a light-grey mesh task chair"},
+    "Office Workstation East": {"pos_room_local_ft": [8.027, 0.000, 4.475], "kb": 159.8, "what": "the sit/stand desk down the east wall under the windows: cream desk pad, wooden monitor riser, 27in monitor with webcam, white keyboard and mouse, two white pedestals, book stack, pen pots, figures, and a grey mesh chair with the green throw over its back"},
+    "Office Art North":        {"pos_room_local_ft": [5.000, 4.350, 0.104], "kb": 189.6, "what": "the framed specimen-grid print, 2.5 x 2.7 ft, bottom rail 4.35 ft AFF, light oak frame and wide white mat"},
+    "Office Cabinet White":    {"pos_room_local_ft": [2.275, 0.000, 10.889], "kb": 54.4, "what": "the white beadboard two-door cabinet on the south wall with the leaf-print tote on top"},
+    "Office Plant Fig":        {"pos_room_local_ft": [9.574, 0.000, 10.351], "kb": 75.8, "what": "fiddle-leaf fig, black ribbed planter on a black metal stand, white pebble dressing, two curved stems -- SE corner in front of the south window"},
+    "Office Clutter":          {"pos_room_local_ft": [5.433, 0.000, 6.050], "kb": 222.2, "what": "four floor totes, a stack of binders, the tall clear-liner bin, the black round bin, the small bin under the east desk, the bladeless fan, and the south wall's round clock + black wall tablet"}
   },
+
+  "_payload_kb": 1146.4,
+
   "_gaps": [
-    "This is a SHELL pass: the room has its lid, trim, surfaces, lights and one or two defining pieces, not a furnished set. Density is well below the photo everywhere.",
-    "Contact shadows are only under the defining pieces, as smooth superellipse falloffs (12 stacked translucent rings, alpha chosen so the centre reads 0.2-0.3 and the outer edge disappears).",
-    "No real cut openings were added; door leaves and cased trim sit flush on the wall. Room 12's west wall does carry room 6's existing cut passage and the skirting is gapped for it."
+    "The SOUTH wall is capped at 165.8 even with a pure-white skin -- it is the wall the sun never reaches and no albedo can lift it further. All four walls now sit within 23 bytes (was 85) but the south is still ~20 below the other three.",
+    "In the doll_sw quadrant the printer nook's own north wall occludes the office's southern strip, so the cabinet, the clock/tablet and most of the floor totes are only visible from inside the room, never from the dollhouse.",
+    "Photo A (the primary reference, and what the tone is matched to) shows LIGHT GREY mesh chairs; the newer photo f shows a black Razer gaming chair at the L desk and a black mesh chair at the east desk. Built to photo A.",
+    "The north wall renders flat at 188.7 because it carries a single albedo skin; the photo has a real 167->205 gradient across it from the east windows. The mean matches, the gradient does not.",
+    "Photo A's desk surfaces are far more crowded than this (cosmetics, cables, papers, a hair dryer, a walking pad on the floor). Density is up a lot but still below the photo.",
+    "The passage is cut in room 8's south wall only; room 22's own north wall is still solid, so from outside you look through the office's hole at the nook's wall."
   ]
 }

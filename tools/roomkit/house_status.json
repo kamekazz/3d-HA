@@ -2,9 +2,9 @@
   "_note": "Whole-house gauntlet status. Update state/round/note/render per room as critics report, then run: python -m roomkit.house_progress",
   "headline": "The real house, rebuilt room by room until a critic stops telling them apart",
   "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. The bar for the overall look is The Sims 4's dollhouse build view; the bar for each room is the photograph of that actual room.",
-  "stamp": "every room shelled · living room round 4 · 19 MB payload, down from 27",
-  "hero": "C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\625d3716-8337-4ad2-9a27-d9fa0142326d\\scratchpad\\shots\\L2_final.png",
-  "hero_label": "Second floor, with the entry vestibule moved to where the floor plan actually puts it.",
+  "stamp": "every floor furnished · whole-house dollhouse complete",
+  "hero": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\dollhouse\\house_low.png",
+  "hero_label": "Every floor furnished, walls down. The garage, which was the largest bare rectangle in the house, is now the busiest room on the first floor.",
   "rooms": [
     {
       "id": 14,
@@ -61,18 +61,20 @@
       "name": "Office",
       "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Office A.jpg",
-      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "note": "The first room built with per-wall albedo skins, and they closed the problem every previous critic named: the four walls went from N 234 / W 210 / E 171 / S 149, a spread of 85.5, down to a spread of 22.9 — real rooms sit within about 30. Its orientation check against the floor plan also caught two errors the shell pass had made: only one window where there are two, and an invented door on the west wall that is actually the bathroom party wall.",
       "round": 1,
-      "render_label": "shell pass"
+      "render_label": "furnished — awaiting critic",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\off8\\shots\\final_ref.png"
     },
     {
       "id": 13,
       "name": "Guest Room",
       "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Guest Room.jpg",
-      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "note": "The sixth room whose orientation turned out wrong: the shell pass had it 180 degrees out on Z, with the headboard, closet and dresser all on the wrong walls. Proved three ways — registering the plan to world coordinates and sampling the bed and pillow icons, a camera solve from seven identifiable points at rms 1.16 degrees (the rival positions score 18.3), and the round mirror, which reflects the blinded window and a picture and therefore faces west. Payload 0.563 MB, the lightest furnished room in the house.",
       "round": 1,
-      "render_label": "shell pass"
+      "render_label": "furnished — awaiting critic",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\guest13\\shots\\sC_ref.png"
     },
     {
       "id": 16,
@@ -133,43 +135,49 @@
       "name": "Laundry",
       "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Laundry.jpg",
-      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "note": "Structural correction: the shell pass had put the washer and dryer at the west end of the north wall, which is exactly where the plan puts the step and door in from the garage. Moved east to the plan's own appliance icon. Honest caveat recorded: the traced footprint merges the real mudroom and laundry alcove, so no camera inside it can reproduce the photo — the side-by-side is a content match, not a geometry match. Spread 89.6 to 18.2.",
       "round": 1,
-      "render_label": "shell pass"
+      "render_label": "furnished — awaiting critic",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\util\\FINAL_laundry_sbs.jpg"
     },
     {
       "id": 10,
       "name": "Pantry",
       "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\pantry door.jpg",
-      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "note": "Both photographs show the doors closed, so the entire interior is inferred: five-tier shelving on the wall you face through the doors, stocked, with a step stool. Only one wall yields a clean metering field, so the skins were sized from the laundry's set scaled by the two rooms' bare west walls, which agree to 3 percent.",
       "round": 1,
-      "render_label": "shell pass"
+      "render_label": "furnished — interior inferred",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\util\\FINAL_pantry_doll_nw.png"
     },
     {
       "id": 1,
       "name": "Movie Room",
       "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Movie room.jpg",
-      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "note": "Geometry derived by thresholding the basement floor plan into an ASCII map at 14px cells, giving a uniform 35.85 px/ft scale, then cross-checked against the live stairs row — which independently confirmed the east wall is solid exactly where the stair runs and open where the newel post appears in the photo. Sectional, screen wall with console and subwoofers, art run, real cut window and stairwell passage. All four walls metered: average 189.0 against the photo's 190.3.",
       "round": 1,
-      "render_label": "shell pass"
+      "render_label": "furnished — awaiting critic",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\bsmt\\shots\\FINAL_movie_ref.png"
     },
     {
       "id": 2,
       "name": "Arcade Room",
       "state": "judging",
       "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Arcade Room.jpg",
-      "note": "Shell pass: ceiling wound to face into the room (solid at eye level, invisible from above), crown, baseboards gapped at doorways, photo-derived cans and registers, correct wall and floor surfaces, plus its defining pieces. Not a full furnishing — the pass that stops the room being an open-topped box.",
+      "note": "The plan's only wall gap between the two basement rooms pins the photographer's position, and a 5.3 x 6.5 ft utility room in the footprint's north-west corner explains the photo's far wall. Eleven arcade cabinets from one model varied by marquee and side-art to stay inside the payload budget. It also caught a structural error: the shell pass had drawn the door leaf 2.4 ft away from where the actual opening was cut.",
       "round": 1,
-      "render_label": "shell pass"
+      "render_label": "furnished — awaiting critic",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\bsmt\\shots\\FINAL_arcade_ref.png"
     },
     {
       "id": 7,
       "name": "Garage",
       "state": "judging",
       "round": 1,
-      "note": "Shell only, deliberately: ceiling, flush fixtures, a concrete curb instead of skirting, and a 16 ft sectional garage door. It wants a car and wall storage."
+      "note": "No interior photograph of this garage exists, and the report says so plainly. What is measured: the sectional door and layout from the plan and the exterior shots. What is inferred: the workbench run, water heater, freezer, mower, bike, bins and the car — a light silver saloon deliberately, since the household SUV is the one parked on the driveway outside. Wall spread 91.5 to 12.3, the best in the house.",
+      "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\util\\FINAL_garage_doll_ne.png",
+      "render_label": "furnished — inferred, not photo-matched"
     }
   ],
   "facts": {
@@ -184,7 +192,8 @@
     "First floor": "~1,250 sq ft living + 443 sq ft garage",
     "Paused": "API session limit; nothing half-applied",
     "Rooms with a shell": "all 17 photographed rooms + garage",
-    "Furniture objects": "154 across 21 rooms"
+    "Furniture objects": "154 across 21 rooms",
+    "Wall spread": "91 down to 12-23 bytes per room via per-wall albedo"
   },
   "footer": "Renders are taken from the running app at 127.0.0.1:5000 — the same Three.js scene the Home Assistant dashboard draws, with device markers hidden for the comparison."
 }
