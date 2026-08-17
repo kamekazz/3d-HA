@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene, focusOn, frameInitialView } from './scene.js';
 import { getTiledTexture, textureSize } from './textures.js';
 import { onStateApplied, isOn } from './state.js';
@@ -183,11 +182,20 @@ function worldScaleBoxUVs(geo, w, h, d) {
   uv.needsUpdate = true;
 }
 
+// Wall body thickness, feet. Walls extrude OUTWARD from the footprint line so
+// the inner face stays exactly where the old zero-thickness fins were: every
+// hand-placed furniture piece is flush against that plane and would end up
+// embedded in the wall if the mass grew inward.
+const WALL_THICKNESS = 0.35;
+// How far the floor plinth drops below the slab. This is the chunky colored
+// rim you see along the open sides of a Sims-style cutaway.
+const PLINTH_DEPTH = 0.5;
+
 function buildRoom(room, floor) {
   const fp = room.footprint;
   const isPoly = fp.points && fp.points.length >= 3;
-  // room.color is the accent (edge outlines here, fill in the 2D planner);
-  // wall/floor surfaces have their own color + optional preset texture
+  // room.color is the accent (edge outlines + plinth rim here, fill in the 2D
+  // planner); wall/floor surfaces have their own color + optional preset texture
   const accent = new THREE.Color(room.color || '#8fa8bf');
 
   // Polygon geometry (Extrude/Shape) has UVs in shape coords = world feet,
@@ -200,10 +208,14 @@ function buildRoom(room, floor) {
     ? getTiledTexture(room.floor_texture, 1 / fs, 1 / fs)
     : getTiledTexture(room.floor_texture, fp.width / fs, fp.depth / fs);
 
-  // Dollhouse walls: FrontSide culls camera-facing walls so the view always
-  // reaches into the room; far walls show their interior face opaque.
-  // (Normals point inward, so outside faces are Back and culled).
-  // transparent stays true so focus-mode ghost fades don't recompile the
+  // Dollhouse walls. These used to be zero-thickness fins drawn FrontSide with
+  // inward normals, so the GPU backface-culled whichever ones the camera stood
+  // behind — free, but it popped at exactly 90 degrees and left mounted art
+  // floating. Walls have a body now, which does NOT backface-cull, so
+  // cutaway.js fades the near ones out per frame instead. That means one mesh
+  // AND one material per edge: this is only the template, every wall gets a
+  // clone (a shared material can't hold an independent opacity).
+  // transparent stays true at opacity 1 so the fades never recompile the
   // shader; polygonOffset pushes wall triangles back so the slab and the
   // accent edge lines win the depth fight against the coincident wall caps.
   const wallsMat = new THREE.MeshStandardMaterial({
@@ -224,28 +236,34 @@ function buildRoom(room, floor) {
   let walls, slab;
   const pts = isPoly ? fp.points.map(([px, pz]) => [px, pz])
     : [[0, 0], [fp.width, 0], [fp.width, fp.depth], [0, fp.depth]];
-  
-  const wallGeos = [];
+
+  const t = WALL_THICKNESS;
+  const wallMeshes = [];
   for (let i = 0; i < pts.length; i++) {
     const ax = pts[i][0], az = pts[i][1];
     const bx = pts[(i + 1) % pts.length][0], bz = pts[(i + 1) % pts.length][1];
     const dx = bx - ax, dz = bz - az;
     const len = Math.hypot(dx, dz);
     if (len < 0.01) continue;
-    
+
+    // The run is extended by one thickness past each end so neighbouring walls
+    // overlap in a t x t block at every corner — without it each convex corner
+    // shows a square notch. The overshoot is buried inside the adjoining wall's
+    // mass, so it costs nothing visually. Hole offsets share this u frame and
+    // therefore need no shifting.
     const shape = new THREE.Shape();
-    shape.moveTo(0, 0);
-    shape.lineTo(len, 0);
-    shape.lineTo(len, room.height);
-    shape.lineTo(0, room.height);
-    shape.lineTo(0, 0);
-    
+    shape.moveTo(-t, 0);
+    shape.lineTo(len + t, 0);
+    shape.lineTo(len + t, room.height);
+    shape.lineTo(-t, room.height);
+    shape.lineTo(-t, 0);
+
     for (const op of room.openings || []) {
       if (op.edge_index === i) {
         let off = op.offset;
         if (off < 0) off = 0;
         if (off + op.width > len) off = Math.max(0, len - op.width);
-        
+
         const hole = new THREE.Path();
         hole.moveTo(off, op.elevation);
         hole.lineTo(off + op.width, op.elevation);
@@ -269,9 +287,11 @@ function buildRoom(room, floor) {
         // at low opacity with a tight specular, and a door is painted white
         // like the real ones in this house — so a real opening is now the better
         // option, which is what the dollhouse view needs.
+        // transparent is on even for an opaque door: the panel fades out with
+        // its wall, and flipping that flag at runtime would recompile the shader.
         const panelMat = new THREE.MeshStandardMaterial({
           color: isDoor ? 0xf1ede6 : 0xdbe7ef,
-          transparent: !isDoor,
+          transparent: true,
           opacity: isDoor ? 1.0 : 0.22,
           roughness: isDoor ? 0.75 : 0.06,
           metalness: 0.0,
@@ -279,44 +299,61 @@ function buildRoom(room, floor) {
         });
         const panelGeo = new THREE.BoxGeometry(op.width, op.height, depth);
         const panel = new THREE.Mesh(panelGeo, panelMat);
-        
+
         const hinge = new THREE.Group();
         panel.position.set(op.width / 2, op.height / 2, 0);
         hinge.add(panel);
-        
+
         const angle = Math.atan2(-dz, dx);
         const u = [dx / len, dz / len];
         hinge.position.set(ax + u[0] * off, op.elevation, az + u[1] * off);
         hinge.rotation.y = angle;
-        hinge.userData = { id: op.id, entityId: op.entity_id, type: op.type, baseAngle: angle };
+        // edgeIndex + baseOpacity: cutaway.js fades a panel out with the wall
+        // it pierces, otherwise a door hangs in the gap where its wall was.
+        hinge.userData = {
+          id: op.id, entityId: op.entity_id, type: op.type, baseAngle: angle,
+          edgeIndex: i, baseOpacity: isDoor ? 1.0 : 0.22,
+        };
         openingMeshes.set(op.id, hinge);
         // Will add to walls mesh after it's created
       }
     }
-    
-    const geo = new THREE.ShapeGeometry(shape);
+
+    // Extrude along the shape's local +Z (which the rotateY below aims INTO the
+    // room), then pull it back a full thickness so the inner face lands on the
+    // footprint line and the mass sits outside it.
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: t, bevelEnabled: false });
+    geo.translate(0, 0, -t);
     const angle = Math.atan2(-dz, dx);
     geo.rotateY(angle);
-    geo.translate(ax, 0, az);
-    
+    // Each wall is its own mesh anchored at the edge midpoint, so cutaway.js
+    // can read a world position straight off it.
+    const mx = (ax + bx) / 2, mz = (az + bz) / 2;
+    geo.translate(ax - mx, 0, az - mz);
+
     const uv = geo.attributes.uv;
     for (let k = 0; k < uv.count; k++) {
       uv.setXY(k, uv.getX(k) / ws, uv.getY(k) / ws);
     }
-    
-    wallGeos.push(geo);
+
+    const wall = new THREE.Mesh(geo, wallsMat.clone());
+    wall.position.set(mx, 0, mz);
+    // nx/nz is the INWARD normal: the direction the painted face looks. The
+    // wall is visible exactly when the camera sits on that side of it.
+    wall.userData = {
+      part: 'wall', edgeIndex: i, nx: -dz / len, nz: dx / len, fade: 1,
+      hx: dx / 2, hz: dz / 2, // midpoint -> end b, for point-to-wall distance
+    };
+    wallMeshes.push(wall);
   }
-  
-  let wallsGeo = null;
-  if (wallGeos.length > 0) {
-    wallsGeo = BufferGeometryUtils.mergeGeometries(wallGeos, false);
-  } else {
-    wallsGeo = new THREE.BufferGeometry();
-  }
-  
-  walls = new THREE.Mesh(wallsGeo, wallsMat);
+
+  // The room mesh itself carries no geometry any more — it is the identity the
+  // rest of the app holds (roomMeshes, picking, userData) and the parent of the
+  // per-edge walls, the slab, the plinth and the accent outline.
+  walls = new THREE.Mesh(new THREE.BufferGeometry(), wallsMat);
   walls.position.set(fp.x, 0, fp.z);
-  
+  for (const wall of wallMeshes) walls.add(wall);
+
   for (const [id, hinge] of openingMeshes) {
     if (room.openings?.some(o => o.id === id)) {
       walls.add(hinge);
@@ -333,6 +370,11 @@ function buildRoom(room, floor) {
     kind: 'room', roomId: room.id, roomName: room.name,
     haAreaId: room.ha_area_id, level: floor.level,
     baseOpacity: 1.0, baseEmissive: 0, accent,
+    // cutaway.js walks these every frame, so they are cached rather than
+    // re-filtered out of children; wallByEdge is keyed by edge index, which
+    // skips any degenerate edge the loop above dropped.
+    wallList: wallMeshes,
+    wallByEdge: new Map(wallMeshes.map((w) => [w.userData.edgeIndex, w])),
   };
 
   const edges = new THREE.LineSegments(
@@ -344,6 +386,21 @@ function buildRoom(room, floor) {
 
   slab.userData.part = 'slab';
   walls.add(slab);
+
+  // The plinth: the floor given a body, so a room whose near walls have faded
+  // away still reads as a solid platform instead of a floating decal. Built
+  // from the same polygon and dropped below the slab, so only its rim shows.
+  // Deliberately a separate mesh from the slab — roomlights.js writes
+  // slab.material.emissive directly and must keep meeting a single material.
+  const plinthGeo = new THREE.ExtrudeGeometry(slabShape,
+    { depth: PLINTH_DEPTH, bevelEnabled: false });
+  plinthGeo.rotateX(-Math.PI / 2);
+  plinthGeo.translate(0, -PLINTH_DEPTH, 0);
+  const plinth = new THREE.Mesh(plinthGeo, new THREE.MeshStandardMaterial({
+    color: accent.clone().multiplyScalar(0.85), roughness: 0.85,
+  }));
+  plinth.userData.part = 'plinth';
+  walls.add(plinth);
 
   return walls;
 }
@@ -396,21 +453,50 @@ export function getShellConfig() {
   return shellConfig ? { ...shellConfig } : null;
 }
 
+// The per-edge wall meshes of a room, in build order.
+export function wallParts(mesh) {
+  return mesh.userData.wallList
+    || mesh.children.filter((c) => c.userData.part === 'wall');
+}
+
+// Single writer for a wall's final opacity. Two independent things dim a wall
+// and they multiply: the room's ghost level (focus mode) and the camera-facing
+// fade cutaway.js maintains in userData.fade. Both go through here so neither
+// can clobber the other. depthWrite drops on a nearly-invisible wall so it
+// stops occluding what is behind it.
+export function applyWallOpacity(wall, baseOpacity) {
+  const op = baseOpacity * (wall.userData.fade ?? 1);
+  const mat = wall.material;
+  if (Math.abs(mat.opacity - op) > 0.002) {
+    mat.opacity = op;
+    mat.depthWrite = op > 0.5;
+  }
+  wall.visible = op > 0.01;
+}
+
 // Single writer for room wall opacity (used by focus-mode fades): keeps
-// userData.baseOpacity in sync, and drops depthWrite on nearly-invisible
-// ghost walls so they don't occlude the focused room.
+// userData.baseOpacity in sync and re-composites every wall against its
+// current camera-facing fade.
 export function setRoomOpacity(mesh, value) {
-  mesh.material.opacity = value;
-  mesh.material.depthWrite = value > 0.5;
   mesh.userData.baseOpacity = value;
+  for (const wall of wallParts(mesh)) applyWallOpacity(wall, value);
+}
+
+// Paint the accent glow onto a room's walls WITHOUT disturbing the stored
+// level. Hover uses this: it needs to add a transient boost and then put the
+// selection glow back, which it can't do if writing also rewrites the baseline.
+export function paintRoomEmissive(mesh, intensity) {
+  for (const wall of wallParts(mesh)) {
+    wall.material.emissive.copy(mesh.userData.accent);
+    wall.material.emissiveIntensity = intensity;
+  }
 }
 
 // Single writer for the accent-tinted glow that marks hover/selection now
 // that walls are opaque (opacity can't signal anymore). Hover reads
 // userData.baseEmissive to restore, mirroring the baseOpacity pattern.
 export function setRoomEmissive(mesh, intensity) {
-  mesh.material.emissive.copy(mesh.userData.accent);
-  mesh.material.emissiveIntensity = intensity;
+  paintRoomEmissive(mesh, intensity);
   mesh.userData.baseEmissive = intensity;
 }
 

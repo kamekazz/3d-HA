@@ -1,0 +1,22 @@
+- generic [active]:
+  - banner [ref=f14e3]:
+    - heading "3D HA House" [level=1] [ref=f14e4]
+    - generic "Realtime status" [ref=f14e5]
+    - generic [ref=f14e6]: connecting…
+    - button "○ Devices" [ref=f14e7] [cursor=pointer]
+    - generic [ref=f14e8]:
+      - generic [ref=f14e9]: View
+      - generic [ref=f14e10]:
+        - checkbox
+        - generic [ref=f14e11] [cursor=pointer]
+      - generic [ref=f14e12]: Edit
+  - button "⌂ Home all systems" [ref=f14e13] [cursor=pointer]:
+    - generic [ref=f14e14]: ⌂
+    - generic [ref=f14e15]:
+      - text: Home
+      - generic [ref=f14e16]: all systems
+  - complementary [ref=f14e17]
+  - contentinfo [ref=f14e18]:
+    - generic [ref=f14e20]:
+      - generic [ref=f14e21]: "--:--"
+      - generic [ref=f14e22]: —

@@ -204,6 +204,52 @@ drive it too; `window.__weather.step(secs)` advances the easing manually for tes
 hidden tabs, so nothing eases while the tab is backgrounded). Both hide in edit mode
 (`appModeChanged`), where the grid/dark ground shows instead, and in single-floor view (below).
 
+**The dollhouse cutaway** (`frontend/js/cutaway.js`): the walls between you and a room fade out, so
+every room reads like a Sims-4 build-mode shot — two far walls, no near walls, no ceiling. This used
+to be free: walls were zero-thickness `ShapeGeometry` fins wound with inward normals and drawn
+`side: THREE.FrontSide`, so the GPU backface-culled whichever ones the camera stood behind. That
+popped at exactly 90 degrees, and it only ever hid the wall *surface* — the art and windows mounted
+on it are separate GLB objects and were left hanging in mid-air.
+
+Walls now have a body (`house.js WALL_THICKNESS`, 0.35 ft, extruded **outward** so the inner face
+stays on the old plane — every one of the hand-placed furniture pieces is flush against it, and an
+inward extrusion would embed them). Each polygon edge is its own child `Mesh` of the room mesh with
+its own **cloned** material and `userData { part:'wall', edgeIndex, nx, nz (inward normal), fade,
+hx, hz }`; the room mesh itself now carries empty geometry and is just the identity + parent
+(`roomMeshes`, picking, `userData.kind`). Each wall's shape runs from `u = -t` to `len + t` so
+neighbours overlap in a `t x t` block at every corner instead of leaving a notch. Rooms also get a
+`part:'plinth'` skirt — the polygon extruded 0.5 ft below the slab in the room's accent — which is
+the chunky colored rim along the open sides.
+
+One `onFrame` tick scores every wall by `dot(inward normal, horizontal direction to the camera)` and
+eases opacity across a **wide** band (`FADE_LO 0.02 .. FADE_HI 0.55` — these are cosines, so that is
+~33 degrees of orbit; the first attempt at 0.05..0.30 spanned barely 15 and still read as the pop it
+replaced). The score is horizontal-only: folding in camera height would fade every wall at once from
+overhead. `house.js applyWallOpacity` is the single writer, multiplying `userData.fade` by the room's
+`baseOpacity` so focus-mode ghosting composes; `setRoomOpacity`/`setRoomEmissive`/`paintRoomEmissive`
+fan out over the wall children (`paintRoomEmissive` deliberately does *not* touch `baseEmissive` —
+hover needs to add a boost and put the stored level back).
+
+It runs in **every** view that draws rooms, not just room focus: a solid wall does not backface-cull,
+so a focus-only fade would turn the single-floor view into a row of sealed boxes.
+
+Things mounted on a wall go with it. Door/window hinges carry `edgeIndex`. Furniture binds whole-object
+when it is within 2 ft of a wall **and** its anchor is above 1.2 ft — the height gate is what keeps a
+sofa pushed against a wall in place while the art above it leaves. Room-spanning skins (`WALL_SKIN_RE`:
+wall wash, baseboards, crown — deliberately narrower than objects.js's `SURFACE_RE`, which is about
+pickability and also matches "Ceiling Fan") are authored as one GLB per room with a sub-mesh per wall,
+so they bind and fade **per sub-mesh**; the bind is lazy (GLBs resolve late) and must
+`root.updateWorldMatrix(true, true)` first, because `Box3.setFromObject` refreshes only the object's
+own matrix and a stale parent chain makes every panel measure to the room origin. Ceilings
+(`CEILING_RE`, name *ending* in "Ceiling") always fade to 0. A trim run authored as one merged loop
+binds to nothing and stays visible — split it per wall in the roomkit build script if it reads wrong.
+Anything faded gets `transparent: true` set once (flipping that flag is what recompiles a shader).
+`objects.js` stays the single writer of object *visibility*; the fade goes through its `wallFade` map.
+`window.__cutaway` exposes `settle()` (jump every fade to its target — roomkit's `shot.py` and
+`dollhouse.py` call it before grabbing the canvas), `setEnabled(b)` and `debug()`. Snapshot cards
+render from their own camera, so `snapshots.js` brackets its render with `scoreForCamera(snapCam)`.
+Room focus also hides stairs, which live on the house root and would otherwise hang in the backdrop.
+
 **Single-floor presentation mode** (`frontend/js/floorview.js`): picking a floor in the level
 selector shouldn't leave one slab hovering over the lawn, so on `levelChanged` to a floor it swaps
 the sky for a dark studio-gradient backdrop (a radial CanvasTexture as `scene.background`, fog
@@ -222,8 +268,9 @@ importmap — no npm/bundler):
 - `main.js` — bootstraps: loads HA structure + house layout, builds the scene, wires picking
   (raycasting for click/hover on rooms and device markers) and realtime.
 - `scene.js` — Three.js scene/camera/renderer/controls setup.
-- `house.js` — builds room geometry (floors, walls) from `/api/house` data. Also loads the
-  whole-house shell GLB; when that fetch/parse fails it dispatches `shellLoadFailed` and `ui.js`
+- `house.js` — builds room geometry (floors, per-edge thick walls, slab, plinth) from `/api/house`
+  data. Also loads the whole-house shell GLB; when that fetch/parse fails it dispatches
+  `shellLoadFailed` and `ui.js`
   raises a persistent banner — a silently missing house reads as a render bug rather than the deploy
   problem it usually is (see `docs/TROUBLESHOOTING-house-shell.md`).
 - `devices.js` — builds device markers from placements; owns the `markers` map (entity_id → mesh)
@@ -232,6 +279,8 @@ importmap — no npm/bundler):
   encode on/off/unavailable).
 - `socket.js` — SocketIO client wrapper with polling fallback.
 - `daylight.js` — sun/weather-driven scene lighting (see Dynamic lighting above).
+- `cutaway.js` — camera-aware per-wall fade + wall-mounted furniture (see The dollhouse cutaway
+  above). Owns `window.__cutaway`.
 - `floorview.js` — single-floor presentation mode: dark backdrop, centered floor framing,
   zoom-out lock (see Single-floor presentation mode above).
 - `roomlights.js` — per-room night glow for HA lights that are on.

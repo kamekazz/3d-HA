@@ -43,8 +43,9 @@ and driving displacement from a fine-cell noise field.
 Three regressions to undo: the east canvas was re-toned to a **blank slab (sd
 0.0** against the photo's 43.2) — restore round 3's marks on round 4's ground and
 do NOT move `CANVAS_E` toward `#b8b5af`; stone relief was deleted chasing sd —
-restore a shallower bevel; and `doll_nw` culls the room's whole identity — return
-to `doll_se` and fix the occlusion as a framing problem.
+restore a shallower bevel; and `doll_nw` drops the room's whole identity — return
+to `doll_se` and fix the occlusion as a framing problem (the mid-air-object half
+of this is fixed: mounted pieces fade with their wall now).
 Wall spread 114.4 is the unpulled lever (office 85→23, garage 91→12, laundry
 90→18). Verified from the photos: both east sofas are the same cream as the
 sectional; the TV is a hard matte-black rectangle; the wreath is soft matte
@@ -73,9 +74,12 @@ patch's sd and warns when a patch cannot be wall. Meter furnished rooms by hand
 with verified clean boxes; `scratchpad/lr5/m5.py` reports sd, mean|Δ| and
 `|d1|/sd` together at native resolution with a visual overlay of every box.
 
-`roomkit.rooms` offers `doll_se/sw/ne/nw`. The two walls nearest the camera cull,
-which is what makes the cutaway — so shoot the diagonal opposite the content, and
-say which quadrant you used.
+`roomkit.rooms` offers `doll_se/sw/ne/nw`. The two walls nearest the camera fade
+out (`frontend/js/cutaway.js`), which is what makes the cutaway — so shoot the
+diagonal opposite the content, and say which quadrant you used. Mounted pieces
+now fade with their wall, so a dropped wall no longer leaves its art floating;
+`shot.py` calls `window.__cutaway.settle()` so a screenshot cannot catch a wall
+mid-fade.
 
 `roomkit.dollhouse` renders the whole house with every floor visible and the
 shell hidden — a view the app itself does not have.

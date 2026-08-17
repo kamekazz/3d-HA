@@ -12,6 +12,7 @@
 import * as THREE from 'three';
 import { scene, camera, renderer, hemiLight, sunLight } from './scene.js';
 import { roomMeshes, floorGroups, stairGroups, getShellRoot } from './house.js';
+import { scoreForCamera } from './cutaway.js';
 import { getEnvironmentRoot } from './environment.js';
 import { getWeatherRoot } from './weather.js';
 import { getFocusedRoomId } from './focus.js';
@@ -155,6 +156,9 @@ function captureRoom(roomId) {
   snapCam.lookAt(center);
 
   // ---- render + synchronous readback (center-crop to the card aspect)
+  // the wall cutaway is scored against the live camera; re-score it for this
+  // one or the card is shot through the back of a solid near wall
+  const restoreCutaway = scoreForCamera(snapCam);
   renderer.render(scene, snapCam);
   let sw = src.width, sh = src.height, sx = 0, sy = 0;
   if (srcAspect > ASPECT) { sw = sh * ASPECT; sx = (src.width - sw) / 2; }
@@ -163,6 +167,7 @@ function captureRoom(roomId) {
   const url = snapCanvas.toDataURL('image/jpeg', JPEG_Q);
 
   // ---- restore, then repaint the real view so no snapshot frame ever shows
+  restoreCutaway();
   for (const [o, v] of saved) o.visible = v;
   scene.background = savedBg;
   scene.fog = savedFog;

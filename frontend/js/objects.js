@@ -23,7 +23,49 @@ function syncObjectVisibility(root) {
   const ud = root.userData;
   const focusHidden = !!focusScope &&
     ud.level === focusScope.level && ud.roomId !== focusScope.roomId;
-  root.visible = !houseModeActive && !focusHidden;
+  const cutAway = (ud.wallFade ?? 1) <= 0.01;
+  root.visible = !houseModeActive && !focusHidden && !cutAway;
+}
+
+// Materials we have already flipped to transparent. Flipping it is what
+// recompiles a shader, so it happens once per material and never again — after
+// that the cutaway only animates a uniform.
+const fadeMats = new WeakSet();
+
+// Wall-mounted pieces dim with the wall they hang on (see cutaway.js). Only
+// objects the cutaway has bound to a wall carry userData.wallFade at all;
+// everything else never enters this path and keeps its authored materials.
+export function fadeSubtree(obj, opacity) {
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) {
+      if (!fadeMats.has(m)) {
+        m.transparent = true;
+        m.needsUpdate = true;
+        fadeMats.add(m);
+      }
+      m.opacity = opacity;
+      m.depthWrite = opacity > 0.5;
+    }
+  });
+}
+
+function applyObjectFade(root) {
+  const f = root.userData.wallFade;
+  if (f === undefined) return;
+  fadeSubtree(root, f);
+}
+
+// cutaway.js is the only caller. Kept here because objects.js is the single
+// writer of object visibility — a fade that wrote root.visible itself would
+// fight the House-mode and room-focus sweeps below.
+export function setObjectWallFade(objectId, opacity) {
+  const root = objects3d.get(objectId);
+  if (!root || root.userData.wallFade === opacity) return;
+  root.userData.wallFade = opacity;
+  applyObjectFade(root);
+  syncObjectVisibility(root);
 }
 
 export function applyAllObjectVisibility() {
@@ -75,7 +117,9 @@ const SURFACE_RE = /\b(floor|ceiling|wall wash|baseboards?|crown)\b/i;
 function makeObject(o, room, floor) {
   const root = new THREE.Group();
   getInstance(o.model_id, 'bottom')
-    .then((inst) => root.add(inst))
+    // models load async: a piece that resolves after its wall has already
+    // faded has to be dimmed on arrival or it pops in over the cutaway
+    .then((inst) => { root.add(inst); applyObjectFade(root); })
     .catch((err) => {
       console.warn(`model ${o.model_id} failed for object ${o.id}:`, err);
       root.add(makePlaceholder());

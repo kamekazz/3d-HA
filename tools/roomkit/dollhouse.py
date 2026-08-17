@@ -73,6 +73,9 @@ async ({ pose, light, markers }) => {
   for (const el of document.querySelectorAll('body > *:not(#scene-container)')) {
     el.style.display = 'none';
   }
+  // walls no longer backface-cull; cutaway.js fades the near ones out over
+  // ~0.2s, so a screenshot taken right after the flight catches them mid-fade
+  window.__cutaway?.settle();
   renderer.render(scene, camera);
   return { rooms: house.roomMeshes.size, shellHidden: !!shell };
 }

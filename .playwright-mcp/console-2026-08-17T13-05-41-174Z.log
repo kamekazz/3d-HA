@@ -1,0 +1,1 @@
+[   10880ms] [ERROR] Failed to load resource: the server responded with a status of 502 (BAD GATEWAY) @ http://127.0.0.1:5000/api/camera/camera.backyard_facing_feeders_live_view/snapshot?t=1786971951975:0

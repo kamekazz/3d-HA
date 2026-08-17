@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { api } from './api.js';
 import { initScene, scene, camera, renderer, applyEnvIntensity } from './scene.js';
-import { buildHouse, roomMeshes, stairGroups } from './house.js';
+import { buildHouse, roomMeshes, stairGroups, paintRoomEmissive } from './house.js';
 import { buildDevices, markers } from './devices.js';
 import { buildObjects, objects3d } from './objects.js';
 import { setAllStates, applyState, friendlyName, stateLabel, styleMarker } from './state.js';
@@ -18,6 +18,7 @@ import { initEnvironment, setEnvironmentData } from './environment.js';
 import { initWeather } from './weather.js';
 import { initRoomLights, setRoomLightsData } from './roomlights.js';
 import { initFloorView } from './floorview.js';
+import { initCutaway, setCutawayData } from './cutaway.js';
 import { initUndo } from './undo.js';
 import { initDashboard } from './dashboard.js';
 import { initCameras } from './cameras.js';
@@ -52,6 +53,7 @@ async function reloadHouse() {
   buildHouse(house);
   buildDevices(house);
   buildObjects(house);
+  setCutawayData(house); // wall meshes + furniture are new objects after a rebuild
   buildLabels(house);
   setEnvironmentData(house); // yard follows the (possibly moved) footprints
   setRoomLightsData({ house, structure }); // fresh slab materials — repoint glow
@@ -153,7 +155,7 @@ function setupPicking() {
     if (!hovered) return;
     const ud = hovered.userData;
     if (ud.kind === 'room') {
-      hovered.material.emissiveIntensity = ud.baseEmissive ?? 0;
+      paintRoomEmissive(hovered, ud.baseEmissive ?? 0);
     } else if (ud.kind === 'device') {
       styleMarker(ud.entityId); // state-driven restore, can't desync
       hideLabel(ud.entityId); // labels are hover-only now, even in focus mode
@@ -165,9 +167,10 @@ function setupPicking() {
     hovered = obj;
     const ud = obj.userData;
     if (ud.kind === 'room') {
-      // accent-tinted glow: walls are opaque now, so opacity can't signal
-      obj.material.emissive.copy(ud.accent);
-      obj.material.emissiveIntensity = (ud.baseEmissive ?? 0) + 0.15;
+      // accent-tinted glow: walls are opaque now, so opacity can't signal.
+      // Goes through paintRoomEmissive because the glow lives on the per-edge
+      // wall meshes, not on the room mesh itself.
+      paintRoomEmissive(obj, (ud.baseEmissive ?? 0) + 0.15);
     } else if (ud.kind === 'device') {
       obj.scale.multiplyScalar(1.25);
       showLabel(ud.entityId);
@@ -277,6 +280,7 @@ async function main() {
   initEnvironment();
   initWeather();
   initFloorView();
+  initCutaway();
   setupPicking();
 
   await loadStructure();
@@ -284,6 +288,7 @@ async function main() {
   buildHouse(house);
   buildDevices(house);
   buildObjects(house);
+  setCutawayData(house); // wall meshes + furniture are new objects after a rebuild
   buildLabels(house);
   setEnvironmentData(house);
   initFocus();

@@ -3,7 +3,7 @@
 // show. Exit with Esc, the "back" chip, or clicking empty space.
 import * as THREE from 'three';
 import { camera, controls, flyTo, getViewPose, MIN_ZOOM, MAX_ZOOM } from './scene.js';
-import { roomMeshes, setLevel, getLevel, setRoomOpacity } from './house.js';
+import { roomMeshes, stairGroups, setLevel, getLevel, setRoomOpacity } from './house.js';
 import { setFocusMarkerScope } from './devices.js';
 import { setObjectFocusScope } from './objects.js';
 import { hideAllLabels } from './labels.js';
@@ -85,6 +85,10 @@ export function enterFocus(roomId) {
   }
   mesh.visible = true;
   setRoomOpacity(mesh, 1.0);
+  // Stairs live on the house root, not in a floor group, so setLevel leaves
+  // them on. With the surrounding rooms gone they hang in the backdrop next to
+  // the room, which reads as a bug rather than as a cutaway.
+  for (const g of stairGroups) g.visible = false;
   setFocusMarkerScope({ level, roomId });
   setObjectFocusScope({ level, roomId });
   // no showRoomLabels here: the room panel carries the info; hover still
@@ -126,6 +130,7 @@ export function exitFocus({ flyBack = true } = {}) {
   hideAllLabels();
   focusedRoomId = null;
 
+  // setLevel re-derives stair visibility from the level, undoing the hide above
   setLevel(savedLevel ?? 'all');
   setActiveLevelButton(savedLevel ?? 'all');
   // floor view (floorview.js) keeps pan off — only House view pans freely

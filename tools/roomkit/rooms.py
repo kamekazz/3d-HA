@@ -136,13 +136,13 @@ def poses_for(f, size=(1100, 850)):
     # The dollhouse shot: a 50-degree orbit looking down into the room, framed so
     # the whole footprint fits. This is the Sims-4 angle.
     #
-    # There are four of them on purpose. Room walls are FrontSide with inward
-    # normals, so the two walls NEAREST the camera are culled — that is what
-    # lets you see in. Pick the quadrant whose culled pair is the two walls you
-    # do NOT care about: a single fixed south-east angle culls the south and east
-    # walls, and in a room whose content is on those walls you lose it. Worse,
-    # placed objects are never culled, so a window unit on a culled wall is left
-    # hanging in mid-air. Shoot the diagonal opposite the content.
+    # There are four of them on purpose. frontend/js/cutaway.js fades out the two
+    # walls NEAREST the camera — that is what lets you see in. Pick the quadrant
+    # whose dropped pair is the two walls you do NOT care about: a single fixed
+    # south-east angle drops the south and east walls, and in a room whose content
+    # is on those walls you lose it. Shoot the diagonal opposite the content.
+    # (Pieces mounted on a dropped wall now fade with it, so they no longer hang
+    # in mid-air — but the wall itself is still gone, content and all.)
     el = math.radians(DOLL_ELEV)
     dist = span * 1.45 + h
     dolls = {}

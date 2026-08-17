@@ -99,6 +99,9 @@ async ({ pose, level, light, markers }) => {
     el.style.display = 'none';
   }
 
+  // walls no longer backface-cull; cutaway.js fades the near ones out over
+  // ~0.2s, so a screenshot taken right after the flight catches them mid-fade
+  window.__cutaway?.settle();
   renderer.render(scene, camera);
   const p = camera.position;
   return { rooms: house.roomMeshes.size, level,

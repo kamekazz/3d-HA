@@ -10,9 +10,12 @@ other half: what the room has to look like as a *dollhouse*, seen from the
 ## What the Sims shots actually do
 
 1. **Two walls, not four.** The camera-side walls are gone; only the far two
-   stand, meeting in a clean corner. Our rooms cull camera-facing walls already
-   (FrontSide), but with every room walled on all four sides a whole floor reads
-   as a maze of white fins. Rooms need to read as *rooms*, not as partitions.
+   stand, meeting in a clean corner. `frontend/js/cutaway.js` does this for us
+   now: the near walls fade out over ~33 degrees of orbit, and whatever is
+   mounted on them (art, windows, the wall-wash skin, baseboard runs) fades with
+   them. Walls have a body and a capped top edge, and each room sits on a
+   plinth in its accent colour, so a room reads as a *room* rather than as a
+   partition — which is what the old zero-thickness fins looked like.
 2. **Every wall is trimmed.** Baseboard at the floor, crown or a picture rail at
    the top, and the wall/floor colours are clearly different values. A bare
    flat-shaded wall meeting a bare floor is the single biggest tell.
@@ -36,15 +39,17 @@ other half: what the room has to look like as a *dollhouse*, seen from the
 
 ## Choose the dollhouse angle to match where the room's content is
 
-Room walls are `FrontSide` with inward normals, so **the two walls nearest the
-camera are culled** — that is what lets you see in, and it is the same
-two-walls-standing look the Sims shots have. The consequence: a fixed camera
-angle culls a fixed pair of walls, and if the room's content lives on that pair
-you lose it.
+**The two walls nearest the camera fade out** (`cutaway.js`) — that is what lets
+you see in, and it is the same two-walls-standing look the Sims shots have. The
+consequence still stands: a fixed camera angle drops a fixed pair of walls, and
+if the room's content lives on that pair you lose it.
 
-Worse, **placed objects are never culled**. A window unit, art or cabinetry on a
-culled wall is left hanging in mid-air with no wall behind it, which reads as a
-bug rather than a cutaway.
+Mounted pieces no longer hang in mid-air — art, windows, cabinetry and the
+per-wall skins fade with their wall. Two things still do not: a piece anchored
+more than 2 ft off its wall or below 1.2 ft (deliberate — a sofa against a wall
+must stay), and a trim run authored as ONE merged mesh spanning all four walls,
+which binds to no single wall and stays fully visible. If a room shows a floating
+ring of trim, split that piece per wall in its build script.
 
 So shoot the diagonal *opposite* the content. `roomkit.rooms <id> --poses-only`
 now gives `doll_se`, `doll_sw`, `doll_ne`, `doll_nw` (and `doll` = `doll_se` for
@@ -55,7 +60,7 @@ quadrant is not looking at the same room you built.
 ## How to shoot the dollhouse comparison
 
 ```
-cd "C:\Users\Manuel\Desktop\Pro\3d HA\tools"
+cd "C:\Users\manuel.traveras\Desktop\PRO\3d-HA\tools"
 PY="../backend/.venv/Scripts/python.exe"
 $PY -m roomkit.rooms --floor-doll 1                    # whole first floor
 $PY -m roomkit.rooms 6 --poses-only                    # then take .doll
