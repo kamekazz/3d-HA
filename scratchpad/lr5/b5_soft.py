@@ -70,11 +70,16 @@ print("  lift boucle %.3f sherpa %.3f fur %.3f rug %.3f pillow %.3f"
       % (LB, LS, LF, LR, LP))
 
 # Geometry is form only now, so the cells go back up and the payload with them.
-C_SEAT = 0.230
-C_BACK = 0.250
-C_ARM = 0.300
-C_RAIL = 0.340
-C_PILL = 0.260
+# ROUND 5b, PAYLOAD.  Once the fine gradient comes from the tile rather than
+# from the mesh, cell size only buys silhouette -- and the room was 1.98 MB
+# against a 1.5 MB budget with four seats at 138-194 KB each.  Cells go up ~30%
+# (area -40%); the upholstery metrics were re-measured after the change, not
+# assumed (see the report).
+C_SEAT = 0.300
+C_BACK = 0.320
+C_ARM = 0.380
+C_RAIL = 0.440
+C_PILL = 0.330
 UVR = T_BOUCLE.repeat
 
 
@@ -187,7 +192,7 @@ def sofa(P, L, D, arm_w=0.92, back_h=2.84, seat_h=1.42, arm_h=2.16, n_seat=3,
     if fur:
         # photo f: a tan faux-fur throw rolled along the back rail and falling
         # down the OUTSIDE of it.  Kept short so it cannot reach the wall.
-        add5(m, bolster5(L * 0.80, 0.20, cell=0.17, grain=GFUR,
+        add5(m, bolster5(L * 0.80, 0.20, cell=0.26, grain=GFUR,
                          uv_repeat=T_FUR.repeat), FUR,
              at=(L * 0.06, back_h - 0.06, -D / 2 + 0.40), rot_x=0.06)
         add5(m, drape5(L * 0.78, 0.80, sag=0.05, edge_drop=0.26, cell=0.17,
@@ -236,7 +241,7 @@ RUGE = Material("lrruge", "#504c46", roughness=0.99)
 
 m = Model()
 m.add(box(RL + 0.16, RT * 0.60, RDp + 0.16), RUGE, at=(0, 0, 0))     # bound edge
-add5(m, grid5(RL, RDp, cell=0.30, grain=GRUG, y=RT, uv_repeat=T_RUG.repeat),
+add5(m, grid5(RL, RDp, cell=0.46, grain=GRUG, y=RT, uv_repeat=T_RUG.repeat),
      RUGM)
 put("Living Floor Rug", save5(m, "rug5"), (RX, 0.004, RZ))
 
@@ -247,7 +252,7 @@ m = sofa(SECT, 7.60, SD, n_seat=3, ret_w=2.70, ret_d=SRD, ret_side=-1,
              (-2.6, PIL_CREAM, 1.50, 1.42, 0.10), (-1.4, PIL_GREY, 1.44, 1.34, -0.14),
              (0.2, PIL_WAVE, 1.46, 1.36, 0.08), (1.5, PIL_GREY, 1.44, 1.34, 0.13),
              (2.6, PIL_CREAM, 1.50, 1.42, -0.09)])
-add5(m, drape5(2.2, 1.9, sag=0.12, edge_drop=0.48, cell=0.18, grain=GSH,
+add5(m, drape5(2.2, 1.9, sag=0.12, edge_drop=0.48, cell=0.26, grain=GSH,
                uv_repeat=T_SHERPA.repeat), THROW_B, at=(2.1, 1.50, 2.5))
 put_anchor("Living Sofa South", m, save5(m, "sofa_s5"),
            (0.0, -SD / 2), (4.35, 16.90), 180)
@@ -267,7 +272,7 @@ m = sofa(ESOU, 6.40, ESD, arm_w=1.15, arm_r=0.52, back_h=3.05, arm_h=2.30,
              (-1.55, PIL_CREAM, 1.62, 1.52, 0.15, PIL_TICK),
              (0.25, PIL_CREAM, 1.54, 1.44, -0.11, PIL_TICK),
              (1.75, PIL_GREY, 1.48, 1.38, 0.08)])
-add5(m, bolster5(2.55, 0.44, cell=0.19, grain=GB, uv_repeat=T_PIL.repeat),
+add5(m, bolster5(2.55, 0.44, cell=0.26, grain=GB, uv_repeat=T_PIL.repeat),
      PIL_CREAM, at=(-0.55, 1.86, -0.30), rot_y=0.20, rot_z=0.10)
 anchor_capped("Living Sofa East South", m, save5(m, "sofa_es5"),
               (0.0, -ESD / 2), (20.47, 13.65), 270, cap_x=20.44)
@@ -275,16 +280,16 @@ anchor_capped("Living Sofa East South", m, save5(m, "sofa_es5"),
 # ==================================================================== armchair
 m = sofa(CHAI, 5.00, 4.00, arm_w=0.94, arm_r=0.44, back_h=2.78, arm_h=2.14,
          n_seat=1, seat_r=0.30)
-add5(m, puff5(2.55, 0.62, 1.55, r=0.28, cell=0.22, grain=GSH,
+add5(m, puff5(2.55, 0.62, 1.55, r=0.28, cell=0.30, grain=GSH,
               uv_repeat=T_SHERPA.repeat), SHERPA, at=(0.02, 1.62, -1.02),
      rot_x=-0.30)
-add5(m, puff5(2.20, 0.44, 1.30, r=0.20, cell=0.22, grain=GSH,
+add5(m, puff5(2.20, 0.44, 1.30, r=0.20, cell=0.30, grain=GSH,
               uv_repeat=T_SHERPA.repeat), SHERPA2, at=(0.02, 2.42, -1.30),
      rot_x=0.10)
-add5(m, puff5(0.85, 0.52, 2.90, r=0.24, cell=0.22, grain=GSH,
+add5(m, puff5(0.85, 0.52, 2.90, r=0.24, cell=0.30, grain=GSH,
               uv_repeat=T_SHERPA.repeat), SHERPA, at=(-1.66, 2.02, 0.10),
      rot_z=0.10)
-add5(m, drape5(0.95, 1.35, sag=0.05, edge_drop=0.60, cell=0.18, grain=GSH,
+add5(m, drape5(0.95, 1.35, sag=0.05, edge_drop=0.60, cell=0.26, grain=GSH,
                uv_repeat=T_SHERPA.repeat), SHERPA2, at=(-1.72, 2.02, 0.60))
 put_anchor("Living Armchair", m, save5(m, "armchair5"), (0.0, -2.0), (1.05, 7.60), 72)
 
@@ -304,7 +309,7 @@ m.add(box(1.12, 0.05, 0.82), Material("lrlap", "#8b8d90", roughness=0.35),
       at=(-0.5, 1.40, 0.10), rot_y=0.28)
 m.add(box(0.40, 0.05, 0.22), Material("lrdark", "#1c1d21", roughness=0.4),
       at=(0.9, 1.40, -0.30), rot_y=-0.35)
-add5(m, drape5(1.5, 1.1, sag=0.07, edge_drop=0.26, cell=0.18, grain=GSH,
+add5(m, drape5(1.5, 1.1, sag=0.07, edge_drop=0.26, cell=0.26, grain=GSH,
                uv_repeat=T_SHERPA.repeat), THROW_B, at=(1.3, 1.42, 0.42))
 put("Living Ottoman", save5(m, "ottoman5"), (7.70, 0.0, 8.40), rot=3)
 

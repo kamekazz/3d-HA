@@ -70,6 +70,15 @@ def rug():
     TW, TD = 1.32, 1.76
     weave = kfield.loop_weave(TW, TD, 132, 4242, ground=111.0, loop=108.0,
                               density=0.50, pitch_in=0.42)
+    # ROUND 4b -- calibrated, not guessed.  The version above rendered
+    # 135.4 / sd 31.2 / R-B +0.4 against photo F's 120.1 / sd 38.1 / R-B -2.2
+    # (both at ~90-127 px per foot, native, n=19k and 85k).  Neutral and finer
+    # were the two things the critic asked for and both landed; it is simply 15
+    # bytes too light and a little too calm.  A floor-facing surface here
+    # measures render = 0.89*albedo + 55.3, so 135.4 came off an image mean of
+    # 90.0 with an image sd of 35.1, and the photo wants 72.8 / 42.8.  Targeting
+    # 45 rather than 42.8 pays for the dark loops the 0..255 clip eats.
+    weave = 72.8 + (weave - weave.mean()) * (45.0 / weave.std())
     rmat = TexMaterial("rugweave", png_gray(weave, levels=64), roughness=0.97,
                        emissive="#151413", mip=False)
     tex_plane(m, rmat, "+y", 0.042, x0 + 0.06, x1 - 0.06, z0 + 0.11, z1 - 0.11,

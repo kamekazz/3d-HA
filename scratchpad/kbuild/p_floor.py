@@ -135,7 +135,7 @@ def plank_image():
 
     # ---- contact shadows: the same exponential distance field as round 3 (its
     # smoothness was confirmed good), applied in render space and ~2x deeper.
-    rects = [(6.35, 8.95, 5.48, 10.52, 0.62, 1.00),      # island box
+    rects = [(5.25, 9.15, 5.30, 10.70, 0.70, 1.00),      # island COUNTER, not box
              (9.93, 12.92, 13.72, ZW_SOUTH, 0.50, 0.95),  # fridge
              (5.75, XW_EAST, ZW_NORTH, 2.20, 0.44, 0.92),  # peninsula
              (12.87, XW_EAST, 2.20, 10.60, 0.44, 0.92),   # east run
