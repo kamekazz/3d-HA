@@ -36,10 +36,6 @@ function setActiveLevelButton(level) {
   });
 }
 
-function roomEdges(mesh) {
-  return mesh.children.find((c) => c.userData.part === 'edges');
-}
-
 // stateless restore: put every room on a level back to normal (markers are
 // restored by clearing/replacing the focus scope in devices.js)
 function restoreLevelVisuals(level) {
@@ -48,8 +44,8 @@ function restoreLevelVisuals(level) {
     mesh.visible = true;
     setRoomOpacity(mesh, 1.0);
     mesh.userData.pickable = true;
-    const edges = roomEdges(mesh);
-    if (edges) edges.visible = true;
+    // the accent rim is a child of each wall now, so setRoomOpacity above has
+    // already restored it along with the wall
   }
 }
 

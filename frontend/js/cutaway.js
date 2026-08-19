@@ -37,12 +37,30 @@ const TAU = 0.09;
 // to the end of the name so "Ceiling Fan" — a fixture, not a surface — is not
 // caught by it.
 const CEILING_RE = /\bceilings?\s*$/i;
-// Room-spanning wall skins and trim runs: one GLB per room holding a separate
-// sub-mesh per wall. They fade per sub-mesh, so a room keeps the trim on the
-// walls it still shows. Deliberately NARROWER than objects.js's SURFACE_RE,
-// which is about pickability and also catches "Ceiling Fan" and "Floor Vent" —
-// real furniture, which has to fade as a whole object or not at all.
-const WALL_SKIN_RE = /\b(wall wash|wall panel|wainscot|baseboards?|crown|molding)\b/i;
+// Architecture: pieces that ARE part of a wall rather than things standing in
+// front of one — skins and trim runs (wall wash, wainscot, baseboards, crown),
+// the openings cut through it (window units, door leaves, linings, casings) and
+// applied panels. They bind per wall, so a room keeps the trim and the doors on
+// the walls it still shows: per sub-mesh where the GLB has one per wall, and
+// otherwise by splitting the merged run per triangle (splitMerged).
+//
+// Two things follow from being architecture rather than furniture, and both are
+// the point of having a separate list. Architecture skips the MOUNT_MIN_Y gate
+// below: a door lining or a garage door starts at the floor and still has to
+// leave with its wall, where a dresser pushed against that wall must not. And
+// it is measured by geometry rather than by its anchor, because a piece like
+// "Dining Windows" is five units on four different walls in one model, anchored
+// nowhere near any of them.
+//
+// Deliberately NOT objects.js's SURFACE_RE, which is about pickability and also
+// catches "Ceiling Fan" and "Floor Vent" — real furniture, which has to fade as
+// a whole object or not at all. Note `floor` is absent here on purpose: a floor
+// plane in a narrow room measures within SURFACE_MAX_DIST of every wall and
+// would be shredded across all of them.
+// Every noun takes an optional plural: the pieces that exposed this bug are
+// named "Dining Openings", "Dining Windows" and "Rios Closet Doors", and \b
+// after a singular fails on all three.
+const WALL_ARCH_RE = /\b(walls?|wainscots?|baseboards?|crowns?|mou?ldings?|trims?|openings?|casings?|jambs?|linings?|windows?|doors?|sliders?|panels?)\b/i;
 // Mounted furniture must be off the floor: a dresser pushed against a wall is
 // bottom-seated at y~0 and stays put when that wall goes, exactly as it does in
 // the Sims. Art, windows, curtains, sconces and wall cabinets all sit higher.
@@ -60,9 +78,10 @@ let enabled = true;
 let mounted = new Map();
 let lastSent = new Map(); // objectId -> last opacity pushed to objects.js
 // Room-spanning surface pieces — the wall-wash skin, baseboard and crown runs —
-// are one GLB per room holding a separate sub-mesh per wall. Fading them as
-// whole objects would strip a room of all its trim at once, so they bind and
-// fade per sub-mesh: { mesh, roomId, edgeIndex }.
+// are one GLB per room covering every wall. Fading them as whole objects would
+// strip a room of all its trim at once, so they bind and fade per wall:
+// { mesh, roomId, edgeIndex }, where mesh is a sub-mesh of the GLB or one of
+// the per-wall buckets splitMerged carved out of it.
 let surfaceParts = [];
 // Surfaces whose GLB has not resolved yet; drained by the tick, because the
 // bind needs real geometry to measure.
@@ -71,6 +90,9 @@ let pendingSurfaces = [];
 const _v = new THREE.Vector3();
 const _box = new THREE.Box3();
 const _c = new THREE.Vector3();
+const _p = new THREE.Vector3();
+const _inv = new THREE.Matrix4();  // world -> room-local
+const _m = new THREE.Matrix4();    // sub-mesh local -> room-local
 
 // Squared distance from a room-local point to a wall, using the midpoint and
 // half-vector house.js stashes on each wall child.
@@ -113,7 +135,7 @@ export function setCutawayData(house) {
           mounted.set(o.id, { roomId: room.id, edgeIndex: null });
           continue;
         }
-        if (WALL_SKIN_RE.test(name)) {
+        if (WALL_ARCH_RE.test(name)) {
           pendingSurfaces.push({ objectId: o.id, roomId: room.id });
           continue;
         }
@@ -128,32 +150,128 @@ export function setCutawayData(house) {
   }
 }
 
+// Sort a sub-mesh's triangles by the wall each one sits against, in room-local
+// space. Returns Map(edgeIndex -> vertex indices), with -1 collecting whatever
+// is not near any wall, or null if the geometry can't be read.
+function triangleBuckets(geo, walls, toLocal) {
+  const pos = geo.attributes?.position;
+  if (!pos) return null;
+  const index = geo.index;
+  const count = index ? index.count : pos.count;
+  if (count < 3 || count % 3 !== 0) return null;
+  const buckets = new Map();
+  for (let t = 0; t < count; t += 3) {
+    let cx = 0, cz = 0;
+    for (let k = 0; k < 3; k++) {
+      _p.fromBufferAttribute(pos, index ? index.getX(t + k) : t + k);
+      _p.applyMatrix4(toLocal);
+      cx += _p.x; cz += _p.z;
+    }
+    const edge = nearestWall(walls, cx / 3, cz / 3, SURFACE_MAX_DIST);
+    const key = edge === null ? -1 : edge;
+    let arr = buckets.get(key);
+    if (!arr) buckets.set(key, arr = []);
+    for (let k = 0; k < 3; k++) arr.push(index ? index.getX(t + k) : t + k);
+  }
+  return buckets;
+}
+
+// Split a sub-mesh that skins several walls into one child per wall.
+//
+// roomkit's glb.py groups primitives BY MATERIAL, never by wall, so a trim run
+// authored as `for w in "nswe"` lands in a single primitive whose bbox centre
+// sits in the middle of the room — nowhere near a wall. It therefore bound to
+// nothing and kept full opacity forever while the walls it skinned faded away.
+// That is the leftover "frame" of a cutaway: skirting, chair rail, wainscot,
+// casings and door leaves left standing in the gap. Splitting here rather than
+// re-authoring the GLBs fixes every already-uploaded room with no rebuild.
+//
+// Buckets share the source attribute buffers and differ only in their index, so
+// this costs one index array per wall, not a copy of the mesh. Each bucket does
+// need its OWN material clone: fadeSubtree tracks the transparent flag per
+// material, so a shared one would fade every wall together — the bug again.
+// Returns true if the mesh was split.
+function splitMerged(o, walls, roomId, owner) {
+  // A multi-material mesh carries draw groups keyed to index ranges; reindexing
+  // would silently repaint it. Not something roomkit emits — leave it alone.
+  if (Array.isArray(o.material)) return false;
+  const src = o.geometry;
+  const buckets = triangleBuckets(src, walls, _m);
+  if (!buckets) return false;
+  const edges = [...buckets.keys()].filter((k) => k !== -1);
+  // Nothing wall-adjacent at all: a genuine room-wide piece — a floor plane, a
+  // contact-shadow decal. Leave it whole and opaque, as before.
+  if (edges.length === 0) return false;
+  // All of it on one wall the bbox centre happened to miss: bind it whole, no
+  // need to rebuild any geometry.
+  if (buckets.size === 1) {
+    surfaceParts.push({ mesh: o, roomId, edgeIndex: edges[0], owner });
+    return true;
+  }
+
+  for (const [key, idx] of buckets) {
+    const g = new THREE.BufferGeometry();
+    for (const name of Object.keys(src.attributes)) {
+      g.setAttribute(name, src.attributes[name]);
+    }
+    g.setIndex(idx);
+    const part = new THREE.Mesh(g, key === -1 ? o.material : o.material.clone());
+    part.name = `${o.name || 'skin'}#${key}`;
+    o.add(part);
+    if (key !== -1) surfaceParts.push({ mesh: part, roomId, edgeIndex: key, owner });
+  }
+  // The parent keeps the identity and the transform and stops drawing — the
+  // same trick house.js uses for the room mesh. Children sit at identity, so
+  // the split geometry lands exactly where the merged mesh did.
+  o.geometry = new THREE.BufferGeometry();
+  return true;
+}
+
 // Measure a loaded surface GLB and bind each of its sub-meshes to the wall it
-// skins. A piece that measures to the middle of the room — a floor plane, a
-// contact-shadow decal, a trim run authored as one merged loop — binds to
-// nothing and keeps full opacity.
+// skins. A sub-mesh that measures to the middle of the room is handed to
+// splitMerged, which either sorts it per wall or leaves it whole and opaque.
 function bindSurface(entry) {
   const root = objects3d.get(entry.objectId);
   if (!root || root.children.length === 0) return false;
   const mesh = roomMeshes.get(entry.roomId);
   if (!mesh) return true; // room is gone; drop it
   const walls = wallParts(mesh);
+  // getWorldPosition refreshes mesh.matrixWorld, which the inverse below needs.
   mesh.getWorldPosition(_v);
   const ox = _v.x, oz = _v.z;
+  _inv.copy(mesh.matrixWorld).invert();
   // Box3.setFromObject measures off matrixWorld and refreshes only the object's
   // own matrix, not its parent chain. A GLB that resolved since the last render
   // still carries stale ancestors, and every panel then measures to the room's
   // origin and binds to nothing — which is how three of a wall-wash's four
   // panels silently kept blocking the cutaway. Force the subtree current first.
   root.updateWorldMatrix(true, true);
-  root.traverse((o) => {
-    if (!o.isMesh) return;
+  // Collected up front, not handled inside traverse(): splitMerged adds
+  // children to the mesh it is splitting, and traverse would walk straight into
+  // them and try to split each bucket again.
+  const subMeshes = [];
+  root.traverse((o) => { if (o.isMesh) subMeshes.push(o); });
+  for (const o of subMeshes) {
     _box.setFromObject(o);
-    if (_box.isEmpty()) return;
+    if (_box.isEmpty()) continue;
     _box.getCenter(_c);
     const edge = nearestWall(walls, _c.x - ox, _c.z - oz, SURFACE_MAX_DIST);
-    if (edge !== null) surfaceParts.push({ mesh: o, roomId: entry.roomId, edgeIndex: edge, owner: root.userData.name });
-  });
+    if (edge !== null) {
+      surfaceParts.push({ mesh: o, roomId: entry.roomId, edgeIndex: edge, owner: root.userData.name });
+      continue;
+    }
+    _m.multiplyMatrices(_inv, o.matrixWorld);
+    if (splitMerged(o, walls, entry.roomId, root.userData.name)) continue;
+    // Nothing of it lies on a wall plane, so it is not a skin or an opening —
+    // it is architecture standing a little off the wall: art on deep frames, a
+    // window unit with a proud stool. Those used to reach here through the
+    // furniture path and bind at its roomier radius, so keep binding them that
+    // way rather than silently dropping them now that the name routes here.
+    const near = nearestWall(walls, _c.x - ox, _c.z - oz, MOUNT_MAX_DIST);
+    if (near !== null) {
+      surfaceParts.push({ mesh: o, roomId: entry.roomId, edgeIndex: near, owner: root.userData.name });
+    }
+  }
   return true;
 }
 

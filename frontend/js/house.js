@@ -187,8 +187,9 @@ function worldScaleBoxUVs(geo, w, h, d) {
 // hand-placed furniture piece is flush against that plane and would end up
 // embedded in the wall if the mass grew inward.
 const WALL_THICKNESS = 0.35;
-// How far the floor plinth drops below the slab. This is the chunky colored
-// rim you see along the open sides of a Sims-style cutaway.
+// How far the floor plinth drops below the slab. This is the chunky colored rim
+// of the floor plate; it is built per edge as a child of that edge's wall, so it
+// fades out with it and an open side of the cutaway shows no kerb at all.
 const PLINTH_DEPTH = 0.5;
 
 function buildRoom(room, floor) {
@@ -344,12 +345,63 @@ function buildRoom(room, floor) {
       part: 'wall', edgeIndex: i, nx: -dz / len, nz: dx / len, fade: 1,
       hx: dx / 2, hz: dz / 2, // midpoint -> end b, for point-to-wall distance
     };
+
+    // The plinth skirt and the accent rim belong to THIS edge, not to the room.
+    // They used to be one room-wide mesh each and neither ever faded, so a room
+    // whose near walls had dissolved still showed a colored kerb along the open
+    // side and a bright outline tracing the wall that was gone — the leftover
+    // "frame" of a cutaway. Parented to the wall, they share its local frame
+    // (so the geometry math below is the wall's verbatim), inherit its
+    // visibility, and applyWallOpacity fades them with it.
+    //
+    // The skirt is a bare quad on the wall's OUTER face, not a solid like the
+    // wall: the outer face is the only part of a kerb you can ever see, and a
+    // solid would also have end caps. Those caps are the whole problem — an end
+    // cap faces along its wall, so at a corner where the neighbouring wall has
+    // faded it is left pointing straight at the camera as a colored nub in the
+    // open side, which is the artefact this rewrite exists to remove. A quad
+    // has none, and it goes edge-on to nothing. The bottom cap below closes the
+    // box. DoubleSide because the quad is hidden under the slab from inside the
+    // room anyway, so which way it is wound never matters.
+    const skirtGeo = new THREE.ShapeGeometry(new THREE.Shape([
+      new THREE.Vector2(0, -PLINTH_DEPTH), new THREE.Vector2(len, -PLINTH_DEPTH),
+      new THREE.Vector2(len, 0), new THREE.Vector2(0, 0),
+    ]));
+    skirtGeo.translate(0, 0, -t);
+    skirtGeo.rotateY(angle);
+    skirtGeo.translate(ax - mx, 0, az - mz);
+    // transparent up front at opacity 1, like the wall material: flipping that
+    // flag at runtime is what recompiles the shader.
+    const skirt = new THREE.Mesh(skirtGeo, new THREE.MeshStandardMaterial({
+      color: accent.clone().multiplyScalar(0.85), roughness: 0.85,
+      side: THREE.DoubleSide, transparent: true, opacity: 1.0,
+    }));
+    skirt.userData = { part: 'plinth', edgeIndex: i };
+    wall.add(skirt);
+    wall.userData.skirt = skirt;
+
+    const rim = new THREE.LineSegments(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(ax - mx, 0.01, az - mz),
+        new THREE.Vector3(bx - mx, 0.01, bz - mz),
+      ]),
+      new THREE.LineBasicMaterial({
+        color: accent.clone().multiplyScalar(1.4),
+        transparent: true, opacity: 1.0,
+      }));
+    // part 'edges' is load-bearing: main.js pick() skips outlines when hunting
+    // for the nearest opaque occluder.
+    rim.userData = { part: 'edges', edgeIndex: i };
+    wall.add(rim);
+    wall.userData.rim = rim;
+
     wallMeshes.push(wall);
   }
 
   // The room mesh itself carries no geometry any more — it is the identity the
   // rest of the app holds (roomMeshes, picking, userData) and the parent of the
-  // per-edge walls, the slab, the plinth and the accent outline.
+  // per-edge walls (each carrying its own plinth skirt and accent rim), the
+  // slab and the plinth's bottom cap.
   walls = new THREE.Mesh(new THREE.BufferGeometry(), wallsMat);
   walls.position.set(fp.x, 0, fp.z);
   for (const wall of wallMeshes) walls.add(wall);
@@ -377,30 +429,32 @@ function buildRoom(room, floor) {
     wallByEdge: new Map(wallMeshes.map((w) => [w.userData.edgeIndex, w])),
   };
 
-  const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(slabGeo),
-    new THREE.LineBasicMaterial({ color: accent.clone().multiplyScalar(1.4) }));
-  edges.userData.part = 'edges';
-  edges.position.y = 0.01;
-  walls.add(edges);
-
   slab.userData.part = 'slab';
   walls.add(slab);
 
-  // The plinth: the floor given a body, so a room whose near walls have faded
-  // away still reads as a solid platform instead of a floating decal. Built
-  // from the same polygon and dropped below the slab, so only its rim shows.
-  // Deliberately a separate mesh from the slab — roomlights.js writes
-  // slab.material.emissive directly and must keep meeting a single material.
-  const plinthGeo = new THREE.ExtrudeGeometry(slabShape,
-    { depth: PLINTH_DEPTH, bevelEnabled: false });
-  plinthGeo.rotateX(-Math.PI / 2);
-  plinthGeo.translate(0, -PLINTH_DEPTH, 0);
-  const plinth = new THREE.Mesh(plinthGeo, new THREE.MeshStandardMaterial({
+  // The plinth gives the floor a body, so a room whose near walls have faded
+  // still reads as a solid platform instead of a floating decal. Its rim is
+  // built per edge above, with the wall it belongs to; this is only the bottom
+  // cap that closes the box, so you never look up into the underside of a floor
+  // plate in the stacked whole-house view (maxPolarAngle keeps the camera above
+  // its target, but the target sits well below an upper floor). It belongs to
+  // no single wall, so it never fades. Deliberately a separate mesh from the
+  // slab — roomlights.js writes slab.material.emissive directly and must keep
+  // meeting one material.
+  //
+  // BackSide is the load-bearing part: the cap sits half a foot under the slab,
+  // so seen from above its projection slides out past the slab's along the near
+  // edges and paints exactly the colored kerb the fading skirt just removed.
+  // Facing it down means it only ever draws when you are actually beneath it.
+  const capGeo = new THREE.ShapeGeometry(slabShape);
+  capGeo.rotateX(-Math.PI / 2);
+  const cap = new THREE.Mesh(capGeo, new THREE.MeshStandardMaterial({
     color: accent.clone().multiplyScalar(0.85), roughness: 0.85,
+    side: THREE.BackSide,
   }));
-  plinth.userData.part = 'plinth';
-  walls.add(plinth);
+  cap.position.y = -PLINTH_DEPTH;
+  cap.userData.part = 'plinthCap';
+  walls.add(cap);
 
   return walls;
 }
@@ -470,6 +524,15 @@ export function applyWallOpacity(wall, baseOpacity) {
   if (Math.abs(mat.opacity - op) > 0.002) {
     mat.opacity = op;
     mat.depthWrite = op > 0.5;
+    // The edge's plinth skirt and accent rim go with it. They are children of
+    // the wall, so visibility follows for free, but opacity lives on the
+    // material and has to be written.
+    const { skirt, rim } = wall.userData;
+    if (skirt) {
+      skirt.material.opacity = op;
+      skirt.material.depthWrite = op > 0.5;
+    }
+    if (rim) rim.material.opacity = op;
   }
   wall.visible = op > 0.01;
 }

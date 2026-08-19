@@ -217,9 +217,14 @@ inward extrusion would embed them). Each polygon edge is its own child `Mesh` of
 its own **cloned** material and `userData { part:'wall', edgeIndex, nx, nz (inward normal), fade,
 hx, hz }`; the room mesh itself now carries empty geometry and is just the identity + parent
 (`roomMeshes`, picking, `userData.kind`). Each wall's shape runs from `u = -t` to `len + t` so
-neighbours overlap in a `t x t` block at every corner instead of leaving a notch. Rooms also get a
-`part:'plinth'` skirt — the polygon extruded 0.5 ft below the slab in the room's accent — which is
-the chunky colored rim along the open sides.
+neighbours overlap in a `t x t` block at every corner instead of leaving a notch. Each wall also
+carries its own `part:'plinth'` skirt and `part:'edges'` accent rim as children, so both fade with
+it — a room-wide version of either left a colored kerb and a bright outline tracing walls that had
+dissolved. The skirt is a bare quad on the wall's **outer** face, not a solid: the outer face is the
+only part of a kerb you can ever see, and a solid's end cap points along its wall, so at a corner
+whose neighbour had faded it jutted into the open side as a colored nub. One `part:'plinthCap'`
+(the polygon at `-PLINTH_DEPTH`, **BackSide**) closes the underside; BackSide is load-bearing —
+faced up, its projection slides out past the slab's along the near edges and repaints the kerb.
 
 One `onFrame` tick scores every wall by `dot(inward normal, horizontal direction to the camera)` and
 eases opacity across a **wide** band (`FADE_LO 0.02 .. FADE_HI 0.55` — these are cosines, so that is
@@ -235,14 +240,30 @@ so a focus-only fade would turn the single-floor view into a row of sealed boxes
 
 Things mounted on a wall go with it. Door/window hinges carry `edgeIndex`. Furniture binds whole-object
 when it is within 2 ft of a wall **and** its anchor is above 1.2 ft — the height gate is what keeps a
-sofa pushed against a wall in place while the art above it leaves. Room-spanning skins (`WALL_SKIN_RE`:
-wall wash, baseboards, crown — deliberately narrower than objects.js's `SURFACE_RE`, which is about
-pickability and also matches "Ceiling Fan") are authored as one GLB per room with a sub-mesh per wall,
-so they bind and fade **per sub-mesh**; the bind is lazy (GLBs resolve late) and must
-`root.updateWorldMatrix(true, true)` first, because `Box3.setFromObject` refreshes only the object's
-own matrix and a stale parent chain makes every panel measure to the room origin. Ceilings
-(`CEILING_RE`, name *ending* in "Ceiling") always fade to 0. A trim run authored as one merged loop
-binds to nothing and stays visible — split it per wall in the roomkit build script if it reads wrong.
+sofa pushed against a wall in place while the art above it leaves. **Architecture** (`WALL_ARCH_RE`:
+wall/wainscot/baseboard/crown/moulding/trim, plus the openings through it — window, door, opening,
+casing, jamb, lining, slider, panel; every noun takes an optional plural, since the pieces that
+exposed this were named "Dining Openings"/"Dining Windows"/"Rios Closet Doors") takes a different
+route from furniture in two ways that are the whole point of the split list: it **skips the 1.2 ft
+height gate** (a door lining or a garage door starts at the floor and still has to leave with its
+wall) and it is measured **by geometry, not by its anchor** ("Dining Windows" is five units on four
+walls in one model, anchored near none of them). `floor` is deliberately absent — a floor plane in a
+narrow room measures within `SURFACE_MAX_DIST` of every wall and would be shredded across all of
+them. Not objects.js's `SURFACE_RE`, which is about pickability and also matches "Ceiling Fan".
+Architecture is one GLB per room and binds **per wall**: by sub-mesh
+where the GLB happens to have one per wall, and otherwise by `splitMerged`, which sorts the merged
+run's triangles by nearest wall and rebuilds it as one child mesh per wall (buckets share the source
+attribute buffers, differ only in their index, and each needs its **own** material clone, since
+`fadeSubtree` tracks the transparent flag per material). That split is what the whole thing turns
+on: `glb.py` groups primitives **by material, never by wall**, so a `for w in "nswe"` trim run lands
+in a single primitive whose bbox centre is mid-room — it bound to nothing and kept full opacity
+forever, leaving skirting, wainscot, casings and door leaves standing in the gap. Fixing it here and
+not in the GLBs means every already-uploaded room is covered with no rebuild. The bind is lazy (GLBs
+resolve late) and must `root.updateWorldMatrix(true, true)` first, because `Box3.setFromObject`
+refreshes only the object's own matrix and a stale parent chain makes every panel measure to the
+room origin; collect the sub-meshes before splitting, or `traverse` walks into the buckets it just
+made. Ceilings (`CEILING_RE`, name *ending* in "Ceiling") always fade to 0 — crown authored inside
+a `* Ceiling` piece therefore goes with it even on walls still shown.
 Anything faded gets `transparent: true` set once (flipping that flag is what recompiles a shader).
 `objects.js` stays the single writer of object *visibility*; the fade goes through its `wallFade` map.
 `window.__cutaway` exposes `settle()` (jump every fade to its target — roomkit's `shot.py` and
