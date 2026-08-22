@@ -24,19 +24,19 @@ function drawLabel(sprite) {
   const x = (CANVAS_W - pillW) / 2;
 
   // pill background, matching the tooltip look
-  ctx.fillStyle = 'rgba(10, 13, 17, 0.92)';
-  ctx.strokeStyle = '#2a3340';
+  ctx.fillStyle = 'rgba(29, 29, 31, 0.92)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.roundRect(x, 4, pillW, CANVAS_H - 8, 18);
+  ctx.roundRect(x, 4, pillW, CANVAS_H - 8, 16);
   ctx.fill();
   ctx.stroke();
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#8b95a5';
+  ctx.fillStyle = '#cccccc';
   ctx.font = '28px system-ui, "Segoe UI", sans-serif';
   ctx.fillText(name, CANVAS_W / 2, 46, pillW - 32);
-  ctx.fillStyle = '#e6e9ee';
+  ctx.fillStyle = '#ffffff';
   ctx.font = '600 44px system-ui, "Segoe UI", sans-serif';
   ctx.fillText(value, CANVAS_W / 2, 100, pillW - 32);
 

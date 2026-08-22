@@ -52,7 +52,7 @@ function renderTemp() {
   const emoji = isWeather ? (CONDITION_EMOJI[s.state] || '🌡️') : '🏠';
   tile.classList.remove('hidden');
   tile.innerHTML =
-    `<span class="bb-icon" style="background:rgba(43,108,176,.35)">${emoji}</span>` +
+    `<span class="bb-icon">${emoji}</span>` +
     `<div class="bb-main"><div class="bb-value">${Math.round(t)}°</div>` +
     `<div class="bb-label">${isWeather ? s.state.replaceAll('-', ' ') : 'indoor'}</div></div>`;
 }
@@ -72,7 +72,7 @@ function renderLights() {
   tile.classList.toggle('tappable', n > 0);
   tile.title = n ? 'Tap to turn all lights off' : 'All lights are off';
   tile.innerHTML =
-    `<span class="bb-icon" style="background:${n ? 'rgba(224,177,0,.35)' : 'rgba(255,255,255,.08)'}">💡</span>` +
+    `<span class="bb-icon${n ? ' is-active' : ''}">💡</span>` +
     `<div class="bb-main"><div class="bb-value">${n}</div>` +
     `<div class="bb-label">light${n === 1 ? '' : 's'} on</div></div>`;
 }
@@ -95,14 +95,14 @@ async function allLightsOff() {
 // ---------------------------------------------------------------- security tile
 
 const ALARM_LABELS = {
-  disarmed: ['Disarmed', 'rgba(255,255,255,.08)'],
-  armed_home: ['Armed home', 'rgba(53,194,106,.3)'],
-  armed_away: ['Armed away', 'rgba(53,194,106,.3)'],
-  armed_night: ['Armed night', 'rgba(53,194,106,.3)'],
-  armed_vacation: ['Armed', 'rgba(53,194,106,.3)'],
-  arming: ['Arming…', 'rgba(224,177,0,.3)'],
-  pending: ['Pending…', 'rgba(224,177,0,.3)'],
-  triggered: ['ALARM', 'rgba(214,69,69,.45)'],
+  disarmed: ['Disarmed', ''],
+  armed_home: ['Armed home', ''],
+  armed_away: ['Armed away', ''],
+  armed_night: ['Armed night', ''],
+  armed_vacation: ['Armed', ''],
+  arming: ['Arming…', 'is-active'],
+  pending: ['Pending…', 'is-active'],
+  triggered: ['ALARM', 'is-alert'],
 };
 
 function renderSecurity() {
@@ -113,16 +113,16 @@ function renderSecurity() {
   tile.classList.remove('hidden');
   if (alarms.length) {
     const s = getState(alarms[0]);
-    const [label, tint] = ALARM_LABELS[s?.state] || [s?.state ?? '—', 'rgba(255,255,255,.08)'];
+    const [label, cls] = ALARM_LABELS[s?.state] || [s?.state ?? '—', ''];
     tile.innerHTML =
-      `<span class="bb-icon" style="background:${tint}">🛡️</span>` +
+      `<span class="bb-icon ${cls}">🛡️</span>` +
       `<div class="bb-main"><div class="bb-value">${label}</div>` +
       `<div class="bb-label">security</div></div>`;
   } else {
     const unlocked = locks.filter((id) => getState(id)?.state === 'unlocked').length;
     const ok = unlocked === 0;
     tile.innerHTML =
-      `<span class="bb-icon" style="background:${ok ? 'rgba(53,194,106,.3)' : 'rgba(224,177,0,.3)'}">${ok ? '🔒' : '🔓'}</span>` +
+      `<span class="bb-icon${ok ? '' : ' is-active'}">${ok ? '🔒' : '🔓'}</span>` +
       `<div class="bb-main"><div class="bb-value">${ok ? 'Locked' : `${unlocked} unlocked`}</div>` +
       `<div class="bb-label">door${locks.length === 1 ? '' : 's'}</div></div>`;
   }
@@ -144,7 +144,7 @@ function renderClimate() {
   const a = getState(id).attributes;
   tile.classList.remove('hidden');
   tile.innerHTML =
-    `<span class="bb-icon" style="background:rgba(155,44,44,.35)">🌡️</span>` +
+    `<span class="bb-icon">🌡️</span>` +
     `<div class="bb-main"><div class="bb-value">${a.temperature}°</div>` +
     `<div class="bb-label">thermostat</div></div>` +
     `<div class="bb-steppers">` +
@@ -210,7 +210,7 @@ function renderCalendar() {
   const more = calEvents.length - 1;
   tile.title = more > 0 ? `Tap for ${calEvents.length} upcoming events` : 'Next event';
   tile.innerHTML =
-    `<span class="bb-icon" style="background:rgba(88,101,242,.35)">📅</span>` +
+    `<span class="bb-icon">📅</span>` +
     `<div class="bb-main"><div class="bb-value">${escapeHtml(next.summary)}</div>` +
     `<div class="bb-label">${escapeHtml(formatWhen(next))}</div></div>`;
   if (!$('cal-popover').classList.contains('hidden')) renderCalPopover();

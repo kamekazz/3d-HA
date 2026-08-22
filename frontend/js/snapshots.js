@@ -78,15 +78,16 @@ function roomHash(room, floor) {
   }));
 }
 
-// dark card-matched studio sweep (same recipe as floorview's backdrop)
+// dark card-matched studio sweep — neutral greys so it blends with
+// .room-card's surface (var(--card-bg) #1d1d1f / --surface-2 #2a2a2c)
 function makeBackdrop() {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(128, 105, 30, 128, 128, 175);
-  grad.addColorStop(0, '#2c3852');
-  grad.addColorStop(0.55, '#1a2130');
-  grad.addColorStop(1, '#0d1118');
+  grad.addColorStop(0, '#3a3a3d');
+  grad.addColorStop(0.55, '#2a2a2c');
+  grad.addColorStop(1, '#1a1a1c');
   g.fillStyle = grad;
   g.fillRect(0, 0, 256, 256);
   const tex = new THREE.CanvasTexture(c);

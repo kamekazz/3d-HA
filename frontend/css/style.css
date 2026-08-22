@@ -1,43 +1,90 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* design tokens — the app's glassy dark language */
+/* Design tokens — Apple.com's design language, dark surfaces.
+   Spec: .claude/skills/apple-design/reference/DESIGN.md
+   The spec is light-dominant; dark exists in it only as full-bleed tiles, so
+   three things below are deliberate extrapolations and are marked as such. */
 :root {
-  --bg: #10141a;
-  --glass-bg: rgba(22, 27, 35, 0.72);
-  --glass-bg-strong: rgba(22, 27, 35, 0.92);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur: 14px;
-  --card-bg: #161b23;
-  --text: #e6e9ee;
-  --text-dim: #8b95a5;
-  --text-faint: #aab4c4;
-  --accent: #2b6cb0;
-  --accent-hover: #3182ce;
-  --ok: #35c26a;
-  --warn: #e0b100;
-  --danger: #d64545;
-  --radius-lg: 16px;
-  --radius-md: 12px;
-  --radius-pill: 999px;
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  --font: "Outfit", system-ui, "Segoe UI", sans-serif;
+  /* surfaces (spec: surface-black, ink, surface-tile-1/2/3).
+     Elevation is a surface-colour step, never a shadow: panel < tile < hover. */
+  --bg: #000000;                              /* true black: nav, planner ground, imagery */
+  --card-bg: #1d1d1f;                         /* ink: panel + utility-button ground */
+  --surface-1: #272729;                       /* tiles, fields — lighter than the panel */
+  --surface-2: #2a2a2c;                       /* micro-step lighter: pressed / hover */
+  --surface-3: #252527;                       /* micro-step darker */
+
+  /* Floating chrome. Apple bans decorative shadow but sanctions backdrop-filter
+     on floating bars; this chrome sits over a live 3D render, so it is
+     functional, not decorative. Blur recipe is the spec's production baseline. */
+  --glass-bg: rgba(29, 29, 31, 0.80);
+  --glass-bg-strong: rgba(29, 29, 31, 0.94);
+  --glass-border: rgba(255, 255, 255, 0.08);  /* EXTRAPOLATION: the spec's
+        rgba(0,0,0,.08) hairline is invisible on near-black; same alpha, inverted */
+  --glass-blur: saturate(180%) blur(20px);
+
+  /* text (spec: on-dark, body-muted, ink-muted-48) */
+  --text: #ffffff;
+  --text-faint: #cccccc;
+  --text-dim: #7a7a7a;
+
+  /* ONE accent. Filled buttons keep Action Blue even on dark (spec says it
+     still works there); Sky Link Blue is for links/inline text on dark only. */
+  --accent: #0066cc;
+  --accent-hover: #0071e3;                    /* primary-focus; also the focus ring */
+  --accent-link: #2997ff;
+
+  /* EXTRAPOLATION: the web spec has no status palette. These are data
+     readouts, never affordances, so they do not break the one-accent rule.
+     Values are Apple's own system colours for dark. */
+  --ok: #30d158;
+  --warn: #ffd60a;
+  --danger: #ff453a;
+
+  /* radii — the grammar does not blend: sm compact utility, lg cards, pill actions */
+  --radius-sm: 8px;
+  --radius-md: 11px;                          /* the rare Pearl capsule */
+  --radius-lg: 18px;
+  --radius-pill: 9999px;
+
+  /* spacing */
+  --sp-xxs: 4px;  --sp-xs: 8px;   --sp-sm: 12px;  --sp-md: 17px;
+  --sp-lg: 24px;  --sp-xl: 32px;  --sp-xxl: 48px;
+
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+          "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* The ONE sanctioned shadow, for imagery resting on a surface. Never chrome.
+     --shadow is deliberately NOT defined: a missed box-shadow: var(--shadow)
+     must fail loudly rather than quietly keep the old look. */
+  --shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px 0;
+
+  /* native chrome (scrollbars, file input, date/colour pickers) follows */
+  color-scheme: dark;
 }
 
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
 }
 
 body {
   font-family: var(--font);
+  /* spec body: 17px / 400 / 1.47 / -0.374px. The 17px reading pace is brand.
+     Dense kiosk chrome steps down to caption (14) / fine-print (12), which are
+     ladder rungs in their own right -- not compromises. */
+  font-size: 17px; font-weight: 400; line-height: 1.47; letter-spacing: -0.374px;
   background: var(--bg);
   color: var(--text);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
+
+/* Focus ring -- spec: 2px solid primary-focus. The app had no focus styling
+   at all before; this is net-new. */
+:focus-visible { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
 
 /* touch hygiene (wall/hand tablet): no pull-to-refresh or scroll-chain
    bounce, no double-tap-zoom delay on controls, no long-press text
@@ -53,16 +100,16 @@ button, .cam-tile, .room-card, .bb-tile { -webkit-tap-highlight-color: transpare
 #scene-container { position: fixed; inset: 0; }
 
 .hidden { display: none !important; }
-.muted { color: #8b95a5; font-size: 0.85em; }
+.muted { color: var(--text-dim); font-size: 14px; letter-spacing: -0.224px; }
 
 /* top bar */
 #topbar {
   position: fixed; top: 0; left: 0; right: 0; height: 48px;
   display: flex; align-items: center; gap: 10px; padding: 0 14px;
-  background: rgba(16, 20, 26, 0.85); backdrop-filter: blur(6px);
-  border-bottom: 1px solid #232b36; z-index: 20;
+  background: var(--bg); backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--glass-border); z-index: 20;
 }
-#topbar h1 { font-size: 15px; font-weight: 600; }
+#topbar h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.374px; }
 #topbar .spacer { flex: 1; }
 
 /* View-only page ("/"): no topbar at all — panels reclaim the space it left
@@ -86,52 +133,97 @@ body.room-focused #room-cards { display: none; }
 
 .status-dot {
   width: 10px; height: 10px; border-radius: 50%;
-  background: #e0b100; display: inline-block;
+  background: var(--warn); display: inline-block;
 }
-.status-dot.connected { background: #35c26a; }
-.status-dot.polling { background: #e0b100; }
-.status-dot.offline { background: #d64545; }
-#conn-label { font-size: 12px; color: #8b95a5; }
+.status-dot.connected { background: var(--ok); }
+.status-dot.polling { background: var(--warn); }
+.status-dot.offline { background: var(--danger); }
+#conn-label { font-size: 12px; letter-spacing: -0.12px; color: var(--text-dim); }
 
+/* button-primary: Action Blue, white, full pill. The pill radius IS the
+   brand's action signal, so it is the default for every button here. */
 button {
-  background: #2b6cb0; color: #fff; border: 0; border-radius: 6px;
-  padding: 7px 12px; font-size: 13px; cursor: pointer;
+  background: var(--accent); color: var(--text); border: 0;
+  border-radius: var(--radius-pill);
+  padding: 11px 22px; font-family: inherit; font-size: 14px;
+  letter-spacing: -0.224px; line-height: 1.29; cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
 }
 /* hover styling only where a real pointer hovers — on touch, hover state
    sticks to the last tapped element and reads as a stuck button */
 @media (hover: hover) {
-  button:hover { background: #3182ce; }
+  button:hover { background: var(--accent-hover); }
 }
-button:active { background: #3182ce; }
-button.secondary { background: #3a4453; }
-button.danger { background: #b23b3b; }
-button.small { padding: 3px 8px; font-size: 12px; }
+/* scale(0.95) is the system-wide press micro-interaction.
+   NOTE: any button carrying its own transform (a centring translate) must
+   restate it in its own :active rule or it will jump on press.
+   See #focus-exit and .cam-nav. */
+button:active { background: var(--accent-hover); transform: scale(0.95); }
+
+/* button-secondary-pill: the ghost pill. Sky Link Blue, not Action Blue --
+   this sits on dark, where the spec swaps inline marks to #2997ff. */
+button.secondary {
+  background: transparent; color: var(--accent-link);
+  border: 1px solid var(--accent-link);
+}
+@media (hover: hover) {
+  button.secondary:hover { background: rgba(41, 151, 255, 0.12); }
+}
+button.secondary:active { background: rgba(41, 151, 255, 0.12); }
+
+/* The one non-blue action in the system: a destructive affordance must not
+   read as the same "click me" as everything else. */
+button.danger {
+  background: transparent; color: var(--danger); border: 1px solid var(--danger);
+}
+@media (hover: hover) {
+  button.danger:hover { background: rgba(255, 69, 58, 0.14); }
+}
+button.danger:active { background: rgba(255, 69, 58, 0.14); }
+
+/* button-dark-utility: ink fill, 8px radius, 14px -- compact chrome actions */
+button.small {
+  background: var(--card-bg); color: var(--text);
+  border-radius: var(--radius-sm); padding: 8px 15px;
+  font-size: 14px; letter-spacing: -0.224px;
+}
+@media (hover: hover) {
+  button.small:hover { background: var(--surface-2); }
+}
+button.small:active { background: var(--surface-2); }
+/* .small matches the spec's utility button (8x15), which lands at ~36px --
+   under the 44px touch minimum. Grow the hit area without changing the look,
+   the same trick .tswitch .knob::after uses. */
+button.small { position: relative; }
+button.small::after { content: ""; position: absolute; inset: -5px 0; }
 
 /* level selector */
 #levels {
   position: fixed; top: 60px; left: 14px; z-index: 20;
   display: flex; flex-direction: column; gap: 6px;
 }
-#levels button { background: #232b36; min-width: 80px; text-align: left; }
-#levels button.active { background: #2b6cb0; }
+#levels button { background: var(--card-bg); min-width: 80px; text-align: left; }
+#levels button.active { background: var(--accent); }
 
 /* panels */
 .panel {
   position: fixed; top: 60px; right: 14px; bottom: 14px; width: 330px;
-  background: rgba(22, 27, 35, 0.96); border: 1px solid #232b36;
+  background: var(--glass-bg-strong); border: 1px solid var(--glass-border);
   border-radius: 10px; padding: 16px; z-index: 30; overflow-y: auto;
 }
-.panel h2 { font-size: 16px; margin-bottom: 6px; padding-right: 24px; }
-.panel h3 { font-size: 13px; margin: 16px 0 8px; color: #aab4c4; text-transform: uppercase; letter-spacing: 0.04em; }
-.panel h4 { font-size: 12px; margin: 12px 0 6px; color: #8b95a5; }
+.panel h2 { font-size: 21px; font-weight: 600; letter-spacing: 0.231px; line-height: 1.19; margin-bottom: 6px; padding-right: 24px; }
+.panel h3 { font-size: 14px; font-weight: 600; letter-spacing: -0.224px; margin: 16px 0 8px; color: var(--text-faint); }
+.panel h4 { font-size: 12px; font-weight: 600; letter-spacing: -0.12px; margin: 12px 0 6px; color: var(--text-dim); }
+/* button-icon-circular, at the 44px minimum touch target */
 .panel .close {
-  position: absolute; top: 10px; right: 10px; background: transparent;
-  font-size: 18px; color: #8b95a5; padding: 2px 8px;
+  position: absolute; top: 8px; right: 8px; background: transparent;
+  width: 44px; height: 44px; padding: 0; border-radius: var(--radius-pill);
+  font-size: 24px; line-height: 1; color: var(--text-dim);
 }
 @media (hover: hover) {
-  .panel .close:hover { color: #fff; background: #2a3340; }
+  .panel .close:hover { color: #fff; background: var(--surface-2); }
 }
-.panel .close:active { color: #fff; background: #2a3340; }
+.panel .close:active { color: #fff; background: var(--surface-2); }
 #editor { right: auto; left: 14px; top: 100px; z-index: 35; }
 
 /* room focus panel — left, ~30% of the screen */
@@ -145,8 +237,8 @@ body.room-panel-open #levels { display: none; } /* focus pins the level anyway *
   display: flex; align-items: center; gap: 8px;
   margin: -16px -16px 12px; padding: 14px 12px 8px 16px;
   position: sticky; top: -16px; z-index: 2; /* stay visible while tiles scroll */
-  background: rgba(22, 27, 35, 0.98);
-  border-bottom: 1px solid #232b36;
+  background: rgba(29, 29, 31, 0.98);
+  border-bottom: 1px solid var(--glass-border);
 }
 #rp-header .close { position: static; }
 #rp-header h2 {
@@ -160,43 +252,45 @@ body.room-panel-open #levels { display: none; } /* focus pins the level anyway *
   gap: 10px; align-items: stretch;
 }
 .rp-section {
-  grid-column: 1 / -1; font-size: 11px; color: #8b95a5;
-  text-transform: uppercase; letter-spacing: 0.05em; margin-top: 6px;
+  grid-column: 1 / -1; font-size: 12px; font-weight: 600;
+  letter-spacing: -0.12px; color: var(--text-dim); margin-top: 6px;
 }
 #rp-tiles > p.muted { grid-column: 1 / -1; }
 
 .tile {
-  background: #1a212b; border: 1px solid #232b36; border-radius: 10px;
+  background: var(--surface-1); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
   padding: 10px; min-height: 72px;
 }
 .tile.tappable { cursor: pointer; }
 @media (hover: hover) {
-  .tile.tappable:hover { border-color: #3a4453; background: #20242e; }
+  .tile.tappable:hover { border-color: rgba(255, 255, 255, 0.18); background: var(--surface-2); }
 }
-.tile.tappable:active { border-color: #3a4453; background: #20242e; }
-.tile.on { background: #20304a; border-color: #2b6cb0; }
+.tile.tappable:active { border-color: rgba(255, 255, 255, 0.18); background: var(--surface-2); }
+.tile.on { background: var(--surface-2); border: 2px solid var(--accent-hover); padding: 9px; }
 .tile.wide, .tile.camera { grid-column: 1 / -1; }
 .tile .t-name {
-  font-size: 12px; color: #aab4c4; line-height: 1.3;
+  font-size: 14px; letter-spacing: -0.224px; color: var(--text-faint); line-height: 1.43;
   overflow: hidden; word-break: break-word;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .tile .t-value {
-  font-size: 19px; font-weight: 600; margin-top: 4px;
-  overflow-wrap: anywhere;
+  font-size: 21px; font-weight: 600; letter-spacing: 0.231px; line-height: 1.19;
+  margin-top: 4px; overflow-wrap: anywhere;
 }
-.tile .t-value.long { font-size: 14px; line-height: 1.3; }
+.tile .t-value.long { font-size: 14px; font-weight: 400; letter-spacing: -0.224px; line-height: 1.43; }
 .tile .t-sub {
-  font-size: 10px; color: #8b95a5; margin-top: 2px;
-  text-transform: uppercase; letter-spacing: 0.05em;
+  font-size: 12px; color: var(--text-dim); margin-top: 2px;
+  letter-spacing: -0.12px;
 }
-.tile .t-more { float: right; background: transparent; color: #8b95a5; padding: 0 6px; }
+.tile .t-more { float: right; background: transparent; color: var(--text-dim);
+  min-width: 44px; height: 32px; padding: 0 6px; border-radius: var(--radius-pill); }
 @media (hover: hover) {
-  .tile .t-more:hover { color: #fff; background: #2a3340; }
+  .tile .t-more:hover { color: #fff; background: var(--surface-2); }
 }
-.tile .t-more:active { color: #fff; background: #2a3340; }
+.tile .t-more:active { color: #fff; background: var(--surface-2); }
 .tile.wide .controls { margin-top: 8px; }
-.tile.wide .t-name { font-size: 13px; color: #e6e9ee; }
+.tile.wide .t-name { font-size: 14px; color: var(--text); }
 
 .tile.camera { padding: 0; overflow: hidden; position: relative; min-height: 0; }
 .tile.camera .cam-view img {
@@ -205,87 +299,104 @@ body.room-panel-open #levels { display: none; } /* focus pins the level anyway *
 }
 .tile.camera .t-name {
   position: absolute; left: 10px; bottom: 8px; max-width: 60%;
-  color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  color: var(--text); left: 0; right: 0; bottom: 0; max-width: none;
+  padding: 14px 10px 8px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
   display: block; white-space: nowrap; text-overflow: ellipsis; /* overlay stays one line */
 }
 .tile.camera .cam-toggle { position: absolute; right: 8px; bottom: 8px; }
 
 .rp-editrow {
   grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
-  background: #1a212b; border-radius: 6px; padding: 7px 10px;
-  font-size: 13px; cursor: pointer;
+  background: var(--surface-1); border-radius: var(--radius-sm); padding: 12px 10px;
+  font-size: 14px; letter-spacing: -0.224px; cursor: pointer;
 }
-.rp-editrow input[type="checkbox"] { width: auto; margin: 0; accent-color: #2b6cb0; }
+.rp-editrow input[type="checkbox"] { width: auto; margin: 0; accent-color: var(--accent); }
 .rp-editrow .name {
   flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 /* device panel */
-.state-line { margin: 8px 0; font-size: 14px; }
+.state-line { margin: 8px 0; font-size: 17px; letter-spacing: -0.374px; }
 
 #dp-camera { margin: 8px 0 12px; }
 .cam-view { position: relative; }
 .cam-view img {
   display: block; width: 100%; min-height: 150px; object-fit: contain;
-  background: #0b0e12; border: 1px solid #232b36; border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
 }
 .cam-view .cam-hint {
   position: absolute; inset: 0; display: flex;
   align-items: center; justify-content: center;
-  font-size: 12px; pointer-events: none;
+  font-size: 14px; letter-spacing: -0.224px; pointer-events: none;
 }
 .cam-view .cam-hint.hidden { display: none; }
 
-.attrs { font-size: 12px; color: #aab4c4; margin-bottom: 12px; }
-.attrs div { padding: 2px 0; border-bottom: 1px solid #1d242e; display: flex; justify-content: space-between; gap: 8px; }
+.attrs { font-size: 14px; letter-spacing: -0.224px; color: var(--text-faint); margin-bottom: 12px; }
+.attrs div { padding: 2px 0; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; gap: 8px; }
 .controls { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .dp-bigvalue {
   width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  background: #1a212b; border: 1px solid #232b36; border-radius: 8px;
+  background: var(--surface-1); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
   padding: 14px 10px; margin-bottom: 4px;
-  font-size: 26px; font-weight: 600;
+  /* lead, but at display leading -- this is a one-line numeric readout */
+  font-size: 28px; font-weight: 600; line-height: 1.14; letter-spacing: 0.196px;
 }
-.dp-bigvalue span { font-size: 11px; font-weight: 400; color: #8b95a5; text-transform: uppercase; letter-spacing: 0.06em; }
+.dp-bigvalue span { font-size: 12px; font-weight: 400; letter-spacing: -0.12px; color: var(--text-dim); }
 
 .dp-slider { width: 100%; margin-top: 4px; }
-.dp-slider-head { display: flex; justify-content: space-between; font-size: 12px; color: #aab4c4; margin-bottom: 4px; }
-.dp-slider-head .val { color: #e6e9ee; }
+.dp-slider-head { display: flex; justify-content: space-between; font-size: 14px; letter-spacing: -0.224px; color: var(--text-faint); margin-bottom: 4px; }
+.dp-slider-head .val { color: var(--text); }
 .dp-slider input[type="range"] {
   -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
-  background: #2a3340; border-radius: 3px; outline: none; cursor: pointer;
+  background: var(--surface-2); border-radius: 3px; outline: none; cursor: pointer;
 }
 .dp-slider input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
-  border-radius: 50%; background: #3182ce; border: 2px solid #10141a;
+  border-radius: 50%; background: var(--accent); border: 2px solid var(--card-bg);
 }
 .dp-slider input[type="range"]::-moz-range-thumb {
   width: 14px; height: 14px; border-radius: 50%;
-  background: #3182ce; border: 2px solid #10141a;
+  background: var(--accent); border: 2px solid var(--card-bg);
 }
 
 .dp-temp { width: 100%; display: flex; align-items: center; justify-content: center; gap: 14px; }
-.dp-temp button { width: 40px; font-size: 17px; }
-.dp-temp-value { font-size: 24px; font-weight: 600; min-width: 64px; text-align: center; }
+.dp-temp button { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 17px; }
+.dp-temp-value { font-size: 28px; font-weight: 600; line-height: 1.14; letter-spacing: 0.196px; min-width: 64px; text-align: center; }
 
 .dp-chips { width: 100%; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+/* configurator-option-chip: pill, and a real touch target -- the old
+   4px padding made a 20px-tall tap zone on a wall tablet. */
 .chip {
-  background: #232b36; color: #aab4c4; border-radius: 999px;
-  padding: 4px 12px; font-size: 12px;
+  background: var(--surface-2); color: var(--text-faint);
+  border-radius: var(--radius-pill);
+  padding: 8px 15px; font-size: 14px; letter-spacing: -0.224px;
 }
 @media (hover: hover) {
-  .chip:hover { background: #2a3340; color: #e6e9ee; }
+  .chip:hover { background: var(--surface-2); color: var(--text); }
 }
-.chip:active { background: #2a3340; color: #e6e9ee; }
-.chip.active { background: #2b6cb0; color: #fff; }
+.chip:active { background: var(--surface-2); color: var(--text); }
+.chip.active { background: var(--accent); color: var(--text); }
 
 /* forms */
-form label { display: block; font-size: 12px; color: #aab4c4; margin-bottom: 8px; }
+form label { display: block; font-size: 14px; letter-spacing: -0.224px; color: var(--text-faint); margin-bottom: 8px; }
 form input, form select {
-  width: 100%; margin-top: 3px; padding: 6px 8px; font-size: 13px;
-  background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 6px;
+  width: 100%; margin-top: 3px; padding: 8px 12px; font-size: 14px;
+  letter-spacing: -0.224px; font-family: inherit;
+  background: var(--surface-1); color: var(--text);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
 }
 form input[type="color"] { padding: 2px; height: 32px; }
+/* the file input's UA button is the one control the cascade can't reach
+   without this pseudo-element */
+input[type="file"]::file-selector-button {
+  background: var(--card-bg); color: var(--text); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm); padding: 6px 14px; margin-right: 10px;
+  font-family: inherit; font-size: 14px; letter-spacing: -0.224px; cursor: pointer;
+}
 .row3 { display: flex; gap: 8px; }
 .row3 label { flex: 1; }
 .btn-row { display: flex; gap: 8px; margin-top: 4px; }
@@ -294,15 +405,16 @@ form input[type="color"] { padding: 2px; height: 32px; }
 #room-list .room-item, #placed-list .placed-item, #entity-list .entity-item,
 #object-list .placed-item {
   display: flex; align-items: center; gap: 6px;
-  padding: 6px 8px; border-radius: 6px; margin-bottom: 4px;
-  background: #1a212b; font-size: 13px;
+  padding: 10px 12px; border-radius: var(--radius-sm); margin-bottom: 4px;
+  background: var(--surface-1); font-size: 14px; letter-spacing: -0.224px;
 }
-#room-list .room-item.selected { outline: 1px solid #2b6cb0; }
+#room-list .room-item.selected { outline: 2px solid var(--accent-hover); outline-offset: -2px; }
 .room-item .name, .entity-item .name, .placed-item .name {
   flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
 }
-.placed-item input { width: 52px; padding: 3px 4px; font-size: 12px;
-  background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 4px; }
+.placed-item input { width: 52px; padding: 5px 6px; font-size: 12px; font-family: inherit;
+  background: var(--surface-1); color: var(--text);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-sm); }
 
 /* second line under each placed device: model + rotation + scale */
 .placed-model-row {
@@ -310,20 +422,23 @@ form input[type="color"] { padding: 2px; height: 32px; }
   margin: -2px 0 6px; padding: 0 8px;
 }
 .placed-model-row select {
-  flex: 1; min-width: 0; padding: 3px 4px; font-size: 12px;
-  background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 4px;
+  flex: 1; min-width: 0; padding: 5px 6px; font-size: 12px; font-family: inherit;
+  background: var(--surface-1); color: var(--text);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
 }
-.placed-model-row input { width: 52px; padding: 3px 4px; font-size: 12px;
-  background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 4px; }
+.placed-model-row input { width: 52px; padding: 5px 6px; font-size: 12px; font-family: inherit;
+  background: var(--surface-1); color: var(--text);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-sm); }
 #obj-model-select {
-  flex: 1; min-width: 0; padding: 6px 8px; font-size: 13px;
-  background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 6px;
+  flex: 1; min-width: 0; padding: 8px 12px; font-size: 14px; font-family: inherit;
+  background: var(--surface-1); color: var(--text);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
 }
 
 /* 3D model library modal */
 #models-modal {
   position: fixed; inset: 0; z-index: 70;
-  background: rgba(8, 11, 15, 0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex; align-items: center; justify-content: center;
 }
 #mm-box {
@@ -335,90 +450,95 @@ form input[type="color"] { padding: 2px; height: 32px; }
 #mm-upload-form input[type="text"] { flex: 1; min-width: 0; margin-top: 0; }
 #mm-list .mm-item {
   display: flex; align-items: center; gap: 8px;
-  padding: 6px 8px; border-radius: 6px; margin-bottom: 4px;
-  background: #1a212b; font-size: 13px;
+  padding: 10px 12px; border-radius: var(--radius-sm); margin-bottom: 4px;
+  background: var(--surface-1); font-size: 14px; letter-spacing: -0.224px;
 }
 .mm-item input.name {
-  flex: 1; min-width: 0; padding: 4px 6px; font-size: 13px;
-  background: transparent; color: #e6e9ee; border: 1px solid transparent;
-  border-radius: 4px;
+  flex: 1; min-width: 0; padding: 6px 8px; font-size: 14px; font-family: inherit;
+  background: transparent; color: var(--text); border: 1px solid transparent;
+  border-radius: var(--radius-sm);
 }
 @media (hover: hover) {
-  .mm-item input.name:hover { background: #10141a; border-color: #2a3340; }
+  .mm-item input.name:hover { background: var(--surface-1); border-color: var(--glass-border); }
 }
-.mm-item input.name:focus { background: #10141a; border-color: #2a3340; }
+.mm-item input.name:focus { background: var(--surface-1); border-color: var(--glass-border); }
 .mm-item .muted { white-space: nowrap; }
 
 /* room-focus exit chip */
 #focus-exit {
   position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
   z-index: 25; background: var(--glass-bg); color: var(--text);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border); border-radius: var(--radius-pill);
-  padding: 10px 20px; font-size: 13.5px; font-weight: 500;
-  box-shadow: var(--shadow);
+  padding: 11px 22px; font-size: 17px; font-weight: 400; letter-spacing: -0.374px;
 }
 @media (hover: hover) {
   #focus-exit:hover { background: var(--glass-bg-strong); }
 }
-#focus-exit:active { background: var(--glass-bg-strong); }
+#focus-exit:active { background: var(--glass-bg-strong); transform: translateX(-50%) scale(0.95); }
 
 /* 2D floor-plan editor */
 #planner {
-  position: fixed; inset: 0; z-index: 60; background: #10141a;
+  position: fixed; inset: 0; z-index: 60; background: var(--bg);
   display: flex; flex-direction: column;
 }
 #pl-topbar {
   display: flex; align-items: center; gap: 10px; padding: 8px 14px;
-  background: rgba(22, 27, 35, 0.96); border-bottom: 1px solid #232b36;
+  background: var(--bg); border-bottom: 1px solid var(--glass-border);
 }
 #pl-topbar .spacer { flex: 1; }
 #pl-floors { display: flex; gap: 6px; flex-wrap: wrap; }
-#pl-floors button { background: #232b36; }
-#pl-floors button.active { background: #2b6cb0; }
-#pl-draw.active { background: #2b6cb0; }
-.pl-inline { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #aab4c4; }
+#pl-floors button { background: var(--card-bg); }
+#pl-floors button.active { background: var(--accent); }
+#pl-draw.active { background: var(--accent); }
+.pl-inline { display: flex; align-items: center; gap: 6px; font-size: 14px; letter-spacing: -0.224px; color: var(--text-faint); }
 .pl-inline select {
-  padding: 5px 8px; font-size: 13px; background: #10141a;
-  color: #e6e9ee; border: 1px solid #2a3340; border-radius: 6px;
+  padding: 8px 12px; font-size: 14px; font-family: inherit; background: var(--surface-1);
+  color: var(--text); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
 }
 .pl-inline input[type="number"] {
-  width: 74px; padding: 5px 8px; font-size: 13px; background: #10141a;
-  color: #e6e9ee; border: 1px solid #2a3340; border-radius: 6px;
+  width: 74px; padding: 8px 12px; font-size: 14px; font-family: inherit; background: var(--surface-1);
+  color: var(--text); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
 }
-.pl-inline input[type="range"] { width: 90px; accent-color: #2b6cb0; }
-#pl-img-move.active { background: #2b6cb0; }
+.pl-inline input[type="range"] { width: 90px; accent-color: var(--accent); }
+#pl-img-move.active { background: var(--accent); }
 #pl-canvas { flex: 1; width: 100%; height: 100%; display: block; touch-action: none; }
-#pl-props, #pl-sprops {
+#pl-props, #pl-sprops, #pl-op-props {
   position: absolute; top: 64px; right: 14px; width: 260px;
-  background: rgba(22, 27, 35, 0.96); border: 1px solid #232b36;
-  border-radius: 10px; padding: 14px; z-index: 61;
+  background: var(--card-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg); padding: var(--sp-md); z-index: 61;
 }
-#pl-props label, #pl-sprops label { display: block; font-size: 12px; color: #aab4c4; margin-bottom: 8px; }
-#pl-props input, #pl-props select, #pl-sprops select {
-  width: 100%; margin-top: 3px; padding: 6px 8px; font-size: 13px;
-  background: #10141a; color: #e6e9ee; border: 1px solid #2a3340; border-radius: 6px;
+#pl-props label, #pl-sprops label, #pl-op-props label { display: block; font-size: 14px; letter-spacing: -0.224px; color: var(--text-faint); margin-bottom: 8px; }
+#pl-props input, #pl-props select, #pl-sprops select,
+#pl-op-props input, #pl-op-props select {
+  width: 100%; margin-top: 3px; padding: 8px 12px; font-size: 14px; font-family: inherit;
+  background: var(--surface-1); color: var(--text);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
 }
 #pl-props input[type="color"] { padding: 2px; height: 32px; }
-#pl-stairs.active { background: #2b6cb0; }
+#pl-stairs.active { background: var(--accent); }
 #pl-status {
   position: absolute; bottom: 12px; left: 14px; z-index: 61;
-  background: rgba(10, 13, 17, 0.85); border: 1px solid #232b36;
-  border-radius: 6px; padding: 6px 10px; font-size: 12px; color: #8b95a5;
+  background: rgba(29, 29, 31, 0.85); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px;
+  letter-spacing: -0.12px; color: var(--text-dim);
 }
 
 /* misc */
 #tooltip {
   position: fixed; z-index: 40; pointer-events: none;
-  background: rgba(10, 13, 17, 0.92); border: 1px solid #2a3340;
-  padding: 6px 10px; border-radius: 6px; font-size: 12px; max-width: 260px;
+  background: rgba(29, 29, 31, 0.92); border: 1px solid var(--glass-border);
+  padding: 8px 12px; border-radius: var(--radius-sm); font-size: 14px;
+  letter-spacing: -0.224px; max-width: 260px;
 }
-#tooltip .sub { color: #8b95a5; }
+#tooltip .sub { color: var(--text-dim); }
 #banner {
   position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-  z-index: 50; background: #4a3418; border: 1px solid #8a6420;
-  color: #f4d488; padding: 10px 16px; border-radius: 8px; font-size: 13px;
+  z-index: 50; background: var(--surface-1); border: 1px solid var(--glass-border);
+  border-left: 3px solid var(--warn);
+  color: var(--text); padding: 12px var(--sp-md); border-radius: var(--radius-sm);
+  font-size: 17px; letter-spacing: -0.374px;
   max-width: 620px; text-align: center;
 }
 
@@ -426,23 +546,23 @@ form input[type="color"] { padding: 2px; height: 32px; }
 .mode-switch {
   display: flex; align-items: center; gap: 8px; margin: 0 10px;
 }
-.mode-label { font-size: 13px; font-weight: 500; transition: color 0.3s ease; }
+.mode-label { font-size: 14px; font-weight: 400; letter-spacing: -0.224px; transition: color 0.3s ease; }
 .mode-switch .switch {
   position: relative; display: inline-block; width: 44px; height: 24px;
 }
 .mode-switch .switch input { opacity: 0; width: 0; height: 0; }
 .mode-switch .slider {
   position: absolute; cursor: pointer; inset: 0;
-  background-color: #2b6cb0; transition: .4s;
+  background-color: rgba(255, 255, 255, 0.16); transition: .4s;
   border-radius: 24px;
 }
 .mode-switch .slider:before {
   position: absolute; content: ""; height: 18px; width: 18px;
   left: 3px; bottom: 3px; background-color: white; transition: .4s;
-  border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  border-radius: 50%;
 }
-.mode-switch input:checked + .slider { background-color: #b23b3b; }
-.mode-switch input:focus + .slider { box-shadow: 0 0 1px #b23b3b; }
+.mode-switch input:checked + .slider { background-color: var(--accent); }
+.mode-switch input:focus-visible + .slider { outline: 2px solid var(--accent-hover); outline-offset: 2px; }
 .mode-switch input:checked + .slider:before { transform: translateX(20px); }
 
 /* ============================= tablet dashboard ============================ */
@@ -453,18 +573,18 @@ form input[type="color"] { padding: 2px; height: 32px; }
   width: 240px; padding: 12px 18px;
   display: flex; align-items: center; gap: 10px;
   background: var(--glass-bg); color: var(--text);
-  font-size: 15px; font-weight: 600; text-align: left;
+  font-size: 17px; font-weight: 600; letter-spacing: -0.374px; text-align: left;
 }
 @media (hover: hover) {
   #home-btn:hover { background: var(--glass-bg-strong); }
 }
 #home-btn:active { background: var(--glass-bg-strong); }
 #home-btn .hb-icon {
-  width: 34px; height: 34px; border-radius: var(--radius-md);
+  width: 34px; height: 34px; border-radius: var(--radius-sm);
   background: var(--accent); display: flex; align-items: center;
   justify-content: center; font-size: 17px; flex: none;
 }
-#home-btn .hb-sub { display: block; font-size: 11px; font-weight: 400; color: var(--text-dim); }
+#home-btn .hb-sub { display: block; font-size: 12px; font-weight: 400; letter-spacing: -0.12px; color: var(--text-dim); }
 
 /* Left column: 2-column camera grid — capacity is computed in cameras.js so
    it never scrolls (wall tablet, touch only); overflow:hidden is the backstop */
@@ -477,10 +597,10 @@ form input[type="color"] { padding: 2px; height: 32px; }
 
 .cam-tile {
   position: relative; border-radius: var(--radius-lg); overflow: hidden;
-  background: #0b0e13; border: 1px solid var(--glass-border); cursor: pointer;
+  background: var(--bg); border: 1px solid var(--glass-border); cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: transform 0.12s;
 }
-.cam-tile:active { transform: scale(0.96); }
+.cam-tile:active { transform: scale(0.95); }
 /* placeholder glyph: visible until the first snapshot lands, and shows
    through the dimmed image of a broken/offline camera */
 .cam-tile::before {
@@ -495,14 +615,16 @@ form input[type="color"] { padding: 2px; height: 32px; }
 }
 .cam-label {
   position: absolute; left: 0; right: 0; bottom: 0;
-  padding: 14px 10px 6px; font-size: 11.5px; font-weight: 600;
-  background: linear-gradient(to top, rgba(8, 10, 14, 0.85), transparent);
+  padding: 14px 10px 8px; font-size: 12px; font-weight: 400; letter-spacing: -0.12px;
+  /* functional legibility scrim over photography, not a decorative gradient */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
   pointer-events: none;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cam-fav-badge {
-  position: absolute; top: 6px; right: 8px; font-size: 13px;
-  color: var(--warn); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  position: absolute; top: 6px; right: 6px; font-size: 14px; line-height: 24px;
+  width: 24px; height: 24px; text-align: center; border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.45); color: var(--accent-link);
   pointer-events: none;
 }
 
@@ -511,25 +633,25 @@ form input[type="color"] { padding: 2px; height: 32px; }
   aspect-ratio: 16 / 9; padding: 0;
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 2px;
-  background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur);
   color: var(--text); font: inherit;
 }
 .cam-all-btn::before { content: none; }
-.cam-all-btn .cab-icon { font-size: 20px; line-height: 1; }
-.cam-all-btn .cab-text { font-size: 11.5px; font-weight: 600; }
-.cam-all-btn .cab-count { font-size: 10.5px; color: var(--text-dim); }
+.cam-all-btn .cab-icon { font-size: 24px; line-height: 1; }
+.cam-all-btn .cab-text { font-size: 14px; font-weight: 600; letter-spacing: -0.224px; }
+.cam-all-btn .cab-count { font-size: 12px; letter-spacing: -0.12px; color: var(--text-dim); }
 
 /* full-screen all-cameras grid — under the live view (z 55) so a tapped
    camera layers on top; tile size is computed in cameras.js so every camera
    fits the screen with no scrolling */
 #cam-all {
   position: fixed; inset: 0; z-index: 54;
-  background: rgba(8, 10, 14, 0.94);
+  background: rgba(0, 0, 0, 0.94);
   display: flex; flex-direction: column;
 }
 #cam-all.hidden { display: none; }
 #cam-all-head { display: flex; align-items: center; padding: 14px 20px; flex: none; }
-#cam-all-head h2 { flex: 1; font-size: 17px; }
+#cam-all-head h2 { flex: 1; font-size: 21px; font-weight: 600; letter-spacing: 0.231px; }
 #cam-all-grid {
   flex: 1; min-height: 0; padding: 0 20px 20px;
   display: grid; gap: 10px;
@@ -539,22 +661,22 @@ form input[type="color"] { padding: 2px; height: 32px; }
 /* full-screen single-camera live view (above dashboard chrome, below planner) */
 #cam-overlay {
   position: fixed; inset: 0; z-index: 55;
-  background: rgba(8, 10, 14, 0.94);
+  background: rgba(0, 0, 0, 0.94);
   display: flex; flex-direction: column;
 }
 #cam-overlay.hidden { display: none; }
 #cam-head { display: flex; align-items: center; padding: 14px 20px; flex: none; }
 #cam-head h2 {
-  flex: 1; font-size: 17px;
+  flex: 1; font-size: 21px; font-weight: 600; letter-spacing: 0.231px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 #cam-fav, #cam-close, #cam-all-close, #rooms-all-close {
-  width: 44px; height: 44px; padding: 0; border-radius: var(--radius-md);
+  width: 44px; height: 44px; padding: 0; border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.08); color: var(--text);
-  font-size: 22px; line-height: 1; flex: none;
+  font-size: 24px; line-height: 1; flex: none;
 }
 #cam-fav { font-size: 24px; margin-right: 10px; }
-#cam-fav.fav { color: var(--warn); }
+#cam-fav.fav { color: var(--accent-link); }
 #cam-fav:active, #cam-close:active, #cam-all-close:active, #rooms-all-close:active {
   background: rgba(255, 255, 255, 0.16);
 }
@@ -568,15 +690,15 @@ form input[type="color"] { padding: 2px; height: 32px; }
   position: absolute; top: 50%; transform: translateY(-50%);
   width: 56px; height: 56px; padding: 0; border-radius: 50%;
   background: var(--glass-bg); border: 1px solid var(--glass-border);
-  backdrop-filter: blur(var(--glass-blur));
-  color: var(--text); font-size: 26px; line-height: 1; z-index: 2;
+  backdrop-filter: var(--glass-blur);
+  color: var(--text); font-size: 24px; line-height: 1; z-index: 2;
   -webkit-tap-highlight-color: transparent;
 }
 #cam-prev { left: 28px; }
 #cam-next { right: 28px; }
 .cam-nav:active {
   background: rgba(255, 255, 255, 0.16);
-  transform: translateY(-50%) scale(0.94);
+  transform: translateY(-50%) scale(0.95);
 }
 
 /* Right column: 2-column room-card grid — capacity is computed in
@@ -589,22 +711,22 @@ form input[type="color"] { padding: 2px; height: 32px; }
   overflow: hidden;
 }
 .floor-heading {
-  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text-dim); font-weight: 600; margin: 6px 4px 0;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  /* height budget: must stay <= roomcards.js HEAD_H (22px) */
+  font-size: 12px; line-height: 1; letter-spacing: -0.12px;
+  color: var(--text-dim); font-weight: 600; margin: 8px 4px 0;
 }
 .room-card {
   /* fixed aspect on the card itself: rows line up evenly and roomcards.js's
      capacity math stays exact (must match CARD_ASPECT there) */
   position: relative; aspect-ratio: 1.6; cursor: pointer; overflow: hidden;
   border-radius: var(--radius-lg); background: var(--card-bg);
-  border: 1px solid var(--glass-border); box-shadow: var(--shadow);
+  border: 1px solid var(--glass-border);
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 @media (hover: hover) {
-  .room-card:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.18); }
+  .room-card:hover { border-color: rgba(255, 255, 255, 0.18); }
 }
-.room-card:active { transform: scale(0.985); }
+.room-card:active { transform: scale(0.95); }
 .room-card .rc-img {
   position: absolute; inset: 0; display: block;
   width: 100%; height: 100%; object-fit: cover;
@@ -613,46 +735,45 @@ form input[type="color"] { padding: 2px; height: 32px; }
 .room-card .rc-placeholder {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 24px; opacity: 0.9;
+  font-size: 24px; opacity: 0.9; background: var(--card-bg);
 }
 .room-card .rc-body {
   position: absolute; left: 0; right: 0; bottom: 0;
   display: flex; align-items: center; gap: 6px; padding: 12px 8px 7px;
-  background: linear-gradient(to top, rgba(8, 10, 14, 0.88), rgba(8, 10, 14, 0.45) 60%, transparent);
+  /* functional legibility scrim over photography, not a decorative gradient */
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0.45) 60%, transparent);
 }
 .room-card .rc-text { flex: 1; min-width: 0; }
 .room-card .rc-name {
-  font-size: 12.5px; font-weight: 600; line-height: 1.2;
+  font-size: 14px; font-weight: 600; line-height: 1.29; letter-spacing: -0.224px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 .room-card .rc-sub {
-  font-size: 10px; color: var(--text-faint); margin-top: 1px;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  font-size: 12px; letter-spacing: -0.12px; color: var(--text-faint); margin-top: 1px;
 }
-.room-card .rc-sub.lit { color: #ffd28a; }
+.room-card .rc-sub.lit { color: var(--text); }
 
 /* the rail's last tile: opens the all-rooms view (same idea as .cam-all-btn) */
 .rooms-all-btn {
   padding: 0; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 2px;
-  background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur);
   color: var(--text); font: inherit;
 }
-.rooms-all-btn .rab-icon { font-size: 20px; line-height: 1; }
-.rooms-all-btn .rab-text { font-size: 11.5px; font-weight: 600; }
-.rooms-all-btn .rab-count { font-size: 10.5px; color: var(--text-dim); }
+.rooms-all-btn .rab-icon { font-size: 24px; line-height: 1; }
+.rooms-all-btn .rab-text { font-size: 14px; font-weight: 600; letter-spacing: -0.224px; }
+.rooms-all-btn .rab-count { font-size: 12px; letter-spacing: -0.12px; color: var(--text-dim); }
 
 /* full-screen all-rooms grid — tile size is computed in roomcards.js so every
    room fits the screen with no scrolling, with a heading row per floor */
 #rooms-all {
   position: fixed; inset: 0; z-index: 54;
-  background: rgba(8, 10, 14, 0.94);
+  background: rgba(0, 0, 0, 0.94);
   display: flex; flex-direction: column;
 }
 #rooms-all.hidden { display: none; }
 #rooms-all-head { display: flex; align-items: center; padding: 14px 20px; flex: none; }
-#rooms-all-head h2 { flex: 1; font-size: 17px; }
+#rooms-all-head h2 { flex: 1; font-size: 21px; font-weight: 600; letter-spacing: 0.231px; }
 #rooms-all-grid {
   flex: 1; min-height: 0; padding: 0 20px 20px;
   display: grid; gap: 10px;
@@ -671,13 +792,13 @@ form input[type="color"] { padding: 2px; height: 32px; }
 .tswitch .knob::before {
   content: ""; position: absolute; width: 18px; height: 18px;
   left: 3px; top: 3px; border-radius: 50%; background: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35); transition: transform 0.25s;
+  transition: transform 0.25s;
 }
 /* invisible halo: grows the 40×24 switch to a ~56×48 touch target without
    changing its look; taps on it stay inside the label, so the card's
    fly-in click never fires */
 .tswitch .knob::after { content: ""; position: absolute; inset: -12px -8px; }
-.tswitch input:checked + .knob { background: var(--accent-hover); }
+.tswitch input:checked + .knob { background: var(--accent); }
 .tswitch input:checked + .knob::before { transform: translateX(16px); }
 .tswitch.pending { opacity: 0.55; }
 
@@ -697,24 +818,29 @@ form input[type="color"] { padding: 2px; height: 32px; }
 @media (hover: hover) {
   #bottom-bar .bb-tile.tappable:hover { background: var(--glass-bg-strong); }
 }
-#bottom-bar .bb-tile.tappable:active { background: var(--glass-bg-strong); }
+#bottom-bar .bb-tile.tappable:active { background: var(--glass-bg-strong); transform: scale(0.95); }
 .bb-icon {
-  width: 34px; height: 34px; border-radius: var(--radius-md); flex: none;
-  display: flex; align-items: center; justify-content: center; font-size: 16px;
+  width: 34px; height: 34px; border-radius: var(--radius-sm); flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 17px;
+  background: rgba(255, 255, 255, 0.08);   /* nominal -- boring is neutral */
 }
+/* Attention and alarm. Deliberately NOT the accent: the accent is reserved
+   for "click me", and these glyphs are readouts, not affordances. */
+.bb-icon.is-active { background: rgba(255, 255, 255, 0.20); }
+.bb-icon.is-alert  { background: rgba(255, 69, 58, 0.30); }
 .bb-main { line-height: 1.15; white-space: nowrap; }
-.bb-value { font-size: 17px; font-weight: 600; }
-.bb-label { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+.bb-value { font-size: 17px; font-weight: 600; letter-spacing: -0.374px; }
+.bb-label { font-size: 12px; letter-spacing: -0.12px; color: var(--text-dim); }
 .bb-steppers { display: flex; gap: 8px; margin-left: 2px; }
 .bb-steppers button {
   /* 44px: minimum comfortable touch target */
   width: 44px; height: 44px; padding: 0; border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1); font-size: 18px; line-height: 1;
+  background: rgba(255, 255, 255, 0.1); font-size: 24px; line-height: 1;
 }
 @media (hover: hover) {
   .bb-steppers button:hover { background: rgba(255, 255, 255, 0.2); }
 }
-.bb-steppers button:active { background: rgba(255, 255, 255, 0.2); }
+.bb-steppers button:active { background: rgba(255, 255, 255, 0.2); transform: scale(0.95); }
 
 /* calendar tile: event names can be long — keep the tile from stretching */
 #bb-calendar .bb-value { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
@@ -726,16 +852,16 @@ form input[type="color"] { padding: 2px; height: 32px; }
   overscroll-behavior: contain; /* finger-scrolling it must not chain away */
 }
 .cal-pop-head {
-  font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;
-  letter-spacing: 0.06em; margin-bottom: 8px;
+  font-size: 12px; font-weight: 600; letter-spacing: -0.12px;
+  color: var(--text-dim); margin-bottom: 8px;
 }
 .cal-row {
   display: flex; gap: 12px; align-items: baseline; padding: 9px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 .cal-row:first-of-type { border-top: none; }
-.cal-when { flex: none; width: 96px; font-size: 12px; color: var(--text-dim); }
-.cal-summary { font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
+.cal-when { flex: none; width: 96px; font-size: 14px; letter-spacing: -0.224px; color: var(--text-dim); }
+.cal-summary { font-size: 17px; letter-spacing: -0.374px; color: var(--text); overflow-wrap: anywhere; }
 
 /* small screens: give the 3D view room — drop the left column first and
    narrow the right rail to one column (roomcards.js reads the real count) */

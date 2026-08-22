@@ -345,10 +345,28 @@ per piece** — take fine gradients from a tiled texture, not from mesh cells.
   `ha/client.py`/`ha/ws_client.py` — never send it to the frontend.
 - Windows dev environment (PowerShell). Default port is 5000; if that's in use, an alternate
   `3d-ha-5001` launch config exists (see `.claude/launch.json`).
-- UI-chrome design language: the app's own glassy-dark tokens live at `:root` in
-  `frontend/css/style.css`. A vendored Apple.com design spec (full token set + do's/don'ts)
-  sits in the `apple-design` skill (`.claude/skills/apple-design/`) as a reference for
-  restyling that chrome — it is not what the app currently ships.
+- UI-chrome design language: **Apple.com, dark surfaces only**. The full token set lives at
+  `:root` in `frontend/css/style.css`; the spec it implements is vendored in the `apple-design`
+  skill (`.claude/skills/apple-design/reference/DESIGN.md`). The five rules that carry it: one
+  accent (Action Blue `#0066cc` fills, Sky Link Blue `#2997ff` for links/marks on dark); **no
+  shadows on chrome** — `--shadow` is deliberately undefined so a stray `var(--shadow)` fails
+  loudly, and elevation comes from a surface step (`--card-bg` panel < `--surface-1` tile <
+  `--surface-2` pressed) plus the 8% hairline; **weight 500 does not exist** (300/400/600/700);
+  radii don't blend (`--radius-sm` 8 utility · `--radius-lg` 18 cards · `--radius-pill` actions);
+  and `transform: scale(0.95)` is the press state on every button — *any button carrying its own
+  centring translate must restate it in its own `:active`* (`#focus-exit`, `.cam-nav`), or it
+  jumps on press. Three things are documented extrapolations, since the spec is light-dominant and
+  its Known Gaps admit dark cards were never surfaced: the hairline is inverted to
+  `rgba(255,255,255,.08)`; `.glass` keeps `backdrop-filter` (the spec sanctions it on floating
+  bars, and this chrome floats over a live 3D render) but lost its shadow; and `--ok/--warn/
+  --danger` are Apple's *system* colours, used only for readouts, never for anything clickable.
+  Three `linear-gradient`s survive as functional legibility scrims over photography
+  (`.cam-label`, `.rc-body`, `.tile.camera .t-name`) — they are commented as such; decorative
+  gradients are banned. `color-scheme: dark` themes the native controls (scrollbars, file input,
+  pickers). Out of scope and still on the old palette: the **planner's canvas drawing colours**
+  (`planner.js` `ctx.fillStyle`, ~29 literals) and `floorview.js`'s blue studio backdrop —
+  `snapshots.js`'s twin backdrop *was* reneutralised because it is deliberately matched to
+  `.room-card`. The 3D scene is lit from HA state, not CSS, and this spec never governed it.
 - Not yet implemented (see `3d-home-assistant-house-spec.md` phases 8-9): drag-to-position for
   *devices* in the 2D planner (rooms drag there already; devices drag in the 3D view once their
   panel is open, or via numeric inputs), app-level login (needed before hosting this anywhere

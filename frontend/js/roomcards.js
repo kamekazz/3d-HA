@@ -117,8 +117,6 @@ function buildCard(room, inOverlay) {
   img.alt = room.name;
   const placeholder = document.createElement('div');
   placeholder.className = 'rc-placeholder';
-  placeholder.style.background =
-    `linear-gradient(135deg, ${room.color || '#8fa8bf'}33, #10141a 85%)`;
   placeholder.textContent = roomEmoji(room.name);
 
   const entry = { sub: null, switchEl: null, input: null, img, placeholder,
