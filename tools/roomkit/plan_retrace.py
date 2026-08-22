@@ -90,13 +90,25 @@ ROOMS[26] = rect(MX2, MZ2, 461,  684, 491,   732)   # bath (2F)
 ROOMS[25] = rect(MX2, MZ2, 790, 1028, 752,   901)   # "Room 7" = closet by Rios
 ROOMS[13] = rect(MX2, MZ2, 683, 1028, 901,  1200)   # Guest Room
 ROOMS[13]["width"] = 12.4                            # butt to the hallway wall
-ROOMS[17] = rect(MX2, MZ2, 461,  684, 736,  1198)   # Hallway (2F)
 ROOMS[27] = rect(MX2, MZ2,  87,  461, 804,  1037)   # Master Closet
 ROOMS[16] = rect(MX2, MZ2,  53,  461, 1037, 1386.5) # Master Bath
 ROOMS[24] = rect(MX2, MZ2, 812, 1027, 1200, 1354.5) # Bathroom closet
-# Master Bedroom - L, includes the entry vestibule off the hallway
-ROOMS[14] = poly(MX2, MZ2, [(461, 1354.5), (597, 1354.5), (597, 1205),
-                            (810, 1205), (810, 1354.5), (1027, 1354.5),
+# Hallway (2F) - re-traced 2026-08-22 by fix_2f_hallway.py, which also placed
+# the five doors.  The original rect(461, 684, 736, 1198) missed the east arm
+# (px 684..790) that fronts the Rios closet and the guest room, and had no
+# stairwell.  The 20 px step in the north edge at px 683 is real: the 2F
+# bathroom's south wall is at py 732, Rios Room's at py 752.
+ROOMS[17] = poly(MX2, MZ2, [(461, 1010), (580, 1010), (580, 732), (683.4, 732),
+                            (683.4, 752.5), (790, 752.5), (790, 901),
+                            (683.4, 901), (683.4, 1198), (461, 1198)])
+# Stairwell - the north (unhatched, so floored) half of the strip the partition
+# at px 580 walls off; the stair cut is py 904..1010 and carries no room.
+ROOMS[28] = rect(MX2, MZ2, 461,  580, 732,   904)   # Stairwell
+# Master Bedroom - L, includes the entry vestibule off the hallway.  Hand-edited
+# down from 8 verts to 7 after the re-trace: the vestibule now runs the full
+# px 461..810 instead of px 461..597.
+ROOMS[14] = poly(MX2, MZ2, [(461, 1354.5), (461, 1205), (810, 1205),
+                            (810, 1354.5), (1027, 1354.5),
                             (1027, 1720.5), (461, 1720.5)])
 
 # ============================ BASEMENT (level 0) ============================
@@ -124,7 +136,8 @@ def patch(path, body):
 FLOOR_OF = {1: 0, 2: 0,
             3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1,
             22: 1, 23: 1,
-            13: 2, 14: 2, 15: 2, 16: 2, 17: 2, 24: 2, 25: 2, 26: 2, 27: 2}
+            13: 2, 14: 2, 15: 2, 16: 2, 17: 2, 24: 2, 25: 2, 26: 2, 27: 2,
+            28: 2}
 
 
 def bbox(b):

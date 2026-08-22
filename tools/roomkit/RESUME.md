@@ -29,7 +29,54 @@ you.)
 | 5 Living Room | **round 5, three sub-passes done, not yet shot for a critic.** 31 objects, **1.64 MB** (was 1.98). (a) `b5_soft.py`: upholstery cells coarsened ~30% now the fine gradient comes from the tile not the mesh — metrics re-measured after the change, not assumed. (b) `b5_shadows.py` (new): contact shadows now read **live object positions out of the app** instead of hand-copied constants, so they cannot drift again — this is the round-4 critic's "no contact shadow under the east sofas or armchair"; pieces standing on the rug draw at y 0.115, on bare plank at 0.050. (c) `b5_view.py` (new): the three outdoor boards re-cut to sit 0.30 ft behind their openings (they were 1.7 ft outside the shell and visible from the dollhouse quadrant) and roughly halved to ~105 KB total. **Next: the per-wall albedo skins — still the unpulled lever, wall spread 114.4 — then shoot `doll_se` + the photo views and send to a critic.** |
 | 6 Kitchen | **round 4, two fixes done, not yet shot for a critic.** 15 objects, **1.66 MB** — the round-3 payload failure (5.88 MB, 27% of the house) is **fixed**. (a) `p_extras.py` rug weave calibrated rather than guessed: render = 0.89·albedo + 55.3 measured, so the weave is re-based to 72.8 mean / sd 45 to land on photo F's 120.1 / 38.1. (b) `p_floor.py` island contact shadow moved onto the **counter** footprint, not the box. **Next: the counter stone — still the round-3 fail, hf/tot 0.25 against the photo's 0.40-0.48, to be rebuilt as a tiled texture or vertex colours, NOT raster cells — then the fridge side face and counter clutter.** |
 | 16 Master Bath + 26, 23 | Bathrooms round 1. Was at "contact shadows render but are far too faint and z-fight — rebuild as an opaque radial colour ramp". 16 has 10 objects; 26 has 4; 23 has 4. **Check the shadow rebuild landed sanely before adding to it.** |
-| 12, 17, 27 hallways/closet | Was at "room 12 is in good shape, now room 17". 12 has 10 objects and 7 openings; 17 has 9 and 4; 27 has 4. |
+| 12, 17, 27 hallways/closet | Was at "room 12 is in good shape, now room 17". 12 has 10 objects and 7 openings; 17 has 9 objects; 27 has 4. **Room 17's footprint and all five of its doors were re-traced 2026-08-22** (see below) — the furniture in it predates the new shape, so check nothing is now standing in the east arm or in the stairwell wall. |
+
+## 2026-08-22 — second-floor hallway + doors re-traced
+
+`fix_2f_hallway.py` (idempotent, re-runnable) rebuilt room 17's footprint and
+placed the five doors the owner marked in
+`docs/floor plan/Gemini_Generated_Image_i28ml3i28ml3i28m.jpg`. What changed:
+
+- **Room 17 Hallway** is now a 10-vertex L. The old polygon was missing the
+  whole east arm (plan px 684..790, the stretch fronting the Rios closet and the
+  guest room), so two of the five doors had no wall to sit on.
+- **Room 28 Stairwell** is new — the north half of the strip the partition at
+  px 580 walls off. It exists because that strip as a bare notch had no west
+  wall, leaving an exterior gap above the master closet. It is only the north
+  half because a room slab covers its whole footprint (`house.js:431`) and a
+  full-strip slab floors the staircase over; the plan's tread hatching
+  (py 915..990) is left as an open cut so the stairs still read on the 2F.
+- **Five doors**, `type: door`, each cut on **both** sides (rooms 13, 14, 15,
+  24, 25, 26). Rooms 25 and 24 were sealed boxes before this.
+- Deleted: opening 111 (cut the hallway stem's east wall, which the plan shows
+  solid — it was traced from a region a UI card covers in the screenshot) and
+  opening 79 (targeted `edge_index 7` on a 7-vertex polygon, so it never
+  rendered).
+- Stairs 7 trimmed to `z 13.5, depth 9.8`; it ran 1.06 ft into the 2F bathroom.
+- **Room 17's anchor moved 3.80 ft west** when the arm was added. Objects and
+  placements are stored relative to the footprint anchor (`objects.js:128`), so
+  the script compensates all 18 pieces by the anchor delta. If you re-shape this
+  room again, do the same or the whole room slides.
+- **`Hall2F Doors` deleted.** The circulation round hand-built it to stand
+  leaves in the four openings room 17 had then; against the corrected footprint
+  two of them coincide with the engine's own door panels, one stands free in the
+  middle of the new east arm, and one is buried in the solid stem wall. Its
+  casings went with it — re-cut them against the new edges next roomkit round.
+  This closes three of the four `_gaps` recorded in `rooms/17.json`: room 14 and
+  room 26 now register with this room's openings, and the "unmodelled space
+  between room 25 and …" is the east arm, now built. `rooms/17.json`'s
+  `_room.rect_world` (10.5–18.6 × 6.6–23.3) is stale — the room is now the
+  10-vertex L at 6.70–18.62 × 6.55–23.44.
+
+`plan_retrace.py`'s `ROOMS[17]`, `ROOMS[14]` and the new `ROOMS[28]` were
+updated to match, so its `raster_check()` reproduces the live layout
+(L2: 1229 sq ft, no overlaps).
+
+**Still open here:** which end of the stairwell strip is the top landing. The
+plan hatches only 2.7 ft of treads, and stairs 7 is `direction: 'n'` (from the
+*main*-floor plan), which puts its head under the new landing slab. It renders
+fine, but if the owner says you come up facing south, the Stairwell room should
+move to the south end of the strip instead.
 
 ## The two open critic verdicts
 
