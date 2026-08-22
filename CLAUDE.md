@@ -11,43 +11,20 @@ browser — the browser only talks to Flask; Flask talks to Home Assistant.
 
 ## Running it
 
-```
-cd backend
-python -m venv .venv
-.venv\Scripts\activate          # Windows
-pip install -r requirements.txt
+`cd backend` then `python app.py` (create the venv and `pip install -r requirements.txt` first).
+Opens on http://127.0.0.1:5000.
 
-copy .env.example .env          # then edit .env:
-#   HA_BASE_URL = https://<your-instance>.ui.nabu.casa
-#   HA_TOKEN    = <a FRESH long-lived access token>
-#   APP_SECRET  = <anything random>
+`backend/config.py` is the only reader of `.env` (`HA_BASE_URL`, `HA_TOKEN`, `APP_SECRET`). There is
+no `.env.example` in the repo, and the app boots without `.env` at all — you can build rooms, but
+there's no HA data or live states until it's configured.
 
-python app.py
-```
-
-Open http://127.0.0.1:5000. There is no `.env.example` requirement to boot — the app starts without
-`.env` too (you can build rooms, but there's no HA data or live states until it's configured).
-
-There is no test suite, linter, or build step in this repo (no `package.json`, no Python test
-files). Verify changes by running the app and exercising the flow in a browser (see the `run` and
-`verify` skills).
+There is no test suite, linter, or build step in this repo. Verify changes by running the app and
+exercising the flow in a browser (see the `run` and `verify` skills).
 
 `app.py` runs with the Werkzeug reloader **off** on purpose (`debug=False`) — the HA websocket
 background thread must only start once per process; enabling the reloader would double-start it.
 
 ## Architecture
-
-```
-Browser (Three.js + vanilla JS, ES modules via importmap, no build step)
-     │ HTTP + SocketIO (no HA token here)
-     ▼
-Flask backend
-  ├── ha/client.py     REST → HA (states, call_service) — holds the token
-  ├── ha/ws_client.py  WebSocket → HA (registries + state_changed, auto-reconnect)
-  ├── ha/cache.py      in-memory floors/areas/devices/entities + states
-  ├── house/           our 3D layout (SQLite: backend/house.db)
-  └── realtime/        SocketIO relay of state changes to browsers
-```
 
 **Two separate data models that get merged client-side:**
 - *HA's own registries* (floors/areas/devices/entities/states) — read-only, fetched over HA's
@@ -107,14 +84,10 @@ state changes.
 **Control path:** browser → `POST /api/control` (`api/control_routes.py`) → `HAClient.call_service`
 → HA. `domain` defaults to the entity_id's prefix and `service` defaults to `toggle` if not given.
 
-**Key endpoints:** `GET /api/ha/structure` (HA tree), `GET /api/ha/states`, `GET /api/ha/status`,
-`POST /api/ha/refresh` (re-fetch HA registries) — `GET/POST/PATCH/DELETE /api/house*` (floor/room/
-device-placement CRUD, backed by `HouseStore`), `POST /api/house/generate` (add missing rooms),
-`POST /api/house/sync` (full reconcile — see above) — `POST/GET/DELETE /api/house/floor/<id>/plan`
-+ `GET /api/house/plan/<id>` (floor-plan tracing images, saved under `backend/uploads/` — tracked
-in git for now so clones ship the demo data, to be re-ignored later;
-png/jpg/webp only, never SVG — files are served back verbatim) — `POST /api/control` — SocketIO
-event `state_changed`.
+**Endpoints** are declared as `@bp.<verb>("/path")` in `house/routes.py` (blueprint prefix
+`/api/house`) and in `api/*_routes.py` — grep those for the current list. One rule that isn't
+visible in the route table: floor-plan and model uploads are **png/jpg/webp only, never SVG** —
+files are served back verbatim, so an SVG would be a script-execution vector.
 
 **Units are FEET everywhere** (world unit = 1 ft; grid cells are 1 ft). Databases from before the
 feet switch stored meters and are converted ×3.28084 once on boot, gated by `PRAGMA user_version`
@@ -170,172 +143,12 @@ house, PATCHes per gesture through the normal room endpoints, and triggers exact
 when closed. `demo/seed_demo.py` + `demo/demo_layout.json` seed this instance's real layout (traced
 from the screenshots in `demo/`) — idempotent keyed upserts, re-runnable.
 
-**Dynamic lighting** follows Home Assistant's sun and weather — frontend-only, no backend changes.
-`frontend/js/daylight.js` reads `sun.sun` (`elevation`/`azimuth`) and the first `weather.*` entity
-(via `state.js findEntities`), maps elevation through a keyframe ramp (night/dusk/golden/day) and
-the weather condition through a dim/desaturate table, and eases `scene.js`'s exported
-`sunLight`/`hemiLight` plus background+fog color toward the target each frame (~1s settle;
-`onFrame(fn)` tick registry in scene.js — fog near must stay > controls.maxDistance 300; HA azimuth
-0=N maps to scene north = −Z). Renderer uses ACESFilmic tone mapping; shadows stay off (translucent
-walls). Topbar `☀ auto` button cycles auto/day/night (persisted in `localStorage['3dha.lightMode']`);
-`window.__daylight.simulate({elevation, azimuth, condition})` fakes states for testing,
-`simulate(null)` reverts. `frontend/js/roomlights.js` makes rooms glow at night when their HA
-`light.*` entities are on (placed devices ∪ the linked HA area's lights): slab emissive tint per lit
-room, plus a **fixed pool of 6 PointLights** (never added/removed — changing the scene's light count
-recompiles every MeshStandard shader; only intensities animate, scaled by `getNightFactor()`).
-When >6 rooms are lit, the ones nearest `controls.target` on visible levels win.
-`setRoomLightsData({house, structure})` must be re-called after every house rebuild
-(`main.js reloadHouse`) because slabs get fresh materials.
+**Frontend detail lives in `frontend/CLAUDE.md`** — the dynamic lighting, outdoor
+environment/weather, dollhouse cutaway and single-floor presentation systems. It loads
+automatically whenever you work under `frontend/`.
 
-**Outdoor environment & weather** (frontend-only): `frontend/js/environment.js` builds the yard —
-a grass disc reaching past fog-far, merged low-poly trees/bushes (two draw calls, vertex-colored
-foliage, seeded RNG so the yard never reshuffles) laid out to mirror the real property's satellite
-view (dense west treeline, treeline across the back, open east lawn, shrubs flanking the driveway
-entrance), plus a fake-AO contact shadow. Plants anchor to the house-shell GLB's **measured**
-footprint when one is loaded — re-measured on `levelChanged` since the shell loads async, with flat
-hardscape meshes (<3 ft tall, e.g. the driveway) excluded from the bounds — and never grow on a
-room rect (`onPad`). `setEnvironmentData(house)` re-runs on every `reloadHouse`.
-`frontend/js/weather.js` renders the HA weather condition: rain streaks (LineSegments) + snow
-(Points) from fixed max-size pools throttled with `setDrawRange`, ~9 drifting cloud meshes,
-lightning as `renderer.toneMappingExposure` flashes (never add/remove lights — shader recompile),
-and eased wet/whitened lawn tinting via `setGroundWet/Snow`. It follows daylight.js's resolved
-sun+weather through `onDaylightChanged`, so the mode button and `__daylight.simulate({condition})`
-drive it too; `window.__weather.step(secs)` advances the easing manually for testing (rAF pauses in
-hidden tabs, so nothing eases while the tab is backgrounded). Both hide in edit mode
-(`appModeChanged`), where the grid/dark ground shows instead, and in single-floor view (below).
-
-**The dollhouse cutaway** (`frontend/js/cutaway.js`): the walls between you and a room fade out, so
-every room reads like a Sims-4 build-mode shot — two far walls, no near walls, no ceiling. This used
-to be free: walls were zero-thickness `ShapeGeometry` fins wound with inward normals and drawn
-`side: THREE.FrontSide`, so the GPU backface-culled whichever ones the camera stood behind. That
-popped at exactly 90 degrees, and it only ever hid the wall *surface* — the art and windows mounted
-on it are separate GLB objects and were left hanging in mid-air.
-
-Walls now have a body (`house.js WALL_THICKNESS`, 0.35 ft, extruded **outward** so the inner face
-stays on the old plane — every one of the hand-placed furniture pieces is flush against it, and an
-inward extrusion would embed them). Each polygon edge is its own child `Mesh` of the room mesh with
-its own **cloned** material and `userData { part:'wall', edgeIndex, nx, nz (inward normal), fade,
-hx, hz }`; the room mesh itself now carries empty geometry and is just the identity + parent
-(`roomMeshes`, picking, `userData.kind`). Each wall's shape runs from `u = -t` to `len + t` so
-neighbours overlap in a `t x t` block at every corner instead of leaving a notch. Each wall also
-carries its own `part:'plinth'` skirt and `part:'edges'` accent rim as children, so both fade with
-it — a room-wide version of either left a colored kerb and a bright outline tracing walls that had
-dissolved. The skirt is a bare quad on the wall's **outer** face, not a solid: the outer face is the
-only part of a kerb you can ever see, and a solid's end cap points along its wall, so at a corner
-whose neighbour had faded it jutted into the open side as a colored nub. One `part:'plinthCap'`
-(the polygon at `-PLINTH_DEPTH`, **BackSide**) closes the underside; BackSide is load-bearing —
-faced up, its projection slides out past the slab's along the near edges and repaints the kerb.
-
-One `onFrame` tick scores every wall by `dot(inward normal, horizontal direction to the camera)` and
-eases opacity across a **wide** band (`FADE_LO 0.02 .. FADE_HI 0.55` — these are cosines, so that is
-~33 degrees of orbit; the first attempt at 0.05..0.30 spanned barely 15 and still read as the pop it
-replaced). The score is horizontal-only: folding in camera height would fade every wall at once from
-overhead. `house.js applyWallOpacity` is the single writer, multiplying `userData.fade` by the room's
-`baseOpacity` so focus-mode ghosting composes; `setRoomOpacity`/`setRoomEmissive`/`paintRoomEmissive`
-fan out over the wall children (`paintRoomEmissive` deliberately does *not* touch `baseEmissive` —
-hover needs to add a boost and put the stored level back).
-
-It runs in **every** view that draws rooms, not just room focus: a solid wall does not backface-cull,
-so a focus-only fade would turn the single-floor view into a row of sealed boxes.
-
-Things mounted on a wall go with it. Door/window hinges carry `edgeIndex`. Furniture binds whole-object
-when it is within 2 ft of a wall **and** its anchor is above 1.2 ft — the height gate is what keeps a
-sofa pushed against a wall in place while the art above it leaves. **Architecture** (`WALL_ARCH_RE`:
-wall/wainscot/baseboard/crown/moulding/trim, plus the openings through it — window, door, opening,
-casing, jamb, lining, slider, panel; every noun takes an optional plural, since the pieces that
-exposed this were named "Dining Openings"/"Dining Windows"/"Rios Closet Doors") takes a different
-route from furniture in two ways that are the whole point of the split list: it **skips the 1.2 ft
-height gate** (a door lining or a garage door starts at the floor and still has to leave with its
-wall) and it is measured **by geometry, not by its anchor** ("Dining Windows" is five units on four
-walls in one model, anchored near none of them). `floor` is deliberately absent — a floor plane in a
-narrow room measures within `SURFACE_MAX_DIST` of every wall and would be shredded across all of
-them. Not objects.js's `SURFACE_RE`, which is about pickability and also matches "Ceiling Fan".
-Architecture is one GLB per room and binds **per wall**: by sub-mesh
-where the GLB happens to have one per wall, and otherwise by `splitMerged`, which sorts the merged
-run's triangles by nearest wall and rebuilds it as one child mesh per wall (buckets share the source
-attribute buffers, differ only in their index, and each needs its **own** material clone, since
-`fadeSubtree` tracks the transparent flag per material). That split is what the whole thing turns
-on: `glb.py` groups primitives **by material, never by wall**, so a `for w in "nswe"` trim run lands
-in a single primitive whose bbox centre is mid-room — it bound to nothing and kept full opacity
-forever, leaving skirting, wainscot, casings and door leaves standing in the gap. Fixing it here and
-not in the GLBs means every already-uploaded room is covered with no rebuild. The bind is lazy (GLBs
-resolve late) and must `root.updateWorldMatrix(true, true)` first, because `Box3.setFromObject`
-refreshes only the object's own matrix and a stale parent chain makes every panel measure to the
-room origin; collect the sub-meshes before splitting, or `traverse` walks into the buckets it just
-made. Ceilings (`CEILING_RE`, name *ending* in "Ceiling") always fade to 0 — crown authored inside
-a `* Ceiling` piece therefore goes with it even on walls still shown.
-Anything faded gets `transparent: true` set once (flipping that flag is what recompiles a shader).
-`objects.js` stays the single writer of object *visibility*; the fade goes through its `wallFade` map.
-`window.__cutaway` exposes `settle()` (jump every fade to its target — roomkit's `shot.py` and
-`dollhouse.py` call it before grabbing the canvas), `setEnabled(b)` and `debug()`. Snapshot cards
-render from their own camera, so `snapshots.js` brackets its render with `scoreForCamera(snapCam)`.
-Room focus also hides stairs, which live on the house root and would otherwise hang in the backdrop.
-
-**Single-floor presentation mode** (`frontend/js/floorview.js`): picking a floor in the level
-selector shouldn't leave one slab hovering over the lawn, so on `levelChanged` to a floor it swaps
-the sky for a dark studio-gradient backdrop (a radial CanvasTexture as `scene.background`, fog
-nulled — daylight.js guards its background/fog writes behind `scene.background.isColor`/`scene.fog`
-and exposes `repaintSky()` for the restore, since its tick early-returns once converged), flies the
-camera to a centered ~50°-elevation dollhouse shot of that floor's rooms (keeps the current
-azimuth), locks zoom-out just past that framing shot (`scene.js setMaxZoom` retunes the live
-`MAX_ZOOM` cap), and disables pan so the floor stays centered; environment.js and weather.js hide
-their roots on the same event. Selecting House ('all') restores the daylight sky, the house zoom
-cap, and the pose you left from (focus-mode exits then override with their own saved pose — both
-were captured at the same moment). Same-level re-fires (rebuilds) only re-center the orbit target
-— buildHouse's `focusOn` points it at the whole-house center otherwise — without moving the camera.
-
-**Frontend module layout** (`frontend/js/`, loaded as native ES modules, Three.js via CDN
-importmap — no npm/bundler):
-- `main.js` — bootstraps: loads HA structure + house layout, builds the scene, wires picking
-  (raycasting for click/hover on rooms and device markers) and realtime.
-- `scene.js` — Three.js scene/camera/renderer/controls setup.
-- `house.js` — builds room geometry (floors, per-edge thick walls, slab, plinth) from `/api/house`
-  data. Also loads the whole-house shell GLB; when that fetch/parse fails it dispatches
-  `shellLoadFailed` and `ui.js`
-  raises a persistent banner — a silently missing house reads as a render bug rather than the deploy
-  problem it usually is (see `docs/TROUBLESHOOTING-house-shell.md`).
-- `devices.js` — builds device markers from placements; owns the `markers` map (entity_id → mesh)
-  and per-domain base colors.
-- `state.js` — live entity-state store; restyles markers on state change (color/emissive/scale
-  encode on/off/unavailable).
-- `socket.js` — SocketIO client wrapper with polling fallback.
-- `daylight.js` — sun/weather-driven scene lighting (see Dynamic lighting above).
-- `cutaway.js` — camera-aware per-wall fade + wall-mounted furniture (see The dollhouse cutaway
-  above). Owns `window.__cutaway`.
-- `floorview.js` — single-floor presentation mode: dark backdrop, centered floor framing,
-  zoom-out lock (see Single-floor presentation mode above).
-- `roomlights.js` — per-room night glow for HA lights that are on.
-- `environment.js` — grass/trees/bushes yard + contact shadow (see Outdoor environment above).
-- `weather.js` — rain/snow/clouds/lightning + lawn tint from the HA weather condition.
-- `ui.js` — room editor panel, device detail/control panel, level selector, connection banner.
-- `planner.js` — the 2D per-floor floor-plan editor (canvas overlay, feet grid, polygon editing,
-  plan-image tracing).
-- `api.js` — thin fetch wrapper for the Flask endpoints above; notifies layout-mutation listeners
-  (`onLayoutMutation`) after each mutating `/api/house` call.
-- `undo.js` — app-wide undo/redo buttons + Ctrl+Z/Y shortcuts (see Undo/redo above).
-
-## The room build ("roomkit") — how the house gets furnished
-
-Every room is being rebuilt as procedural geometry until a critic can't tell the render from the
-photograph of the real room. **Start any room work by reading `tools/roomkit/RESUME.md`** — it
-carries the current state, the open critic verdicts and what to do next; then `ROOM-BRIEF.md`
-(toolchain + every lesson the critic reports have produced) and `STYLE-BAR.md` (the Sims 4
-dollhouse bar). Per-room piece maps live in `tools/roomkit/rooms/<id>.json`; whole-house state in
-`house_status.json`, rendered to a shareable page by `python -m roomkit.house_progress` (run from
-`tools/`).
-
-`tools/roomkit/` is the toolchain: `glb.py` writes GLBs by hand (no Blender), `place.py` uploads
-and positions them through the normal `/api/house/model` + `/api/house/room/<id>/object` endpoints,
-`rooms.py` shoots a room from the reference photo's viewpoint or from a `doll_se/sw/ne/nw`
-cutaway quadrant, `dollhouse.py` shoots the whole house with every floor visible, `meter.py`
-compares render against photo. Per-room build scripts live in `scratchpad/<room>/` (e.g.
-`scratchpad/lr5/`, `scratchpad/kbuild/`) and are idempotent and re-runnable, keyed by piece name.
-
-The loop is build → shoot → **blind** critic verdict → next round. Two rules that have each cost a
-round: `roomkit.meter` only measures an *empty* room (its centre patch lands on furniture
-otherwise — meter furnished rooms by hand), and standard deviation is scale-blind, so match
-mean|Δ| between adjacent pixels too, at native resolution. Budgets: **≤1.5 MB per room, ≤300 KB
-per piece** — take fine gradients from a tiled texture, not from mesh cells.
+**Furnishing the house ("roomkit")** — see the `roomkit` skill; start any room work by reading
+`tools/roomkit/RESUME.md`.
 
 ## Conventions worth knowing
 

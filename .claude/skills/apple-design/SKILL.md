@@ -1,6 +1,6 @@
 ---
 name: apple-design
-description: Apple.com's design language as a full token spec (Action Blue #0066cc, SF Pro ladder, 8px spacing, one drop-shadow, pill CTAs, light/dark full-bleed tile rhythm). Use when designing or restyling UI chrome in this repo — topbar, panels, level selector, planner overlay, buttons, banners, model/plan dialogs — or when asked for an "Apple-style" / "Apple-like" look anywhere.
+description: "Apple.com's design language as a full token spec (Action Blue #0066cc, SF Pro ladder, 8px spacing, one drop-shadow, pill CTAs, light/dark full-bleed tile rhythm). Use when designing or restyling UI chrome in this repo — topbar, panels, level selector, planner overlay, buttons, banners, model/plan dialogs — or when asked for an \"Apple-style\" / \"Apple-like\" look anywhere."
 ---
 
 # Apple design language
