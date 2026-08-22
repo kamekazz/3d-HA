@@ -345,6 +345,10 @@ per piece** — take fine gradients from a tiled texture, not from mesh cells.
   `ha/client.py`/`ha/ws_client.py` — never send it to the frontend.
 - Windows dev environment (PowerShell). Default port is 5000; if that's in use, an alternate
   `3d-ha-5001` launch config exists (see `.claude/launch.json`).
+- UI-chrome design language: the app's own glassy-dark tokens live at `:root` in
+  `frontend/css/style.css`. A vendored Apple.com design spec (full token set + do's/don'ts)
+  sits in the `apple-design` skill (`.claude/skills/apple-design/`) as a reference for
+  restyling that chrome — it is not what the app currently ships.
 - Not yet implemented (see `3d-home-assistant-house-spec.md` phases 8-9): drag-to-position for
   *devices* in the 2D planner (rooms drag there already; devices drag in the 3D view once their
   panel is open, or via numeric inputs), app-level login (needed before hosting this anywhere
