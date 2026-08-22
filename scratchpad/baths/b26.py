@@ -137,14 +137,32 @@ def build_trim():
     m = baseboards(W, D, doors=[("n", *DOOR_N), ("e", SH[2], SH[3])])
     # _blit maps a unit through house.js's edge parameter, which runs ASCENDING
     # on n/e and BACKWARDS on s/w -- so mirror the span for s/w units only.
-    door_unit(m, "n", W, D, *DOOR_N)
+    # CASING ONLY -- no leaf.  Room 17's `Hall2F Doors` models this doorway's
+    # leaf with both_faces=True, so its 6-panel elevation serves the room 26 side
+    # too.  The leaf that used to be here (world z 23.400-23.545, x 10.92-13.72)
+    # sat 0.48 ft out of register with opening 128, so it hid room 17's relief
+    # from the hallway and showed doubled panel outlines from inside the bath.
+    # Owner approved dropping it, 22 Aug 2026 (scratchpad/hall2/BRIEF.md,
+    # "Duplicate neighbour door panels").  Do NOT restore `door_unit` here.
+    # `top=DOOR_TOP` keeps the casing head exactly where door_unit put it.
+    cased_opening(m, "n", W, D, *DOOR_N, top=DOOR_TOP)
     window_unit(m, "s", W, D, W - WIN_S[1], W - WIN_S[0], sill=SILL, head=HEAD)
     return m
 
 
 SKIN_LO, SKIN_HI = BB_H - 0.02, H - CROWN_H + 0.04
+
+# The north wall's doorway onto the hallway.  Opening 128 was re-cut by the room
+# 17 v2 door pass to register EXACTLY with the hallway's own opening 127 --
+# local x 0.90..3.70 (world x 11.40..14.20), 0.48 ft east of where this file's
+# DOOR_N puts it.  The skin's hole must follow the OPENING, not DOOR_N: this
+# plane sits at world z 23.428, i.e. 0.128 ft into the hallway side of the wall
+# face, so any part of it left standing across the opening reads as a slab in
+# front of room 17's door leaf.  Owner-approved (22 Aug 2026).  DOOR_N itself is
+# deliberately untouched -- it still drives this room's own casing and skirting.
+DOOR_N_CUT = (0.90, 3.70)
 HOLES = {
-    "n": [(DOOR_N[0] - 0.32, DOOR_N[1] + 0.32, 0.0, 7.20)],
+    "n": [(DOOR_N_CUT[0] - 0.32, DOOR_N_CUT[1] + 0.32, 0.0, 7.20)],
     "e": [(SH[2] - 0.10, SH[3] + 0.10, 0.0, H)],
     "s": [(WIN_S[0] - 0.30, WIN_S[1] + 0.30, SILL - 0.50, HEAD + 0.32)],
     "w": [],

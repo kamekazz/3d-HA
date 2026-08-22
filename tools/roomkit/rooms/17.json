@@ -1,216 +1,218 @@
 {
-  "_note": "CIRCULATION round. Build scripts live in scratchpad/circ/ -- ckit.py holds the shared helpers (idempotent openings reconcile, per-wall albedo skins with holes punched round every cut, stair dressing) and r12.py / r17.py / r27.py are idempotent by piece name, so re-running rebuilds and re-places without duplicating. Wall/floor probes: scratchpad/circ/probe.py (12, 17) and probe27.py (27); the fine-scale mean|d1| metric is d1.py.",
-  "_room_note": "Hallway (2F). Orientation: the primary photo has the stairwell knee wall running away on the RIGHT and the master-bedroom opening at the far end, so it is shot from the SOUTH looking NORTH. Confirmed independently by the level-1 stairs row (world x 14.6..18.4, z 14.3..24.5) landing on the plan drawn treads, and by the plan showing the knee-wall line at world x ~14.4 running z 13.7..23.5. NO crown in this room -- every shot shows a clean drywall corner. CHANGED this round: per-wall albedo skins re-fitted from real two-point render probes (the previous skins were ONE flat colour on all four walls and metered a 121.2-byte spread; now 9.1); runner and plant contact shadows moved to y=0.078 and strength 0.42-0.46; plank palette and floor_color re-fitted to the photo.",
-  "_room": {
-    "id": 17,
-    "name": "Hallway",
-    "floor": {
-      "id": 3,
-      "name": "Second floor.",
-      "level": 2
-    },
-    "rect_world": {
-      "x": [
-        10.5,
-        18.6
-      ],
-      "z": [
-        6.6,
-        23.3
-      ]
-    },
-    "size_ft": [
-      8.1,
-      16.7
-    ],
-    "wall_height": 8.0
+ "_note": "CIRCULATION round. Build scripts live in scratchpad/circ/ -- ckit.py holds the shared helpers (idempotent openings reconcile, per-wall albedo skins with holes punched round every cut, stair dressing) and r12.py / r17.py / r27.py are idempotent by piece name, so re-running rebuilds and re-places without duplicating. Wall/floor probes: scratchpad/circ/probe.py (12, 17) and probe27.py (27); the fine-scale mean|d1| metric is d1.py.",
+ "_room_note": "Hallway (2F). Orientation: the primary photo has the stairwell knee wall running away on the RIGHT and the master-bedroom opening at the far end, so it is shot from the SOUTH looking NORTH. Confirmed independently by the level-1 stairs row (world x 14.6..18.4, z 14.3..24.5) landing on the plan drawn treads, and by the plan showing the knee-wall line at world x ~14.4 running z 13.7..23.5. NO crown in this room -- every shot shows a clean drywall corner. CHANGED this round: per-wall albedo skins re-fitted from real two-point render probes (the previous skins were ONE flat colour on all four walls and metered a 121.2-byte spread; now 9.1); runner and plant contact shadows moved to y=0.078 and strength 0.42-0.46; plank palette and floor_color re-fitted to the photo.",
+ "_room": {
+  "id": 17,
+  "name": "Hallway",
+  "floor": {
+   "id": 3,
+   "name": "Second floor.",
+   "level": 2
   },
-  "_surfaces": {
-    "wall_color": "#d4d6d7",
-    "floor_color": "#474642",
-    "floor_texture": "wood",
-    "wall_texture": null
+  "rect_world": {
+   "x": [
+    10.5,
+    18.6
+   ],
+   "z": [
+    6.6,
+    23.3
+   ]
   },
-  "_camera": {
-    "judge_from": "doll_se",
-    "why": "Content is the WEST wall (metal sculpture, return-air grille, two doorways) and the NORTH wall (the master-bedroom cased opening the primary photo looks straight at). doll_se culls south + east and leaves exactly that pair standing -- and the east wall it culls is the only blank one in the room. The shell pass chose doll_nw, which culls the west wall and would leave the sculpture hanging in mid-air."
-  },
-  "_openings": [
-    {
-      "type": "passage",
-      "edge_index": 0,
-      "wall": "n",
-      "offset": 4.05,
-      "width": 2.9,
-      "elevation": 0.0,
-      "height": 7.0,
-      "world_span": [
-        [
-          14.55,
-          6.6
-        ],
-        [
-          17.45,
-          6.6
-        ]
-      ]
-    },
-    {
-      "type": "passage",
-      "edge_index": 2,
-      "wall": "s",
-      "offset": 4.4,
-      "width": 2.8,
-      "elevation": 0.0,
-      "height": 6.78,
-      "world_span": [
-        [
-          14.2,
-          23.3
-        ],
-        [
-          11.4,
-          23.3
-        ]
-      ]
-    },
-    {
-      "type": "passage",
-      "edge_index": 3,
-      "wall": "w",
-      "offset": 2.1,
-      "width": 2.7,
-      "elevation": 0.0,
-      "height": 6.78,
-      "world_span": [
-        [
-          10.5,
-          21.2
-        ],
-        [
-          10.5,
-          18.5
-        ]
-      ]
-    },
-    {
-      "type": "passage",
-      "edge_index": 3,
-      "wall": "w",
-      "offset": 6.02,
-      "width": 2.73,
-      "elevation": 0.0,
-      "height": 6.78,
-      "world_span": [
-        [
-          10.5,
-          17.28
-        ],
-        [
-          10.5,
-          14.55
-        ]
-      ]
-    }
+  "size_ft": [
+   8.1,
+   16.7
   ],
-  "_payload_kb": 400.9,
-  "pieces": {
-    "Hall2F Baseboards": {
-      "pos_room_local_ft": [
-        3.92,
-        0.0,
-        8.4
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 86.6
-    },
-    "Hall2F Ceiling": {
-      "pos_room_local_ft": [
-        4.05,
-        7.875,
-        8.35
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 60.9
-    },
-    "Hall2F Floor Planks": {
-      "pos_room_local_ft": [
-        4.05,
-        0.014,
-        8.35
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 15.8
-    },
-    "Hall2F Floor Runner": {
-      "pos_room_local_ft": [
-        1.61,
-        0.05,
-        7.3
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 62.5
-    },
-    "Hall2F Floor Stairwell": {
-      "pos_room_local_ft": [
-        6.075,
-        0.012,
-        12.19
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 7.5
-    },
-    "Hall2F Knee Wall": {
-      "pos_room_local_ft": [
-        3.74,
-        0.0,
-        11.505
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 8.5
-    },
-    "Hall2F Plants": {
-      "pos_room_local_ft": [
-        4.05,
-        0.0,
-        1.45
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 113.7
-    },
-    "Hall2F Wall Art": {
-      "pos_room_local_ft": [
-        0.109,
-        3.76,
-        4.196
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 29.3
-    },
-    "Hall2F Wall Wash Skins": {
-      "pos_room_local_ft": [
-        4.05,
-        0.49,
-        8.35
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 15.9
-    }
+  "wall_height": 8.0
+ },
+ "_surfaces": {
+  "wall_color": "#cfd1d2",
+  "floor_color": "#504f4b",
+  "floor_texture": "wood",
+  "wall_texture": null
+ },
+ "_camera": {
+  "judge_from": "doll_se",
+  "why": "Content is the WEST wall (metal sculpture, return-air grille, two doorways) and the NORTH wall (the master-bedroom cased opening the primary photo looks straight at). doll_se culls south + east and leaves exactly that pair standing -- and the east wall it culls is the only blank one in the room. The shell pass chose doll_nw, which culls the west wall and would leave the sculpture hanging in mid-air."
+ },
+ "_openings": [
+  {
+   "type": "passage",
+   "edge_index": 0,
+   "wall": "n",
+   "offset": 4.05,
+   "width": 2.9,
+   "elevation": 0.0,
+   "height": 7.0,
+   "world_span": [
+    [
+     14.55,
+     6.6
+    ],
+    [
+     17.45,
+     6.6
+    ]
+   ]
   },
-  "_gaps": [
-    "Room 14 (Master Bed) does NOT register with this room north opening. Ours is world x 14.55..17.45 at z=6.60, matching the plan gap 14.56..17.43 to 0.02 ft; room 14 south wall on that leg (its edge 1, from (18.62,6.30) to (13.84,6.30)) has no opening at all. It reads through in practice only because room walls are FrontSide, so a neighbour uncut wall is back-face culled from our side. The fix on their side: a passage on edge_index 1, offset 1.17, width 2.90, height 7.00, elevation 0.",
-    "The second west doorway (world z 18.50..21.20) is a real gap in the plan but the layout has NO room behind it -- world x 6.70..10.50, z 17.30..22.70 is unmodelled space between room 25 and this hallway. It is cut with an opaque leaf in it so it does not open onto nothing.",
-    "Room 26 (2F bath) does NOT register with this room south opening (world x 11.40..14.20 at z=23.30); room 26 has no openings at all. It belongs to the bathroom agent and was not touched. The fix on their side: a passage on room 26 edge_index 0 (z=23.40), offset 0.90, width 2.80.",
-    "Room 17 footprint has no void in it and the app draws one opaque slab across the whole rect, so the real stairwell opening down to the first floor cannot be shown -- it is a dark inset panel with a white nosing board, which reads as a well from the dollhouse pose but is not a hole.",
-    "Wall skins meter sd 0.00 / mean|d1| 0.00 against the photo 13.60-26.40 / 0.37-1.19."
-  ]
+  {
+   "type": "passage",
+   "edge_index": 2,
+   "wall": "s",
+   "offset": 4.4,
+   "width": 2.8,
+   "elevation": 0.0,
+   "height": 6.78,
+   "world_span": [
+    [
+     14.2,
+     23.3
+    ],
+    [
+     11.4,
+     23.3
+    ]
+   ]
+  },
+  {
+   "type": "passage",
+   "edge_index": 3,
+   "wall": "w",
+   "offset": 2.1,
+   "width": 2.7,
+   "elevation": 0.0,
+   "height": 6.78,
+   "world_span": [
+    [
+     10.5,
+     21.2
+    ],
+    [
+     10.5,
+     18.5
+    ]
+   ]
+  },
+  {
+   "type": "passage",
+   "edge_index": 3,
+   "wall": "w",
+   "offset": 6.02,
+   "width": 2.73,
+   "elevation": 0.0,
+   "height": 6.78,
+   "world_span": [
+    [
+     10.5,
+     17.28
+    ],
+    [
+     10.5,
+     14.55
+    ]
+   ]
+  }
+ ],
+ "_payload_kb": 1323.9,
+ "pieces": {
+  "Hall2F Baseboards": {
+   "pos_room_local_ft": [
+    3.92,
+    0.0,
+    8.4
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 86.6
+  },
+  "Hall2F Ceiling": {
+   "pos_room_local_ft": [
+    4.05,
+    7.822,
+    8.35
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 55.6
+  },
+  "Hall2F Floor Planks": {
+   "pos_room_local_ft": [
+    4.05,
+    0.014,
+    8.35
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 15.8
+  },
+  "Hall2F Floor Runner": {
+   "pos_room_local_ft": [
+    1.97,
+    0.05,
+    8.6
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 221.3
+  },
+  "Hall2F Knee Wall": {
+   "pos_room_local_ft": [
+    3.74,
+    0.0,
+    11.505
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 8.5
+  },
+  "Hall2F Plants": {
+   "pos_room_local_ft": [
+    4.075,
+    0.0,
+    1.65
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 143.0
+  },
+  "Hall2F Wall Art": {
+   "pos_room_local_ft": [
+    0.527,
+    3.297,
+    4.295
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 133.2
+  },
+  "Hall2F Wall Wash Skins": {
+   "pos_room_local_ft": [
+    4.05,
+    0.5,
+    8.35
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 161.2
+  },
+  "Hall2F Wall Fittings": {
+   "pos_room_local_ft": [
+    0.523,
+    0.992,
+    4.302
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 13.3
+  }
+ },
+ "_gaps": [
+  "Room 14 (Master Bed) does NOT register with this room north opening. Ours is world x 14.55..17.45 at z=6.60, matching the plan gap 14.56..17.43 to 0.02 ft; room 14 south wall on that leg (its edge 1, from (18.62,6.30) to (13.84,6.30)) has no opening at all. It reads through in practice only because room walls are FrontSide, so a neighbour uncut wall is back-face culled from our side. The fix on their side: a passage on edge_index 1, offset 1.17, width 2.90, height 7.00, elevation 0.",
+  "The second west doorway (world z 18.50..21.20) is a real gap in the plan but the layout has NO room behind it -- world x 6.70..10.50, z 17.30..22.70 is unmodelled space between room 25 and this hallway. It is cut with an opaque leaf in it so it does not open onto nothing.",
+  "Room 26 (2F bath) does NOT register with this room south opening (world x 11.40..14.20 at z=23.30); room 26 has no openings at all. It belongs to the bathroom agent and was not touched. The fix on their side: a passage on room 26 edge_index 0 (z=23.40), offset 0.90, width 2.80.",
+  "Room 17 footprint has no void in it and the app draws one opaque slab across the whole rect, so the real stairwell opening down to the first floor cannot be shown -- it is a dark inset panel with a white nosing board, which reads as a well from the dollhouse pose but is not a hole.",
+  "Wall skins meter sd 0.00 / mean|d1| 0.00 against the photo 13.60-26.40 / 0.37-1.19."
+ ],
+ "_surfaces_v2_note": "V2 SURFACES+SOFT GOODS pass (scratchpad/hall2/build.py; probe.py solves the skins, wallmeter.py meters every wall over its own probe mask, m.py meters the photo). THE FINDING THAT MATTERS FOR EVERY ROOM: house.js extrudes each wall OUTWARD from its own footprint line, so on a party wall the NEIGHBOUR's 0.35 ft slab lands INSIDE this room and is the surface the camera actually sees. In room 17 that is room 13 over local x 0..0.35 for z -0.10..10.70, room 14 over local z -0.30..0.05, room 16 over local x 7.75..8.10, room 26 over local z 16.45..16.80. Anything mounted against the footprint line renders inside the neighbour's slab and is INVISIBLE -- that is why the round-1 sculpture could not be seen and why the previous skins metered as if absent. build.py's FACE dict / wface() offset every wall-mounted piece onto the visible face. Skins solved by probe: n #6f6f6f -> 169.4, s #f7f7f7 -> 164.4, e #cacaca -> 157.6, w #b2b2b2 -> 176.1 (photo: west wall 171-182, north 165.7, ceiling 144-148). Ceiling emissive dropped to #5c5c5c -> 148.7 (kit.CEIL's #b0b0b0 gave 207.7). Runner: 3-tone basketweave height field, 200.4/197.2 north and 166.7 south against the photo's 181.2.",
+ "_runner_note": "Hall2F Floor Runner has failed three ways, all from REGULARITY: r1 full-width cylinders over a slab (piano keyboard), r2 a light/dark pair across straight ropes (painted stripes), r3 a basketweave on a straight lattice (a floor GRATE from the plan/doll poses).  It is now a quasi-periodic sum of five waves in five directions with mutually irrational periods, so no rib ever crosses the rug; the three tones are picked from that same height field so they are blobs following the wool, not cells following the mesh; cell split diagonals alternate; and the tone range is 18 levels, not 40.  CHECK IT FROM `plan` AND `doll_se`, not only at eye level -- it looked acceptable at eye level twice while being wrong from above."
 }

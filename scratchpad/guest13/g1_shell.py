@@ -103,7 +103,13 @@ def trim_piece():
 
     window_unit(m, "w", W, D, D - WIN[1], D - WIN[0],
                 sill=WIN_SILL, head=WIN_HEAD)
-    door_unit(m, "e", W, D, DOOR[0], DOOR[1], top=DOOR_H)
+    # CASING ONLY -- no leaf.  Room 17's `Hall2F Doors` models this doorway's
+    # leaf with both_faces=True, so its 6-panel elevation already serves the
+    # room 13 side.  A leaf here sat 0.145 ft proud of it (world x 10.355-10.500)
+    # and read from the hallway as a blank slab hiding room 17's relief.  Owner
+    # approved dropping it, 22 Aug 2026 (scratchpad/hall2/BRIEF.md, "Duplicate
+    # neighbour door panels").  Do NOT restore `door_unit` here.
+    cased_opening(m, "e", W, D, DOOR[0], DOOR[1], top=DOOR_H)
     closet_doors(m)
     return m
 

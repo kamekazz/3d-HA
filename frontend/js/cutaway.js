@@ -343,6 +343,36 @@ function tick(dt, instant = false, cam = camera) {
   }
 }
 
+// Undo every fade this module has applied: walls, the panels in their openings,
+// the per-wall surface skins and anything mounted on a wall. Used by
+// setEnabled(false) so a photo-matched interior shot sees all four walls and
+// the ceiling, the way someone standing in the room does.
+function restoreAll() {
+  for (const mesh of roomMeshes.values()) {
+    const base = mesh.userData.baseOpacity ?? 1;
+    for (const wall of wallParts(mesh)) {
+      wall.userData.fade = 1;
+      applyWallOpacity(wall, base);
+    }
+  }
+  for (const hinge of openingMeshes.values()) {
+    hinge.visible = true;
+    const op = hinge.userData.baseOpacity ?? 1;
+    for (const child of hinge.children) {
+      if (child.material) child.material.opacity = op;
+    }
+  }
+  for (const part of surfaceParts) {
+    part.last = 1;
+    fadeSubtree(part.mesh, 1);
+    part.mesh.visible = true;
+  }
+  for (const objectId of mounted.keys()) {
+    lastSent.set(objectId, 1);
+    setObjectWallFade(objectId, 1);
+  }
+}
+
 // Snapshot cards render the scene from their own camera at a fixed azimuth
 // (snapshots.js), and the cutaway is scored against the live one — so a card
 // would otherwise be shot through the back of a solid wall. Re-score for that
@@ -363,7 +393,14 @@ export function initCutaway() {
       scene.updateMatrixWorld(true);
       tick(0, true);
     },
-    setEnabled: (v) => { enabled = v; },
+    setEnabled: (v) => {
+      enabled = v;
+      // tick() early-returns while disabled, so flipping the flag alone would
+      // freeze whatever was already faded out -- including every ceiling, which
+      // CEILING_RE holds at 0 permanently. Disabling the cutaway has to mean
+      // "show the room as built", so put everything back to full.
+      if (!v) restoreAll();
+    },
     debug: () => ({ pending: pendingSurfaces.length,
       parts: surfaceParts.map((p) => [p.owner, p.mesh.name, p.roomId, p.edgeIndex, p.last]),
       mounted: mounted.size }),

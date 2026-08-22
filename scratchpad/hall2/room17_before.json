@@ -1,0 +1,242 @@
+{
+ "color": "#8fa8bf",
+ "depth": 16.7,
+ "devices": [
+  {
+   "entity_id": "cover.1st_floor_hallway_4d81_vent",
+   "id": 395,
+   "model_id": null,
+   "position": {
+    "x": 5.085302,
+    "y": 6.56168,
+    "z": 4.265092
+   },
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "type": "cover",
+   "visible": 1
+  },
+  {
+   "entity_id": "light.2nd_floor_2nd_floor_hallway",
+   "id": 396,
+   "model_id": null,
+   "position": {
+    "x": 1.0,
+    "y": 7.545932,
+    "z": 1.0
+   },
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "type": "light",
+   "visible": 1
+  },
+  {
+   "entity_id": "sensor.1st_floor_hallway_4d81_duct_pressure",
+   "id": 397,
+   "model_id": null,
+   "position": {
+    "x": 5.085302,
+    "y": 4.92126,
+    "z": 8.858268
+   },
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "type": "sensor",
+   "visible": 1
+  },
+  {
+   "entity_id": "switch.hallway",
+   "id": 398,
+   "model_id": null,
+   "position": {
+    "x": 2.5,
+    "y": 3.9370079999999996,
+    "z": 1.0
+   },
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "type": "switch",
+   "visible": 1
+  }
+ ],
+ "floor_color": "#474642",
+ "floor_id": 3,
+ "floor_texture": "wood",
+ "footprint": {
+  "depth": 16.7,
+  "points": null,
+  "width": 8.1,
+  "x": 10.5,
+  "z": 6.6
+ },
+ "ha_area_id": "hallway",
+ "height": 8.0,
+ "id": 17,
+ "name": "Hallway",
+ "objects": [
+  {
+   "id": 156,
+   "model_id": 130,
+   "model_name": "Hall2F Ceiling",
+   "name": "Hall2F Ceiling",
+   "position": {
+    "x": 4.05,
+    "y": 7.875,
+    "z": 8.35
+   },
+   "rot_y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": 157,
+   "model_id": 131,
+   "model_name": "Hall2F Baseboards",
+   "name": "Hall2F Baseboards",
+   "position": {
+    "x": 3.920000000000001,
+    "y": 0.0,
+    "z": 8.4
+   },
+   "rot_y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": 159,
+   "model_id": 133,
+   "model_name": "Hall2F Floor Runner",
+   "name": "Hall2F Floor Runner",
+   "position": {
+    "x": 1.61,
+    "y": 0.05,
+    "z": 7.3
+   },
+   "rot_y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": 277,
+   "model_id": 251,
+   "model_name": "Hall2F Knee Wall",
+   "name": "Hall2F Knee Wall",
+   "position": {
+    "x": 3.74,
+    "y": 0.0,
+    "z": 11.504999999999999
+   },
+   "rot_y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": 278,
+   "model_id": 252,
+   "model_name": "Hall2F Floor Stairwell",
+   "name": "Hall2F Floor Stairwell",
+   "position": {
+    "x": 6.075,
+    "y": 0.012,
+    "z": 12.19
+   },
+   "rot_y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": 279,
+   "model_id": 253,
+   "model_name": "Hall2F Floor Planks",
+   "name": "Hall2F Floor Planks",
+   "position": {
+    "x": 4.05,
+    "y": 0.014,
+    "z": 8.35
+   },
+   "rot_y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": 280,
+   "model_id": 254,
+   "model_name": "Hall2F Plants",
+   "name": "Hall2F Plants",
+   "position": {
+    "x": 4.05,
+    "y": 0.0,
+    "z": 1.4500000000000002
+   },
+   "rot_y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": 281,
+   "model_id": 255,
+   "model_name": "Hall2F Wall Art",
+   "name": "Hall2F Wall Art",
+   "position": {
+    "x": 0.10901076893346612,
+    "y": 3.759599541069117,
+    "z": 4.195834
+   },
+   "rot_y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": 282,
+   "model_id": 256,
+   "model_name": "Hall2F Wall Wash Skins",
+   "name": "Hall2F Wall Wash Skins",
+   "position": {
+    "x": 4.05,
+    "y": 0.49,
+    "z": 8.35
+   },
+   "rot_y": 0.0,
+   "scale": 1.0
+  }
+ ],
+ "openings": [
+  {
+   "edge_index": 0,
+   "elevation": 0.0,
+   "entity_id": null,
+   "height": 7.0,
+   "id": 124,
+   "offset": 4.05,
+   "type": "passage",
+   "width": 2.9
+  },
+  {
+   "edge_index": 3,
+   "elevation": 0.0,
+   "entity_id": null,
+   "height": 6.78,
+   "id": 125,
+   "offset": 6.02,
+   "type": "passage",
+   "width": 2.73
+  },
+  {
+   "edge_index": 3,
+   "elevation": 0.0,
+   "entity_id": null,
+   "height": 6.78,
+   "id": 126,
+   "offset": 2.1,
+   "type": "passage",
+   "width": 2.7
+  },
+  {
+   "edge_index": 2,
+   "elevation": 0.0,
+   "entity_id": null,
+   "height": 6.78,
+   "id": 127,
+   "offset": 4.4,
+   "type": "passage",
+   "width": 2.8
+  }
+ ],
+ "wall_color": "#d4d6d7",
+ "wall_texture": null,
+ "width": 8.1,
+ "x": 10.5,
+ "z": 6.6
+}

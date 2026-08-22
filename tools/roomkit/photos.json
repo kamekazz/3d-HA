@@ -1,38 +1,168 @@
 {
-  "_note": "Reference photo -> room id map. Paths are relative to docs/photos-jpg/ (converted once from docs/Photos-1-001/*.heic by scripts/heic_to_jpg.py). The FIRST photo listed for a room is its primary reference — the one the critic judges from. Rooms with no photos are judged on the floor plan + Sims-4 dollhouse readability only.",
-
-  "rooms": {
-    "1":  { "name": "Movie Room",          "photos": ["Movie room.jpg"] },
-    "2":  { "name": "Arcade Room",         "photos": ["Arcade Room.jpg"] },
-
-    "4":  { "name": "Dining",              "photos": ["Dining A.jpg", "Dining B.jpg", "Dining C.jpg", "Dining f.jpg"] },
-    "5":  { "name": "Living Room",         "photos": ["Living Room A.jpg", "Living Room B.jpg", "Living Room C.jpg", "Living Room f.jpg"] },
-    "6":  { "name": "Kitchen",             "photos": ["Kitchen A.jpg", "Kitchen B.jpg", "Kitchen C.jpg", "Kitchen F.jpg"] },
-    "8":  { "name": "Office",              "photos": ["Office A.jpg", "Office B.jpg", "Office C.jpg", "Office f.jpg"] },
-    "9":  { "name": "Laundry",             "photos": ["Laundry.jpg", "Laundry room and garage door right next to it.jpg"] },
-    "10": { "name": "Pantry",              "photos": ["pantry door.jpg", "Pantry and garage door.jpg"] },
-    "12": { "name": "First floor hallway", "photos": ["First floor hallway.jpg", "First floor hallway Entryway.jpg", "First floor hallway and Stairs.jpg", "First floor hallway Stairs to Second Floor.jpg", "Bottom of the stairs And front door.jpg"] },
-    "22": { "name": "Office printers",     "photos": ["First-floor bathroom.jpg"],
-            "_note": "The file name is wrong: this is the printer nook off the office, not a bathroom. Identified during the shell pass — the office's charcoal wainscot frames the doorway in the shot." },
-    "23": { "name": "Bathroom",            "photos": ["Bathroom.jpg", "Bathroom A.jpg"] },
-
-    "13": { "name": "Guest Room",          "photos": ["Guest Room.jpg", "Guest Room TV and Door.jpg", "Guest Room Closet.jpg"] },
-    "14": { "name": "Master Bed",          "photos": ["Master bedroom.jpg", "Master Bed 1.jpg", "Master Bed 2.jpg", "Master Bed 3.jpg"] },
-    "15": { "name": "Rios Room",           "photos": ["Rios room.jpg", "Rios Room 1.jpg", "Rios Room 2.jpg", "Rios Room 3.jpg"] },
-    "16": { "name": "Master Bath.",        "photos": ["Master Bath. 1.jpg", "Master Bath. 2.jpg", "Master Bath. 3.jpg", "Master Bathroom A.jpg"] },
-    "17": { "name": "Hallway (2F)",        "photos": ["Second-floor hallway.jpg", "Hallway to Master Bedroom.jpg", "Hallway Doors Second floor, next to real room and guest room.jpg", "Hallway Top of the second floor. Stairs.jpg"] },
-    "26": { "name": "bath (2F)",           "photos": ["Second floor bathroom.jpg", "Second floor bathroom B.jpg", "Second floor bathroom B (2).jpg"] },
-    "27": { "name": "Master Closet",       "photos": ["Walk in the closet to Master Bedroom.jpg", "Walking Closet for the Master bedroom.jpg"] }
+ "_note": "Reference photo -> room id map. Paths are relative to docs/photos-jpg/ (converted once from docs/Photos-1-001/*.heic by scripts/heic_to_jpg.py). The FIRST photo listed for a room is its primary reference — the one the critic judges from. Rooms with no photos are judged on the floor plan + Sims-4 dollhouse readability only.",
+ "rooms": {
+  "1": {
+   "name": "Movie Room",
+   "photos": [
+    "Movie room.jpg"
+   ]
   },
-
-  "exterior": ["Front of the house.jpg", "Front of the house, a little bit of the garage and car pointing to a different house.jpg", "Side of the house.jpg", "Side of the house Outside.jpg"],
-
-  "no_photo": {
-    "3":  "Backyard — outdoor pad, environment.js handles it",
-    "7":  "Garage — only seen through doorways in the laundry/pantry photos",
-    "11": "Frontyard — outdoor pad",
-    "24": "Bathroom closet",
-    "25": "Room 7 — unnamed 2F strip, likely the stair landing",
-    "18": "House — the level-10 placeholder holding the shell model"
+  "2": {
+   "name": "Arcade Room",
+   "photos": [
+    "Arcade Room.jpg"
+   ]
+  },
+  "4": {
+   "name": "Dining",
+   "photos": [
+    "Dining A.jpg",
+    "Dining B.jpg",
+    "Dining C.jpg",
+    "Dining f.jpg"
+   ]
+  },
+  "5": {
+   "name": "Living Room",
+   "photos": [
+    "Living Room A.jpg",
+    "Living Room B.jpg",
+    "Living Room C.jpg",
+    "Living Room f.jpg"
+   ]
+  },
+  "6": {
+   "name": "Kitchen",
+   "photos": [
+    "Kitchen A.jpg",
+    "Kitchen B.jpg",
+    "Kitchen C.jpg",
+    "Kitchen F.jpg"
+   ]
+  },
+  "8": {
+   "name": "Office",
+   "photos": [
+    "Office A.jpg",
+    "Office B.jpg",
+    "Office C.jpg",
+    "Office f.jpg"
+   ]
+  },
+  "9": {
+   "name": "Laundry",
+   "photos": [
+    "Laundry.jpg",
+    "Laundry room and garage door right next to it.jpg"
+   ]
+  },
+  "10": {
+   "name": "Pantry",
+   "photos": [
+    "pantry door.jpg",
+    "Pantry and garage door.jpg"
+   ]
+  },
+  "12": {
+   "name": "First floor hallway",
+   "photos": [
+    "First floor hallway.jpg",
+    "First floor hallway Entryway.jpg",
+    "First floor hallway and Stairs.jpg",
+    "First floor hallway Stairs to Second Floor.jpg",
+    "Bottom of the stairs And front door.jpg"
+   ]
+  },
+  "22": {
+   "name": "Office printers",
+   "photos": [
+    "First-floor bathroom.jpg"
+   ],
+   "_note": "The file name is wrong: this is the printer nook off the office, not a bathroom. Identified during the shell pass — the office's charcoal wainscot frames the doorway in the shot."
+  },
+  "23": {
+   "name": "Bathroom",
+   "photos": [
+    "Bathroom.jpg",
+    "Bathroom A.jpg"
+   ]
+  },
+  "13": {
+   "name": "Guest Room",
+   "photos": [
+    "Guest Room.jpg",
+    "Guest Room TV and Door.jpg",
+    "Guest Room Closet.jpg"
+   ]
+  },
+  "14": {
+   "name": "Master Bed",
+   "photos": [
+    "Master bedroom.jpg",
+    "Master Bed 1.jpg",
+    "Master Bed 2.jpg",
+    "Master Bed 3.jpg"
+   ]
+  },
+  "15": {
+   "name": "Rios Room",
+   "photos": [
+    "Rios room.jpg",
+    "Rios Room 1.jpg",
+    "Rios Room 2.jpg",
+    "Rios Room 3.jpg"
+   ]
+  },
+  "16": {
+   "name": "Master Bath.",
+   "photos": [
+    "Master Bath. 1.jpg",
+    "Master Bath. 2.jpg",
+    "Master Bath. 3.jpg",
+    "Master Bathroom A.jpg"
+   ]
+  },
+  "17": {
+   "name": "Hallway (2F)",
+   "photos": [
+    "../v2 Hallway-jpg/hallway_looking_towards_stairs.jpg",
+    "../v2 Hallway-jpg/hallway_with_white_runner_rug.jpg",
+    "../v2 Hallway-jpg/two_closed_white_doors_1.jpg",
+    "../v2 Hallway-jpg/two_closed_white_doors_2.jpg",
+    "../v2 Hallway-jpg/staircase_looking_down.jpg",
+    "../v2 Hallway-jpg/staircase_looking_up.jpg",
+    "Second-floor hallway.jpg"
+   ],
+   "_note": "v2 set (Aug 2026) supersedes the v1 photos and is the accuracy bar. It is 450x600, so sd measured off it is scale-inflated -- meter fine-scale texture from the 1200x1600 'Second-floor hallway.jpg' listed last instead. Paths are relative to docs/photos-jpg/, hence the ../ into docs/v2 Hallway-jpg/."
+  },
+  "26": {
+   "name": "bath (2F)",
+   "photos": [
+    "Second floor bathroom.jpg",
+    "Second floor bathroom B.jpg",
+    "Second floor bathroom B (2).jpg"
+   ]
+  },
+  "27": {
+   "name": "Master Closet",
+   "photos": [
+    "Walk in the closet to Master Bedroom.jpg",
+    "Walking Closet for the Master bedroom.jpg"
+   ]
   }
+ },
+ "exterior": [
+  "Front of the house.jpg",
+  "Front of the house, a little bit of the garage and car pointing to a different house.jpg",
+  "Side of the house.jpg",
+  "Side of the house Outside.jpg"
+ ],
+ "no_photo": {
+  "3": "Backyard — outdoor pad, environment.js handles it",
+  "7": "Garage — only seen through doorways in the laundry/pantry photos",
+  "11": "Frontyard — outdoor pad",
+  "24": "Bathroom closet",
+  "25": "Room 7 — unnamed 2F strip, likely the stair landing",
+  "18": "House — the level-10 placeholder holding the shell model"
+ }
 }

@@ -67,15 +67,34 @@ def _srgb_to_linear(c):
 # --------------------------------------------------------------------------
 
 class Part:
-    """Triangle soup in feet: positions plus a parallel index list."""
+    """Triangle soup in feet: positions plus a parallel index list.
 
-    def __init__(self, verts=None, tris=None, smooth=False):
+    `colors` is OPTIONAL and, when given, must be one (r, g, b) 0-1 tuple per
+    vertex. It is exported as glTF `COLOR_0`, which three.js turns into
+    `material.vertexColors = true` and MULTIPLIES into the material's
+    baseColor. That is the cheap way to bake a smooth gradient -- a light
+    falloff down a wall, grain along a plank -- into a surface: 4 bytes per
+    vertex on a mesh whose vertices are already shared, against the ~24 bytes
+    per duplicated vertex that splitting the same field into per-cell material
+    buckets costs. A Part with no colors exports exactly as it always did.
+
+    Colours are authored in the SAME sRGB space as `Material.color`; they are
+    converted to linear on export, so a vertex colour of 0.5 halves the
+    material's rendered value the way a 50% grey swatch would.
+    """
+
+    def __init__(self, verts=None, tris=None, smooth=False, colors=None):
         self.verts = list(verts or [])   # [(x, y, z), ...]
         self.tris = list(tris or [])     # [(i, j, k), ...]
         self.smooth = smooth             # average normals instead of flat-shading
+        self.colors = list(colors) if colors else None
+        if self.colors and len(self.colors) != len(self.verts):
+            raise ValueError("Part.colors must be one per vertex "
+                             f"({len(self.colors)} vs {len(self.verts)})")
 
     def copy(self):
-        return Part(list(self.verts), list(self.tris), self.smooth)
+        return Part(list(self.verts), list(self.tris), self.smooth,
+                    list(self.colors) if self.colors else None)
 
 
 class Model:
@@ -103,7 +122,8 @@ class Model:
             x, z = x * cy + z * sy, -x * sy + z * cy
             out.append((x + at[0], y + at[1], z + at[2]))
 
-        self._parts.append((Part(out, part.tris, part.smooth), mat))
+        self._parts.append((Part(out, part.tris, part.smooth,
+                                 part.colors), mat))
         return self
 
     def bounds(self):
@@ -143,7 +163,7 @@ class Model:
             return view
 
         for mat_index, parts in enumerate(groups):
-            verts, norms, idx = _weld(parts)
+            verts, norms, idx, cols = _weld(parts)
             if not idx:
                 continue
 
@@ -166,8 +186,21 @@ class Model:
             accessors.append({"bufferView": push(ind, 34963), "componentType": 5125,
                               "count": len(idx), "type": "SCALAR"})
 
-            primitives.append({"attributes": {"POSITION": a_pos, "NORMAL": a_nrm},
-                               "indices": a_idx, "material": mat_index, "mode": 4})
+            attrs = {"POSITION": a_pos, "NORMAL": a_nrm}
+            if cols is not None:
+                # VEC4 / UNSIGNED_BYTE normalized: 4 bytes per vertex, which is
+                # also exactly the 4-byte element alignment glTF requires (a
+                # VEC3 ubyte accessor is 3 bytes and would be illegal here).
+                cbuf = b"".join(
+                    struct.pack("<4B", *[max(0, min(255, int(round(v * 255.0))))
+                                         for v in _srgb_to_linear(c)] + [255])
+                    for c in cols)
+                attrs["COLOR_0"] = len(accessors)
+                accessors.append({"bufferView": push(cbuf, 34962),
+                                  "componentType": 5121, "normalized": True,
+                                  "count": len(cols), "type": "VEC4"})
+            primitives.append({"attributes": attrs, "indices": a_idx,
+                               "material": mat_index, "mode": 4})
 
         gltf_materials = []
         uses_emissive_strength = False
@@ -219,9 +252,16 @@ class Model:
 
 
 def _weld(parts):
-    """Flat-shade (duplicate verts per face) or smooth-shade (average) each part."""
-    verts, norms, idx = [], [], []
+    """Flat-shade (duplicate verts per face) or smooth-shade (average) each part.
+
+    Returns (verts, norms, idx, cols); `cols` is None unless at least one part
+    in the group carried vertex colours, in which case the parts that did not
+    are filled with white so the attribute stays parallel to POSITION.
+    """
+    verts, norms, idx, cols = [], [], [], []
+    any_color = any(p.colors for p in parts)
     for part in parts:
+        pc = part.colors
         if part.smooth:
             base = len(verts)
             acc = [[0.0, 0.0, 0.0] for _ in part.verts]
@@ -234,6 +274,8 @@ def _weld(parts):
             verts.extend(part.verts)
             norms.extend(_norm(v) if any(v) else (0.0, 1.0, 0.0) for v in acc)
             idx.extend(base + i for tri in part.tris for i in tri)
+            if any_color:
+                cols.extend(pc if pc else [(1.0, 1.0, 1.0)] * len(part.verts))
         else:
             for (a, b, c) in part.tris:
                 va, vb, vc = part.verts[a], part.verts[b], part.verts[c]
@@ -242,7 +284,10 @@ def _weld(parts):
                 verts.extend((va, vb, vc))
                 norms.extend((n, n, n))
                 idx.extend((base, base + 1, base + 2))
-    return verts, norms, idx
+                if any_color:
+                    cols.extend((pc[a], pc[b], pc[c]) if pc
+                                else ((1.0, 1.0, 1.0),) * 3)
+    return verts, norms, idx, (cols if any_color else None)
 
 
 def _face_normal(a, b, c):

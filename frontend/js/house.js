@@ -247,6 +247,22 @@ function buildRoom(room, floor) {
     const len = Math.hypot(dx, dz);
     if (len < 0.01) continue;
 
+    // An opening that spans its ENTIRE wall, floor to ceiling, means "there is
+    // no wall here" — the case is a polygon room whose footprint notches around
+    // a stairwell, where the two edges facing the void are not walls at all.
+    // Cutting it as a hole cannot express that: the run below is extended by
+    // one thickness past each end, and an opening's offset is clamped to
+    // [0, len], so the overshoot always survives as a floor-to-ceiling post at
+    // each end — two of them meeting in a solid column at the notch corner.
+    // Pushing the hole wider instead makes ExtrudeGeometry triangulate garbage.
+    // So skip the wall outright. Its plinth skirt and accent rim are its
+    // children and go with it, which is what you want: they would otherwise
+    // ring the void in saturated colour.
+    if ((room.openings || []).some((op) => op.edge_index === i
+        && op.offset <= 0 && op.offset + op.width >= len
+        && op.elevation <= 0.01
+        && op.elevation + op.height >= room.height - 0.02)) continue;
+
     // The run is extended by one thickness past each end so neighbouring walls
     // overlap in a t x t block at every corner — without it each convex corner
     // shows a square notch. The overshoot is buried inside the adjoining wall's

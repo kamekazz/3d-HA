@@ -39,7 +39,7 @@ def load_poses():
 # and only then unclamp OrbitControls so an interior pose is not pushed back
 # out to the dollhouse framing.
 SETUP_JS = """
-async ({ pose, level, light, markers }) => {
+async ({ pose, level, light, markers, cutaway }) => {
   const house = await import('/js/house.js');
   const sceneMod = await import('/js/scene.js');
   const { camera, controls, renderer, scene } = window.__scene3d;
@@ -101,6 +101,11 @@ async ({ pose, level, light, markers }) => {
 
   // walls no longer backface-cull; cutaway.js fades the near ones out over
   // ~0.2s, so a screenshot taken right after the flight catches them mid-fade
+  // Interior eye-level poses matched to a reference PHOTO want the room as
+  // built: cutaway.js always fades ceilings out (CEILING_RE) and drops the
+  // two near walls, which is right for the dollhouse pose and wrong when the
+  // bar is a photo taken standing in the room. Opt out with --no-cutaway.
+  window.__cutaway?.setEnabled(cutaway);
   window.__cutaway?.settle();
   renderer.render(scene, camera);
   const p = camera.position;
@@ -120,7 +125,8 @@ async () => {
 """
 
 
-def take(pose, out, level=DEFAULT_LEVEL, light=None, settle=1200, markers=False):
+def take(pose, out, level=DEFAULT_LEVEL, light=None, settle=1200, markers=False,
+         cutaway=True):
     os.makedirs(os.path.dirname(os.path.abspath(out)) or ".", exist_ok=True)
     w, h = pose.get("size", [900, 1200])
     with sync_playwright() as p:
@@ -136,7 +142,7 @@ def take(pose, out, level=DEFAULT_LEVEL, light=None, settle=1200, markers=False)
         page.wait_for_timeout(2500)  # first house fetch + buildHouse
 
         info = page.evaluate(SETUP_JS, {"pose": pose, "level": level, "light": light,
-                                        "markers": markers})
+                                        "markers": markers, "cutaway": cutaway})
 
         for _ in range(40):
             st = page.evaluate(READY_JS)
@@ -148,7 +154,7 @@ def take(pose, out, level=DEFAULT_LEVEL, light=None, settle=1200, markers=False)
         # re-assert the pose: async model loads can trigger a rebuild that
         # re-runs setLevel and its camera work
         page.evaluate(SETUP_JS, {"pose": pose, "level": level, "light": light,
-                                        "markers": markers})
+                                        "markers": markers, "cutaway": cutaway})
         page.wait_for_timeout(300)
 
         page.screenshot(path=out)
@@ -173,6 +179,8 @@ def main():
                    help="floor level, or 'all' for the exterior shell view")
     p.add_argument("--day", action="store_true", help="force bright daylight")
     p.add_argument("--markers", action="store_true", help="keep HA device markers visible")
+    p.add_argument("--no-cutaway", dest="cutaway", action="store_false",
+                   help="keep ceilings and all four walls (photo-matched interior poses)")
     p.add_argument("--settle", type=int, default=1200)
     a = p.parse_args()
 
@@ -185,7 +193,7 @@ def main():
         pose = poses[a.pose]
     level = a.level if a.level == "all" else int(a.level)
     light = {"elevation": 42, "azimuth": 155, "condition": "sunny"} if a.day else None
-    print(json.dumps(take(pose, a.out, level, light, a.settle, a.markers)))
+    print(json.dumps(take(pose, a.out, level, light, a.settle, a.markers, a.cutaway)))
 
 
 if __name__ == "__main__":
