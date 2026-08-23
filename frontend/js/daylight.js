@@ -309,6 +309,15 @@ export function repaintSky() {
   tickApply();
 }
 
+// boot.js calls this just before the loading curtain lifts. initDaylight()
+// syncs at boot, but HA states arrive later (main.js loadStates) and the
+// recomputeTarget() that follows eases over SMOOTH_TAU — so without this the
+// curtain would lift onto a scene visibly fading from the default look into the
+// real day/night one.
+export function settleDaylight() {
+  syncCurrentToTarget();
+}
+
 function syncCurrentToTarget() {
   current.sunDir.copy(target.sunDir);
   current.sunColor.copy(target.sunColor);

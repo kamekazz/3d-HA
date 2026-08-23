@@ -30,6 +30,21 @@ export function isOutdoorRoom(name) {
   return OUTDOOR_RE.test(name || '');
 }
 
+// Structural shells that are rooms in the layout but not destinations: a
+// printer nook, two closets, and the stairwell void. None is bound to an HA
+// area and none holds a device, so a room card for one can only ever read "no
+// lights" and fly you into an empty box. They stay in the 3D scene and in both
+// editors — this only keeps them out of the room list you pick from
+// (roomcards.js). Exact names, not a regex like OUTDOOR_RE above: /closet/
+// would also swallow "Master Closet", and /room 7/ is too loose to be safe.
+const HIDDEN_ROOM_NAMES = new Set([
+  'office printers', 'bathroom closet', 'room 7', 'stairwell',
+]);
+
+export function isHiddenRoom(name) {
+  return HIDDEN_ROOM_NAMES.has(String(name || '').trim().toLowerCase());
+}
+
 // The whole-house shell model: when configured, the "House" (level 'all') view
 // hides the generated geometry and shows this single model instead. Loads
 // async; until it resolves (or if it fails) the view falls back to the normal

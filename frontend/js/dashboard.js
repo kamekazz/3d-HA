@@ -217,7 +217,22 @@ function renderCalendar() {
   if (!$('cal-popover').classList.contains('hidden')) renderCalPopover();
 }
 
+// #bb-calendar starts hidden and un-hides off this fetch, which initDashboard
+// fires un-awaited — so the tile used to pop into the dock a beat after the rest
+// of it. boot.js awaits this before lifting the curtain (bounded: HA calendar
+// can be slow, and one dock tile is not worth holding the whole app for).
+let calFirstLoad = null;
+let calFirstLoadDone = null;
+export function calendarReady(timeoutMs = 2500) {
+  if (!calFirstLoad) return Promise.resolve();
+  return Promise.race([
+    calFirstLoad,
+    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
 async function refreshCalendar() {
+  if (!calFirstLoad) calFirstLoad = new Promise((r) => { calFirstLoadDone = r; });
   try {
     const data = await api.getCalendar(CAL_HORIZON_DAYS);
     calEvents = data?.events || [];
@@ -225,6 +240,8 @@ async function refreshCalendar() {
     calEvents = []; // HA not configured / unreachable → tile just hides
   }
   renderCalendar();
+  calFirstLoadDone?.();
+  calFirstLoadDone = null;
 }
 
 function escapeHtml(s) {

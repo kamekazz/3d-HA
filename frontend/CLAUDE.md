@@ -7,6 +7,35 @@ does is readable from the files themselves; below is the part the code can't tel
 `shellLoadFailed` and `ui.js` raises a persistent banner — a silently missing house reads as a
 render bug rather than the deploy problem it usually is (see `docs/TROUBLESHOOTING-house-shell.md`).
 
+**The boot curtain** (`frontend/js/boot.js`): the app assembles itself over seconds — ~200 furniture
+GLBs, the DRACO house shell, wall/floor textures, then the room-card thumbnails — and every one of
+those used to land on screen as its own pop-in, with the camera visibly re-framing when the shell
+arrived (`house.js` `refitStage`). `#boot-screen` covers all of it and lifts once. Three things about
+it are not readable from the code:
+
+- **The markup is static in `index.html`, deliberately.** `<head>` blocks on socket.io and the
+  three.js importmap from a CDN before `main.js` is even parsed, so a JS-created overlay would flash
+  the empty chrome first.
+- **`DefaultLoadingManager` drives the progress bar; `models.js modelsIdle()` is the gate.** Every
+  loader in the app is constructed with no explicit manager (`models.js` GLTFLoader/DRACOLoader,
+  `textures.js` TextureLoader), so the manager sees GLBs, the DRACO decoder and textures alike — but
+  its counts dip to zero between bursts, so it cannot be the completion signal on its own, and its
+  `itemsLoaded`/`itemsTotal` are closure locals that are **not** readable off the instance (boot.js
+  mirrors them from the callbacks). `modelsIdle()` counts inside `getInstance`, not `loadModel`, so
+  it covers the clone/material work after the fetch — and the shell and device markers for free.
+- **Never wait on a bare `requestAnimationFrame` in the gate.** Chrome pauses rAF whenever the tab is
+  backgrounded, occluded or not being composited, so a bare rAF hangs the curtain until the failsafe
+  — measured, not theoretical. `boot.js nextFrame()` races rAF against a 100 ms timer, and
+  `finishBoot` uses it too. Every wait is additionally bounded, and a 15 s failsafe reveals no matter
+  what; `main().catch` reveals first and *then* banners, or a boot error would be an unreadable black
+  screen. `window.__boot.state()` says which gate is holding during a hang.
+
+The render loop keeps running behind the curtain **on purpose**: `snapshots.js` captures the room
+cards off the live canvas, and `scene.js`'s pose solve needs real renders. Because the shell now
+lands before the user can touch the camera, `refitStage({onlyIfUntouched: true})` always wins and the
+opening shot is the shell-measured one. `reloadHouse` (planner close, undo, sync) gets no curtain —
+models are already cached.
+
 **The stage, and how the house gets framed** (`frontend/js/stage.js` + `scene.js`): the canvas is
 full-bleed (`#scene-container` is `inset:0`) but chrome covers part of it, so the house is framed
 into the *unobstructed* rect — "the stage" — and that rect is owned by **CSS, not JS**. `#stage-rect`

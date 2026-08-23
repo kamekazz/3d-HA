@@ -15,23 +15,27 @@ import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, openObj
 import { initDrag } from './drag.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
-import { initDaylight } from './daylight.js';
+import { initDaylight, settleDaylight } from './daylight.js';
 import { initEnvironment, setEnvironmentData } from './environment.js';
 import { initWeather } from './weather.js';
 import { initRoomLights, setRoomLightsData } from './roomlights.js';
 import { initFloorView } from './floorview.js';
 import { initCutaway, setCutawayData } from './cutaway.js';
 import { initUndo } from './undo.js';
-import { initDashboard } from './dashboard.js';
+import { initDashboard, calendarReady } from './dashboard.js';
 import { initCameras } from './cameras.js';
-import { initRoomCards, setRoomCardsData } from './roomcards.js';
-import { requestSnapshots } from './snapshots.js';
+import { initRoomCards, setRoomCardsData, cardImagesReady } from './roomcards.js';
+import { requestSnapshots, snapshotsIdle } from './snapshots.js';
+import { startBoot, bootStage, bootProgress, settleLoaders, orTimeout, finishBoot }
+  from './boot.js';
 
 let structure = null;
 
-async function loadStructure() {
+// `pending` lets boot pass an already-in-flight request (see main()); the
+// background retry loop calls with no argument and starts a fresh one.
+async function loadStructure(pending) {
   try {
-    structure = await api.getStructure();
+    structure = await (pending || api.getStructure());
     showBanner(null);
   } catch (e) {
     structure = null;
@@ -41,9 +45,9 @@ async function loadStructure() {
   }
 }
 
-async function loadStates() {
+async function loadStates(pending) {
   try {
-    const states = await api.getStates();
+    const states = await (pending || api.getStates());
     if (Array.isArray(states)) setAllStates(states);
   } catch { /* HA offline — markers stay grey */ }
 }
@@ -284,6 +288,20 @@ function setupPicking() {
 // ------------------------------------------------------------- boot
 
 async function main() {
+  startBoot();
+  bootStage('Reading Home Assistant…', 0, 0.15);
+
+  // These used to be three serial round-trips (structure, then house, then
+  // states) - two of them dead time. Fire all three now and await each exactly
+  // where it was awaited before, so the ordering that matters is unchanged:
+  // setAllStates still runs after buildDevices has created the markers it
+  // styles. The bare .catch() only marks the rejection handled so an early
+  // failure isn't an unhandled rejection; the real handling is at the await.
+  const structureP = api.getStructure();
+  const houseP = api.getHouse();
+  const statesP = api.getStates();
+  for (const p of [structureP, houseP, statesP]) p.catch(() => {});
+
   // First: the stage probe is what scene.js frames the house into, and
   // initScene reads it during setup.
   initStage();
@@ -304,8 +322,14 @@ async function main() {
   initCutaway();
   setupPicking();
 
-  await loadStructure();
-  const house = await api.getHouse();
+  await loadStructure(structureP);
+  bootProgress(0.6);
+  const house = await houseP;
+
+  // Everything from here to the first await is synchronous, so no loader
+  // callback can fire inside it - the furniture band below is in place before
+  // DefaultLoadingManager reports its first item.
+  bootStage('Building the house…', 0.15, 0.30);
   buildHouse(house);
   buildDevices(house);
   buildObjects(house);
@@ -324,8 +348,11 @@ async function main() {
   initCameras();
   initRoomCards();
   setRoomCardsData(house, structure); // after setRoomLightsData — cards read its light sets
-  requestSnapshots(house);
-  await loadStates();
+
+  // buildHouse/buildDevices/buildObjects above each fired a pile of GLB loads
+  // and threw the promises away; this is the band their real progress lands in.
+  bootStage('Loading furniture…', 0.30, 0.85);
+  await loadStates(statesP);
   updateData({ structure, house });
 
   connectRealtime({
@@ -333,6 +360,34 @@ async function main() {
     onBulkStates: (states) => setAllStates(states),
     onStatus: (status) => setConnStatus(status),
   });
+
+  // ---- hold the curtain until the scene has actually finished assembling
+  await settleLoaders();          // every GLB, texture and the DRACO shell
+
+  bootStage('Preparing the scene…', 0.85, 0.92);
+  // Shaders for a few hundred fresh GLB materials compile on the first DRAW,
+  // not on load — that hitch belongs behind the curtain. compileAsync is newer
+  // than the pinned three, so fall back to the synchronous compile.
+  if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
+  else renderer.compile(scene, camera);
+  window.__cutaway?.settle();     // jump wall fades to target, don't fade them in
+  settleDaylight();               // and don't fade day->night after the reveal
+
+  bootStage('Rendering room previews…', 0.92, 0.99);
+  // immediate: settleLoaders() has resolved, so the 1.5s/6.5s guesswork the
+  // timers exist for is answered — nothing is still streaming in.
+  requestSnapshots(house, { immediate: true });
+  // Don't wait on a hidden tab. snapshots.js captures one room per rAF, which
+  // drains ~25 rooms in well under a second when the page is visible - but a
+  // backgrounded tab has no rAF at all AND its pump parks itself on
+  // document.hidden by design, so waiting there can only ever burn the cap for
+  // previews that physically cannot render. Nobody is looking; the pump picks
+  // them up when the tab comes back. The cap covers the in-between case (a
+  // visible but uncomposited window) and stays well clear of the failsafe.
+  if (!document.hidden) await orTimeout(snapshotsIdle(), 5000);
+  await Promise.all([cardImagesReady(1500), calendarReady(2000)]);
+
+  finishBoot();
 
   // if structure failed at boot (HA still connecting), retry in the background —
   // but only when the backend actually has HA configured
@@ -354,6 +409,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  finishBoot(); // the banner is behind the curtain — lift it first, always
   showBanner(`App failed to start: ${e.message}`);
   console.error(e);
 });

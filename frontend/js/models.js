@@ -21,6 +21,33 @@ gltfLoader.setDRACOLoader(dracoLoader);
 
 const cache = new Map(); // model_id -> Promise<{scene, box}>
 
+// ------------------------------------------------------------ readiness gate
+// Nothing else in the app knows when the scene has finished assembling: every
+// caller of getInstance() below throws its promise away (objects.js:makeObject,
+// devices.js, house.js:loadHouseShell), so the house used to build itself
+// piecemeal on screen. boot.js awaits this to hold the loading curtain.
+//
+// The count lives on getInstance, NOT on loadModel, so it also covers the
+// clone/traverse/material work that runs after the fetch resolves — and it
+// covers the house shell and model-backed device markers for free, since both
+// go through getInstance too.
+let inFlight = 0;
+const idleWaiters = new Set();
+
+export function modelsIdle() {
+  if (inFlight === 0) return Promise.resolve();
+  return new Promise((resolve) => idleWaiters.add(resolve));
+}
+
+export function modelsPending() { return inFlight; }
+
+function releaseIfIdle() {
+  if (inFlight > 0 || !idleWaiters.size) return;
+  const waiters = [...idleWaiters];
+  idleWaiters.clear();
+  for (const resolve of waiters) resolve();
+}
+
 function loadModel(modelId) {
   let entry = cache.get(modelId);
   if (!entry) {
@@ -57,6 +84,16 @@ export function invalidateModel(modelId) {
  * child.userData.__orig for state.js to restore.
  */
 export async function getInstance(modelId, anchor = 'bottom') {
+  inFlight += 1;
+  try {
+    return await buildInstance(modelId, anchor);
+  } finally {
+    inFlight -= 1;
+    releaseIfIdle();
+  }
+}
+
+async function buildInstance(modelId, anchor) {
   const { scene, box } = await loadModel(modelId);
   const inst = scene.clone(true);
   inst.traverse((child) => {

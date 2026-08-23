@@ -24,6 +24,7 @@ const STORE_PREFIX = '3dha.snap.';
 
 const cache = new Map();               // roomId -> { hash, url }
 const readyListeners = new Set();
+const idleWaiters = new Set();   // boot.js: resolve when the queue drains
 let queue = [];                        // [{roomId, hash}] pending capture
 let pumping = false;
 let sweepTimers = [];
@@ -180,8 +181,22 @@ function captureRoom(roomId) {
 
 // ---------------------------------------------------------------- queue pump
 
+function releaseIfIdle() {
+  if (pumping || queue.length || !idleWaiters.size) return;
+  const waiters = [...idleWaiters];
+  idleWaiters.clear();
+  for (const resolve of waiters) resolve();
+}
+
+// Resolves once every queued room has been captured. boot.js awaits this so the
+// room rail is fully populated before the loading curtain lifts.
+export function snapshotsIdle() {
+  if (!pumping && !queue.length) return Promise.resolve();
+  return new Promise((resolve) => idleWaiters.add(resolve));
+}
+
 function pump() {
-  if (!queue.length) { pumping = false; return; }
+  if (!queue.length) { pumping = false; releaseIfIdle(); return; }
   // a focused room has ghosted siblings and a mid-flight camera; a hidden tab
   // has no rAF — park the queue and try again shortly
   if (document.hidden || getFocusedRoomId() !== null) {
@@ -233,11 +248,20 @@ function enqueueSweep(house, { force = false } = {}) {
   if (queue.length) startPump();
 }
 
-// Called on boot and after every reloadHouse. The first sweep waits for GLB
-// device models / textures / daylight to settle; the second (forced) sweep
-// catches models that were still streaming in during the first pass.
-export function requestSnapshots(house) {
+// Called on boot and after every reloadHouse. The two timers are a fudge
+// factor: they wait for GLB device models / textures / daylight to settle, and
+// the second (forced) sweep catches models that were still streaming in during
+// the first pass.
+//
+// `immediate` is boot.js's path, and is strictly better: by then modelsIdle()
+// has actually resolved, so there is nothing left to wait for and nothing left
+// to catch. Both timers are skipped — the forced one especially, since it would
+// recapture every room and swap the card images under the user after the
+// curtain has already lifted.
+export function requestSnapshots(house, { immediate = false } = {}) {
   for (const t of sweepTimers) clearTimeout(t);
+  sweepTimers = [];
+  if (immediate) { enqueueSweep(house); return; }
   sweepTimers = [
     setTimeout(() => enqueueSweep(house), 1500),
     setTimeout(() => enqueueSweep(house, { force: true }), 6500),

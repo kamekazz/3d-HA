@@ -16,6 +16,7 @@
 import { api } from './api.js';
 import { enterFocus } from './focus.js';
 import { getRoomLightIds, getRoomsForEntity } from './roomlights.js';
+import { isHiddenRoom } from './house.js';
 import { isOn, getState, onStateApplied } from './state.js';
 import { showBanner } from './ui.js';
 import { getSnapshot, onSnapshotReady } from './snapshots.js';
@@ -319,16 +320,40 @@ export function setRoomCardsData(house, structure) {
       for (const area of floor.areas || [])
         if (area.picture) pictureAreas.add(area.area_id);
   }
-  // The stray "error" HA floor holds a whole-house catch-all area, not a real
-  // room — skip it here (fixing that floor in HA is the real cure).
-  floorsData = [...(house?.floors || [])]
-    .filter((f) => (f.rooms || []).length && f.ha_floor_id !== 'error')
+  // Two exclusions, both here rather than at render time: layoutAllRoomsGrid
+  // solves the overlay's column count off floorsData, so anything filtered
+  // downstream of it would leave that fit math counting cards it no longer
+  // draws. The stray "error" HA floor holds a whole-house catch-all area, not a
+  // real room (fixing that floor in HA is the real cure); isHiddenRoom drops
+  // the structural shells one level down — see house.js. The {...f} copy keeps
+  // the floor's own rooms array intact for every other consumer of `house`.
+  floorsData = (house?.floors || [])
+    .filter((f) => f.ha_floor_id !== 'error')
+    .map((f) => ({ ...f, rooms: (f.rooms || []).filter((r) => !isHiddenRoom(r.name)) }))
+    .filter((f) => f.rooms.length)
     .sort((a, b) => b.level - a.level); // top floor first, like the building
   roomsFlat = floorsData.flatMap((f) => f.rooms);
   railSig = ''; // same ids may carry new names/colors — force the rebuild
   computeCapacity();
   renderRail();
   if (allOpen) renderAllRooms();
+}
+
+// boot.js awaits this before lifting the loading curtain. Rail cards whose room
+// has an HA area picture fetch it per card (buildCard below), so without this
+// the rail would finish assembling itself in full view. Bounded per image: one
+// slow or broken area picture must not hold the curtain.
+export function cardImagesReady(timeoutMs = 2000) {
+  const pending = [];
+  for (const entry of railInstances.values()) {
+    const { img } = entry;
+    if (!img || !img.src || img.complete) continue;
+    pending.push(Promise.race([
+      img.decode().catch(() => {}),   // decode() rejects on a broken image
+      new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+    ]));
+  }
+  return Promise.all(pending);
 }
 
 export function initRoomCards() {

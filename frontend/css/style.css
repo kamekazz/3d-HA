@@ -151,6 +151,48 @@ button, .cam-tile, .room-card, .bb-tile { -webkit-tap-highlight-color: transpare
 
 #scene-container { position: fixed; inset: 0; }
 
+/* ------------------------------------------------------------ boot curtain
+   The app builds itself over several seconds — 271 furniture GLBs, the DRACO
+   house shell, wall/floor textures, then the room-card thumbnails — and every
+   one of those used to land on screen as its own little pop-in. This covers the
+   whole thing until boot.js says all of it is done (see frontend/CLAUDE.md).
+   z-index clears 70, the highest layer in this sheet (#models-modal). The 3D
+   render loop keeps running underneath ON PURPOSE: snapshots.js captures room
+   cards off the live canvas and scene.js's pose solve needs real renders. */
+#boot-screen {
+  position: fixed; inset: 0; z-index: 100;
+  background: var(--bg); color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 1; transition: opacity 0.45s ease;
+}
+#boot-inner {
+  display: flex; flex-direction: column; align-items: center;
+  gap: var(--sp-md); padding: var(--sp-lg); text-align: center;
+  max-width: 340px; width: 100%;
+}
+#boot-title {
+  margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;
+  color: var(--text);
+}
+#boot-track {
+  width: 100%; height: 4px; border-radius: var(--radius-pill);
+  background: var(--glass-border); overflow: hidden;
+}
+#boot-fill {
+  width: 0%; height: 100%; border-radius: var(--radius-pill);
+  background: var(--accent); transition: width 0.3s ease;
+}
+#boot-status {
+  margin: 0; font-size: 13px; letter-spacing: -0.08px; color: var(--text-dim);
+  min-height: 1.2em;
+}
+/* the curtain lifts; boot.js removes the node once this transition ends */
+body.booted #boot-screen { opacity: 0; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  #boot-screen, #boot-fill { transition: none; }
+}
+
 /* The unobstructed rect the 3D house is framed into. Invisible but laid out,
    so ONE getBoundingClientRect() in stage.js resolves calc(), env(), every
    media query, the live orientation and any body-state override at once —
