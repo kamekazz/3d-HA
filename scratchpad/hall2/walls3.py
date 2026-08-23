@@ -121,14 +121,18 @@ CANS = [(5.80, 7.18, 1.15), (7.75, 7.18, 1.00), (6.10, 4.18, 1.00),
 # sRGB->linear on export, so the values below are converted on the way out).
 RAMP_BOT = 0.500         # linear multiplier at the skirting
 RAMP_GAM = 0.78          # shape of the climb to the ceiling
-BOUNCE = 0.085           # floor-bounce lift, last ~1 ft
-BOUNCE_H = 0.85
-SEAM_DK = 0.36           # ceiling-junction seam
-SEAM_H = 0.135
-CORNER_DK = 0.145        # reentrant vertical corner
-CORNER_W = 0.62
+BOUNCE = 0.055           # floor-bounce lift, last ~1 ft
+BOUNCE_H = 0.80
+# The photo's ceiling junction is not a hairline: on the p_stairs right wall the
+# wall meters 164 two inches down and 101.7 IN the seam -- a 0.62 ratio.  That
+# needs a deep, narrow multiplier AND rows fine enough to hold it, which is what
+# FINE_TOP is for.
+SEAM_DK = 0.55           # ceiling-junction seam
+SEAM_H = 0.115
+CORNER_DK = 0.175        # reentrant vertical corner
+CORNER_W = 0.55
 POOL = 0.20              # brightening under a ceiling can
-MOTTLE = 0.020
+MOTTLE = 0.026
 
 
 def _rnd(i):
@@ -210,7 +214,35 @@ def live_holes():
     return holes
 
 
-def build(colors, cell=0.21, flat=False, holes=None):
+# Refinement lines.  A refinement ROW costs one vertex per column and vice
+# versa, so these are kept to the two features that actually need sub-cell
+# resolution: the ceiling seam (0.115 ft deep) and the corner occlusion.
+FINE_TOP = (0.025, 0.06, 0.11, 0.18, 0.30)
+FINE_BOT = (0.06, 0.18)
+FINE_END = (0.06, 0.16, 0.34)
+
+
+def _grid(lo, hi, cell, extra):
+    """Uniform grid plus refinement lines, deduped and clamped.
+
+    A uniform 0.24 ft grid smears the two features that carry this piece: the
+    ceiling seam (the photo's is ~0.15 ft deep) and the corner occlusion (~0.6
+    ft).  Refining only where they live costs a handful of rows per wall
+    instead of quadrupling the whole sheet.
+    """
+    n = max(2, int(round((hi - lo) / cell)))
+    vals = [lo + (hi - lo) * i / n for i in range(n + 1)]
+    vals += [v for v in extra if lo + 1e-4 < v < hi - 1e-4]
+    vals.sort()
+    out = [vals[0]]
+    for v in vals[1:]:
+        if v - out[-1] > 0.012:
+            out.append(v)
+    out[-1] = hi
+    return out
+
+
+def build(colors, cell=0.29, flat=False, holes=None):
     """`flat=True` drops the baked field (used only by the two-point probe)."""
     holes = holes if holes is not None else live_holes()
     m = Model()
@@ -221,9 +253,14 @@ def build(colors, cell=0.21, flat=False, holes=None):
         if col not in mats:
             mats[col] = Material("h17w3" + col.lstrip("#"), col,
                                  roughness=0.95, metallic=0.0)
-        na = max(2, int(round((a1 - a0) / cell)))
-        ny = max(2, int(round((Y_CEIL - Y_BOT) / cell)))
         hs = holes.get(key, [])
+        ys = _grid(Y_BOT, Y_CEIL, cell,
+                   [Y_CEIL - d for d in FINE_TOP] + [Y_BOT + d for d in FINE_BOT]
+                   + [yt for (_, _, yt) in hs])
+        aa = _grid(a0, a1, cell,
+                   [a0 + d for d in FINE_END] + [a1 - d for d in FINE_END]
+                   + [e for (h0, h1, _) in hs for e in (h0, h1)])
+        na, ny = len(aa) - 1, len(ys) - 1
 
         def blocked(a, y):
             return any(h0 <= a <= h1 and y <= yt for (h0, h1, yt) in hs)
@@ -232,9 +269,9 @@ def build(colors, cell=0.21, flat=False, holes=None):
         live = set()
         quads = []
         for j in range(ny):
-            yc = Y_BOT + (Y_CEIL - Y_BOT) * (j + 0.5) / ny
+            yc = (ys[j] + ys[j + 1]) / 2.0
             for i in range(na):
-                ac = a0 + (a1 - a0) * (i + 0.5) / na
+                ac = (aa[i] + aa[i + 1]) / 2.0
                 if blocked(ac, yc):
                     continue
                 p = j * (na + 1) + i
@@ -243,12 +280,12 @@ def build(colors, cell=0.21, flat=False, holes=None):
 
         remap, verts, raw = {}, [], []
         for j in range(ny + 1):
-            y = Y_BOT + (Y_CEIL - Y_BOT) * j / ny
+            y = ys[j]
             for i in range(na + 1):
                 p = j * (na + 1) + i
                 if p not in live:
                     continue
-                a = a0 + (a1 - a0) * i / na
+                a = aa[i]
                 d = plane + n * (INSET + (0.0 if flat else disp(w, a, y)))
                 remap[p] = len(verts)
                 verts.append((d, y, a) if axis == "x" else (a, y, d))

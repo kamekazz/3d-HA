@@ -137,7 +137,7 @@ DOORS = [
     ((0.362, 10.77), (3.116, 10.77), (0.0, 1.0)),   # 136 guest room
     ((7.828, 0.0), (10.691, 0.0), (0.0, 1.0)),      # 137 master bed
 ]
-DOOR_A = float(os.environ.get("H17_DOOR", 0.30))
+DOOR_A = float(os.environ.get("H17_DOOR", 0.20))
 DOOR_R = 1.85                   # how far the wash reaches into the room, ft
 
 Y0 = 0.0168                     # over the slab (0.010), under the runner (0.020)
@@ -224,7 +224,7 @@ def ao_at(x, z):
     return a
 
 
-BASE_LIGHT = 0.855      # the mid-hall walking strip, which has no can over it
+BASE_LIGHT = 0.845      # the mid-hall walking strip, which has no can over it
 
 
 def _door_wash(x, z):

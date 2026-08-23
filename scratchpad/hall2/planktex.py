@@ -50,7 +50,7 @@ PW = PX // PLANKS          # 64 px = 0.6667 ft = 8 in boards
 # 6.7%).  BOOST is the pre-compensation, and BASE drops with it so the +25%
 # excursions do not clip at 255.
 BASE = 188.0               # near-white; rooms.floor_color tints it
-BOOST = float(os.environ.get("H17_BOOST", 1.50))
+BOOST = float(os.environ.get("H17_BOOST", 1.35))
 
 rng = np.random.default_rng(20260822)
 
@@ -96,29 +96,29 @@ def build():
         sid = np.zeros(PX, dtype=int)
         sid[js[0]:js[1]] = 1
         sv = np.zeros(PX)
-        vals = [np.clip(rng.normal(0.0, 0.036), -0.082, 0.082) for _ in range(2)]
+        vals = [np.clip(rng.normal(0.0, 0.026), -0.062, 0.062) for _ in range(2)]
         # never let the two halves of one column land on the same value
-        if abs(vals[0] - vals[1]) < 0.022:
-            vals[1] += 0.032 * (1 if vals[1] >= vals[0] else -1)
+        if abs(vals[0] - vals[1]) < 0.018:
+            vals[1] += 0.026 * (1 if vals[1] >= vals[0] else -1)
         for s in range(2):
             sv[sid == s] = vals[s]
         seg_val[:, x0:x1] = sv[:, None]
 
         # the joint itself: a hairline, plus a 1 px feather
         for j in js:
-            for dy, amt in ((-1, -0.035), (0, -0.105), (1, -0.075), (2, -0.025)):
+            for dy, amt in ((-1, -0.045), (0, -0.135), (1, -0.095), (2, -0.030)):
                 joint[(j + dy) % PX, x0:x1] += amt
 
     v += seg_val
-    v += fig * (0.056 * g_brush + 0.028 * g_med + 0.022 * g_short) + 0.036 * g_cath
+    v += fig * (0.095 * g_brush + 0.014 * g_med + 0.018 * g_short) + 0.012 * g_cath
     v += joint
 
     # ---- mineral streaks: narrow, long, dark, wandering ---------------
-    for _ in range(46):
+    for _ in range(30):
         px_ = int(rng.integers(0, PX))
         y0 = int(rng.integers(0, PX))
         ln = int(rng.integers(int(1.2 * PPF), int(5.0 * PPF)))
-        amp = -rng.uniform(0.045, 0.115)
+        amp = -rng.uniform(0.035, 0.085)
         w = rng.uniform(0.8, 2.1)
         for i in range(ln):
             yy = (y0 + i) % PX
@@ -142,17 +142,26 @@ def build():
     # ---- the micro-bevelled long edge ---------------------------------
     xm = X % PW
     edge = np.zeros((PX, PX))
-    prof = {0: -0.125, 1: -0.115, 2: -0.055, PW - 1: -0.125, PW - 2: -0.070,
-            3: 0.030, PW - 3: 0.022}
+    # A real LVP long edge is a 1-2 mm painted micro-bevel: a groove with a
+    # catch-light on the shoulder either side.  It has to survive both the wear
+    # layer (which hides ~44% of it) and the mip chain at the far end of a 17 ft
+    # hall, which is why it is 6 px of profile and not the shipped tile's flat
+    # 2 px bar -- "you can count boards from the camera to the far door".
+    prof = {0: -0.205, 1: -0.205, 2: -0.130, 3: -0.055,
+            PW - 1: -0.205, PW - 2: -0.150, PW - 3: -0.070,
+            4: 0.048, PW - 4: 0.040}
     for k, a in prof.items():
         edge[xm == k] += a
     v += edge
 
     # ---- fine sensor-scale speckle ------------------------------------
-    v += rng.standard_normal((PX, PX)) * 0.030
+    v += rng.standard_normal((PX, PX)) * 0.055
 
     img = BASE * (1.0 + BOOST * v)
-    out = np.clip(np.rint(img), 0, 255).astype(np.uint8)
+    # Quantise to even levels.  The finest component here is speckle at ~11
+    # levels sd, so a 2-level step is invisible, and it takes the PNG from
+    # 441 KB to about 330 -- this file loads for the whole app, not just room 17.
+    out = np.clip(np.rint(img / 2.0) * 2.0, 0, 254).astype(np.uint8)
     return out
 
 

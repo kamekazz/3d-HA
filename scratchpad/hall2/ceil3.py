@@ -80,7 +80,7 @@ WELL_X0, WELL_Z0 = 7.61, 6.81
 CAL_E = [0, 64, 88, 112, 128, 136, 168, 192, 208, 255]
 CAL_V = [97.0, 125.7, 145.3, 165.3, 178.0, 184.0, 203.3, 214.7, 220.7, 233.0]
 CAL_SW = [78.0, 52.0, 38.5, 27.1, 22.3, 18.5, 9.8, 6.5, 4.6, 2.2]
-STR_V = {1.0: 233.0, 1.5: 240.7, 2.0: 245.0, 3.0: 249.0}
+STR_V = {1.0: 233.0, 1.2: 236.6, 1.5: 240.7, 2.0: 245.0, 2.5: 247.2, 3.0: 249.0}
 TONE_GAMMA = 3.3               # albedo falls as tone**this
 T_LO = 0.22
 
@@ -117,7 +117,8 @@ def rung_swing(e, strength=1.0):
 # E byte, emissive strength.  Chosen so consecutive reachable ranges overlap
 # from V=104 all the way to V=250 (printed by --dry).
 LADDER = [(72, 1.0), (88, 1.0), (104, 1.0), (120, 1.0), (136, 1.0),
-          (152, 1.0), (164, 1.0), (176, 1.0), (188, 1.0), (200, 1.0)]
+          (152, 1.0), (164, 1.0), (176, 1.0), (188, 1.0), (200, 1.0),
+          (216, 1.0), (232, 1.0), (248, 1.0), (255, 1.2), (255, 1.5), (255, 2.0), (255, 2.5)]
 
 RUNGS = [(rung_vmax(e, s), rung_swing(e, s)) for (e, s) in LADDER]
 RANGES = [(v - sw * (1.0 - T_LO ** TONE_GAMMA), v) for (v, sw) in RUNGS]
@@ -194,12 +195,12 @@ LENS_HOT = Material("h17clens", "#ffffff", roughness=0.30, emissive="#fff6e8",
                     emissive_strength=3.0, double_sided=False)
 LENS_MID = Material("h17clens2", "#ffffff", roughness=0.30, emissive="#fff6e8",
                     emissive_strength=2.0, double_sided=False)
-TRIMW = Material("h17ctrim", "#ffffff", roughness=0.55, emissive="#c8c8c8",
+TRIMW = Material("h17ctrim", "#ffffff", roughness=0.55, emissive="#dcdcdc",
                  double_sided=False)
 # the puck's cylindrical side reads 85-136 in the photograph: it is the one
 # genuinely DARK thing on the ceiling, and it is what proves the fitting has
 # depth.  Non-emissive white on a vertical face lands near there.
-SMSIDE = Material("h17csm", "#e8e8e8", roughness=0.60, double_sided=False)
+SMSIDE = Material("h17csm", "#8a8a8a", roughness=0.60, double_sided=False)
 
 
 # --------------------------------------------------------------- tone field
@@ -267,9 +268,9 @@ def pools(x, z):
             continue
         rim = R_SM_BODY if kind == 0 else R_WF_TRIM
         th = math.atan2(dz, dx)
-        wob = 1.0 + 0.10 * math.cos(3 * th + 1.9 * i) + 0.05 * math.cos(5 * th - i)
-        s += k * 80.0 * math.exp(-max(0.0, r - rim) / (0.195 * wob))
-        s += k * 9.5 * math.exp(-((r / (1.45 * wob)) ** 1.7))
+        wob = 1.0 + 0.055 * math.cos(3 * th + 1.9 * i)
+        s += k * 96.0 * math.exp(-max(0.0, r - rim) / 0.200)
+        s += k * 10.0 * math.exp(-((r / (1.50 * wob)) ** 1.7))
     return s
 
 
@@ -289,11 +290,11 @@ def junction(e):
     """Photo: flat field, a slow -9% over ~1.3 ft, then a hard dip to 0.70 in
     the last 0.09 ft.  Round 1 ramped the whole thing smoothly over 1.6 ft, so
     the line itself never got dark enough to read."""
-    if e <= 0.085:
-        return 0.70
-    if e <= 0.34:
-        return 0.70 + 0.21 * _sm((e - 0.085) / 0.255)
-    return 0.91 + 0.09 * _sm((e - 0.34) / 1.55)
+    if e <= 0.115:
+        return 0.67
+    if e <= 0.40:
+        return 0.67 + 0.22 * _sm((e - 0.115) / 0.285)
+    return 0.89 + 0.11 * _sm((e - 0.40) / 1.75)
 
 
 def target(x, z, e=None):
@@ -303,10 +304,10 @@ def target(x, z, e=None):
     v *= junction(e)
     v *= contact(x, z)
     v *= 1.0 + 0.018 * math.sin(x / 3.1 + 0.6) * math.sin(z / 4.7 + 2.2)
-    v += (4.6 * (_vnoise(x, z, 0.78) - 0.5)
-          + 3.2 * (_vnoise(x + 31.4, z + 17.7, 1.9) - 0.5)
-          + 2.2 * (_vnoise(x + 8.1, z - 5.3, 0.40) - 0.5))
-    return max(100.0, min(217.0, v))
+    v += (6.4 * (_vnoise(x, z, 0.63) - 0.5)
+          + 5.0 * (_vnoise(x + 31.4, z + 17.7, 1.70) - 0.5)
+          + 3.2 * (_vnoise(x + 8.1, z - 5.3, 3.60) - 0.5))
+    return max(100.0, min(246.0, v))
 
 
 # ------------------------------------------------------------------ meshing
@@ -407,9 +408,15 @@ def _wafer(m, cx, cz, amp):
     behind the cone wall, which is why three of four fittings rendered as empty
     white rings with no light in them."""
     yt = YC - 0.004
-    _fan(m, cx, cz, YC - 0.008, R_WF_TRIM, 1.60, rings=10, seg=22, gamma=2.4)
-    _ring(m, TRIMW, cx, cz, yt, R_WF_LENS, R_WF_TRIM)
-    _disc(m, LENS_HOT if amp > 0.9 else LENS_MID, cx, cz, yt + D_RECESS, R_WF_LENS)
+    yl = YC - 0.013                       # the lens is the LOWEST element, so a
+                                          # 11-degree grazing view can never lose
+                                          # it behind the trim -- round 1 recessed
+                                          # it 0.024 ft UP and three of four cans
+                                          # rendered as empty rings.
+    _fan(m, cx, cz, YC - 0.006, R_WF_TRIM, 1.60, rings=10, seg=22, gamma=2.4)
+    _ring(m, TRIMW, cx, cz, yt, R_WF_LENS - 0.006, R_WF_TRIM)
+    _shell(m, TRIMW, cx, cz, yt, R_WF_LENS - 0.006, yl, R_WF_LENS)
+    _disc(m, LENS_HOT if amp > 0.9 else LENS_MID, cx, cz, yl, R_WF_LENS)
 
 
 def _puck(m, cx, cz, amp):
@@ -417,17 +424,17 @@ def _puck(m, cx, cz, amp):
     dark side wall -- the 85-136 line the photograph shows across the top of the
     near fitting."""
     yb = YC - D_SM
-    _fan(m, cx, cz, YC - 0.008, R_SM_BODY, 1.75, rings=11, seg=26, gamma=2.4)
-    _shell(m, SMSIDE, cx, cz, YC, R_SM_BODY, yb + 0.014, R_SM_BODY, seg=30)
-    _shell(m, SMSIDE, cx, cz, yb + 0.014, R_SM_BODY, yb, R_SM_LENS, seg=30)
+    _fan(m, cx, cz, YC - 0.006, R_SM_BODY, 1.75, rings=11, seg=26, gamma=2.4)
+    _shell(m, SMSIDE, cx, cz, YC, R_SM_BODY, yb + 0.016, R_SM_BODY, seg=30)
+    _shell(m, TRIMW, cx, cz, yb + 0.016, R_SM_BODY, yb, R_SM_LENS, seg=30)
     _disc(m, LENS_HOT, cx, cz, yb, R_SM_LENS, seg=30)
 
 
-STEP = 0.36                    # the open field
-ALSTEP = 0.44                  # the alcove: seen small, and only in p_doors*
+STEP = 0.30                    # the open field
+ALSTEP = 0.54                  # the alcove: seen small, and only in p_doors*
 # rows measured OUT from the wall face; -0.14 is buried inside the wall
 BAND_E = [-M, -0.02, 0.0, 0.055, 0.13, 0.28, 0.55, 0.95, 1.45]
-BAND_ALONG = 0.62
+BAND_ALONG = 0.72
 
 
 def _uniform(lo, hi, step):
