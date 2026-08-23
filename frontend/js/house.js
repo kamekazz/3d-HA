@@ -110,6 +110,71 @@ export function buildHouse(house) {
   if (shellConfig) loadHouseShell(shellConfig);
 }
 
+// Props baked into the shell that the real house does not have, cut by world
+// box at load time.
+//
+// The shell carries a garden set the photographs contradict: a ground-level
+// terrace behind the garage wing with a lounge suite and a big OPEN cantilever
+// parasol, where the real house has a raised deck against the back wall with a
+// CLOSED parasol on it. Most of that set is separate meshes and environment.js
+// hides those. The parasol's frame and ribs are not — they are 5,631 triangles
+// merged into `Root_Node`, the shell's 79k-triangle catch-all, so hiding the
+// object would take the siding with it. Left in, they hang over the back lawn
+// as a black spiked star, and it is the first thing the eye finds in the view
+// the app flies to when you tap the Backyard.
+//
+// So the triangles go, not the object. They separate cleanly by height: below
+// y 5.5 in this footprint is terrace slab and boundary fence, which stay; above
+// it there is nothing but the parasol. Measured off the loaded shell — see the
+// y-histogram in the commit message.
+const SHELL_CUTS = [
+  { name: 'parasol frame', min: [30, 5.5, -48], max: [45, 14, -36] },
+];
+
+function maskShellProps(shell) {
+  shell.updateWorldMatrix(true, true);
+  // SketchUp exports its edge overlay as a LineSegments object beside the
+  // meshes, and this shell carries one. It is invisible where it coincides with
+  // a shaded face, so it costs nothing to keep — until you delete the faces it
+  // was drawn over, and then the parasol's ribs are still there as bare white
+  // lines radiating out of thin air. Nothing wants a wireframe over a shaded
+  // model, so the whole overlay goes. Matched on type, not name: the names in
+  // this file are SketchUp component ids a re-export would renumber.
+  shell.traverse((o) => {
+    if (o.isLineSegments || o.isLine || o.isLineLoop) o.visible = false;
+  });
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  shell.traverse((o) => {
+    if (!o.isMesh || !o.geometry?.attributes?.position) return;
+    const geo = o.geometry;
+    const pos = geo.attributes.position;
+    const idx = geo.index;
+    const count = idx ? idx.count : pos.count;
+    if (count % 3 !== 0) return;
+    const at = (i) => (idx ? idx.getX(i) : i);
+    const keep = [];
+    let cut = 0;
+    for (let t = 0; t < count; t += 3) {
+      a.fromBufferAttribute(pos, at(t)).applyMatrix4(o.matrixWorld);
+      b.fromBufferAttribute(pos, at(t + 1)).applyMatrix4(o.matrixWorld);
+      c.fromBufferAttribute(pos, at(t + 2)).applyMatrix4(o.matrixWorld);
+      const x = (a.x + b.x + c.x) / 3;
+      const y = (a.y + b.y + c.y) / 3;
+      const z = (a.z + b.z + c.z) / 3;
+      const hit = SHELL_CUTS.some((k) =>
+        x >= k.min[0] && x <= k.max[0] && y >= k.min[1] && y <= k.max[1]
+        && z >= k.min[2] && z <= k.max[2]);
+      if (hit) { cut++; continue; }
+      keep.push(at(t), at(t + 1), at(t + 2));
+    }
+    if (!cut) return;
+    geo.setIndex(keep);
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
+    console.info(`shell: cut ${cut} prop triangles from ${o.name || '(unnamed)'}`);
+  });
+}
+
 function applyShellTransform(root, cfg) {
   root.position.set(cfg.x || 0, cfg.y || 0, cfg.z || 0);
   root.rotation.y = cfg.rot_y || 0;
@@ -144,6 +209,9 @@ async function loadHouseShell(cfg) {
   shell.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   applyShellTransform(shell, cfg);
   root.add(shell);
+  // after the transform and the add, never before: SHELL_CUTS is expressed in
+  // world feet, and until the shell is placed its matrixWorld is the identity
+  maskShellProps(shell);
   houseShell = shell;
   setLevel(currentLevel); // a shell now exists — apply House mode if on 'all'
 }

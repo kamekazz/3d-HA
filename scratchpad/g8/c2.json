@@ -1,0 +1,15 @@
+{"path": "C:/Users/Manuel/Desktop/Pro/3d HA/docs/photos-jpg/Garage v3 1.jpg",
+ "overlay": "C:/Users/Manuel/Desktop/Pro/3d HA/scratchpad/g8/p1_boxes2.png",
+ "boxes": {
+   "cab_grey":    [30, 560, 100, 760],
+   "cab_grey2":   [10, 900, 60, 1000],
+   "tv_black":    [800, 570, 900, 630],
+   "pegboard":    [1060, 660, 1180, 720],
+   "yellow_car":  [930, 760, 985, 800],
+   "wreath":      [255, 585, 300, 620],
+   "eames":       [700, 780, 760, 810],
+   "banner_bmw":  [470, 640, 560, 700],
+   "mat_dark":    [470, 830, 600, 856],
+   "extinguish":  [10, 1100, 70, 1230],
+   "clock":       [1140, 585, 1180, 615]
+ }}

@@ -26,11 +26,24 @@ FT_TO_M = 0.3048
 # --------------------------------------------------------------------------
 
 class Material:
-    """A PBR material. `color` is sRGB hex or an (r, g, b) 0-1 tuple."""
+    """A PBR material. `color` is sRGB hex or an (r, g, b) 0-1 tuple.
+
+    `tex` is OPTIONAL and takes raw PNG bytes (see `png_gray` / `png_rgb`).
+    It is exported as `baseColorTexture` with a REPEAT sampler, so a small
+    seamless tile plus UVs that run past 1.0 covers a whole floor or wall at a
+    few KB. That is the cheap way to buy FINE-SCALE surface texture: the
+    project's payload budget is 300 KB per piece and rasterising the same
+    detail into geometry cells has cost whole megabytes and still metered
+    smoother than the photo (see ROOM-BRIEF, "sd is SCALE-BLIND").
+
+    The texture MULTIPLIES `color` (glTF says baseColor = factor x texel), and
+    it is sampled as sRGB, so author the tile near white and let `color` carry
+    the hue: a tile whose mean is 240/255 darkens the material by ~6%.
+    """
 
     def __init__(self, name, color, roughness=0.85, metallic=0.0,
                  emissive=None, emissive_strength=1.0, opacity=1.0,
-                 double_sided=True):
+                 double_sided=True, tex=None):
         self.name = name
         self.color = _rgb(color)
         self.roughness = float(roughness)
@@ -39,11 +52,13 @@ class Material:
         self.emissive_strength = float(emissive_strength)
         self.opacity = float(opacity)
         self.double_sided = bool(double_sided)
+        self.tex = tex
 
     def key(self):
         return (self.name, self.color, self.roughness, self.metallic,
                 self.emissive, self.emissive_strength, self.opacity,
-                self.double_sided)
+                self.double_sided,
+                None if self.tex is None else hash(bytes(self.tex)))
 
 
 def _rgb(c):
@@ -83,18 +98,28 @@ class Part:
     material's rendered value the way a 50% grey swatch would.
     """
 
-    def __init__(self, verts=None, tris=None, smooth=False, colors=None):
+    def __init__(self, verts=None, tris=None, smooth=False, colors=None,
+                 uv=None):
         self.verts = list(verts or [])   # [(x, y, z), ...]
         self.tris = list(tris or [])     # [(i, j, k), ...]
         self.smooth = smooth             # average normals instead of flat-shading
         self.colors = list(colors) if colors else None
+        # [(u, v), ...] one per vertex; values outside 0..1 tile the material's
+        # `tex` (the sampler wraps REPEAT). Only meaningful on a Part whose
+        # material carries a texture; parts in the same material group that
+        # have none are filled with (0, 0).
+        self.uv = list(uv) if uv else None
         if self.colors and len(self.colors) != len(self.verts):
             raise ValueError("Part.colors must be one per vertex "
                              f"({len(self.colors)} vs {len(self.verts)})")
+        if self.uv and len(self.uv) != len(self.verts):
+            raise ValueError("Part.uv must be one per vertex "
+                             f"({len(self.uv)} vs {len(self.verts)})")
 
     def copy(self):
         return Part(list(self.verts), list(self.tris), self.smooth,
-                    list(self.colors) if self.colors else None)
+                    list(self.colors) if self.colors else None,
+                    list(self.uv) if self.uv else None)
 
 
 class Model:
@@ -123,7 +148,7 @@ class Model:
             out.append((x + at[0], y + at[1], z + at[2]))
 
         self._parts.append((Part(out, part.tris, part.smooth,
-                                 part.colors), mat))
+                                 part.colors, part.uv), mat))
         return self
 
     def bounds(self):
@@ -163,7 +188,7 @@ class Model:
             return view
 
         for mat_index, parts in enumerate(groups):
-            verts, norms, idx, cols = _weld(parts)
+            verts, norms, idx, cols, uvs = _weld(parts, with_uv=True)
             if not idx:
                 continue
 
@@ -199,12 +224,34 @@ class Model:
                 accessors.append({"bufferView": push(cbuf, 34962),
                                   "componentType": 5121, "normalized": True,
                                   "count": len(cols), "type": "VEC4"})
+            if uvs is not None:
+                ubuf = b"".join(struct.pack("<2f", u, v) for (u, v) in uvs)
+                attrs["TEXCOORD_0"] = len(accessors)
+                accessors.append({"bufferView": push(ubuf, 34962),
+                                  "componentType": 5126,
+                                  "count": len(uvs), "type": "VEC2"})
             primitives.append({"attributes": attrs, "indices": a_idx,
                                "material": mat_index, "mode": 4})
 
+        # Images go in the same binary chunk. One sampler, REPEAT/REPEAT with
+        # trilinear mips, is all any tile here wants; identical PNG bytes share
+        # one image so a tile reused by several materials is stored once.
+        images, textures, tex_of_mat, by_bytes = [], [], {}, {}
+        for mi, m in enumerate(mats):
+            if m.tex is None:
+                continue
+            raw = bytes(m.tex)
+            if raw not in by_bytes:
+                view = push(raw, None)
+                buffer_views[view].pop("target", None)
+                images.append({"bufferView": view, "mimeType": "image/png"})
+                textures.append({"sampler": 0, "source": len(images) - 1})
+                by_bytes[raw] = len(textures) - 1
+            tex_of_mat[mi] = by_bytes[raw]
+
         gltf_materials = []
         uses_emissive_strength = False
-        for m in mats:
+        for mi, m in enumerate(mats):
             entry = {
                 "name": m.name,
                 "pbrMetallicRoughness": {
@@ -214,6 +261,9 @@ class Model:
                 },
                 "doubleSided": m.double_sided,
             }
+            if mi in tex_of_mat:
+                entry["pbrMetallicRoughness"]["baseColorTexture"] = {
+                    "index": tex_of_mat[mi]}
             if m.opacity < 1.0:
                 entry["alphaMode"] = "BLEND"
             if m.emissive != (0.0, 0.0, 0.0):
@@ -236,6 +286,12 @@ class Model:
             "bufferViews": buffer_views,
             "buffers": [{"byteLength": len(blob)}],
         }
+        if images:
+            gltf["images"] = images
+            gltf["textures"] = textures
+            # 9987 LINEAR_MIPMAP_LINEAR / 9729 LINEAR / 10497 REPEAT
+            gltf["samplers"] = [{"magFilter": 9729, "minFilter": 9987,
+                                 "wrapS": 10497, "wrapT": 10497}]
         if uses_emissive_strength:
             gltf["extensionsUsed"] = ["KHR_materials_emissive_strength"]
 
@@ -251,17 +307,23 @@ class Model:
         return path
 
 
-def _weld(parts):
+def _weld(parts, with_uv=False):
     """Flat-shade (duplicate verts per face) or smooth-shade (average) each part.
 
     Returns (verts, norms, idx, cols); `cols` is None unless at least one part
     in the group carried vertex colours, in which case the parts that did not
     are filled with white so the attribute stays parallel to POSITION.
+
+    `with_uv=True` appends `uvs`, which works the same way and is filled with
+    (0, 0). It is opt-in ONLY so the arity stays what it was -- other agents'
+    build scripts import this and unpack it positionally.
     """
-    verts, norms, idx, cols = [], [], [], []
+    verts, norms, idx, cols, uvs = [], [], [], [], []
     any_color = any(p.colors for p in parts)
+    any_uv = any(p.uv for p in parts)
     for part in parts:
         pc = part.colors
+        pu = part.uv
         if part.smooth:
             base = len(verts)
             acc = [[0.0, 0.0, 0.0] for _ in part.verts]
@@ -276,6 +338,8 @@ def _weld(parts):
             idx.extend(base + i for tri in part.tris for i in tri)
             if any_color:
                 cols.extend(pc if pc else [(1.0, 1.0, 1.0)] * len(part.verts))
+            if any_uv:
+                uvs.extend(pu if pu else [(0.0, 0.0)] * len(part.verts))
         else:
             for (a, b, c) in part.tris:
                 va, vb, vc = part.verts[a], part.verts[b], part.verts[c]
@@ -287,7 +351,11 @@ def _weld(parts):
                 if any_color:
                     cols.extend((pc[a], pc[b], pc[c]) if pc
                                 else ((1.0, 1.0, 1.0),) * 3)
-    return verts, norms, idx, (cols if any_color else None)
+                if any_uv:
+                    uvs.extend((pu[a], pu[b], pu[c]) if pu
+                               else ((0.0, 0.0),) * 3)
+    out = (verts, norms, idx, (cols if any_color else None))
+    return out + ((uvs if any_uv else None),) if with_uv else out
 
 
 def _face_normal(a, b, c):
@@ -405,6 +473,63 @@ def sag_plane(w, d, sag=0.08, nx=10, nz=10, y=0.0, edge_drop=0.0):
             b, c, dd = a + 1, a + nx + 1, a + nx + 2
             t += [(a, c, b), (b, c, dd)]
     return Part(v, t, smooth=True)
+
+
+def uv_quad(p0, p1, p2, p3, uv0=(0, 0), uv1=(1, 0), uv2=(1, 1), uv3=(0, 1)):
+    """A textured quad: four 3-D points CCW plus their UVs.
+
+    UVs above 1 tile the material's `tex` — a 20 ft floor carrying a 2 ft tile
+    is `uv2=(10, 10)`, which costs four vertices instead of a hundred cells.
+    """
+    return Part([p0, p1, p2, p3], [(0, 1, 2), (0, 2, 3)],
+                uv=[uv0, uv1, uv2, uv3])
+
+
+def uv_floor(w, d, tile=2.0, y=0.0, offset=(0.0, 0.0)):
+    """Horizontal plane w x d centred on the origin, facing +Y, UV'd for `tile`.
+
+    `tile` is how many FEET one texture repeat covers, so the pattern keeps its
+    real-world scale however big the plane is.
+    """
+    u0, v0 = offset[0] / tile, offset[1] / tile
+    u1, v1 = u0 + w / tile, v0 + d / tile
+    return uv_quad((-w / 2, y, d / 2), (w / 2, y, d / 2),
+                   (w / 2, y, -d / 2), (-w / 2, y, -d / 2),
+                   (u0, v1), (u1, v1), (u1, v0), (u0, v0))
+
+
+# --------------------------------------------------------------------------
+# PNG writer -- stdlib only, so a tile can be generated in the build script
+# --------------------------------------------------------------------------
+
+def png_gray(pixels):
+    """8-bit greyscale PNG bytes from a list of rows of 0-255 ints."""
+    return _png(pixels, 0, 1)
+
+
+def png_rgb(pixels):
+    """8-bit RGB PNG bytes from a list of rows of (r, g, b) tuples."""
+    flat = [[c for px in row for c in px] for row in pixels]
+    return _png(flat, 2, 3)
+
+
+def _png(rows, color_type, nchan):
+    import zlib
+    h = len(rows)
+    w = len(rows[0]) // nchan if color_type == 2 else len(rows[0])
+    raw = bytearray()
+    for row in rows:
+        raw.append(0)                      # filter type 0 (None)
+        raw.extend(int(v) & 0xFF for v in row)
+
+    def chunk(tag, data):
+        return (struct.pack(">I", len(data)) + tag + data
+                + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
+
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, color_type, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+            + chunk(b"IEND", b""))
 
 
 def torus(radius, tube, seg=20, ring=10):

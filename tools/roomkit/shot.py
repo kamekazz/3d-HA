@@ -178,6 +178,18 @@ def main():
     p.add_argument("--level", default=str(DEFAULT_LEVEL),
                    help="floor level, or 'all' for the exterior shell view")
     p.add_argument("--day", action="store_true", help="force bright daylight")
+    # The sun. --day's default azimuth 155 is the FRONT of this house, which is
+    # right for every interior and for the front elevation, and unfairly dark
+    # for the rear: one directional sun and no bounce light means a wall the sun
+    # never reaches gets only hemisphere + IBL, so the back of the house renders
+    # a flat grey no authoring can fix. Pass --sun-azimuth 335 to light the rear
+    # for a back-yard comparison. Say which you used in your report — a critic
+    # comparing a differently-lit shot is not looking at what you built.
+    p.add_argument("--sun-azimuth", type=float, default=155.0,
+                   help="sun azimuth in degrees with --day (default 155, the front "
+                        "of this house; use ~335 to light the rear elevation)")
+    p.add_argument("--sun-elevation", type=float, default=42.0,
+                   help="sun elevation in degrees with --day (default 42)")
     p.add_argument("--markers", action="store_true", help="keep HA device markers visible")
     p.add_argument("--no-cutaway", dest="cutaway", action="store_false",
                    help="keep ceilings and all four walls (photo-matched interior poses)")
@@ -192,7 +204,8 @@ def main():
             raise SystemExit(f"unknown pose {a.pose!r}; have {sorted(poses)}")
         pose = poses[a.pose]
     level = a.level if a.level == "all" else int(a.level)
-    light = {"elevation": 42, "azimuth": 155, "condition": "sunny"} if a.day else None
+    light = ({"elevation": a.sun_elevation, "azimuth": a.sun_azimuth,
+              "condition": "sunny"} if a.day else None)
     print(json.dumps(take(pose, a.out, level, light, a.settle, a.markers, a.cutaway)))
 
 

@@ -62,6 +62,31 @@ function makeGrassTexture() {
   return tex;
 }
 
+// Aggregate/grit tile for the hardscape (driveway, walk, rock beds, slate).
+// Authored below white so it MULTIPLIES the vertex colour rather than replacing
+// it (mean ~0.83). The blob size and the 6 ft tile are chosen TOGETHER against
+// the render scale, not for prettiness: at the front photo-matched pose one
+// screen pixel is about 0.05 ft, so a 128 px tile over 6 ft puts one texel on
+// one pixel and anything finer is averaged away by the mipmap before it
+// reaches the eye. The first attempt (1.3 px speckle on a 4 ft tile) metered
+// mean|Δ| 1.3-1.9 against the photograph's 4.8 for exactly that reason.
+function makeGritTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#d6d6d4';
+  g.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 3600; i++) {
+    const v = 168 + Math.floor(Math.random() * 88);
+    g.fillStyle = `rgb(${v},${v},${v - 3})`;
+    g.fillRect(Math.random() * 128, Math.random() * 128, 3.0, 3.0);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function makeShadowTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
@@ -235,7 +260,10 @@ function addBush(rng, x, z, leaves) {
 // vertex-coloured) and one lawn patch; foliage joins the existing merged
 // leaves mesh, so shrubs and flowers cost nothing extra.
 
-const ROCK = new THREE.Color(0x8b857b);
+// Metered off "Front of the house.jpg": the rock bed reads lum 131 against
+// the driveway's 187 -- it is markedly DARKER than the concrete, not the same
+// brightness as the old comment claimed, and cooler.
+const ROCK = new THREE.Color(0x76777b);
 const _c = new THREE.Color();
 
 // Color.setHSL defaults to the WORKING colour space (linear) in three r160, so
@@ -270,6 +298,18 @@ function wheelAt(r, w, x, y, z) {
   g.translate(x, y, z);
   return g;
 }
+// A free 4-corner quad carrying position/normal/uv, so it can be merged into
+// the same buffer as slab()'s PlaneGeometry. Used for the grass banks that
+// clothe the shell pad's 2 ft vertical edges — a horizontal slab cannot.
+// Corners in order, seen from above.
+function quadAt(p0, p1, p2, p3) {
+  const g = new THREE.BufferGeometry();
+  const v = [...p0, ...p1, ...p2, ...p0, ...p2, ...p3];
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(v), 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(12), 2));
+  g.computeVertexNormals();
+  return g;
+}
 // per-vertex jitter around a base colour — turns one plane into gravel
 function speckle(geo, base, rng, amt) {
   const n = geo.attributes.position.count;
@@ -292,13 +332,16 @@ function addBed(rng, x0, z0, x1, z1, y, beds) {
   const edge = boxAt(x1 - x0, 0.16, 0.4, (x0 + x1) / 2, y - 0.06, z1 - 0.2);
   paint(edge, _c.setHex(0x3c3b34));
   beds.push(edge);
-  const n = Math.round((x1 - x0) * (z1 - z0) / 3.2);
+  // one cobble per 2 sq ft, not per 3.2: the photographed rock meters
+  // mean|d1| 15.8 and sd 46.9, i.e. a dense field of individually lit
+  // stones, and a sparse scatter over a flat plane cannot reach either.
+  const n = Math.round((x1 - x0) * (z1 - z0) / 2.0);
   for (let i = 0; i < n; i++) {
     const r = 0.2 + rng() * 0.28;
     const s = new THREE.IcosahedronGeometry(r, 0);
     s.scale(1, 0.55, 1);
     s.translate(x0 + rng() * (x1 - x0), y + r * 0.2, z0 + rng() * (z1 - z0));
-    paint(s, hsl(0.09, 0.07, 0.52 + rng() * 0.22));
+    paint(s, hsl(0.09, 0.06, 0.22 + rng() * 0.42));
     beds.push(s);
   }
 }
@@ -336,6 +379,124 @@ function addGrassClump(rng, x, z, y, leaves) {
     g.translate(x + Math.cos(a) * 0.5 * rng(), y + h * 0.42, z + Math.sin(a) * 0.5 * rng());
     paint(g, _c);
     leaves.push(g);
+  }
+}
+
+// Big clipped mound — the standalone specimen shrubs standing free on the back
+// lawn in Backyard v3 5/7: near-hemispherical, 4-9 ft across, one of them the
+// red-purple photinia beside the deck. Much larger and rounder than addBush.
+function addMound(rng, x, z, r, y, hue, leaves) {
+  const g = new THREE.IcosahedronGeometry(r, 2);
+  g.scale(1.05, 0.72, 1.0);
+  g.translate(x, y + r * 0.60, z);
+  paint(g, hue === 'red'
+    ? hsl(0.98, 0.30, 0.24 + rng() * 0.05)     // photinia / loropetalum
+    : hsl(0.29 + rng() * 0.05, 0.42, 0.20 + rng() * 0.05));
+  leaves.push(g);
+}
+
+// Mature shade tree. addDeciduous fixes its trunk height at 6-11 ft whatever
+// `s` is, which caps the treeline at shrub height; the front and back photos
+// are framed by 30-45 ft canopies, so this one scales the height too.
+function addShadeTree(rng, x, z, s, trunks, leaves) {
+  const h = (13 + rng() * 7) * s;
+  const trunk = new THREE.CylinderGeometry(0.5 * s, 0.95 * s, h, 6);
+  trunk.translate(x, h / 2, z);
+  trunks.push(trunk);
+  const hue = 0.27 + rng() * 0.07;
+  for (let i = 0; i < 6; i++) {
+    const r = (4.0 + rng() * 3.2) * s;
+    const blob = new THREE.IcosahedronGeometry(r, 1);
+    blob.scale(1.1, 0.8, 1.1);
+    const a = rng() * Math.PI * 2, d = rng() * 4.2 * s;
+    blob.translate(x + Math.cos(a) * d, h + (rng() - 0.2) * 4 * s, z + Math.sin(a) * d);
+    paint(blob, _leaf.setHSL(hue, 0.42 + rng() * 0.14, 0.15 + rng() * 0.07,
+                             THREE.SRGBColorSpace));
+    leaves.push(blob);
+  }
+}
+
+// Dry-stacked slate retaining course. This is the signature hardscape of the
+// property — "Front of the house" and "Side of the house Outside" both show a
+// dark thin-slab stone wall holding the raised lawn up, and it is exactly where
+// the shell GLB leaves a bare 2 ft white face at the edge of its site pad.
+// Runs along one axis; `along` is 'x' or 'z'.
+function addSlate(rng, along, a0, a1, b, yBot, yTop, beds) {
+  const courses = Math.max(2, Math.round((yTop - yBot) / 0.42));
+  const ch = (yTop - yBot) / courses;
+  for (let c = 0; c < courses; c++) {
+    const y = yBot + c * ch;
+    const out = 0.34 - c * (0.16 / courses);      // slight batter, front-heavy
+    for (let a = a0; a < a1; a += 1.5 + rng() * 1.1) {
+      const len = Math.min(1.4 + rng() * 1.0, a1 - a);
+      const g = along === 'x'
+        ? boxAt(len, ch * 1.06, out, a + len / 2, y, b)
+        : boxAt(out, ch * 1.06, len, b, y, a + len / 2);
+      paint(g, hsl(0.09, 0.05, 0.20 + rng() * 0.08));
+      beds.push(g);
+    }
+  }
+}
+
+// Poured-concrete apron: one flat plate plus scored control joints. The shell
+// GLB's own site pad reads as unbroken white, and the joint grid is most of
+// what tells a driveway from a blank plane at this distance.
+function addConcrete(x0, z0, x1, z1, y, joints, beds) {
+  const g = slab(x0, z0, x1, z1, y, 2, 2);
+  paint(g, hsl(0.10, 0.02, 0.57));
+  beds.push(g);
+  const dk = hsl(0.10, 0.02, 0.42).clone();
+  for (const [jx, jz, jw, jd] of joints) {
+    const j = slab(jx, jz, jx + jw, jz + jd, y + 0.012);
+    paint(j, dk);
+    beds.push(j);
+  }
+}
+
+// Flagstone stepping stones: irregular slabs, blue-grey, set proud of the
+// gravel. Both yards have a run of them (front bed, and the back gravel bed).
+function addFlagstones(rng, pts, y, beds) {
+  for (const [x, z] of pts) {
+    const g = boxAt(2.0 + rng() * 0.5, 0.16, 1.5 + rng() * 0.4, x, y, z,
+                    (rng() - 0.5) * 0.45);
+    paint(g, hsl(0.55, 0.05, 0.36 + rng() * 0.09));
+    beds.push(g);
+  }
+}
+
+// Neighbouring house, as pure massing. Both the front and the back photographs
+// have one in frame on each side — without them the house stands in an empty
+// field, which is the loudest thing wrong with the whole-house view. Kept
+// deliberately plain and slightly desaturated: it must read as background.
+function addNeighbour(x, z, w, d, h, ry, doors, props) {
+  const wall = hsl(0.10, 0.04, 0.86);
+  const roof = hsl(0.08, 0.03, 0.54);
+  const push = (g, c) => { paint(g, c); props.push(g); };
+  push(boxAt(w, h, d, x, 0, z, ry), wall);
+  // gable prism sitting on the walls, ridge along the local X axis
+  const rise = 5.5;
+  const pr = new THREE.BufferGeometry();
+  const hw = w / 2 + 0.7, hd = d / 2 + 0.7;
+  const V = [[-hw, 0, -hd], [hw, 0, -hd], [hw, 0, hd], [-hw, 0, hd],
+             [-hw, rise, 0], [hw, rise, 0]];
+  // wound so the OUTWARD normal is the front face: MeshStandardMaterial is
+  // FrontSide, and the first attempt at this prism was inverted, which left
+  // every neighbour reading as a flat-topped grey box with no roof at all
+  const F = [[0, 5, 1], [0, 4, 5], [2, 4, 3], [2, 5, 4],
+             [0, 3, 4], [1, 5, 2], [0, 2, 3], [0, 1, 2]];
+  const pos = [];
+  for (const f of F) for (const i of f) pos.push(...V[i]);
+  pr.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  // uv is unused here but mergeGeometries refuses a set that does not match
+  pr.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(pos.length / 3 * 2), 2));
+  pr.computeVertexNormals();
+  pr.rotateY(ry); pr.translate(x, h, z);
+  push(pr, roof);
+  const dd = d / 2 + 0.15, cr = Math.cos(ry), sr = Math.sin(ry);
+  for (let i = 0; i < doors; i++) {
+    const off = (i - (doors - 1) / 2) * 9.5;
+    push(boxAt(8.4, 7.2, 0.4, x + off * cr + dd * sr, 0.2,
+               z - off * sr + dd * cr, ry), hsl(0.10, 0.02, 0.86));
   }
 }
 
@@ -380,104 +541,302 @@ function addPathLight(x, z, y, props) {
   paint(cap, dark); props.push(cap);
 }
 
-function addFrontYard(R, rng, leaves, beds, props, lawns) {
-  // Landmarks measured off this shell GLB with a downward ray sweep (feet,
-  // world space) and written as offsets from the roof rect so they travel with
-  // the shell if it is moved or rescaled. Street is +Z, garage on the +X side.
-  const driveL = R.x1 - 27.0;   // driveway edges
-  const driveR = R.x1 - 2.0;
-  const padL = R.x1 - 54.0;   // the shell's pale site pad, left of the driveway
-  const padF = R.z1 + 8.6;   // pad's front edge; lawn beyond it
-  const porchF = R.z1 + 3.6;   // porch deck front edge
-  const stepL = R.x1 - 36.0;   // porch steps down to the walk
-  const garageF = R.z1 - 10.9;   // garage front wall
+// ------------------------------------------------------- measured landmarks
+// Everything below is anchored to landmarks MEASURED off this shell GLB
+// (2026-08-22) rather than guessed from the roof rect, which is what put the
+// old front beds 5 ft out on the lawn. Method: a downward raycast grid at
+// y=3.2 (above the terrain, below the first floor) for the ground, and
+// horizontal +Z / -Z sweeps at 1 ft steps for the wall planes.
+//
+//   grade        2.13 ft over the house pad, 0.16 ft on the driveway strip and
+//                everywhere past the pad. The pad's edges are 2 ft VERTICAL
+//                faces in the GLB, and they are pale concrete like the rest of
+//                it - grass banks and the slate course below clothe them.
+//   site pad     x -6..46.5, z -74..50, plus the driveway strip x 22..46 out
+//                to z 76. One unbroken pale slab in the GLB: the single
+//                biggest error in the exterior was that the whole back yard
+//                rendered as concrete.
+//   porch        front edge z 40.6, x -7..20.3; deck top y 8.0; rail top 10.4
+//   house front  z 29.5 (x -7..20)      garage front  z 29.8 (x 20.3..46.5)
+//   block rear   z -24.5 (x -7..20)     wing rear     z -10.9 (x 21..48)
+//   porch steps  x 12..19.5, projecting to z 44.5
+//
+// Re-expressed as offsets from the roof rect R (x -11.7..48, z -25.4..41.4) so
+// they still travel if the shell is moved or rescaled.
+function landmarks(R) {
+  return {
+    hi: 2.16, lo: 0.19,          // the two terrain levels, +0.03 to clear z-fight
+    padW: R.x0 + 5.7,            // -6.0
+    padE: R.x1 - 1.5,            // 46.5
+    padF: R.z1 - 0.4,            // 41.0   front face of the raised pad
+    apronF: R.z1 + 9.0,          // 50.4   front edge of the flat apron
+    padN: R.z0 - 25.6,           // -51.0  rear edge of the raised pad
+    yardN: R.z0 - 48.6,          // -74.0  rear edge of the site pad
+    lowE: R.x1 - 21.5,           // 26.5   x where the raised pad drops at the rear
+    houseF: R.z1 - 11.9,         // 29.5
+    houseW: R.x0 + 2.7,          // -9.0
+    blockE: R.x1 - 28.0,         // 20.0   east wall of the main block
+    blockN: R.z0 + 0.9,          // -24.5
+    wingN: R.z0 + 14.5,          // -10.9
+    porchF: R.z1 - 0.8,          // 40.6
+    porchW: R.x0 + 4.7,          // -7.0
+    porchE: R.x1 - 27.7,         // 20.3
+    porchY: 8.02,
+    driveL: R.x1 - 27.2,         // 20.8
+    driveR: R.x1 - 0.9,          // 47.1  runs to the pad's own east edge
+    street: R.z1 + 34,           // 75.4
+    stepW: R.x1 - 36.2,          // 11.8
+    stepE: R.x1 - 28.3,          // 19.7
+    stepF: R.z1 + 3.1,           // 44.5
+  };
+}
 
-  // 1. Lawn over the site pad. The GLB's ground plane is one pale concrete-ish
-  //    slab across the whole lot, so without this the house sits on a huge
-  //    apron where the photo has grass. The walk from the porch steps to the
-  //    driveway is left uncovered — that part really is concrete.
-  lawns.push(slab(padL, R.z1 - 12, stepL - 0.5, padF + 0.5, 0.25));
-  lawns.push(slab(stepL - 0.5, padF - 2.0, driveL + 0.4, padF + 0.5, 0.25));
+// Grass over the shell's pale site pad, at the two heights it actually has,
+// with sloped banks clothing the 2 ft vertical faces between them. Everything
+// the photographs show as lawn; only the driveway, the walk and the planting
+// beds are left as hardscape, and those are drawn back on top.
+function addGroundCover(L, lawns) {
+  const g = (x0, z0, x1, z1, y) => lawns.push(slab(x0, z0, x1, z1, y));
+  // --- back yard: the big one. All of this was bare concrete before.
+  g(L.padW, -31, L.padE, L.wingN, L.hi);                  // raised, full width
+  g(L.padW, L.padN, L.lowE, -31, L.hi);                   // raised, west half
+  g(L.lowE, L.padN, L.padE, -31, L.lo);                   // dropped, east half
+  g(L.padW, L.yardN, L.padE, L.padN, L.lo);               // beyond the pad
+  // banks over the pad's 2 ft vertical faces
+  lawns.push(quadAt([L.lowE, L.hi, -32.4], [L.lowE, L.hi, L.padN],
+                    [L.lowE + 2.6, L.lo, L.padN], [L.lowE + 2.6, L.lo, -32.4]));
+  lawns.push(quadAt([L.padW, L.hi, L.padN], [L.lowE, L.hi, L.padN],
+                    [L.lowE, L.lo, L.padN - 2.6], [L.padW, L.lo, L.padN - 2.6]));
+  lawns.push(quadAt([L.lowE, L.lo, -32.4], [L.padE, L.lo, -32.4],
+                    [L.padE, L.hi, -30.6], [L.lowE, L.hi, -30.6]));
+  // --- side yards, west and east of the house
+  g(L.padW, L.wingN, L.houseW, L.houseF, L.hi);
+  g(L.driveL - 0.4, L.wingN, L.padE, L.houseF - 0.2, L.lo);
+  // --- front: the apron in front of the porch, west of the driveway. Runs
+  //     4 ft PAST the pad's own front edge: anything short of it leaves a
+  //     white sliver of the GLB's slab reading as a kerb across the lawn.
+  g(L.padW - 2, L.padF, L.driveL + 0.2, L.apronF + 4, L.lo);
+  g(L.driveR - 0.2, L.houseF - 1, L.padE + 2, L.apronF + 4, L.lo);
+  g(L.porchE, L.houseF, L.driveL, L.padF, L.hi);
+  lawns.push(quadAt([L.padW, L.hi, L.padF], [L.driveL, L.hi, L.padF],
+                    [L.driveL, L.lo, L.padF + 2.2], [L.padW, L.lo, L.padF + 2.2]));
+}
 
-  // 2. Foundation beds: across the front of the porch, up the west wall, and
-  //    down the far side of the driveway (all three read in the front photo).
-  const bedF0 = porchF + 0.4, bedF1 = porchF + 5.8;
-  addBed(rng, R.x0 - 2.0, bedF0, stepL - 1.0, bedF1, 0.34, beds);
-  addBed(rng, R.x0 - 3.0, R.z1 - 13, R.x0 + 0.4, bedF0, 0.34, beds);
-  addBed(rng, driveR + 0.4, garageF + 2.5, driveR + 8.5, padF + 6, 0.34, beds);
-  // small bed at the street end of the driveway, where the lamp post stands
-  addBed(rng, driveL - 9, padF + 2, driveL - 0.4, padF + 12, 0.3, beds);
+function addFrontYard(L, rng, leaves, beds, props, lawns, trunks) {
+  // 1. Driveway and the walk to the porch steps, scored with control joints.
+  //    ("Front of the house.jpg": one longitudinal joint down the middle and
+  //    transverse ones roughly every 12 ft.)
+  const joints = [];
+  for (let z = L.houseF + 12; z < L.street; z += 12.5) {
+    joints.push([L.driveL, z, L.driveR - L.driveL, 0.16]);
+  }
+  joints.push([(L.driveL + L.driveR) / 2 - 0.08, L.houseF, 0.16, L.street - L.houseF]);
+  addConcrete(L.driveL, L.houseF, L.driveR, L.street, L.lo + 0.02, joints, beds);
+  addConcrete(L.stepW - 0.6, L.padF + 0.4, L.driveL + 0.2, L.stepF + 1.6,
+              L.lo + 0.03, [], beds);
 
-  // 3. Planting: a near-continuous row of clipped shrubs against the siding
-  //    with drifts of purple perennials in front of them, as in the photo
-  for (let x = R.x0 - 1.4; x < stepL - 1.6; x += 1.9 + rng() * 0.9) {
-    addBoxwood(rng, x, bedF0 + 1.5 + rng() * 1.2, 1.15 + rng() * 0.7, 0.34, leaves);
+  // 2. The slate retaining course. The shell pad's front face is a bare 2 ft
+  //    white cliff running the width of the house; in the photographs it is a
+  //    dry-stacked thin-slab stone wall, which is also what holds the front
+  //    bed up. The same wall turns the west corner.
+  addSlate(rng, 'x', L.houseW - 1.2, L.stepW - 0.9, L.padF + 0.1, L.lo, L.hi + 0.1, beds);
+  addSlate(rng, 'z', L.wingN + 6, L.padF, L.houseW - 1.1, L.lo, L.hi + 0.1, beds);
+
+  // 3. Front bed: river rock at the foot of the slate, clipped boxwood in a
+  //    near-continuous row with drifts of purple perennials in front, and
+  //    flagstones stepping through it from the drive up to the porch steps.
+  const bedF0 = L.padF + 0.5, bedF1 = L.padF + 6.4;
+  addBed(rng, L.houseW - 1.4, bedF0, L.stepW - 0.8, bedF1, L.lo + 0.05, beds);
+  for (let x = L.houseW - 0.6; x < L.stepW - 1.4; x += 1.9 + rng() * 0.9) {
+    addBoxwood(rng, x, bedF0 + 1.5 + rng() * 1.1, 1.15 + rng() * 0.7, L.lo + 0.05, leaves);
   }
-  for (let x = R.x0 + 1.5; x < stepL - 3.0; x += 4.5 + rng() * 3.5) {
-    addPerennial(rng, x, bedF1 - 1.4 - rng() * 0.9, 0.34, leaves);
+  for (let x = L.houseW + 1.5; x < L.stepW - 2.6; x += 4.2 + rng() * 3.0) {
+    addPerennial(rng, x, bedF1 - 1.5 - rng() * 0.9, L.lo + 0.05, leaves);
   }
-  for (let z = R.z1 - 13; z < bedF0 - 1; z += 2.4 + rng() * 1.2) {
-    addBoxwood(rng, R.x0 - 1.5 + rng() * 0.9, z, 1.05 + rng() * 0.6, 0.34, leaves);
+  addFlagstones(rng, [[L.stepW - 2.2, bedF1 - 0.7], [L.stepW - 3.4, bedF1 - 2.1],
+                      [L.stepW - 2.0, bedF1 - 3.4], [L.stepW - 3.2, bedF1 - 4.7]],
+                L.lo + 0.06, beds);
+
+  // 4. Bed east of the driveway, at the property line: rock, purple drifts and
+  //    a pair of squat path lights (second and third front photos).
+  addBed(rng, L.driveR + 0.6, L.houseF + 4, L.driveR + 9.5, L.apronF + 6, L.lo + 0.04, beds);
+  for (let z = L.houseF + 6; z < L.apronF + 4; z += 3.2 + rng() * 2.0) {
+    const x = L.driveR + 2.4 + rng() * 4.4;
+    if (rng() < 0.55) addBoxwood(rng, x, z, 1.15 + rng() * 0.8, L.lo + 0.04, leaves);
+    else addPerennial(rng, x, z, L.lo + 0.04, leaves);
   }
-  for (let z = garageF + 4; z < padF + 5; z += 3.2 + rng() * 2.0) {
-    const x = driveR + 2.4 + rng() * 3.6;
-    if (rng() < 0.6) addBoxwood(rng, x, z, 1.15 + rng() * 0.8, 0.34, leaves);
-    else addPerennial(rng, x, z, 0.34, leaves);
-  }
+  addPathLight(L.driveR + 1.4, L.houseF + 9, L.lo + 0.04, props);
+  addPathLight(L.driveR + 2.0, L.houseF + 19, L.lo + 0.04, props);
+  addPathLight(L.stepW - 5.0, bedF1 - 0.8, L.lo + 0.05, props);
+
+  // 5. Island bed at the street end of the drive, with the lamp post
+  addBed(rng, L.driveL - 10, L.apronF + 2.5, L.driveL - 0.6, L.apronF + 13, L.lo + 0.03, beds);
   for (let i = 0; i < 6; i++) {
-    addBoxwood(rng, driveL - 7.5 + rng() * 6.5, padF + 3.5 + rng() * 7, 1.1 + rng() * 0.8, 0.3, leaves);
+    addBoxwood(rng, L.driveL - 8 + rng() * 6.5, L.apronF + 4 + rng() * 7.5,
+               1.1 + rng() * 0.8, L.lo + 0.03, leaves);
   }
+  const lx = L.driveL - 5.2, lz = L.apronF + 9.0;
+  const post = cylAt(0.12, 0.16, 6.2, 8, lx, L.lo, lz);
+  paint(post, _c.setHex(0x191a1c)); props.push(post);
+  const lamp = boxAt(0.8, 1.1, 0.8, lx, L.lo + 6.2, lz);
+  paint(lamp, _c.setHex(0xd8cda4)); props.push(lamp);
+  const lcap = cylAt(0.02, 0.62, 0.42, 4, lx, L.lo + 7.3, lz);
+  paint(lcap, _c.setHex(0x191a1c)); props.push(lcap);
+  addGrassClump(rng, lx - 2.2, lz - 1.0, L.lo, leaves);
+  addGrassClump(rng, lx + 2.0, lz + 1.2, L.lo, leaves);
+  addGrassClump(rng, lx - 0.4, lz + 2.6, L.lo, leaves);
 
-  // 4. Flagstones stepping through the front bed toward the porch steps
-  for (let i = 0; i < 4; i++) {
-    const g = boxAt(2.1, 0.14, 1.7, stepL - 3.2 - i * 2.6, 0.36,
-                    bedF0 + 1.4 + (i % 2) * 0.7, (rng() - 0.5) * 0.3);
-    paint(g, hsl(0.33, 0.05, 0.44 + rng() * 0.07));
-    beds.push(g);
-  }
-
-  // 5. Vehicles and hardware
-  addCar((driveL + driveR) / 2 - 0.6, garageF + 11, props);
-  addBin(driveR + 1.4, garageF + 1.6, props);
-  addPathLight(driveR + 1.6, garageF + 8, 0.34, props);
-  addPathLight(driveR + 2.2, garageF + 16, 0.34, props);
-  addPathLight(stepL - 5.5, bedF0 + 0.9, 0.34, props);
-  // the black urns standing against the wall where the porch meets the garage
-  for (const [ux, uz] of [[driveL + 0.7, porchF - 0.6], [driveL + 1.3, garageF + 1.4]]) {
-    const urn = cylAt(0.85, 0.55, 1.25, 10, ux, 0.22, uz);
+  // 6. Vehicles and hardware. The bin is BLUE with a black lid - the v3 front
+  //    shots were taken at dusk and it reads black there, but "Side of the
+  //    house.jpg" shows it in daylight against the garage flank.
+  addCar((L.driveL + L.driveR) / 2 - 1.4, L.houseF + 13, props);
+  addBin(L.driveR - 1.4, L.houseF + 1.9, props);
+  // black urns standing against the wall where the porch meets the garage
+  for (const [ux, uz] of [[L.porchE + 0.9, L.houseF + 1.4], [L.driveL + 1.1, L.houseF + 1.4]]) {
+    const urn = cylAt(0.85, 0.55, 1.25, 10, ux, L.lo, uz);
     paint(urn, _c.setHex(0x24252a)); props.push(urn);
   }
 
-  // 6. Porch: white planters with topiary flanking the steps, bench to the side
-  // (its own Color, not the shared _c scratch — addBoxwood below overwrites that)
-  const white = new THREE.Color(0xeeece7);
-  const deckY = 2.15;
-  for (const px of [stepL - 1.6, stepL - 7.5]) {
-    const pot = cylAt(0.78, 0.6, 1.5, 10, px, deckY, porchF - 1.5);
-    paint(pot, white); props.push(pot);
-    addBoxwood(rng, px, porchF - 1.5, 0.72, deckY + 1.4, leaves);
-    addBoxwood(rng, px, porchF - 1.5, 0.52, deckY + 2.7, leaves);
-  }
-  // kept clear of the porch's own left-hand stair, which the shell models
-  const bx = stepL - 13.0, bz = porchF - 2.6;
-  const bench = [boxAt(4.2, 0.28, 1.6, bx, deckY + 1.25, bz),
-                 boxAt(4.2, 1.35, 0.22, bx, deckY + 1.5, bz - 0.7),
-                 boxAt(0.28, 1.25, 1.5, bx - 1.95, deckY, bz),
-                 boxAt(0.28, 1.25, 1.5, bx + 1.95, deckY, bz)];
-  for (const g of bench) { paint(g, white); props.push(g); }
+  // 7. Framing trees. The front photograph is framed top-left and top-right by
+  //    mature canopies overhanging the drive; without them the house reads as
+  //    standing in an open field.
+  // This one also stands over the Sketchup scale FIGURE baked into the shell's
+  // merged Root_Node mesh at x -16.5, z 44.7 — it cannot be hidden separately.
+  addShadeTree(rng, L.driveL - 37, L.apronF - 5.6, 1.8, trunks, leaves);
+  addShadeTree(rng, L.driveR + 22, L.apronF + 2, 1.35, trunks, leaves);
+  addShadeTree(rng, L.driveR + 26, L.houseF + 4, 1.2, trunks, leaves);
 
-  // 7. Street lamp post in the island bed by the driveway, flanked by the
-  //    ornamental grasses (second photo, looking down the drive to the road)
-  const lx = driveL - 5.0, lz = padF + 8.5;
-  const post = cylAt(0.12, 0.16, 6.2, 8, lx, 0.3, lz);
-  paint(post, _c.setHex(0x191a1c)); props.push(post);
-  const lamp = boxAt(0.8, 1.1, 0.8, lx, 6.5, lz);
-  paint(lamp, _c.setHex(0xd8cda4)); props.push(lamp);
-  const cap = cylAt(0.02, 0.62, 0.42, 4, lx, 7.6, lz);
-  paint(cap, _c.setHex(0x191a1c)); props.push(cap);
-  addGrassClump(rng, lx - 2.2, lz - 1.0, 0.3, leaves);
-  addGrassClump(rng, lx + 2.0, lz + 1.2, 0.3, leaves);
-  addGrassClump(rng, lx - 0.4, lz + 2.6, 0.3, leaves);
+  // 8. The neighbouring house at the west, two garage doors facing the street
+  addNeighbour(L.driveL - 78, L.houseF + 7, 26, 30, 18, 0, 2, beds);
+
+  // 9. Woodland across the far side of the street. Both yards' fly-to poses
+  //    look straight past the house at open horizon otherwise, which reads as
+  //    a model on a putting green; every photograph is closed off by trees.
+  //    Planted past z = 108 so neither exterior camera (z 97 front, z -78 back)
+  //    ever stands inside one.
+  for (let x = L.driveL - 130; x < L.driveR + 110; x += 11 + rng() * 9) {
+    addShadeTree(rng, x, L.street + 34 + rng() * 22, 1.0 + rng() * 0.6,
+                 trunks, leaves);
+  }
+}
+
+// The back yard had nothing but the generic treeline: the shell GLB models the
+// rear elevation and a ground-level terrace with a white fence, and everything
+// else in "Backyard v3 5/7/9" - the lawn, the rock beds that edge it, the big
+// free-standing clipped mounds, the grasses, the stepping stones - was missing.
+// (The raised composite deck and its furniture are placed objects on room 3,
+// not built here: they are discrete pieces the owner can move.)
+function addBackYard(L, rng, leaves, beds, props, lawns, trunks) {
+  const yN = L.padN;            // where the raised lawn ends
+  // The deck (a placed object on room 3) occupies world x 2.7..29.9,
+  // z -44.5..-24.3. Nothing below may grow inside it.
+  // 1. Rock beds edging the lawn. NARROW: the photographs are lawn-dominated
+  //    with the rock confined to a border at the foot of the treeline and one
+  //    wider apron beside the deck steps.
+  addBed(rng, L.padW - 2, yN - 6.5, L.padE + 2, yN - 1.5, L.lo + 0.04, beds);
+  addBed(rng, L.padW - 1.5, -46, L.padW + 3.0, L.wingN - 6, L.hi + 0.04, beds);
+  addBed(rng, L.padE - 7.5, -47, L.padE + 2, -28, L.lo + 0.04, beds);
+  // stepping stones running away from the deck's east flight, as in the aerial
+  addFlagstones(rng, [[L.padE - 5.5, -33], [L.padE - 4.4, -35.4], [L.padE - 5.4, -37.8],
+                      [L.padE - 4.2, -40.2], [L.padE - 5.3, -42.6]], L.lo + 0.06, beds);
+
+  // 2. The big clipped mounds standing free on the lawn. Dark green ones across
+  //    the middle of the lawn and the red-purple one beside the deck steps.
+  addMound(rng, L.padW + 3.5, L.blockN - 6, 4.2, L.hi, 'green', leaves);
+  addMound(rng, L.padW + 2, L.blockN - 22, 3.4, L.hi, 'green', leaves);
+  addMound(rng, L.padW + 13, -50, 3.8, L.hi, 'green', leaves);
+  // The big red-purple photinia beyond the deck rail (v3 9). Sized and sited
+  // to also swallow the shell GLB's leftover parasol RIBS: hiding the
+  // terrace lounge set takes its canopy with it, but the frame is merged
+  // into mesh_11 along with the siding and the boundary fence and cannot be
+  // hidden separately, so it was left standing as bare white spokes.
+  addMound(rng, L.padE - 11.5, -36.5, 6.0, L.lo, 'red', leaves);
+  addMound(rng, L.lowE + 9, -25, 3.0, L.hi, 'green', leaves);
+  addMound(rng, L.padE - 4, -45, 3.2, L.lo, 'green', leaves);
+  addMound(rng, L.padE - 8, -39, 4.8, L.lo, 'green', leaves);
+  addMound(rng, L.padE - 14, -41.5, 4.2, L.lo, 'green', leaves);
+
+  // 3. Ornamental grasses and low shrubs along the bed edges
+  for (let x = L.padW; x < L.padE; x += 5 + rng() * 5) {
+    addGrassClump(rng, x, yN - 4.5 + (rng() - 0.5) * 3, L.lo + 0.04, leaves);
+  }
+  for (let z = -46; z < L.wingN - 7; z += 5 + rng() * 4) {
+    if (rng() < 0.6) addGrassClump(rng, L.padW + 0.8 + rng() * 1.6, z, L.hi + 0.04, leaves);
+    else addBoxwood(rng, L.padW + 1.0 + rng() * 1.6, z, 1.3 + rng() * 0.7, L.hi + 0.04, leaves);
+  }
+  for (let z = -46; z < -29; z += 4 + rng() * 3) {
+    addGrassClump(rng, L.padE - 1.2 - rng() * 4, z, L.lo + 0.04, leaves);
+  }
+
+  // 4. Dense mature treeline round the boundary - the back photographs are
+  //    closed off by woodland on all three sides, well above roof height.
+  //    Planted ON the lot lines (past the site pad's own edges), not just
+  //    outside the lawn: the app's exterior fly-to for this yard stands the
+  //    camera at (-18.5, -77.9), and a treeline hugging the lawn edge put a
+  //    30 ft canopy over the lens.
+  for (let x = L.padW - 22; x < L.padE + 26; x += 8 + rng() * 5) {
+    addShadeTree(rng, x + (rng() - 0.5) * 4, L.yardN - 7 - rng() * 14,
+                 1.0 + rng() * 0.5, trunks, leaves);
+  }
+  for (let z = L.yardN + 2; z < L.wingN - 4; z += 9 + rng() * 6) {
+    addShadeTree(rng, L.padW - 24 - rng() * 10, z, 0.95 + rng() * 0.5, trunks, leaves);
+  }
+  for (let z = L.yardN + 4; z < -22; z += 10 + rng() * 6) {
+    addShadeTree(rng, L.padE + 16 + rng() * 10, z, 0.9 + rng() * 0.5, trunks, leaves);
+  }
+
+  // 4b. Understory. Without it the treeline is bare trunks over open lawn and
+  //     the boundary reads as a park; every back photograph has a dense mass of
+  //     shrub and small tree under the canopy right down to the grass.
+  for (let x = L.padW - 22; x < L.padE + 24; x += 4 + rng() * 4) {
+    addMound(rng, x + (rng() - 0.5) * 3, L.yardN - 4 - rng() * 9,
+             3.0 + rng() * 2.4, L.lo, rng() < 0.12 ? 'red' : 'green', leaves);
+  }
+  for (let z = L.yardN + 4; z < L.wingN; z += 5 + rng() * 4) {
+    addMound(rng, L.padW - 12 - rng() * 8, z, 2.8 + rng() * 2.2,
+             L.hi, 'green', leaves);
+    addMound(rng, L.padE + 10 + rng() * 8, z, 2.8 + rng() * 2.2,
+             L.lo, 'green', leaves);
+  }
+
+  // 5. A neighbouring house each side, as in "Backyard v3 7"
+  addNeighbour(L.padW - 46, L.blockN - 14, 26, 28, 17, 0, 0, beds);
+  addNeighbour(L.padE + 40, L.blockN - 18, 26, 28, 17, 0, 0, beds);
+}
+
+// The shell GLB ships an outdoor lounge set — a brown sofa, two armchairs, an
+// ottoman and an OPEN cream parasol — standing on a ground-level terrace about
+// 20 ft off the back of the house. Every rear photograph disagrees with it:
+// the real furniture is white/grey wicker, the parasol is a CLOSED cantilever
+// on a black mast, and all of it stands on a raised composite deck attached to
+// the rear wall. That deck and its furniture are placed as objects on room 3,
+// so leaving the GLB's set visible would put two lounge sets in the back yard.
+//
+// Hidden by BOUNDING BOX rather than by mesh name, because the names in this
+// GLB are Sketchup component ids ("sofa+go+do", "106341") that a re-export
+// would change: any shell mesh that lies wholly inside the terrace rectangle
+// and is under 10 ft tall is furniture. Nine meshes match, and none of them is
+// siding, roof, fence or terrain — the terrace slab itself, the fence and the
+// rear elevation all stay. Set HIDE_TERRACE_PROPS to null to restore them.
+const HIDE_TERRACE_PROPS = { x0: 27, x1: 48, z0: -52, z1: -32, maxH: 11 };
+const _hidBox = new THREE.Box3();
+function hideShellPatioProps() {
+  const shell = getShellRoot();
+  if (!shell || !HIDE_TERRACE_PROPS) return;
+  const B = HIDE_TERRACE_PROPS;
+  shell.updateWorldMatrix(true, true);
+  shell.traverse((o) => {
+    if (!o.isMesh) return;
+    _hidBox.setFromObject(o);
+    const cx = (_hidBox.min.x + _hidBox.max.x) / 2;
+    const cz = (_hidBox.min.z + _hidBox.max.z) / 2;
+    if (cx >= B.x0 && cx <= B.x1 && cz >= B.z0 && cz <= B.z1
+        && _hidBox.max.x - _hidBox.min.x <= 24
+        && _hidBox.max.z - _hidBox.min.z <= 24
+        && _hidBox.max.y - _hidBox.min.y <= B.maxH) {
+      o.visible = false;
+    }
+  });
 }
 
 // Rebuild the trees/bushes/shadow around the house. Placement mirrors the
@@ -591,11 +950,19 @@ function buildYard() {
     }
   }
 
-  // Everything the shell GLB leaves out between the siding and the street:
-  // planting beds, the SUV, the bin, porch pieces (see addFrontYard). Anchored
-  // to the shell's roof outline, so it only runs when a shell is loaded — the
+  // Everything the shell GLB leaves out, front and back: the lawn that covers
+  // its pale site pad, the driveway, the planting beds, the SUV, the bin, the
+  // slate retaining course, the deck-side planting and the neighbours (see
+  // landmarks/addGroundCover/addFrontYard/addBackYard). Anchored to the shell's
+  // roof outline, so it only runs when a shell is loaded — the
   // generated-geometry fallback keeps its own bushes above.
-  if (roofRect) addFrontYard(roofRect, rng, leaves, beds, props, lawns);
+  if (roofRect) {
+    const L = landmarks(roofRect);
+    addGroundCover(L, lawns);
+    addFrontYard(L, rng, leaves, beds, props, lawns, trunks);
+    addBackYard(L, rng, leaves, beds, props, lawns, trunks);
+    hideShellPatioProps();
+  }
 
   // mergeGeometries refuses to mix indexed (cylinder/cone) with non-indexed
   // (icosahedron) geometry — normalize everything to non-indexed first
@@ -619,9 +986,22 @@ function buildYard() {
     yard.add(lawn);
   }
   if (beds.length) {
-    const m = new THREE.Mesh(
-      BufferGeometryUtils.mergeGeometries(flat(beds), false),
-      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }));
+    // Fine grain on the hardscape. Vertex colours alone gave the driveway
+    // sd 3.7 / mean|Δ| 0.30 against the photograph's 10.8 / 6.3 — the right
+    // average value and no texture at all at the scale the eye reads, which is
+    // the "sd is scale-blind" trap. A near-white 4 ft noise tile multiplies
+    // into the same vertex colours and costs one 128px canvas for every bed,
+    // wall and slab in both yards. UVs re-derived from world position (as the
+    // lawn does) so the grain keeps ONE physical scale across slabs of very
+    // different sizes.
+    const geo = BufferGeometryUtils.mergeGeometries(flat(beds), false);
+    const pos = geo.attributes.position, uv = geo.attributes.uv;
+    for (let i = 0; i < pos.count; i++) {
+      uv.setXY(i, pos.getX(i) / 6, -pos.getZ(i) / 6);
+    }
+    uv.needsUpdate = true;
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      vertexColors: true, map: makeGritTexture(), roughness: 1, flatShading: true }));
     m.receiveShadow = true;
     yard.add(m);
   }

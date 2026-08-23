@@ -1,0 +1,17 @@
+{"path": "C:/Users/Manuel/Desktop/Pro/3d HA/docs/photos-jpg/Garage v3 1.jpg",
+ "overlay": "C:/Users/Manuel/Desktop/Pro/3d HA/scratchpad/g8/p1_boxes.png",
+ "boxes": {
+   "N_above_banner":[412, 500, 612, 534],
+   "N_left_hi":     [232, 487, 330, 505],
+   "E_mid":         [872, 714, 922, 756],
+   "E_low":         [812, 768, 916, 812],
+   "E_pegleft":     [1018, 726, 1056, 788],
+   "E_hi":          [1052, 552, 1116, 576],
+   "CEIL":          [255, 400, 415, 440],
+   "CEIL2":         [175, 452, 300, 470],
+   "F_far":         [350, 900, 900, 1000],
+   "F_mid":         [300, 1050, 900, 1250],
+   "DOORLEAF":      [232, 660, 330, 770],
+   "BANNER_WHITE":  [640, 560, 700, 700],
+   "STEP_RISER":    [175, 838, 320, 862]
+ }}

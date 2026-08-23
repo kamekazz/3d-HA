@@ -1,0 +1,229 @@
+"""Write tools/roomkit/rooms/7.json -- the room's own layout map + evidence."""
+import json
+import os
+import urllib.request
+
+BASE = "http://127.0.0.1:5000"
+MODELS = r"C:\Users\Manuel\Desktop\Pro\3d HA\backend\uploads\models"
+OUT = r"C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\rooms\7.json"
+
+h = json.load(urllib.request.urlopen(BASE + "/api/house"))
+models = {m["name"]: m for m in json.load(urllib.request.urlopen(BASE + "/api/house/models"))}
+pieces, total = {}, 0.0
+for f in h["floors"]:
+    for r in f["rooms"]:
+        if r["id"] != 7:
+            continue
+        for o in r["objects"]:
+            m = models.get(o["name"])
+            p = os.path.join(MODELS, m["filename"]) if m else None
+            kb = round(os.path.getsize(p) / 1024.0, 1) if p and os.path.exists(p) else 0.0
+            total += kb
+            pieces[o["name"]] = {
+                "pos_room_local_ft": [round(o["position"][k], 3) for k in ("x", "y", "z")],
+                "rot_y_deg": round(o["rot_y"] * 57.29578, 1),
+                "scale": o["scale"], "kb": kb,
+            }
+
+doc = {
+  "_note": "REBUILT 2026-08-22 against the owner's v3 photo drop "
+           "(docs/photos-jpg/Garage v3 1-6.jpg). This room previously had NO "
+           "interior photograph and was furnished from 'normal construction "
+           "sense'; the photos contradicted most of it, so the fabricated "
+           "pieces were REPLACED, not merely deleted (see _replaced). Build "
+           "scripts: scratchpad/g8/{gk,g8_clean,g8_surface,g8_arch,g8_furn,"
+           "probe_walls,m}.py, all idempotent by piece name.",
+  "_room": {
+    "id": 7, "name": "Garage",
+    "floor": {"id": 2, "name": "First floor", "level": 1, "floor_height": 10.0},
+    "rect_world": {"x": [18.9, 39.3], "z": [13.0, 34.7]},
+    "size_ft": [20.4, 21.7], "wall_height": 9.0, "slab_world_y": 8.0,
+  },
+  "_orientation": [
+    "+Z is the FRONT of the house: Frontyard (room 11) is z 35.0-43.0, directly "
+    "south of the garage's z=34.7 edge; Backyard (room 3) is z -22.5..-12.5.",
+    "The plan (docs/floor plan/Main Floor Plan App.png) is drawn 180 deg "
+    "rotated from world. Registered on the garage's own four wall lines: plan "
+    "px x 52.5 <-> world x 39.3 and px 511.5 <-> 18.9 (0.0444 ft/px); px y 546 "
+    "<-> world z 34.7 and px 1032 <-> 13.0 (0.0447 ft/px). The two scales "
+    "agreeing to 0.5% is the check that the registration is right.",
+    "SOUTH (z=34.7) = the sectional door: the plan's opening line is px x "
+    "71.5-469 = world x 20.79-38.46, and that wall faces the Frontyard.",
+    "NORTH (z=13.0) = the service door: the plan labels 'Indoor garage door' "
+    "over px x 339-446.5 = world x 21.79-26.57, where opening id 4 already sits "
+    "(world x 22.43-25.43). Photo 1 is shot from the open sectional door and "
+    "the six-panel door with the wreath is on the wall OPPOSITE it.",
+    "WEST (x=18.9) = the grey metal cabinets: the plan draws a 1.6 x 9.1 ft run "
+    "at px (368-398, 553-722) = world x 19.46-21.68, z 20.41-28.90. Facing "
+    "north from the door WEST is on the left, which is photo 1's cabinet wall; "
+    "photos 4 and 5 shoot the same wall from the back and put it on the right.",
+    "EAST (x=39.3) = exterior side wall: TV, pegboard, Liqui Moly clock, "
+    "boards, yellow ride-on. Photo 3 (looking south) puts the TV wall on the "
+    "LEFT with the sectional door on the right - the same wall.",
+  ],
+  "_evidence": [
+    "PHOTO-VERIFIED: black interlocking rubber coin-tile floor over the whole "
+    "slab; off-white painted walls; white FLAT sectional door, four sections, "
+    "three galvanised struts, no windows and no raised panels (photo 5 head-on: "
+    "the leaf meters 211.5 x 94 px, aspect 2.25 = a 16 x 7 ft double door); "
+    "white chain-drive opener with a beige motor head at the BACK of the rail "
+    "and a bare bulb on a red cord; white six-panel service door with a green "
+    "wreath, up two white treads with white newel rails, dark grid scraper mat "
+    "below (photo 6); large KIES MOTORSPORTS vinyl of a white BMW M4; "
+    "wall-mounted flat TV; skateboards and a snowboard; black pegboard with "
+    "hooks and caps; round Liqui Moly clock; white Eames-style moulded chair on "
+    "wooden dowel legs; yellow child's ride-on tipped nose-up on the east wall; "
+    "grey two-door metal cabinets; RED rolling tool cabinet; brooms, a red fire "
+    "extinguisher, a coiled white hose, sacks of feed, framed prints and small "
+    "signage; the bay is EMPTY - there is no car in any of the six photos.",
+    "INFERRED (sized by convention, not visible): the exact feet along each "
+    "wall (see _gaps), the eight recessed cans and three linear shop lights, "
+    "the door's torsion tube and springs, and the wall fan.",
+  ],
+  "_replaced": {
+    "_note": "placed with no photograph and contradicted by the v3 drop; each "
+             "was replaced by what the photos show, never merely removed",
+    "Garage Car": "the bay is empty in photos 1, 2, 3, 4 and 5",
+    "Garage Workbench + Garage Cabinets Tall": "-> Garage Cabinets (grey metal)",
+    "Garage Shelving": "-> the wire shelf inside Garage Brooms",
+    "Garage Water Heater, Freezer, Mower, Bins, Bike, Ladder, Bay Storage":
+        "none of them appear in any photo",
+    "Garage Floor Marks": "painted-concrete bay markings; the real floor is "
+                          "black rubber coin tile -> Garage Floor",
+    "Garage Step": "-> Garage Steps (two treads, newel rails, doormats)",
+    "Garage Opener": "merged into Garage Ceiling so CEILING_RE fades it with "
+                     "the ceiling instead of leaving the rail in mid-air",
+  },
+  "_surfaces": {
+    "wall_color": "#dad7d0", "floor_color": "#3d3f43", "floor_texture": "concrete",
+    "_floor_note": "the room's own floor only shows in slivers under the walls; "
+                   "the visible floor is the Garage Floor GLB",
+    "per_wall_skin": {"n": "#7e7c78", "w": "#a7a5a0", "e": "#ebe8e0", "s": "#fffbf3"},
+    "skin_texture": "128 px tiled paint grain at 2 ft, mean 242 sd 9 -- the "
+                    "round-1 skins shipped at sd 0.00 flat colour",
+    "north_furring_ft": 0.42,
+    "north_furring_why": "house.js builds each wall's mass OUTSIDE its own "
+        "footprint, so the Pantry (garage-local x -0.1..3.0), the Laundry "
+        "(9.6..14.0) and the Office printers room (14.3..20.5) each push their "
+        "south wall 0.35 ft INTO room 7 and hide room 7's north face behind "
+        "their own paint (verified with a red-skin probe). Those rooms belong "
+        "to other agents, so the north skin is furred out past them and every "
+        "north-wall piece hangs off z=0.42, not z=0.",
+    "coin_tile": "512 px PNG covering 4 ft (2x2 interlocking modules) at 128 "
+                 "px/ft, coins on a 1.71 in pitch, embedded as a glTF "
+                 "baseColorTexture with a REPEAT sampler (new in roomkit/glb.py). "
+                 "58.8 KB for the whole floor.",
+  },
+  "_camera": {
+    "judge_from": "doll_sw",
+    "why": "cutaway.js fades the two walls nearest the camera. doll_sw drops "
+           "SOUTH and WEST and keeps NORTH (the KIES banner, the service door, "
+           "the wreath, the steps) and EAST (TV, pegboard, clock, boards, "
+           "yellow ride-on, chair) -- the two walls that carry this room's "
+           "identity and the same pair the primary photo shows. It costs the "
+           "sectional door leaf and the cabinet run. doll_nw was shot as a "
+           "secondary because it keeps the sectional door. doll_ne, which the "
+           "previous photoless pass chose, drops both content walls.",
+    "photo_pose": {"pos": [23.30, 13.10, 34.10], "target": [28.90, 12.20, 13.00],
+                   "fov": 84, "size": [900, 1200],
+                   "flags": "--level 1 --day --no-cutaway"},
+    "doll_sw_pose": {"pos": [14.181, 47.998, 45.156],
+                     "target": [29.1, 10.52, 23.85], "fov": 42,
+                     "size": [1200, 900]},
+  },
+  "_metered_srgb_luma": {
+    "_method": "native-resolution boxes on 900x700 --day renders of the "
+               "FURNISHED room; boxes re-picked by hand off "
+               "scratchpad/g8/vsheet.png because the empty-room boxes stopped "
+               "being wall once the banner, cabinets and pegboard went in. sd "
+               "AND mean|d1| both reported. Photo numbers come from Garage v3 "
+               "1.jpg (1200x1600) only -- the 450x600 shots are never metered.",
+    "walls_render": {
+      "north": "175.0 (sd 3.14, |d1| 2.16, |d1|/sd 0.689, n 34840)",
+      "east":  "173.2 (sd 8.29, |d1| 2.52, |d1|/sd 0.304, n 21600)",
+      "south": "162.4 (sd 8.13, |d1| 2.64, |d1|/sd 0.325, n 13630)",
+      "west":  "162.0 (sd 3.35, |d1| 2.35, |d1|/sd 0.702, n 79800)",
+      "spread": 13.0,
+    },
+    "walls_photo": {
+      "north_clean": "166.9 (sd 5.12, |d1| 2.50, |d1|/sd 0.488, n 1764)",
+      "east_clean": "178.1 (sd 6.52, |d1| 1.79, |d1|/sd 0.275, n 2100)",
+      "_note": "the west wall is behind the cabinets in every photo and is "
+               "unsolvable from the photograph; it was fitted to the same "
+               "target as the others (173 sRGB).",
+    },
+    "walls_before": "north 233.1 / west 200.3 / east 167.9 / south 141.6, "
+                    "spread 91.5 bare. The round-1 skin fit claimed 12.3, but "
+                    "its 'bare north = 233' was really the neighbours' walls, "
+                    "so the whole fit was re-run from a two-point probe (plus a "
+                    "third point at #3a3a3a for the north wall, because the "
+                    "tone curve's slope is 1.87 in the dark half against 0.49 "
+                    "in the bright half and a two-bright-point fit extrapolated "
+                    "to a wrong albedo).",
+    "floor_render": {
+      "north_end_near": "69.6 (sd 17.71, |d1| 3.34, |d1|/sd 0.188, n 54000)",
+      "mid_grazing": "77.3 (sd 5.08, |d1| 2.92, |d1|/sd 0.575, n 24000)",
+      "east_side": "87.5 (sd 5.44, |d1| 2.83, |d1|/sd 0.521, n 54900)",
+    },
+    "floor_photo": {
+      "far": "79.4 (sd 13.72, |d1| 4.50, |d1|/sd 0.328, n 55000)",
+      "mid": "82.5 (sd 19.07, |d1| 6.38, |d1|/sd 0.334, n 120000)",
+    },
+    "ceiling": "render 162.7 against the photo's 162.8 (sd 2.41) - 169.2 "
+               "(sd 17.50)",
+  },
+  "_payload": {"room_total_kb": round(total, 1), "objects": len(pieces),
+               "largest_piece_kb": max(p["kb"] for p in pieces.values()),
+               "budget": "<=1.5 MB per room and <=300 KB per piece: both met"},
+  "pieces": pieces,
+  "_gaps": [
+    "TASK-BRIEF DISAGREEMENT: the brief describes the sectional door as having "
+    "'a row of small windows near the top'. Photo 5 shows it head-on and it is "
+    "plain -- four long sections, three galvanised struts, no glazing and no "
+    "raised panels. What reads as a window row is the top section catching the "
+    "header light plus a section joint. Photo 4 agrees. Built flat.",
+    "TASK-BRIEF DISAGREEMENT: the brief calls the rolling tool cabinet black. "
+    "Photos 2, 4 and 5 show it RED (Milwaukee) with a black work top and a "
+    "black top chest. Built red.",
+    "The banner artwork, the wall prints and the signage are blocked-out "
+    "approximations, not the real graphics: KIES reads as type, the M4 reads as "
+    "a car, MOTORSPORTS is a letter-spaced rule.",
+    "Positions ALONG each wall are approximate. All six photos are ultra-wide "
+    "and uncorrected -- a pinhole solve on photo 1 returns f = 399 px (~112 deg "
+    "horizontal) and then disagrees with the measured wall height by 40%. So "
+    "wall ASSIGNMENT comes from the plan and the ORDER of objects along each "
+    "wall comes from the photos, but their exact feet do not.",
+    "The floor's fine-scale gradient is short: |d1| 3.34 against the photo's "
+    "4.50-6.38 at a matching sd. Cause measured, not guessed: the coin pattern "
+    "mips away with distance because GLTFLoader gives an embedded texture "
+    "anisotropy 1 and a GLB cannot set it (frontend/js/textures.js sets "
+    "aniso 16 on plank_grey for exactly this reason, but models.js sets none). "
+    "Trading module drift down (+-9 -> +-4) and coin contrast up bought +0.6 of "
+    "it; the rest needs an app-side anisotropy setting, which is out of scope.",
+    "The south wall cannot reach the common target: even a pure-white skin "
+    "lands it at 162.4, about 11 short. It is the wall the sun never reaches.",
+    "The photo's floor is glossy and reflects the open door opening; ours is "
+    "matte at roughness 0.62. Lowering it risks a specular blowout across a "
+    "20 x 21 ft plane, so it was left.",
+    "The garage door is modelled CLOSED (photos 3, 4, 5). The primary photo has "
+    "it OPEN with the panels lying on the ceiling track, so the ceiling in that "
+    "photo does not match ours, by design.",
+    "The whole-house shell GLB's exterior garage door is a raised-panel grid "
+    "(5 x 8 small panels); the real door is flat. That is the shell model, not "
+    "room 7. No opening is cut in room 7's south wall, so the interior leaf and "
+    "the shell's exterior door cannot mis-register -- the leaf hangs on the "
+    "inside face of a solid wall, which is where a real sectional door hangs.",
+    "Opening id 4 was raised to elevation 1.25 / height 6.75 so the service "
+    "door sits on the landing the photos show. Nothing is modelled on the other "
+    "side of that wall (the strip at world x 21.9-28.5, z 3.1-13.0 is "
+    "unmodelled), so there is no neighbour opening to keep registered with.",
+    "Contact shadows: at roughness 0.98 they rendered BRIGHTER than the floor "
+    "at grazing angles (a Fresnel route into the pale-halo failure ROOM-BRIEF "
+    "warns about). Fixed by matching the floor's roughness (0.62); they now "
+    "darken. Measured contact-edge darkening is about 25-30%, against the "
+    "brief's 34% target.",
+  ],
+}
+with open(OUT, "w") as fh:
+    json.dump(doc, fh, indent=2)
+print("wrote", OUT, len(pieces), "pieces,", round(total, 1), "KB")

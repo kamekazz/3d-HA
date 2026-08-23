@@ -1,187 +1,298 @@
 {
-  "_note": "FURNISHING ROUND (follows the shell pass). See scratchpad/bsmt/ar.py.",
-  "_room_note": "Arcade Room -- 'Arcade Room.jpg'. ORIENTATION: the photo is taken from the SOUTH looking NORTH, standing in the doorway from the Movie Room. Derivation: the basement plan's only wall gap between the two rooms is world x 11.4-14.1 on z=11.4, i.e. this room's SOUTH wall at local x 13.5-16.2 -- the same door the Movie Room photo shows from the other side, so the camera stands in it. The photo's far wall carries a white six-panel door with a wall cabinet beside it and measures ~5.3 ft; the plan puts a 5.3 x 6.5 ft utility room inside this footprint's NW corner (world x -2.3..3.2, z -9.0..-5.3), and its south face is exactly that wall. That fixes left = WEST (the Arcade1Up run, the collectible shelf, the duct bulkhead, the pinball) and right = EAST (the five full-size uprights under the hex panels).",
-  "_camera": {
-    "judge_from": "doll_se",
-    "why": "doll_se leaves the NORTH and WEST walls standing, which is where this room's content is (the pier + hex panels, and the west cabinet run + shelf + bulkhead), and it matches the level-0 whole-floor dollhouse pose. The cost is that the EAST run has no wall behind it from that quadrant; its cabinets were given pale caps and plinths and a wider pitch so the run reads as a row of machines rather than one black wall.",
-    "reference_pose": {
-      "pos": [
-        3.6,
-        5.3,
-        10.0
-      ],
-      "target": [
-        4.9,
-        3.3,
-        -11.4
-      ],
-      "fov": 84,
-      "size": [
-        900,
-        1200
-      ]
-    }
-  },
-  "_metered": {
-    "_how": "same method as room 1. NOTE the photo is a night shot under RGB LEDs -- its ceiling meters rgb=(144,152,218), so its absolute luminances are NOT comparable to a daylight render and are quoted for ratio only.",
-    "render_ceiling": "207.9  n=25600 sd=0.0",
-    "render_wall_north": "234.1  n=25600 sd=0.0",
-    "render_wall_east": "170.6  n=51000 sd=0.0-0.3",
-    "render_wall_south": "147.6  n=32000 sd=9.8 (door casing in the band)",
-    "render_wall_west": "not measurable - the cabinet run, the shelf and the bulkhead occlude z 6.5-21.6 and the leaning posters cover the rest. Proxy 202.9 (room 1's west wall: same albedo #dcdbd8, same normal, same level, n=25600).",
-    "render_wall_AVERAGE_4": "188.8 using that proxy",
-    "render_floor_plank": "142.0  n=6400 sd=1.2",
-    "render_rug": "205.3  n=24000 sd=13.8",
-    "photo_ceiling": "155.4  n=71500 sd=2.6  rgb=(144,152,218)",
-    "photo_walls": "166.0 n=4000 sd=9.0 (north) / 156.0 n=2400 sd=10.1 (east) / 173.9 n=9600 sd=24.5 (west soffit)",
-    "photo_rug": "169.4 n=80000 sd=6.6 (centre) / 179.8 n=15000 sd=8.0 (right)",
-    "photo_floor_plank": "142.2 n=67500 sd=21.0",
-    "photo_lounge_black": "17.7 n=17600 sd=7.7",
-    "photo_pouf_grey": "171.0 n=3300 sd=7.7",
-    "rug_over_floor_ratio": "photo 1.19, render 1.45 -- the render's rug still has more contrast against the plank than the photo"
-  },
-  "_gaps": [
-    "The photo is lit by RGB LED strips, Nanoleaf hexes and marquees; the app renders daylight. Only the marquees, the shelf strip, a third of the hex panels, the pinball playfield and the floor lamp are emissive here, so the room reads neutral where the photo reads purple/cyan. That is deliberate -- the alternative is emissive on room-scale runs, which two rounds of critics rejected.",
-    "The 5.3 x 6.5 ft utility room in the footprint's NW corner is built as a solid white pier (inside 'Arcade Baseboards' so it stays unpickable). It is real -- it is in the plan and it is the wall the photo's door sits in -- but the footprint does not know about it, so the room's slab and skirting still run underneath it.",
-    "ONE cabinet model is reused eleven times (six mini uprights + five full-size) with only the marquee/side-art hue varying, to stay inside the payload budget. The photo's eleven machines are all different.",
-    "From doll_se the EAST wall is culled, so the east run stands with no wall behind it. Pale caps, pale plinths and a 2.52 ft pitch keep it reading as a row of machines rather than one black wall, but it is still the weakest thing in the dollhouse shot.",
-    "The black lounge is five wedge-backed modules on a common base; the real one is a single sculptural piece and reads softer.",
-    "Not modelled: the posters' artwork, the shelf figures are coloured blocks rather than Funko Pops, and the pinball has no side art."
-  ],
-  "_room": {
-    "id": 2,
-    "name": "Arcade Room",
-    "floor": {
-      "id": 1,
-      "name": "Basement",
-      "level": 0,
-      "floor_height": 8.0
-    },
-    "rect_world": {
-      "x": [
-        -2.1,
-        18.6
-      ],
-      "z": [
-        -11.9,
-        11.4
-      ]
-    },
-    "size_ft": [
-      20.7,
-      23.3
+ "_note": "ROUND 2, 2026-08-22, judged against the v3 photo drop. Built by scratchpad/bsmt/ar2.py (idempotent, re-runnable). Round 1's ar.py is superseded and must NOT be re-run: it is 180 degrees out on X.",
+ "_room_note": "ORIENTATION -- RE-DERIVED AND CORRECTED. Round 1 put the cabinet run on the WEST wall; it is on the EAST. Derivation: the HA basement plan image (docs/floor plan/Basement Floor Plan App.png) is the world ROTATED 180 degrees -- plan-up = +z, plan-LEFT = +x. Two independent anchors fix that to better than 0.3 ft: (1) the plan's stair-enclosure wall registers at world x 15.14 and the DB stairs row for the basement is x 15.1..18.4 (the un-rotated reading puts the same wall at world x -2.5, 17.6 ft out); (2) the plan's only party-wall door gap is world x 11.15..14.20 and openings 103 (this room) and 3 (Movie Room) are both world x 11.4..14.1. With that registration the SOUTH wall (z=23.3) is the ONLY wall of this room carrying any opening. 'Arcade Room v3 4.jpg' and 'Arcade Room.jpg' show a far wall with a white six-panel door, ~13 ft of arcade cabinets on ONE side of it and a narrow stub plus a recess on the other -- which is the south wall exactly (13.5 ft solid from x 0 to 13.2, door 13.5..16.2, a 1.2 ft stub, then the 3.2 ft opening to the stair landing at 17.5..20.7). So that camera looks SOUTH, its left-hand long wall is the EAST wall, and the cabinet run + Funko shelf live there. 'v3 1' is the reverse view (cabinets right, desk left) and agrees.",
+ "_walls": {
+  "east x=20.7": "THE ROOM. 7 uprights facing west, the lit Funko shelf over them at y 6.34, the white chevron acoustic band at y ~7.0, the cove LED at 7.62, the Y-shaped RGB fixture at z 20.55, the pinball at z 18.75 and a low glass collectible case at z 20.3..22.1.",
+  "south z=23.3": "Legends Ultimate / Capcom Champion (on its blue CAPCOM base) / Time Crisis / T2 across x 0.5..11.3, the black diagonal-rib acoustic panel x 11.6..13.2, the Movie Room door x 13.5..16.2 (opening 103, real cut), a vertical RGB hex light bar on the 1.2 ft stub at x 16.85, a wall-hung mini cabinet x 17.35..18.85 and the Connect-4 game on a low white console x 17.9..20.55.",
+  "west x=0": "the white sit-stand desk run z 9.6..20.1 with monitors, keyboards, a retro-console shelf, two plants and six RGB floor uplights; the very large TV z 9.2..16.6 at y 3.25..6.55 with an RGB bias strip; hex panels; a second Y light; Ridge Racer round the corner at z 21.55.",
+  "north z=0": "hex panels (white / black / lit), three small mounted screens, a slim RGB floor lamp and a green vase in the corner beside the utility room."
+ },
+ "_camera": {
+  "judge_from": "doll_nw",
+  "why": "cutaway.js fades the two walls nearest the camera, so doll_nw leaves the EAST and SOUTH walls standing -- which is where every arcade cabinet in the room is. doll_se (round 1's choice) culls exactly the pair that carries the room's identity. The cost is that the west wall (desk + big TV) has no wall behind it from this quadrant; the desk, chair, plants and uplights still read because they are floor-standing.",
+  "poses_world": {
+   "photo_v3_4_match": {
+    "pos": [
+     14.4,
+     5.2,
+     -10.9
     ],
-    "wall_height": 8.0
+    "target": [
+     7.4,
+     2.2,
+     11.4
+    ],
+    "fov": 84,
+    "size": [
+     900,
+     1200
+    ]
+   },
+   "photo_v3_1_match": {
+    "pos": [
+     2.4,
+     5.2,
+     9.4
+    ],
+    "target": [
+     10.4,
+     2.0,
+     -11.0
+    ],
+    "fov": 80,
+    "size": [
+     900,
+     1200
+    ]
+   },
+   "doll_nw": {
+    "pos": [
+     -7.156,
+     40.009,
+     -22.252
+    ],
+    "target": [
+     8.25,
+     2.24,
+     -0.25
+    ],
+    "fov": 42,
+    "size": [
+     1200,
+     900
+    ]
+   },
+   "plan": {
+    "pos": [
+     8.25,
+     37.0,
+     -0.25
+    ],
+    "target": [
+     8.25,
+     0.0,
+     -0.25
+    ],
+    "fov": 45,
+    "size": [
+     900,
+     900
+    ]
+   }
+  }
+ },
+ "_metered": {
+  "_how": "Photo boxes are hand-placed on clean single-material patches at NATIVE 1200x1600 and verified on an overlay (scratchpad/bsmt/m2.py reports mean, sd, mean|d1| between adjacent pixels and |d1|/sd together). Render walls are metered by the DIFF-MASK method (scratchpad/bsmt/probe2.py): the room is rendered with one wall's skin changed and the pixels that moved ARE that wall, so no sample box can swallow a cabinet. Render floor numbers come from the top-down plan pose where the geometry is unambiguous. NOTE the photos are a NIGHT shot under RGB cove/hex fixtures -- every surface is colour-cast and the absolute luminances are NOT comparable to a daylight render. Ratios and the texture statistics are.",
+  "photo_ceiling": "123.6  n=108000  sd=7.34  |d1|=1.10  (v3 1: 138.5 sd 8.24)",
+  "photo_wall_south_clean": "148.6  n=3608  sd=15.60  |d1|=1.81  ratio 0.116",
+  "photo_wall_east_clean": "133.9  n=3025  sd=24.33  |d1|=3.46  ratio 0.142",
+  "photo_wall_north_clean": "128.2  n=48000  sd=31.37  |d1|=3.77  ratio 0.120  (v3 1)",
+  "photo_rug_centre": "131.6  n=203000  sd=17.65  |d1|=2.78 ; clean single-lit patch 159.7 n=11400 sd=6.76 |d1|=2.68 ratio 0.397",
+  "photo_plank": "84.5 n=32400 sd=6.82 |d1|=3.13 ratio 0.459  /  134.7 n=7000 sd=23.22  /  140.1 n=34000 sd=12.56 (v3 1)",
+  "photo_cabinet_black": "14.5  n=5400  sd=20.58  |d1|=3.11",
+  "photo_rug_over_plank": "1.19 (v3 4, both in the same lit patch) / 0.99 (v3 1)",
+  "render_wall_north": "174.0  n=213290  sd=6.42  |d1|=0.52  ratio 0.082",
+  "render_wall_east": "175.1  n=59571   sd=13.73 |d1|=1.28  ratio 0.093",
+  "render_wall_south": "165.5  n=91882   sd=11.02 |d1|=0.70  ratio 0.064",
+  "render_wall_west": "176.5  n=94569   sd=8.83  |d1|=0.86  ratio 0.097",
+  "render_wall_SPREAD": "11.0  (was 75.4 with one wall_color -- the tightest in the house so far: garage 12.3, laundry 18.2, office 22.9)",
+  "render_rug_clean": "174.5  n=12320  sd=8.25  |d1|=0.59  ratio 0.072",
+  "render_plank_clean": "141.5  n=4746   sd=10.24 |d1|=1.39  ratio 0.136",
+  "render_rug_over_plank": "1.23  (photo 1.19)",
+  "render_contact_shadow": "at the lounge's contact edge 120.8 against 180.7 of free rug = 33.2% darkening, easing to zero over ~27 px / 0.9 ft. Target 34% over ~25 px."
+ },
+ "_wall_skins": {
+  "_how": "probe2.py. All four skins at albedo 250 rendered N 239.1 / E 187.0 / S 163.7 / W 214.7 (spread 75.4); at albedo 110 they rendered N 168.0 / E 75.3 / S 51.9 / W 106.0. Two-point power fits (gamma N 0.43, E 1.11, S 1.40, W 0.86) inverted for a common target of 172, then one measured nudge.",
+  "final": {
+   "n": "#747371",
+   "e": "#e6e4e0",
+   "s": "#fffefb",
+   "w": "#b5b3af"
   },
-  "_surfaces": {
-    "wall_color": "#dcdbd8",
-    "floor_color": "#6b6967",
-    "wall_texture": null,
-    "floor_texture": "wood"
+  "note": "The south wall is the one the sun never reaches: it caps at ~168 even pure white, so it is left white and lands 11 under the others. The skins are NOT flat colour -- each carries a two-tone vertical banding, which is why they meter sd 6.4-13.7 rather than the algebraically-perfect 0.00 three earlier rooms shipped."
+ },
+ "_shadows": "kit.contact_shadow's stacked-layer shape metered as a 0.5-2% darkening in this scene -- coincident translucent triangles inside one primitive do not accumulate here. ar2.py's cshadow() replaces it with ONE coplanar layer of NON-OVERLAPPING annuli, each carrying its own alpha, full darkness AT the footprint feathering out over 0.7-0.85 ft, at y=0.050 on plank and y=0.115 on the rug. Measured 33.2% at the contact edge.",
+ "_gaps": [
+  "The photos are lit almost entirely by RGB cove strips, Nanoleaf hexes, marquees and floor uplights; the app renders daylight. Only the fixtures the photo actually shows are emissive here (marquees, the shelf strip, the cove, a third of the hexes, the two Y fixtures, the RGB bar, the uplight lenses, the TV bias strip). There is deliberately NO room-filling emissive box and no emissive on any room-scale trim run -- four builders were rejected for that.",
+  "The 3.2 ft opening from the SE corner of the south wall (local x 17.5..20.7) to the stair landing is real in the plan and is NOT cut. Cutting it would leave the Movie Room's own wall standing in the hole, and room 1 belongs to another agent. It needs to be paired: Arcade edge_index 2 offset 0.0 width 3.2, Movie Room edge_index 0 offset 17.3 width 3.2.",
+  "The room is really L-shaped: the plan puts a 6.1 x 3.7 ft utility closet at world x -3.0..3.1, z -8.5..-4.8 and an open 6.3 x 3.9 ft alcove north of it. The closet is built here as a solid white block (inside 'Arcade Baseboards' so it stays unpickable) and its south face carries the six-panel door that v3 1 shows straight ahead. The footprint is a rectangle and does not know about it, so the slab and skirting still run underneath. The alcove is left as open floor.",
+  "ONE cabinet model is reused thirteen times with the marquee / printed-front / side-art hues and the silhouette varying, to stay inside the payload budget. The photos' machines are all different.",
+  "The rug and the plank both match the photo's sd (8.25 vs a clean 6.76; 10.24 vs 6.82) but fall well short on |d1| (0.59 vs 2.68; 1.39 vs 3.13). The photo's nap is sub-inch fibre. Reaching it with geometry costs more than the whole room's payload budget, and the one attempt at finer cells read as a chequerboard -- a clear perceptual regression. roomkit.glb.Material has no texture-map support, which is the real blocker.",
+  "The ceiling is invisible in every render because cutaway.js fades any object whose name ends in 'ceiling'. That is deliberate app behaviour (STYLE-BAR item 7) but it means the interior photo-match shots show sky above the 8 ft wall line where the photo shows a lit white ceiling.",
+  "Not modelled: the printed artwork on the cabinets (they carry tone fields, not graphics), the Funkos are two-box figures rather than Pops, the pinball has no side art, and the desk's second monitor arm."
+ ],
+ "_room": {
+  "id": 2,
+  "name": "Arcade Room",
+  "floor": {
+   "id": 1,
+   "name": "Basement",
+   "level": 0,
+   "floor_height": 8.0
   },
-  "_openings": [
-    {
-      "edge_index": 2,
-      "elevation": 0.0,
-      "entity_id": null,
-      "height": 6.83,
-      "id": 103,
-      "offset": 4.5,
-      "type": "door",
-      "width": 2.6999999999999993
-    }
+  "rect_world": {
+   "x": [
+    -2.1,
+    18.6
+   ],
+   "z": [
+    -11.9,
+    11.4
+   ]
+  },
+  "size_ft": [
+   20.7,
+   23.3
   ],
-  "pieces": {
-    "Arcade Baseboards": {
-      "pos_room_local_ft": [
-        10.35,
-        0.0,
-        11.65
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 42.8
-    },
-    "Arcade Cabinets East": {
-      "pos_room_local_ft": [
-        19.125,
-        0.0,
-        7.137
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 151.2
-    },
-    "Arcade Cabinets West": {
-      "pos_room_local_ft": [
-        1.475,
-        0.0,
-        14.36
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 168.3
-    },
-    "Arcade Ceiling": {
-      "pos_room_local_ft": [
-        10.35,
-        6.92,
-        11.65
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 159.9
-    },
-    "Arcade Floor Rug": {
-      "pos_room_local_ft": [
-        11.661,
-        0.006,
-        11.55
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 154.4
-    },
-    "Arcade Lounge": {
-      "pos_room_local_ft": [
-        10.161,
-        0.0,
-        12.439
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 85.4
-    },
-    "Arcade North Wall": {
-      "pos_room_local_ft": [
-        12.777,
-        0.0,
-        0.998
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 106.1
-    },
-    "Arcade Tables": {
-      "pos_room_local_ft": [
-        16.625,
-        0.0,
-        13.8
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 23.7
-    },
-    "Arcade West Shelf": {
-      "pos_room_local_ft": [
-        1.45,
-        -0.005,
-        13.513
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 171.8
-    }
+  "wall_height": 8.0,
+  "local_to_world": "world = local + (-2.1, 0, -11.9)"
+ },
+ "_surfaces": {
+  "wall_color": "#dcdbd8",
+  "floor_color": "#6e6b68",
+  "wall_texture": null,
+  "floor_texture": "wood"
+ },
+ "_openings": [
+  {
+   "id": 103,
+   "edge_index": 2,
+   "type": "door",
+   "offset": 4.5,
+   "width": 2.7,
+   "height": 6.83,
+   "elevation": 0.0,
+   "_note": "south wall; edge 2 runs (W,D)->(0,D) so offset counts BACK from x=W. Local x 13.5..16.2 = world x 11.4..14.1, registering exactly with the Movie Room's opening 3."
+  }
+ ],
+ "pieces": {
+  "Arcade Baseboards": {
+   "pos_room_local_ft": [
+    10.35,
+    0.0,
+    11.65
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 57.3
   },
-  "_payload_kb": 1063.6
+  "Arcade Cabinets East": {
+   "pos_room_local_ft": [
+    18.938,
+    0.0,
+    8.82
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 245.2
+  },
+  "Arcade Cabinets South": {
+   "pos_room_local_ft": [
+    10.341,
+    0.0,
+    21.435
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 288.4
+  },
+  "Arcade Ceiling": {
+   "pos_room_local_ft": [
+    10.35,
+    7.54,
+    11.65
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 103.3
+  },
+  "Arcade Desk": {
+   "pos_room_local_ft": [
+    2.8,
+    -0.11,
+    14.85
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 154.1
+  },
+  "Arcade East Shelf": {
+   "pos_room_local_ft": [
+    17.94,
+    0.0,
+    11.58
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 206.7
+  },
+  "Arcade Floor Rug": {
+   "pos_room_local_ft": [
+    10.625,
+    0.012,
+    11.825
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 126.9
+  },
+  "Arcade Lounge": {
+   "pos_room_local_ft": [
+    9.802,
+    0.0,
+    12.525
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 57.9
+  },
+  "Arcade North Wall": {
+   "pos_room_local_ft": [
+    12.66,
+    0.0,
+    0.96
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 68.0
+  },
+  "Arcade TV Wall": {
+   "pos_room_local_ft": [
+    0.108,
+    2.56,
+    13.126
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 39.8
+  },
+  "Arcade Tables": {
+   "pos_room_local_ft": [
+    11.6,
+    0.0,
+    19.375
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 41.0
+  },
+  "Arcade Wall Wash": {
+   "pos_room_local_ft": [
+    10.35,
+    0.0,
+    11.65
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 101.5
+  }
+ },
+ "_payload_kb": 1490.1,
+ "_shots": [
+  "scratchpad/shots/v3_arcade/a_look_s.png  + _sbs.jpg   (photo v3 4 match)",
+  "scratchpad/shots/v3_arcade/b_look_n.png  + _sbs.jpg   (photo v3 1 match)",
+  "scratchpad/shots/v3_arcade/c_doll_nw.png + _sbs.jpg   (dollhouse, doll_nw)",
+  "scratchpad/shots/v3_arcade/d_plan.png                 (plan, used for metering)"
+ ],
+ "_build_script": "scratchpad/bsmt/ar2.py  (probe: scratchpad/bsmt/probe2.py, meter: scratchpad/bsmt/m2.py)"
 }

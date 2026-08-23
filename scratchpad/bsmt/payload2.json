@@ -1,0 +1,137 @@
+{
+ "rows": [
+  {
+   "name": "Arcade Baseboards",
+   "pos_room_local_ft": [
+    10.35,
+    0.0,
+    11.65
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 57.3
+  },
+  {
+   "name": "Arcade Cabinets East",
+   "pos_room_local_ft": [
+    18.938,
+    0.0,
+    8.82
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 245.2
+  },
+  {
+   "name": "Arcade Cabinets South",
+   "pos_room_local_ft": [
+    10.341,
+    0.0,
+    21.435
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 288.4
+  },
+  {
+   "name": "Arcade Ceiling",
+   "pos_room_local_ft": [
+    10.35,
+    7.54,
+    11.65
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 103.3
+  },
+  {
+   "name": "Arcade Desk",
+   "pos_room_local_ft": [
+    2.8,
+    -0.11,
+    14.85
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 154.1
+  },
+  {
+   "name": "Arcade East Shelf",
+   "pos_room_local_ft": [
+    17.94,
+    0.0,
+    11.58
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 206.7
+  },
+  {
+   "name": "Arcade Floor Rug",
+   "pos_room_local_ft": [
+    10.625,
+    0.012,
+    11.825
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 126.9
+  },
+  {
+   "name": "Arcade Lounge",
+   "pos_room_local_ft": [
+    9.802,
+    0.0,
+    12.525
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 57.9
+  },
+  {
+   "name": "Arcade North Wall",
+   "pos_room_local_ft": [
+    12.66,
+    0.0,
+    0.96
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 68.0
+  },
+  {
+   "name": "Arcade TV Wall",
+   "pos_room_local_ft": [
+    0.108,
+    2.56,
+    13.126
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 39.8
+  },
+  {
+   "name": "Arcade Tables",
+   "pos_room_local_ft": [
+    11.6,
+    0.0,
+    19.375
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 41.0
+  },
+  {
+   "name": "Arcade Wall Wash",
+   "pos_room_local_ft": [
+    10.35,
+    0.0,
+    11.65
+   ],
+   "rot_y": 0.0,
+   "scale": 1.0,
+   "kb": 101.5
+  }
+ ],
+ "total_kb": 1490.1
+}

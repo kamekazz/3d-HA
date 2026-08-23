@@ -1,221 +1,129 @@
 {
-  "_note": "FURNISHING ROUND (follows the shell pass). Build scripts live in scratchpad/bsmt/ -- bkit.py holds the shared helpers (it imports scratchpad/shellpass/kit.py and adds puff/slab/barrel/nailheads), mv.py is this room and ar.py is room 2. Both are idempotent by piece name, so re-running rebuilds and re-places without duplicating. Run them from scratchpad/bsmt/.",
-  "_room_note": "Movie Room -- 'Movie room.jpg'. ORIENTATION, derived from docs/floor plan/Basement Floor Plan App.png (thresholded to an ASCII wall map; plan LEFT = world +X = EAST, plan TOP = world +Z, confirmed against the Garage/Frontyard footprints on the main floor) and cross-checked against the live `stairs` row: NORTH wall (local z=0, world z=11.4) is shared with the Arcade Room and carries the ~7.6 ft black screen, the grey/white media console, two black subs and the door to the Arcade at local x 13.35-16.05 (the plan's wall gap is world x 11.4-14.1); WEST wall (local x=0, world x=-1.9) is exterior and carries the L-sectional, the five-panel print and the high basement window; EAST wall is solid over z 0-16.6 -- the stair (DB row: world x 15.1-18.4, z 15.2-27.6 = local z 3.8-16.2, direction 'n') runs behind it -- and is OPEN over z 16.6-23.5, which is the foot of that stair and is exactly the black newel post in the photo's bottom-right; SOUTH wall is the exterior front wall, behind the camera. The shell pass drew its door leaf at 13.4-16.1 but the DB hole was at 11.03-14.03; the plan says the leaf was right, so the opening moved. Furniture positions (console, ottoman, both swivel chairs, the sectional's two legs) are the plan's own LiDAR blobs, not eyeballed.",
+  "_note": "ROUND 2 -- rebuilt 2026-08-22 against the NEW v3 photo drop (Movie Room v3 1-5) and the re-traced 20.4 x 23.5 footprint. Build script: scratchpad/bsmt/mv2.py (idempotent by piece name; helpers in scratchpad/bsmt/bkit.py + the new scratchpad/bsmt/tex.py, which generates every tiled PNG). Round 1's mv.py is superseded -- it was authored for a 17.0 ft wide room and everything east of local x 17 was missing.",
+
+  "_engine_finding": "*** On a SHARED wall each room's wall MASS lands inside its NEIGHBOUR. *** house.js extrudes walls OUTWARD from the footprint line (WALL_THICKNESS 0.35, `geo.translate(0,0,-t)`), so the Movie Room's north wall body occupies world z 11.05-11.40 (inside the Arcade) and the Arcade Room's south wall body occupies world z 11.40-11.75 -- i.e. Movie-local z 0 to 0.35. Everything round 1 put on the north wall at depth < 0.35 (the screen at 0.19, the in-wall speakers at 0.10, the chair rail at 0.085, the wainscot at 0.042, the baseboard at 0.075) was BURIED and invisible from inside the room, and what you actually saw was the Arcade's wall face. That is the true cause of round 1's `_gaps` entry 'the north wall is CLIPPED at 238 with no chair-rail step' -- it was never tone-curve saturation. Every north-wall element is now authored at depth >= NF = 0.36 and the north wall meters 161.9 with a proper 26-point rail step.",
+
+  "_room_note": "ORIENTATION, re-derived from scratch. Registration: docs/floor plan/Basement Floor Plan App.png (1080x2424) -> room local feet by local_x = 20.4 - (px-155)/35.85, local_z = 23.5 - (py-213)/35.85, i.e. plan LEFT = local +X ('east'), plan TOP = local +Z ('south'). Fitted from the room's own outline (733 x 842 px against 20.4 x 23.5 ft = 35.9 and 35.8 px/ft, and 733/842 = 0.871 vs 20.4/23.5 = 0.868) and then CHECKED against a datum the plan did not supply: the live `stairs` row (world x 15.1-18.4, z 15.2-27.6 = local 17.0-20.3 x 3.8-16.2). The plan's tread hatching maps to local 16.97-20.18 x 4.17-16.02 -- both axes agree to <= 0.25 ft. Second check: the Arcade Room lies at world z -11.9..11.4, i.e. NORTH of this room, and the plan draws it BELOW, which fixes plan-down = -Z.",
+
+  "_walls": {
+    "north (local z=0, world z=11.4)": "shared with the Arcade Room. THE TV WALL. Plan blobs: media console local x 2.19-9.86 x 1.6 ft deep, a black speaker cabinet at x 9.86-11.95 (2.1 ft square). Door to the Arcade at x 13.35-16.05 (opening 3), whose world span 11.45-14.15 registers with room 2's opening 103 at 11.4-14.1. Photo 3 confirms: big black TV centred over the console, a flush white in-wall speaker each side, a white 6-panel door to its RIGHT (which is +x, since looking north +x is to the right).",
+    "west (local x=0)": "exterior. The FIVE-PANEL CANVAS PRINT plus one high egress window. Photo 3 (camera facing the TV wall) puts the art on the wall to the LEFT of the TV wall; photo 2 shows three wall planes left-to-right - south (window) | west (art + window) | north (TV) - with the stair at the near right. Sectional's west leg, a tiered side table + black lamp, and the tall white tower purifier.",
+    "south (local z=23.5)": "exterior. A SECOND high egress window (newly cut, opening 145, local x 2.40-6.00). The sectional's south leg runs along it, then at its east end a black cabinet, the bladeless ring fan, a small cart and a second side table + lamp -- that cluster is unmistakable at photo 4's left, on the wall left of the SW corner.",
+    "east (local x=20.4)": "exterior, but the stair fills it. The plan draws a partition down the stairwell's room side at local x ~16.9 running z 4.17-16.02, with a cross wall closing the under-stair space at z ~4.2. Photo 3 shows a SECOND flat TV mounted on that partition, right of the Arcade door and past the corner. The two cream swivel barrel chairs (plan blobs at local 13.06-16.08 x 11.78-14.77 and 12.50-16.10 x 6.96-10.31, the second one visibly rotated) stand in front of it facing west."
+  },
+
   "_camera": {
     "judge_from": "doll_se",
-    "why": "walls are FrontSide with inward normals, so the two nearest the camera are culled. This room's content is on the NORTH (screen) and WEST (sofa/art/window) walls, and doll_se is the only quadrant that leaves both standing. The shell pass said doll_sw, which culls the west wall and leaves the art and the window hanging in mid-air. doll_se also matches the level-0 whole-floor pose (roomkit.rooms --floor-doll 0, az 35).",
-    "reference_pose": {
-      "pos": [
-        13.5,
-        5.5,
-        33.7
-      ],
-      "target": [
-        3.6,
-        3.2,
-        12.0
-      ],
-      "fov": 80,
-      "size": [
-        900,
-        1200
-      ]
-    }
+    "why": "cutaway.js fades the two walls nearest the camera. This room's content is on the NORTH wall (TV, console, subs, door) and the WEST wall (art, window, sectional) -- doll_se culls SOUTH and EAST and is the only quadrant that leaves both standing. It also matches the level-0 whole-floor pose. The new stair partition is >1 ft from any room wall so cutaway leaves it alone, which is right: it is a real interior wall, not a skin.",
+    "doll_pose": {"pos": [23.813, 40.231, 45.304], "target": [8.3, 2.24, 23.15], "fov": 42, "size": [1200, 900]},
+    "photo_matched_pose": {"pos": [12.1, 5.4, 16.4], "target": [3.6, 2.2, 31.0], "fov": 92, "size": [900, 1200],
+      "note": "matches 'Movie Room v3 4.jpg' (the primary): standing near local (14, 5) at ~5.4 ft looking SSW across the room at the SW corner, ultrawide. Shoot it with --no-cutaway."}
   },
+
   "_metered": {
-    "_how": "Rec.709 luminance of CLEAN plateaus in --day renders at level 0, read off vertical profiles (scratchpad/bsmt/prof.py) so every quoted band has sd<=1 unless noted. Photo values from scratchpad/bsmt/m.py, which writes a _boxes overlay of every sample.",
-    "render_ceiling": "207.9  n=15600 sd=0.0",
-    "render_wall_upper_north": "238.3  n=15600 sd=0.4   (CLIPPED - see gaps)",
-    "render_wall_upper_west": "202.9  n=25600 sd=0.0",
-    "render_wall_upper_east": "170.3  n=27200 sd=0.3",
-    "render_wall_upper_south": "144.6  n=46000 sd=0.0",
-    "render_wall_upper_AVERAGE_4": "189.0",
-    "render_wainscot_north": "238.3 (no separation, clipped)",
-    "render_wainscot_east": "132.7  n=13600 sd=0.1",
-    "render_wainscot_south": "107.8  n=18400 sd=8.4",
-    "render_wainscot_west": "not measurable - sofa and side table occlude it",
-    "render_floor_plank": "141.8  n>20000 sd=1.2-2.4",
-    "render_rug": "212.7  n=24700 sd=6.6",
-    "photo_ceiling": "188.9  n=40000 sd=3.8",
-    "photo_wall_upper": "175.3 n=18750 sd=6.6 (west, above the art) / 197.7 n=11900 sd=8.9 (west, mid) / 179.3 n=3528 sd=5.2 (north, above the screen) / 209.0 n=3420 sd=6.6 (north, right of it) -> mean 190.3",
-    "photo_wall_lower": "166.7 n=6600 sd=25.9 (west) / 172.1 n=2860 sd=23.9 (north)",
-    "photo_floor_plank": "152.1  n=4500 sd=3.7",
-    "photo_rug": "208.0  n=100000 sd=6.8",
-    "photo_screen_black": "11.9 n=11700 sd=4.8",
-    "photo_chair_ivory": "204.8 n=4800 sd=25.0",
-    "photo_ottoman_top": "206.9 n=13200 sd=5.1"
+    "_how": "Render values from --day --no-cutaway shots at NATIVE resolution, 1100x850 look_n/s/e/w from the room centre (clean wall boxes only, verified against a _boxes overlay). Photo values from 'Movie Room v3 4.jpg' at its native 1200x1600 -- the ONLY v3 shot big enough to meter; v3 2/3/5 are 450x600 and their sd is scale-inflated. Both sd AND mean|adjacent-pixel delta| are reported, per ROOM-BRIEF 'sd is SCALE-BLIND'. Shots: scratchpad/shots/v3_movie/.",
+
+    "render_wall_upper_north": "161.9  sd 13.03  |d1| 1.00",
+    "render_wall_upper_west":  "158.4  sd  3.91  |d1| 0.70",
+    "render_wall_upper_east":  "158.4  sd  4.12  |d1| 0.47",
+    "render_wall_upper_south": "159.3  sd  3.98  |d1| 0.82",
+    "render_wall_upper_SPREAD": "3.5  (was 93 in round 1)",
+    "render_wainscot_north": "136.3  sd 23.28  |d1| 1.43",
+    "render_wainscot_west":  "138.1  sd  4.22  |d1| 0.82",
+    "render_wainscot_east":  "137.9  sd  4.50  |d1| 0.58",
+    "render_wainscot_south": "138.1  sd  4.34  |d1| 0.96",
+    "render_wainscot_SPREAD": "1.8",
+    "render_ceiling": "151.2  sd 0.72  |d1| 0.16",
+    "render_floor_plank": "125.3  sd 8.49  |d1| 2.21",
+    "render_rug": "184.7  sd 3.66  |d1| 2.41",
+    "render_sofa_fabric": "159.5 / 160.5  sd 26.8 / 16.8  |d1| 3.40 / 2.14",
+    "render_chair_ivory": "193.1  sd 8.25  |d1| 1.85",
+    "render_art_panels": "104.5  sd 50.34  |d1| 8.76",
+    "render_tv_black": "13.5",
+    "render_window_pane": "231.6",
+
+    "photo_ceiling": "148.4 / 158.4  sd 2.95 / 2.39  |d1| 1.40 / 1.39",
+    "photo_wall_upper": "147.5 sd 9.54 |d1| 1.20 (south, near) / 157.5 sd 14.73 |d1| 1.12 (south, far) / 181.0 sd 5.13 |d1| 1.23 (west, near) / 151.0 sd 4.38 |d1| 1.45 (west, above the art)  -> range 147.5-181.0, mean 159.3",
+    "photo_wainscot": "128.7 sd 14.69 |d1| 3.76 (south) / 150.9 sd 5.80 |d1| 1.36 (west)",
+    "photo_floor_plank": "120.6  sd 12.02  |d1| 3.88",
+    "photo_rug": "189.6  sd 9.37  |d1| 3.49   rgb (192,189,185)",
+    "photo_sofa_fabric": "151.7 sd 11.88 |d1| 3.11 (back) / 159.5 sd 37.34 |d1| 10.96 (lit seat)",
+    "photo_chair_ivory": "149.2 sd 2.91 (shaded side); lit tops read ~200",
+    "photo_art_panels": "112.4  sd 41.52  |d1| 9.27",
+    "photo_black_cabinet": "41.9",
+    "photo_grey_throw": "73.1",
+    "photo_white_trim_crown": "159.2  sd 1.99"
   },
+
+  "_how_the_wall_skins_were_solved": "Two-point probe, per wall and per band, exactly as ROOM-BRIEF prescribes: build once at one albedo, meter a clean box on that wall in its own look_* render, rebuild at a second albedo, meter again, fit render = a + b*albedo_sRGB, invert for the target (upper 158, wainscot 136), rebuild, verify. Three iterations were needed on the north wall because its response is strongly non-linear (there is a large additive term: even a near-black skin renders ~97 up there). Final albedos: upper N #6a6c6f W #a4a6a9 E #d3d5d8 S #fbfdff; wainscot N #56585b W #8f9194 E #babcbf S #dadce0. Note how far apart those are -- the same paint value renders 220 on the north wall and 139 on the south -- which is precisely why one wall_color could never work. NONE of them is emissive; each is a full-height, corner-to-corner plane at roughness 0.95 (matching the room wall) carrying a tiled grain PNG plus smooth per-vertex colour jitter, so no skin ships at sd 0.00.",
+
   "_gaps": [
-    "The four upper walls run 238 / 203 / 170 / 145 -- a 93-byte spread against the photo's 175-209. The AVERAGE (189.0) lands on the photo's (190.3), which is what ROOM-BRIEF asks for, but the north wall (the one the sun at azimuth 155 faces) is CLIPPED: the wall and the authored-darker wainscot both meter 238, so the chair rail has no value step on that wall at all. Two authored values 45 apart (#dcdbd8 wall vs #b0aeaa wainscot) come out identical there, so no albedo skin fixes it either -- it is the tone curve saturating, not a colour choice.",
-    "The footprint is a rectangle but the real room is L-shaped: the plan shows it wrapping the top of the stairwell over world x 15.1-18.4, z 28.0-34.9 (local x 17-20.3, z 16.6-23.5). About 21 sq ft of real room is outside the footprint. Nothing was resized; the stairwell opening was cut on the east wall where that wrap begins.",
-    "The sectional's shape is the plan's LiDAR blob (a west leg at local z 11.7-19.2 and a south leg at x 2.1-12.7), not the photo -- the photo only shows the west leg and the near end of the south one.",
-    "The five-panel print is a blocked-out seascape, not the photo's artwork; same for the console doors and the pillow weave.",
-    "Not modelled: the white electrical panel and thermostat on the west wall, and the console's exact hardware."
+    "FABRIC FINE-SCALE GRADIENT is still short of the photo. Upholstery now meters |d1| 1.85-3.40 against the photo's 3.11-10.96 (round 1's fabrics were 0.07, effectively plastic). The lift came from giving every upholstery part a planar UV projection so the woven tile actually samples, plus per-vertex colour. The residue is a tessellation limit: puff/slab carry too few vertices for the vertex-colour term to vary at 1-2 inch scale, and the tile is minified at typical viewing distance. Closing it fully needs UV-generating primitives in roomkit.glb, not more geometry (that is the Kitchen's 5.88 MB mistake).",
+    "The CEILING meters sd 0.72 against the photo's 2.39-2.95. Its tile is there but a downward plane at 8 ft is minified almost to a flat colour. Left alone rather than cranking the tile contrast, which would show as visible mosaic from the doll pose.",
+    "The room's SE quadrant (local x 15.2-20.4, z 16.3-23.5, ~24 sq ft) is bare plank. That is what the plan shows -- it is the landing you step into off the stair -- but a critic may read it as unfurnished floor.",
+    "The v3 photos disagree with each other about where the black cabinet / ring fan cluster sits. Photo 4 (primary, 1200x1600) puts it on the wall LEFT of the SW corner, which is the south wall's east end, and that is what is built. Photo 2 (450x600) reads it as nearer the west wall. The plan shows no blob for it either way. If the owner says otherwise, move 'Movie Corner Props' -- nothing else depends on it.",
+    "The SOUTH window's x position (local 2.40-6.00) is the weakest number in the build: it comes from a camera solve on photo 4's ultrawide frame (SW corner at frame x 740 of 1200), good to maybe +-1.5 ft. Its existence is certain (photo 2 and photo 4 both show it); its offset is not.",
+    "Not modelled: the white electrical panel and thermostat, the console's exact hardware, the wall outlet plates, and the small return register. The five-panel print is a procedurally generated dark-massed-figures image, not the owner's actual artwork."
   ],
+
   "_room": {
-    "id": 1,
-    "name": "Movie Room",
-    "floor": {
-      "id": 1,
-      "name": "Basement",
-      "level": 0,
-      "floor_height": 8.0
-    },
-    "rect_world": {
-      "x": [
-        -1.9,
-        15.1
-      ],
-      "z": [
-        11.4,
-        34.9
-      ]
-    },
-    "size_ft": [
-      17.0,
-      23.5
-    ],
+    "id": 1, "name": "Movie Room",
+    "floor": {"id": 1, "name": "Basement", "level": 0, "floor_height": 8.0},
+    "rect_world": {"x": [-1.9, 18.5], "z": [11.4, 34.9]},
+    "size_ft": [20.4, 23.5],
     "wall_height": 8.0
   },
+
   "_surfaces": {
     "wall_color": "#dcdbd8",
-    "floor_color": "#6b6967",
+    "floor_color": "#5b5d61",
     "wall_texture": null,
-    "floor_texture": "wood"
+    "floor_texture": "wood",
+    "_note": "wall_color is now irrelevant on all four walls -- each carries its own 'Movie Wall Wash <n>' skin. floor_color was darkened from #6b6967; the visible floor is the 'Movie Floor Planks' tiled quad at y 0.042 (the app's own wood texture meters sd 1.5 / |d1| 1.1 against the photo's 12.0 / 3.9)."
   },
+
   "_openings": [
-    {
-      "edge_index": 0,
-      "elevation": 0.0,
-      "entity_id": null,
-      "height": 6.83,
-      "id": 3,
-      "offset": 13.35,
-      "type": "door",
-      "width": 2.700000000000001
-    },
-    {
-      "edge_index": 1,
-      "elevation": 0.0,
-      "entity_id": null,
-      "height": 7.2,
-      "id": 94,
-      "offset": 16.6,
-      "type": "passage",
-      "width": 6.849999999999999
-    },
-    {
-      "edge_index": 3,
-      "elevation": 5.5,
-      "entity_id": null,
-      "height": 1.8499999999999996,
-      "id": 95,
-      "offset": 14.5,
-      "type": "window",
-      "width": 3.5999999999999996
-    }
+    {"id": 3,   "edge_index": 0, "type": "door",   "offset": 13.35, "width": 2.70, "height": 6.83, "elevation": 0.0, "_note": "to the Arcade; world span 11.45-14.15 registers with room 2 opening 103"},
+    {"id": 95,  "edge_index": 3, "type": "window", "offset": 14.50, "width": 3.60, "height": 1.85, "elevation": 5.5, "_note": "west wall, local z 5.40-9.00"},
+    {"id": 145, "edge_index": 2, "type": "window", "offset": 14.40, "width": 3.60, "height": 1.85, "elevation": 5.5, "_note": "NEW this round -- south wall, local x 2.40-6.00"}
   ],
+  "_openings_deleted": [
+    {"id": 94, "was": "passage, edge 1 (east), offset 16.6 width 6.85 height 7.2", "why": "cut when this room stopped at local x 17 and the stairwell was OUTSIDE the footprint. The re-trace pulled the east wall out to 20.4, so the hole now punched 6.9 x 7.2 ft straight through the basement's EXTERIOR wall."}
+  ],
+
   "pieces": {
-    "Movie Art Panels": {
-      "pos_room_local_ft": [
-        0.073,
-        4.05,
-        15.6
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 36.9
-    },
-    "Movie Baseboards": {
-      "pos_room_local_ft": [
-        8.5,
-        0.0,
-        11.865
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 39.1
-    },
-    "Movie Ceiling": {
-      "pos_room_local_ft": [
-        8.5,
-        7.54,
-        11.75
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 140.6
-    },
-    "Movie Floor Rug": {
-      "pos_room_local_ft": [
-        8.075,
-        0.006,
-        14.28
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 213.6
-    },
-    "Movie Ottoman": {
-      "pos_room_local_ft": [
-        7.825,
-        0.0,
-        16.05
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 58.8
-    },
-    "Movie Screen Wall": {
-      "pos_room_local_ft": [
-        6.203,
-        0.0,
-        1.255
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 202.0
-    },
-    "Movie Sectional": {
-      "pos_room_local_ft": [
-        4.885,
-        0.0,
-        16.835
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 199.8
-    },
-    "Movie Side Table": {
-      "pos_room_local_ft": [
-        1.275,
-        0.0,
-        9.076
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 85.7
-    },
-    "Movie Stair Rail": {
-      "pos_room_local_ft": [
-        16.74,
-        0.0,
-        21.89
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 6.6
-    },
-    "Movie Swivel Chairs": {
-      "pos_room_local_ft": [
-        14.383,
-        0.0,
-        10.9
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0,
-      "kb": 129.2
-    }
+    "Movie Wall Wash n": {"pos_room_local_ft": [10.2, 0.0, 0.39], "rot_y": 0.0, "scale": 1.0, "kb": 13.8},
+    "Movie Wall Wash s": {"pos_room_local_ft": [10.2, 0.0, 23.47], "rot_y": 0.0, "scale": 1.0, "kb": 14.0},
+    "Movie Wall Wash w": {"pos_room_local_ft": [0.03, 0.0, 11.75], "rot_y": 0.0, "scale": 1.0, "kb": 14.1},
+    "Movie Wall Wash e": {"pos_room_local_ft": [20.37, 0.0, 11.75], "rot_y": 0.0, "scale": 1.0, "kb": 13.9},
+    "Movie Ceiling": {"pos_room_local_ft": [10.2, 7.54, 11.75], "rot_y": 0.0, "scale": 1.0, "kb": 157.0},
+    "Movie Floor Planks": {"pos_room_local_ft": [10.2, 0.042, 11.75], "rot_y": 0.0, "scale": 1.0, "kb": 6.7},
+    "Movie Baseboards": {"pos_room_local_ft": [10.2, 0.0, 11.75], "rot_y": 0.0, "scale": 1.0, "kb": 40.3},
+    "Movie Screen Wall": {"pos_room_local_ft": [6.21, 3.56, 0.465], "rot_y": 0.0, "scale": 1.0, "kb": 9.0},
+    "Movie Media Console": {"pos_room_local_ft": [6.365, 0.0, 1.54], "rot_y": 0.0, "scale": 1.0, "kb": 197.0},
+    "Movie Stair Wall": {"pos_room_local_ft": [18.475, 0.0, 10.161], "rot_y": 0.0, "scale": 1.0, "kb": 31.8},
+    "Movie Stair Rail": {"pos_room_local_ft": [17.4, 0.0, 13.2], "rot_y": 0.0, "scale": 1.0, "kb": 13.5},
+    "Movie Floor Rug": {"pos_room_local_ft": [8.375, 0.046, 13.725], "rot_y": 0.0, "scale": 1.0, "kb": 153.1},
+    "Movie Sectional": {"pos_room_local_ft": [5.76, 0.0, 17.125], "rot_y": 0.0, "scale": 1.0, "kb": 239.4},
+    "Movie Ottoman": {"pos_room_local_ft": [7.825, 0.0, 16.05], "rot_y": 0.0, "scale": 1.0, "kb": 38.5},
+    "Movie Swivel Chairs": {"pos_room_local_ft": [14.39, 0.0, 10.89], "rot_y": 0.0, "scale": 1.0, "kb": 68.0},
+    "Movie Art Panels": {"pos_room_local_ft": [0.06, 4.05, 17.35], "rot_y": 0.0, "scale": 1.0, "kb": 34.2},
+    "Movie Side Table": {"pos_room_local_ft": [1.165, 0.0, 8.83], "rot_y": 0.0, "scale": 1.0, "kb": 79.6},
+    "Movie Corner Props": {"pos_room_local_ft": [11.602, 0.0, 21.46], "rot_y": 0.0, "scale": 1.0, "kb": 120.8}
   },
-  "_payload_kb": 1112.3
+  "_payload_kb": 1244.7,
+  "_largest_piece_kb": {"Movie Sectional": 239.4},
+
+  "_contact_shadows": "Rebuilt. kit.contact_shadow runs its 12 annuli from s=1.0 down to s=0.10, so with rx near the footprint almost all the darkness lands UNDER the piece: measured 9% darkening at the contact edge against ROOM-BRIEF's 34% target. mv2.py's own `cshadow()` takes the piece's HALF-EXTENTS and runs the ramp from 0.55x them out to (h + 0.8 ft) with exponent 1.15, so about half the layers overlap at the footprint edge. Measured in the top-down render: 30% darkening at the contact edge, easing to zero over ~20 px, under the sectional, the ottoman and both chairs. Heights: floor plane 0.042, rug 0.046-0.098, shadows on bare plank 0.058, shadows on the rug 0.104 -- all well clear of the slab's polygonOffset.",
+
+  "_shots": [
+    "scratchpad/shots/v3_movie/photo4_match.png  (photo-matched, primary)",
+    "scratchpad/shots/v3_movie/sbs_photo4.jpg",
+    "scratchpad/shots/v3_movie/doll_se.png",
+    "scratchpad/shots/v3_movie/sbs_doll_se.jpg",
+    "scratchpad/shots/v3_movie/photo2_match.png + sbs_photo2.jpg",
+    "scratchpad/shots/v3_movie/photo3_match.png + sbs_photo3.jpg  (TV wall)",
+    "scratchpad/shots/v3_movie/look_n|s|e|w.png  (metering)",
+    "scratchpad/shots/v3_movie/plan.png  (contact-shadow profile)"
+  ]
 }
