@@ -1,5 +1,5 @@
 {
-  "_note": "EXTERIOR round 1, 2026-08-22. Room 11 'Frontyard' is not a room: it is the front of the house, and the only view it is ever seen from is the whole-house level ('all'), where the app hides generated room geometry and shows the shell GLB instead. SHOOT WITH --level all, NEVER --level 1: a level-1 shot drops into single-floor mode, which hides the shell, the lawn and the trees and shows a studio backdrop. Build scripts: scratchpad/ext/ (kit.py shared helpers, f_porch.py this room, b_deck.py + b_furn.py room 3, pick.py pixel->world probe). Most of this yard is NOT placed objects - it is procedural geometry in frontend/js/environment.js (addGroundCover + addFrontYard), which is the right home for anything that has to be visible on the whole-house view and costs no GLB payload.",
+  "_note": "EXTERIOR round 2, 2026-08-23. Room 11 'Frontyard' is not a room: it is the front of the house, and the only view it is ever seen from is the whole-house level ('all'), where the app hides generated room geometry and shows the shell GLB instead. SHOOT WITH --level all, NEVER --level 1: a level-1 shot drops into single-floor mode, which hides the shell, the lawn and the trees and shows a studio backdrop. Build scripts: scratchpad/ext/ (kit.py shared helpers, f_porch.py this room, b_deck.py + b_furn.py room 3, probe.py pixel->world raycast, scan.py / hmap.py shell-terrain scanners, meas.py metering). Most of this yard is NOT placed objects - it is procedural geometry in frontend/js/environment.js (addGroundCover + addFrontYard + addStreet), which is the right home for anything that has to be visible on the whole-house view and costs no GLB payload.",
   "_room": {
     "id": 11,
     "name": "Frontyard",
@@ -9,10 +9,10 @@
     "_rect_warning": "The traced rect does NOT line up with the shell. The shell's porch is at x -7..20.3, z 29.5..40.6 and its floor is at world y 2.13 - 5.87 ft BELOW the first-floor group that objects hang off. Every placement here therefore uses pos.y = 2.13 - 8.0 = -5.87. Anchor to the shell, not to this rect."
   },
   "_shell_landmarks_measured": {
-    "_method": "roomkit-style raycast sweeps against the loaded shell (scratchpad/ext/pick.py + downward grid at y=3.2 for terrain + horizontal +Z/-Z sweeps for wall planes), 2026-08-22",
+    "_method": "roomkit-style raycast sweeps against the loaded shell (scratchpad/ext/probe.py + downward grid at y=3.2 for terrain + horizontal +Z/-Z sweeps for wall planes), 2026-08-22; re-verified 2026-08-23 with scan.py/hmap.py",
     "grade_house_pad_y": 2.13,
     "grade_driveway_y": 0.16,
-    "site_pad": { "x": [-6.0, 46.5], "z": [-74.0, 50.0], "note": "one unbroken pale slab in the GLB; plus the driveway strip x 22..46 out to z 76" },
+    "site_pad": { "x": [-6.0, 46.5], "z": [-74.0, 50.0], "note": "one unbroken pale slab in the GLB; plus the driveway strip x 20.0..46 out to z 76. NOTE the west edge of that strip is x 20.0, not 22 - round 1 started the concrete at 20.8 and the 0.8 ft of shell left uncovered rendered as a white 6-inch border band down the side of the slab, which round 2's critic read as a CAD outline. It was never an outline we drew." },
     "porch": { "x": [-7.0, 20.3], "front_edge_z": 40.6, "floor_y": 2.13, "rail_top_y": 10.4, "soffit_y": 12.6 },
     "house_front_wall_z": 29.5,
     "garage_front_wall_z": 29.8,
@@ -25,44 +25,65 @@
   "_objects": [
     { "name": "Frontyard Porch Bench", "pos": [4.6, -5.87, -3.4], "world": [0.6, 2.13, 31.6], "kb": 15.2,
       "note": "white slatted bench with the pink-red cushions at the porch's west end (Front of the house.jpg)" },
-    { "name": "Frontyard Porch Planters", "pos": [19.25, -5.87, -4.65], "world": [15.25, 2.13, 30.35], "kb": 22.8,
-      "note": "pair of white urns flanking the front door, clipped topiary over white flowers" },
-    { "name": "Frontyard Door Wreath", "pos": [19.25, -1.98, -7.08], "world": [15.25, 7.18, 27.92], "kb": 10.2,
-      "note": "wreath on the dark front door; visible in all three v3 front shots" }
+    { "name": "Frontyard Porch Planters", "pos": [19.25, -5.87, -4.65], "world": [15.25, 2.13, 30.35], "kb": 32.9,
+      "note": "pair of white urns flanking the front door. ROUND 2: the topiaries were two stacked cones and read as green traffic cones; they are clipped BALLS on a stem now (kit _ball(), three truncated cones - roomkit.glb has no sphere)" },
+    { "name": "Frontyard Door Wreath", "pos": [19.25, -1.66, -7.04], "world": [15.25, 7.48, 27.96], "kb": 30.3,
+      "note": "ROUND 2 REBUILT. Round 1 hung a GREEN torus with a red tab. 'Front of the house.jpg' x 780-820 y 610-700 (enlarged at scratchpad/ext/p_porch.png x 790-870) shows a DARK-RED STARBURST about 22 in across - radiating twigs, no foliage ring. Now 26 thin boxes rotated about Z off a small hub, two tones, alternating lengths." }
   ],
-  "_payload_kb": 48.2,
-  "_largest_piece_kb": 22.8,
+  "_payload_kb": 78.4,
+  "_largest_piece_kb": 32.9,
   "_environment_js": {
-    "_note": "The bulk of the front yard is procedural. Rewritten this round against MEASURED shell landmarks; the previous version derived them as offsets from the roof rect and put the whole front bed 4-5 ft out on the lawn.",
-    "addGroundCover": "grass over the shell's pale site pad at both of its heights, with sloped bank quads clothing the 2 ft vertical faces between them. Runs 4 ft past the pad's own front edge - anything short leaves a white sliver reading as a kerb across the lawn.",
-    "driveway": "poured slab x 20.8..47.1, z 29.5..75.4 with one longitudinal control joint and transverse joints every 12.5 ft, plus the walk from the porch steps to the drive",
-    "slate_course": "dry-stacked thin-slab retaining wall along the pad's front face (z 41, x -10.2..10.9) and its west face (x -10.1, z -4.9..41). This is the property's signature hardscape and it is also what turns the GLB's bare 2 ft white cliff into a wall.",
-    "front_bed": "river rock at the foot of the slate (x -10.4..11.0, z 41.5..47.4) with a near-continuous clipped-boxwood row, drifts of purple perennials and four flagstones stepping up to the porch steps",
-    "east_bed": "rock bed along the property line east of the drive with boxwood/perennials and two squat path lights",
-    "island_bed": "bed at the street end of the drive with the lamp post and three ornamental grass clumps",
-    "props": "black SUV nose-in on the drive, BLUE wheeled bin against the garage's east corner, two black urns at the porch/garage junction",
-    "trees": "three mature framing canopies (new addShadeTree scales height with s; addDeciduous does not, which capped the whole treeline at shrub height), plus a woodland line across the far side of the street",
-    "neighbour": "a two-garage-door house massing to the west, as in the front photograph"
+    "_note": "The bulk of the front yard is procedural. Round 2 re-authored the ground layer, the planting layout and the lot edge.",
+    "lawn": "REWRITTEN. makeGrassTexture() was a white plate with 33% coverage of 1.5 px dots - relative sd 8%, rendering 3.4%, against the photograph's 8-15%. Now a full-coverage tile: per-texel GRAIN 50 + a 0.7 ft CLUMP octave 13 on mean 194, anisotropy 8. The tile carries NO low-frequency content on purpose - a first attempt with mower stripes and a 2.9 ft octave rendered the whole lawn as a visible 8.6 ft PLAID. Large-scale variation instead comes from a non-repeating world-space vertex tint (three octaves at 54/19/7 ft) written into the merged lawn mesh in buildYard. GRASS_BASE 0x53703c -> 0x67716a, solved by inverting the render's measured response, not picked by eye.",
+    "lawn_subdivision_bug": "slab()'s segment arguments default to 1, so addGroundCover was laying every lawn patch as ONE QUAD - the entire yard's lawn merged to 30 triangles. Harmless while the lawn was flat colour, fatal the moment the tint went into vertex colours. Now subdivided at ~3.5 ft (5,670 tris).",
+    "ground_cover": "One BASE SHEET at the low grade covering the whole site pad and 45 ft past it (it is also the only lawn geometry with enough vertices to carry the tint). Round 1 patched the pad region by region and left slivers of the GLB's pale slab showing wherever a patch stopped short; all of those rendered as thin WHITE LINES and read as leftover fence rails.",
+    "driveway": "poured slab x 20.0..47.1 (west edge moved from 20.8 - see site_pad note), z 29.5..67.8, one longitudinal control joint and transverse joints every 12.5 ft. The CONCRETE ITSELF IS UNCHANGED: round 2's critic passed it and said leave it alone.",
+    "lot_edge": "NEW - addStreet(). Sidewalk (4.4 ft, set back 7.6 ft from the kerb, with a grass verge), concrete curb broken at the drive, asphalt carriageway with a dashed centre line, a flared driveway apron, and a mailbox. Heights are tight: the 1200 ft grass disc sits at y -0.05 and the shell pad at 0.16, so the carriageway cannot be sunk below the lawn - it goes at y 0.00 and the curb does the reading.",
+    "west_planting": "ONE CONTINUOUS SWEEP. Round 1 had a rectangle with a straight dark edge board plus a DETACHED island bed with a lamp post stranded in open lawn at x 10.4-20.5, z 52.8-63.3. Now the front bed runs from the porch's west return round the raised pad and down the whole west edge of the drive to the street, in three overlapping runs so the outer line steps in, with ONE scalloped dry-stacked stone edge tracing it.",
+    "east_planting": "rock border the full length of the drive with the salvia mass, a small tree, four path lights, and the LAMP-POST bed at the street end - between the drive and the sidewalk, which is where 'Front of the house, a little bit of the garage and car pointing to a different house.jpg' actually puts it (see _disagreements).",
+    "beds": "addBed density 0.5 -> 7.0 cobbles/sq ft and the stones are SMALLER (r 0.075-0.475 against round 1's 0.20-0.48). Octahedra below r 0.24 - at 4-8 screen px an 8-triangle blob and a 20-triangle one are the same picture, and there are ~6,700 stones across both yards. Cool blue-grey hue (photo meters B > G > R), value span 0.145-0.545, plus a coarse rim of larger pale stones where the rock meets lawn. The straight dark edge board is GONE.",
+    "stone_edging": "NEW addStoneEdge() - dry-stacked scalloped slate along a world polyline, two staggered courses, each stone tilted, GREY (a first pass at hue 0.08 rendered as a brown timber edging board, i.e. the exact defect being fixed).",
+    "species": "addBoxwood takes a species now: boxwood / euonymus / juniper / yew, each with its own hue, squash and spread. Round 1 was nine identical boxwood balls.",
+    "geese": "two cast-concrete geese west of the porch steps ('Front of the house.jpg' x 660-590 y 875-900)",
+    "trees": "addShadeTree unchanged. NO CONIFERS in the front half of the lot now (z > -8): round 1 stood one in the middle of the front lawn and it appears in no front photograph.",
+    "neighbours": "addNeighbour rebuilt - 38-degree gable (was 20), eave overhang, fascia band, window openings, and its own MATTE bucket. Round 1 merged it into `beds`, whose UVs come from world X/Z, so every vertical face sampled one line of the grit tile and smeared it eave to grade. It also had an hsl() aliasing bug (hsl() returns the shared _c, so `wall` and `roof` were the same object) which is why it rendered as one flat grey mass. Two more houses added across the street."
   },
   "_metrics": {
-    "_pose": "front photo-matched: pos [34,5.5,92] target [15,13,30] fov 48 - the camera settles at y 15.5, the app clamps it",
-    "driveway": { "render": { "lum": 178.3, "sd": 10.2, "d1": 4.69 },
-                  "photo_Front_of_the_house": { "lum": 180.2, "sd": 10.4, "d1": 4.76 },
-                  "verdict": "match on value, spread AND fine-scale gradient" },
-    "river_rock": { "render": { "lum": 126.4, "sd": 38.1, "d1": 5.48 },
-                    "photo": { "lum": 131.2, "sd": 46.9, "d1": 15.8 },
-                    "verdict": "value close, still 3x too smooth - see _open" }
+    "_pose": "front photo-matched: pos [34,15.5,92] target [15,13,30] fov 48, --day (sun azimuth 155)",
+    "lawn": {
+      "photo_Front_of_the_house": { "rgb": [123.1, 136.4, 129.5], "G_minus_R": 13.3, "lum": 131.7, "sd": 30.2, "d1x": 9.44, "d1y": 11.48 },
+      "render": { "rgb": [121.1, 132.7, 122.6], "G_minus_R": 11.6, "lum": 128.1, "sd": 21.2, "d1x": 7.54, "d1y": 10.56 },
+      "round_1": { "rgb": [125, 158, 95], "G_minus_R": 33, "sd": "3.5-5.0", "d1x": "1.6-2.6", "d1y": "2.7-3.6" },
+      "verdict": "value, hue and fine gradient all inside the photograph's range. |dx| x3.3, |dy| x3.1, sd x4.6 against round 1; G-R +33 -> +12..+14. sd still ~30% under on the largest windows."
+    },
+    "river_rock": {
+      "photo": { "rgb": [121.6, 127.0, 135.7], "lum": 126.4, "sd": 46.2, "d1x": 12.66, "d1y": 19.21 },
+      "render": { "rgb": [122.0, 125.6, 129.3], "lum": 124.9, "sd": 38.6, "d1x": 9.72, "d1y": 15.17 },
+      "round_1": { "lum": 146.2, "sd": 21.8, "d1x": 5.92, "d1y": 8.09 },
+      "verdict": "value and hue matched, sd inside the photo's 37.6-46.2 band, fine gradient from 2.1x too smooth down to 1.3x."
+    },
+    "driveway": {
+      "photo": { "lum": 185.2, "sd": 10.43, "d1x": 6.48, "d1y": 6.13 },
+      "render": { "lum": 180.4, "sd": 8.47, "d1x": 2.86, "d1y": 5.74 },
+      "verdict": "unchanged authoring - the critic passed it and asked for it to be left alone. Sampled from a different box than round 1's, which is why |dx| reads lower here than round 1's reported 4.71."
+    }
   },
+  "_disagreements_with_the_round_2_critic": [
+    "'The front door is a black void with no leaf and no sidelights' is WRONG. The shell GLB models a six-panel dark door, white-cased sidelights with blue glass, and two coach lamps. See scratchpad/shots/v3_ext/r2_front_porch.png. The wreath WAS green and is now the photographed dark-red starburst; nothing else at that opening needed building.",
+    "'A detached island bed with a lamp post exists in no photograph' is WRONG about existence and RIGHT about siting. 'Front of the house, a little bit of the garage and car pointing to a different house.jpg' shows the lamp post plainly - a black lantern on a slim post standing in a sheet of green groundcover with ornamental grasses, edged in river rock, near the street. What was wrong was that round 1 put it in open lawn WEST of the drive; the photograph puts it EAST of the drive between the drive and the sidewalk, which is where it is now.",
+    "'The white 6-inch border band around the driveway slab' is not an outline we drew: probed (scratchpad/ext/probe.py) it is Root_Node - the shell's own pale driveway strip - at y 0.16, x 20.0-20.8, z 54-76, showing through because our concrete started at 20.8 and our lawn patch stopped at z 54.4. Fixed by covering, not by deleting anything."
+  ],
   "_open": [
-    "River rock meters mean|d1| 5.5 against the photograph's 15.8. Real river rock is a dense field of individually lit stones; ours is a speckled plane with scattered cobbles at one per 2 sq ft. Raising density further is the obvious lever but it is geometry, not texture - a cobble normal-map on the beds material would be the cheaper fix.",
-    "The shell GLB has a Sketchup SCALE FIGURE baked into its merged Root_Node mesh at about x -16.5, z 44.7. It cannot be hidden separately (Root_Node is 79k triangles covering the whole model). The west framing tree is deliberately planted over it.",
-    "Beds are rectangles; the photographed beds curve. environment.js has no polygon bed primitive."
+    "The shell GLB has a Sketchup SCALE FIGURE baked into its merged Root_Node mesh at about x -16.5, z 44.7. The west framing tree is deliberately planted over it. A SHELL_CUTS box would remove it.",
+    "Beds are still composed of rectangles; environment.js has no polygon bed primitive. The scalloped stone edge polyline is what gives the sweep its curve.",
+    "The yard's merged geometry is now 157,861 triangles across 8 meshes (beds 87,790 - mostly cobbles; leaves 58,687; lawn 5,670). That is up from ~75k and it is the price of the cobble field. One draw call each.",
+    "The exterior sky renders as a dull blue-grey even with --day; the photographs are bright. That is the app's daylight/weather, not this yard."
   ],
   "_shots": [
-    "scratchpad/shots/v3_ext/front_exterior.png  (the app's own fly-to for this yard)",
-    "scratchpad/shots/v3_ext/front_photo.png     (photo-matched, from the driveway apron)",
-    "scratchpad/shots/v3_ext/porch_r1.png        (close on the porch)",
-    "scratchpad/shots/v3_ext/front_before.png / front_photo_before.png  (state at the start of the round)",
-    "scratchpad/shots/v3_ext/front_exterior_sbs.jpg / front_photo_sbs.jpg"
+    "scratchpad/shots/v3_ext/r2_front_flyto.png      (the app's own fly-to for this yard) + _sbs.jpg",
+    "scratchpad/shots/v3_ext/r2_front_photo.png     (photo-matched to 'Front of the house.jpg') + _sbs.jpg",
+    "scratchpad/shots/v3_ext/r2_front_lotedge.png   (kerb, sidewalk, verge, apron, mailbox, road) + _sbs.jpg",
+    "scratchpad/shots/v3_ext/r2_front_porch.png     (close on the door, wreath and urns) + _sbs.jpg",
+    "scratchpad/shots/v3_ext/r2_base_front.png      (state at the start of round 2)"
   ]
 }

@@ -29,10 +29,11 @@ LD, UD = 2.40, 2.72        # world Y of the two deck surfaces
 # was structural: every wicker panel was a `box()`, which emits no UVs, so the
 # weave tile sampled texel (0,0) forever. Everything wicker below is an
 # `add_uv_box` now. WEAVE is texture repeats per foot: 1.6 puts one over-under
-# pair at about 0.9 inch, a real strand width that still survives the mipmap
-# at the exterior fly-to distance.
-WEAVE = 1.6
-WICKER = Material("wicker", "#b2b0b0", roughness=0.85, metallic=0.0,
+# pair at about 1.3 inch -- the top of the real strand range, chosen so the
+# weave survives the mipmap at the exterior fly-to distance rather than for
+# closest fidelity in the one close-up shot.
+WEAVE = 1.15
+WICKER = Material("wicker", "#a4a3a7", roughness=0.85, metallic=0.0,
                   tex=wicker_tex(11))
 CUSH = Material("cushion", "#ded7c8", roughness=0.95, metallic=0.0)
 TEAK = Material("teak", "#a9norm", roughness=0.7) if False else \

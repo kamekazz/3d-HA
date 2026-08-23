@@ -494,6 +494,47 @@ your report and in `rooms/<id>.json`** — a critic comparing your render agains
 the same photograph the texture came from is entitled to know which surfaces
 those are.
 
+### Ship the geometric claim, not just the pixels
+
+**A photo-derived texture does not protect you from a wrong solve — it hides
+one.** The Garage's round-2 banner was rectified with a bad four-point solve and
+then mapped to a quad whose aspect came from *the same* bad solve, so the error
+was self-consistent and invisible: the builder reported 0.73 W/H, a critic
+recovered **0.89–0.97 by four independent routes** (homography aspect recovery
+across the plausible camera range, model-free px/ft arithmetic at the correct
+near-edge scale, vanishing-point-constrained corners, and letterform metrics —
+the E's ink-width/cap ratio fell to 0.63, narrower than any real grotesque). The
+banner shipped horizontally squeezed by about 20%, car and lettering together.
+
+Because the pixels are real, the realism conceals the geometry error. A
+vector-drawn KIES would have made a 20% squeeze obvious at a glance.
+
+**So a photo-derived surface must ship its geometric claim in checkable form.**
+Record in `rooms/<id>.json`, for every such surface: the **four source corner
+pixel coordinates**, the **scale reference** you used to convert to feet, and
+the resulting **width x height in feet**. Watch the classic error: measuring an
+apparent width against the *near-edge* px/ft scale on a receding surface. Use
+the mean scale across the surface, or solve the homography.
+
+### Not everything flat-looking is flat printed art
+
+A **door leaf is not a poster.** It is a structural object, and painting a
+top-lit gradient or a pillow across each section onto it is **baked lighting** —
+exactly what the illumination-division clause above exists to forbid. Joints,
+struts, rails and stiles are **geometry**. A leaf's shading comes from the
+scene's own light, never from the texture.
+
+The test: would a viewer moving the camera see the trick collapse? Baked
+highlights stay put when the light should move. That collapses.
+
+### When photo-derived surfaces dominate the frame, say so loudly
+
+If the compared view is carried by photo-derived surfaces, the like-for-like
+verdict is inflated by construction, and the critic must be told which surfaces
+they are so it can discount them. Offering the critic a **flat-shaded variant**
+of the same pose alongside the textured one is the cleanest way to show what the
+modelling is doing on its own.
+
 ## Room geometry is ground truth
 
 Footprints are traced from the real floor plans in `docs/floor plan/`. **Never

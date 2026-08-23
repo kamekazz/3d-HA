@@ -1,5 +1,5 @@
 {
-  "_note": "EXTERIOR round 1, 2026-08-22. Room 3 'Backyard' is not a room: it is the back of the house, seen only from the whole-house level ('all'). SHOOT WITH --level all, NEVER --level 1. Build scripts: scratchpad/ext/ (kit.py shared helpers incl. deck_surface/railing/stair and the board + wicker PNG tiles, b_deck.py, b_furn.py; pick.py is a pixel->world probe against the running app). The landscape is procedural in frontend/js/environment.js (addGroundCover + addBackYard); the deck and its furniture are placed objects so the owner can move them.",
+  "_note": "EXTERIOR round 2, 2026-08-23. Room 3 'Backyard' is not a room: it is the back of the house, seen only from the whole-house level ('all'). SHOOT WITH --level all, NEVER --level 1, and with --sun-azimuth 335 or the rear elevation renders unlit. Build scripts: scratchpad/ext/ (kit.py shared helpers incl. deck_surface/railing/stair, the board + wicker PNG tiles and the new uv_box; b_deck.py, b_furn.py; probe.py pixel->world raycast, scan.py / hmap.py shell-terrain scanners, meas.py metering). The landscape is procedural in frontend/js/environment.js (addGroundCover + addBackYard); the deck and its furniture are placed objects so the owner can move them.",
   "_room": {
     "id": 3,
     "name": "Backyard",
@@ -18,68 +18,100 @@
     "grade_break_x": 25.0,
     "raised_pad_rear_edge_z": -51.0,
     "site_pad_rear_edge_z": -74.0,
-    "boundary_fence": "the shell's own white fence runs at z = -50.9 across the lot and up the east side at x ~47 - it is a PROPERTY-LINE fence, not a patio enclosure, and it matches Backyard v3 7. Kept.",
-    "rear_ground_floor_window_sill_y": 5.5
-  },
-  "_shell_rear_deck_verdict": {
-    "question": "does the shell's rear deck match the photographed deck?",
-    "answer": "No.",
-    "what_the_shell_has": "a GROUND-LEVEL white terrace (just its site pad) about 20 ft off the back of the house, carrying a brown outdoor lounge set - sofa, two armchairs, an ottoman - and an OPEN cream cantilever parasol whose canopy spans x 31.4..43.1, y 7.4..9.4, z -46.8..-35.2. There is no raised deck, no composite decking and no white railing anywhere at the rear.",
-    "what_the_photographs_have": "a RAISED grey composite deck attached to the rear elevation, boards on the diagonal, white square-baluster railing with flat newel caps, two levels with a step between them, steps down at two points, white/grey WICKER furniture and the cantilever parasol CLOSED on a black mast.",
-    "what_was_done": "Built the deck as a placed object against the shell's own rear walls, and hid the shell's lounge set + parasol canopy from environment.js (hideShellPatioProps) so the yard does not end up with two lounge sets. Nine meshes are hidden, by BOUNDING BOX rather than by name because the names are Sketchup component ids that a re-export would change. Set HIDE_TERRACE_PROPS to null in environment.js to restore them. The terrace slab, the fence and the rear elevation are untouched.",
-    "residual": "the parasol's black FRAME and white ribs survive: they are merged into mesh_11 along with the siding and the boundary fence and cannot be isolated. The big red-purple mound and the understory shrubs are sited to mask most of it."
+    "boundary_fence": "GONE. house.js SHELL_CUTS now deletes the shell's rear boundary fence - round 1's note that it 'matches Backyard v3 7' and was 'kept' is superseded: it was a closed rectangle enclosing the whole rear lot and appears in no photograph. The environment.js comments that said 'the fence stays' were stale and have been corrected. What survives the cut is its bottom RAIL - see _residual_shell_props.",
+    "rear_elevation_openings": "the ground-floor opening behind the deck is a full-height PATIO DOOR, not a 5.5 ft-sill window. Round 1's 'rear_ground_floor_window_sill_y: 5.5' drove the whole deck-height compromise and is the wrong reading; see _deck._height_decision."
   },
   "_deck": {
-    "upper": { "x": [3.0, 20.0], "z": [-32.6, -24.4], "top_world_y": 3.95 },
-    "lower": { "x": [3.0, 24.5], "z": [-42.2, -32.6], "top_world_y": 3.30 },
-    "rail_height_ft": 3.05,
+    "upper": { "x": [3.0, 20.0], "z": [-32.6, -24.4], "top_world_y": 2.72 },
+    "lower": { "x": [3.0, 27.5], "z": [-42.2, -32.6], "top_world_y": 2.40 },
+    "rail_height_ft": 3.00,
     "stairs": [
-      { "where": "east edge, x 24.6..29.9 at z -34.6..-38.6", "risers": 5, "from_y": 3.30, "to_y": 0.16, "note": "down onto the gravel apron, as in v3 5" },
-      { "where": "north edge, x 10.3..14.9", "risers": 2, "from_y": 3.30, "to_y": 2.13, "note": "down to the lawn" }
+      { "where": "east edge, x 27.6..31.9 at z -34.6..-38.6", "risers": 4, "from_y": 2.40, "to_y": 0.16, "note": "4 risers at 0.56 - the photographed count, down onto the gravel apron as in v3 5" },
+      { "where": "north edge, x 10.3..14.9", "risers": 1, "from_y": 2.40, "to_y": 2.13, "note": "one step: on this side the shell's lawn genuinely is at deck level" }
     ],
-    "_height_disagreement": "The photographs show the deck 4-5 risers above the lawn. The shell puts its rear grade (2.13) FLUSH with its own ground floor, so a deck at photo height would carry its rail across the middle of the rear ground-floor windows (sill measured at y 5.5). Built at 3.95/3.30 instead: 1.8 ft above the lawn on the north side and 3.1 ft above the east strip, which is where the taller flight goes. If the owner wants the photographed height the shell's rear grade has to drop, not the deck rise.",
+    "_height_decision": "COMMITTED, replacing round 1's 3.95/3.30 compromise. What the photographs fix is the deck's relationship to the HOUSE, not its height above the lawn: 'Backyard v3 9' and 'v3 2' both put the deck surface level with the rear door THRESHOLD - you walk straight out - and the 4 risers down to the grass exist because the real lot falls away behind the house. This shell does not model that fall; its rear grade (2.13) is FLUSH with its own ground floor. So 'photographed height above the lawn' and 'photographed height relative to the house' are mutually exclusive here - 4 risers up from the lawn would put the deck 2.7 ft above the interior floor and you would step UP into the house. Taken: the HOUSE relationship, which is visible from every view. Recovered where the shell allows: the east strip really is 2.24 ft lower, so the EAST flight gets its photographed four risers, and the lower deck was pushed east from x 24.5 to 27.5 past the grade break so a third of it genuinely floats on posts with a visible fascia. Result: rail top 5.72 (upper) / 5.40 (lower) instead of 7.00 / 6.35.",
+    "_rail_over_the_door": "Round 2's critic cited my_rear_elev.png showing the rail crossing the opening. 'Backyard v3 2' shows the REAL rail crossing the real patio doors' lower third from that same ground-level viewpoint, because the rail stands 18 ft in front of the wall. That overlap is projection, not collision, and it is what the photograph does. See r2_back_elev.png against 'Backyard v3 2.jpg'.",
     "contact_shadows": "baked into the deck surface as VERTEX-COLOUR darkening on a 0.8 ft grid, not as decal quads: a decal at deck height either z-fights or, if opaque, erases the board texture. Ramp exponent 1.15, radii run ~0.8 ft past each piece's footprint, eight pieces listed in b_deck.py SHADOWS."
   },
   "_objects": [
-    { "name": "Backyard Deck", "pos": [20.33, -8.468, -11.855], "kb": 236.7,
-      "note": "two platforms + fascia + posts + 8 rail runs + 2 stair flights; grey composite boards on the 45-degree diagonal from a tiled PNG" },
-    { "name": "Backyard Grill", "pos": [15.5, -4.0, -4.7], "world": [11.5, 3.95, -27.2], "rot_deg": 178, "kb": 8.6,
-      "note": "black covered gas grill on the upper level" },
-    { "name": "Backyard Sofa", "pos": [22.6, -4.7, -14.5], "world": [18.6, 3.30, -37.0], "rot_deg": 268, "kb": 15.9,
-      "note": "3-seat white/grey wicker sofa along the east rail" },
-    { "name": "Backyard Lounge", "pos": [15.02, -4.7, -14.12], "world": [11.6, 3.30, -36.9], "kb": 42.5,
+    { "name": "Backyard Deck", "pos": [21.305, -8.4, -11.33], "kb": 245.7,
+      "note": "two platforms + fascia + posts + 8 rail runs + 2 stair flights; grey composite boards on the 45-degree diagonal from a tiled PNG. The critic passed the shape, the diagonal boards, the white square-baluster rail and the flat newel caps explicitly - only the HEIGHT changed." },
+    { "name": "Backyard Grill", "pos": [15.5, -5.23, -4.7], "world": [11.5, 2.72, -27.2], "rot_deg": 178, "kb": 8.6 },
+    { "name": "Backyard Sofa", "pos": [20.8, -5.28, -7.9], "world": [16.8, 2.72, -30.4], "rot_deg": 268, "kb": 18.3,
+      "note": "moved to the UPPER level by the rail, which is where v3 9 x 785-1000 puts it" },
+    { "name": "Backyard Lounge", "pos": [15.02, -5.6, -14.12], "world": [11.6, 2.40, -36.9], "kb": 46.6,
       "note": "two wicker armchairs, two square ottomans and the light wooden coffee table, as one group" },
-    { "name": "Backyard Parasol", "pos": [27.05, -4.7, -15.85], "world": [22.6, 3.30, -39.6], "rot_deg": 200, "kb": 8.4,
-      "note": "CLOSED cream cantilever parasol on a black mast with two ties" }
+    { "name": "Backyard Parasol", "pos": [29.52, -5.6, -16.63], "world": [25.2, 2.40, -40.0], "rot_deg": 200, "kb": 9.3,
+      "note": "REBUILT. Round 1 read 'closed' correctly and built the wrong closed shape - a 0.86 ft-radius cylinder 6 ft long on a 0.50 ft SQUARE mast with two fat black bands, which reads as a bollard. v3 9 (x 1000-1075, y 110-300) and v3 2 (x~100, y 235-300) show a LONG SLIM TAPER: 7 ft of furled fabric barely a foot across at its widest, on a slim ROUND mast, tied twice. Aspect 1:7, was 1:3.5." },
+    { "name": "Backyard Chaise", "pos": [25.0, -5.6, -15.7], "world": [21.0, 2.40, -38.2], "rot_deg": 272, "kb": 15.8,
+      "note": "NEW - the long wicker daybed on the lower level (v3 9 x 830-1060)" },
+    { "name": "Backyard Planter", "pos": [29.8, -5.6, -11.9], "world": [25.8, 2.40, -34.4], "kb": 11.5,
+      "note": "NEW - grey planter with a pink hydrangea at the lower deck rail (v3 9 x 990-1090)" },
+    { "name": "Backyard Planter Two", "pos": [8.8, -5.6, -18.7], "world": [4.8, 2.40, -41.2], "kb": 11.5 }
   ],
-  "_payload_kb": 312.0,
-  "_largest_piece_kb": 236.7,
+  "_payload_kb": 367.3,
+  "_largest_piece_kb": 245.7,
+  "_wicker": {
+    "the_real_defect": "Round 2's critic said the wicker has no weave. It did not, and the cause was STRUCTURAL, not a texture-strength problem: roomkit.glb's box() emits NO UVs, so every wicker panel sampled texel (0,0) forever and rendered as flat paint. kit.py now has uv_box()/add_uv_box() - a box with per-face planar UVs - and every wicker part uses it.",
+    "tile": "wicker_tex rewritten: 8 px cells (one over-under pair), warp and weft swapping which is on top per cell, a dark gap line between strands, base 250 against gap 138. Round 1's 242-against-196 on a 4 px cell was a 19% modulation; a real basketweave is nearer 45%.",
+    "scale": "WEAVE = 1.15 repeats per foot, about 1.3 inch per pair - the top of the real strand range, chosen so the weave survives the mipmap at the exterior fly-to distance rather than for closest fidelity in one close-up.",
+    "colour": "#bfbab1 (warm) -> #a4a3a7. The photographed wicker meters RGB 169,166,175 - B above R; round 1 rendered 195,193,187."
+  },
   "_environment_js": {
-    "lawn": "THE big fix. The shell's site pad is one pale slab from x -6..46.5, z -74..50, so the entire back yard rendered as concrete. addGroundCover lays grass over it at both of its heights with sloped bank quads over the 2 ft vertical faces.",
-    "beds": "narrow river-rock borders at the foot of the treeline and one wider apron beside the deck's east steps, with five flagstone stepping stones",
-    "mounds": "new addMound - the big free-standing clipped specimens on the lawn, including the red-purple photinia beyond the deck rail",
-    "grasses": "ornamental grass clumps along the bed edges",
-    "treeline": "mature canopies on all three lot lines plus an understory of shrub mounds down to the grass. Planted ON the lot lines, past the site pad: the app's own fly-to for this yard stands the camera at (-18.5, 33.9, -77.9) and the first attempt put a 30 ft canopy over the lens.",
-    "neighbours": "one massing each side, as in Backyard v3 7"
+    "lawn": "Shared with room 11 - see rooms/11.json _environment_js.lawn. Same disc, same tile, same world-space vertex tint.",
+    "beds": "narrow river-rock borders at the foot of the treeline and one wider apron beside the deck's east steps, at 4.4 cobbles/sq ft (front yard runs 7.0). The rear border was moved from z -57.5..-52.5 to -53.6..-48.4 so it straddles the pad's rear edge, which is where 'Backyard v3 5' puts the mulch line - on the far edge of the lawn, not out beyond it.",
+    "specimen": "addPhotinia() - NEW, replacing addMound(...,'red'). Round 1 built a 12 x 4 ft BURGUNDY PANCAKE at RGB 114,60,66 (R-G +54). v3 9 x 1000-1075 and v3 5 x 740-960 show a SPHERE about 9 ft each way whose body is olive-green (metered 93,90,64 and 95,99,75, R-G between -5 and +5) with red new growth only on the sunlit tips. Now authored green-dominant with the red as a minority of the upper vertices. Round 1's comment said it was 'sized and sited to also swallow the shell GLB's leftover parasol RIBS' - the ribs went with house.js SHELL_CUTS, so that job no longer exists and this is authored purely to the photograph.",
+    "mounds": "addMound takes a `kind` (green/dark/olive/grey) and a per-mound squash, and a `sphere` flag. Round 1 gave every one of ~20 the same squash and hue, which read as twenty copies of one object.",
+    "weepers": "addWeeper() - NEW. The layered/weeping specimens standing free on the lawn in v3 7 and along the boundary in v3 5. Two earlier passes rendered them as stacks of brown lily pads (y scale 0.30 then 0.62 with 1.55 s tier spacing at hue 0.09-0.15); the tiers overlap heavily now at y 0.66 / 0.95 s spacing and the hue is a bronze-green 0.195-0.245.",
+    "feeder": "addFeeder() - the pole bird feeder at the boundary bed (v3 5 x 1140-1170)",
+    "treeline": "TWO ranks across the rear at 4.5 ft spacing jittered in both axes, plus denser side lines and small flowering trees inside the line. This is the round-2 critic's headline back-yard gap: with the shell's rear fence cut, the yard ran flat green to a razor-straight horizon. A CAM KEEP-OUT guard now skips any big tree within 22 ft of either exterior fly-to camera ground point ((47.1, 97.2) front, (-18.5, -77.9) back) - a 33 ft shade tree has a ~12 ft crown and the denser rank put leaves over the lens.",
+    "understory": "mounds at 2.6-5.6 ft spacing along all three boundaries, mixed kinds",
+    "neighbours": "FIVE massings, not two: v3 7 shows three rooflines across the boundary and one hard left. addNeighbour rebuilt (see rooms/11.json) and moved into its own matte bucket."
+  },
+  "_residual_shell_props": {
+    "_note": "REPORT ONLY - house.js is not ours. These are what is left of the shell's terrace enclosure fence after SHELL_CUTS took its pickets and top rails. Each is a thin bar at y 0.654-0.765, about 0.6 ft proud of our lawn, and each renders as a thin WHITE LINE lying on the grass. Found with scratchpad/ext/probe.py (pixel -> world, visible-filtered) and measured with scan.py / hmap.py.",
+    "measured_runs": [
+      { "what": "rear run", "x": [25.0, 47.2], "y": [0.654, 0.765], "z": [-51.0, -50.0] },
+      { "what": "west return", "x": [26.0, 28.0], "y": [0.654, 0.765], "z": [-51.0, -31.6] },
+      { "what": "east return", "x": [46.0, 47.2], "y": [0.654, 0.765], "z": [-51.0, -30.0] },
+      { "what": "separate short rail further west", "x": [3.4, 14.0], "y": [0.654, 0.765], "z": [-54.0, -53.2] }
+    ],
+    "suggested_SHELL_CUTS_boxes": [
+      { "x0": 24.5, "x1": 48.0, "y0": 0.45, "y1": 1.05, "z0": -51.6, "z1": -29.5 },
+      { "x0": 2.8, "x1": 14.8, "y0": 0.45, "y1": 1.05, "z0": -54.6, "z1": -52.8 }
+    ],
+    "safety": "Neither box contains terrain that must stay: the ground there is at 0.16 (below y0 0.45) and the raised pad at 2.13 (above y1 1.05). They do clip the legs of the terrace lounge props, which environment.js hideShellPatioProps already hides."
   },
   "_metrics": {
-    "_pose": "back photo-matched: pos [4,15.5,-25.8] target [20,2.5,-42] fov 72 - reproduces the eave camera of Backyard v3 9",
-    "deck_boards": { "render": { "lum": 161.0, "sd": 26.1, "d1": 3.45 },
-                     "photo_v3_9": { "lum": 133.0, "sd": 25.7, "d1": 4.54 },
-                     "deck_over_white_rail": { "render": 0.890, "photo": 0.827 },
-                     "verdict": "spread matches; absolute value is not comparable (the photo is a dusk security-cam still, our render is forced noon sun), so the honest number is the deck/rail RATIO, which is 8% light" },
-    "lawn": { "render_lum": 148.6, "note": "the back photos are all dusk; no honest absolute comparison available" }
+    "_pose": "back photo-matched: pos [4,15.5,-25.8] target [20,2.5,-42] fov 72, --day --sun-azimuth 335 - reproduces the eave camera of Backyard v3 9. The wide fly-to is pos [-18.5,33.9,-77.9] target [14.5,14.5,-7.3] fov 55, same sun.",
+    "photinia": {
+      "photo_v3_9": { "rgb": [92.8, 90.2, 64.0], "R_minus_G": 2.6 },
+      "photo_v3_5": { "rgb": [94.7, 99.3, 74.6], "R_minus_G": -4.6 },
+      "render": { "rgb": [81.1, 80.1, 51.3], "R_minus_G": 1.0 },
+      "round_1": { "rgb": [114, 60, 66], "R_minus_G": 54 },
+      "verdict": "hue landed between the two photographs. Value sits 10-18 low, but every rear photograph is a dusk still and our render is forced noon, so the absolute is not comparable."
+    },
+    "wicker": {
+      "photo_v3_9": { "rgb": [169.4, 165.9, 175.3], "sd": 27.3, "d1x": 10.12 },
+      "round_1": { "rgb": [195, 193, 187], "note": "flat - no weave sampled at all" },
+      "verdict": "weave now renders (see r2_back_deck.png); still reads brighter than the dusk photograph and its |dx| is roughly half, because a 1.3 inch weave mips down hard at deck-camera distance."
+    },
+    "deck_boards": { "photo_v3_9": { "lum": 142.3, "sd": 26.0, "d1x": 4.57, "d1y": 7.05 },
+                     "render": { "lum": 154.8, "sd": 18.6, "d1x": 4.47, "d1y": 1.15 },
+                     "note": "unchanged authoring - the critic passed the boards. |dy| is low because the sample box runs along the board direction." },
+    "lawn": { "see": "rooms/11.json _metrics.lawn - the same disc and the same tile" }
   },
   "_open": [
-    "The rear elevation renders dark grey. roomkit.shot --day hardcodes sun azimuth 155 (south-south-east), which is the FRONT of this house, so the rear wall gets only hemisphere + IBL. It is the renderer's one-sun-no-bounce limit at building scale, not an authoring error; the photographs show the rear white.",
-    "The shell's parasol frame and ribs still stand on the lawn - merged into mesh_11 with the siding, cannot be hidden.",
-    "check_pick 3 and 11 both report OK 49/49, but the test is weak for an outdoor room: it samples the ROOM SLAB at world y 8, and every piece here sits below it (negative pos.y), so nothing could ever block those samples. It is not evidence that these yards are clickable, only that they are not broken."
+    "The rear elevation still renders a flat desaturated grey even at --sun-azimuth 335: one directional sun, no bounce. Not charged to this yard. Separately, the shell's siding is authored warm off-white (189,184,180, R>B) where the house is cool blue-grey in every photograph (148,164,181, B>G>R) - shell material, not ours.",
+    "The four terrace-fence footing runs above still render as white lines on the lawn. Boxes supplied; house.js is not ours to edit.",
+    "check_pick only takes an integer level, so it cannot be run against these two outdoor rooms at all - and even at --level 1 it would sample the room slab at world y 8, above every piece here. It is not evidence either way for a yard.",
+    "The yard's merged geometry is 157,861 triangles across 8 meshes, up from ~75k, almost all of it the cobble field and the denser treeline."
   ],
   "_shots": [
-    "scratchpad/shots/v3_ext/back_exterior.png  (the app's own fly-to for this yard)",
-    "scratchpad/shots/v3_ext/back_photo.png     (photo-matched to Backyard v3 9, from under the eave)",
-    "scratchpad/shots/v3_ext/deck_close.png / deck_r2.png (deck iterations)",
-    "scratchpad/shots/v3_ext/back_before.png, shell_deck.png (state at the start of the round)",
-    "scratchpad/shots/v3_ext/back_exterior_sbs.jpg / back_photo_sbs.jpg"
+    "scratchpad/shots/v3_ext/r2_back_flyto.png  (the app's own fly-to for this yard) + _sbs.jpg",
+    "scratchpad/shots/v3_ext/r2_back_deck.png   (photo-matched to Backyard v3 9, from under the eave) + _sbs.jpg",
+    "scratchpad/shots/v3_ext/r2_back_lawn.png   (three-quarter over the lawn, against v3 5) + _sbs.jpg",
+    "scratchpad/shots/v3_ext/r2_back_elev.png   (rear elevation, against v3 2 - the deck-height evidence) + _sbs.jpg",
+    "scratchpad/shots/v3_ext/r2_base_back.png   (state at the start of round 2)"
   ]
 }

@@ -147,6 +147,15 @@ const SHELL_CUTS = [
   // wing. Kept to y 7 and to z -11: the wing's own rear wall is at z -10.9 and
   // rises past y 11, and the fence run never goes above 6.5.
   { name: 'fence east return', min: [42, 1.0, -27], max: [48, 7, -11] },
+  // The same fence's bottom rails, left behind when the boxes above took its
+  // pickets: four thin bars at y 0.654-0.765, about 0.6 ft proud of the lawn,
+  // rendering as white lines lying on the grass. Boxes measured off the loaded
+  // shell by the exterior builder and re-verified here. Safe at this height:
+  // the terrain there sits at 0.16 and the raised pad at 2.13, so neither is
+  // inside them, and the only other things they touch are legs of props
+  // environment.js already hides.
+  { name: 'fence rails, rear run', min: [24.5, 0.45, -51.6], max: [48.0, 1.05, -29.5] },
+  { name: 'fence rail, west strip', min: [2.8, 0.45, -54.6], max: [14.8, 1.05, -52.8] },
 ];
 
 function maskShellProps(shell) {

@@ -89,33 +89,85 @@ T_CEIL = TX.grain_tile(80, 249, 2.0, blotch=6.0, cells=8, seed=53)
 # --day look_* renders on 2026-08-23 with the blotch=2.5 tile, clean bare-wall
 # boxes verified against an overlay:  render(255-white) , render(#8c8c8c).
 #
-# FINAL probe, re-run with the shipped emissive in place: render byte at grey
-# albedo 255 and at 122, per wall, same clean boxes.  Inside [122, 255] the
-# response is close enough to linear in the sRGB byte to invert directly; the
-# north wall is strongly NON-linear below that (a near-black skin metered 77.7,
-# not the ~174 a two-point linear fit predicts), so its wainscot uses a third
-# measured point at albedo 36.
-PROBE = {"n": (240.1, 190.3), "w": (218.9, 147.1),
-         "e": (173.7, 66.3),  "s": (180.5, 112.1)}
-PROBE_LO_N = (36.0, 77.7)      # north wall, third point
+# ROUND 2b PROBE -- re-measured with NO EMISSIVE ANYWHERE, three points per
+# wall (albedo 60 / 122 / 255), same clean bare-wall boxes, --day look_* at
+# native 1100x850.  Round 2's numbers are void: they were taken through the
+# emissive and the emissive is gone.
+#
+#         albedo:      60      122     255
+#   north            89.9    176.5   239.3
+#   west             43.2    112.9   214.2
+#   east             21.1     68.8   177.1
+#   south            14.9     57.0   162.7
+#
+# The response is NOT linear in the albedo byte -- the tone curve compresses
+# hard at the top (north gains 1.40 render bytes per albedo byte over 60-122
+# and only 0.47 over 122-255).  Round 2 papered over that with a linear fit
+# plus one hand-placed exception for the north wall; this inverts the measured
+# curve piecewise instead, which costs nothing and needs no exceptions.
+PROBE_A = (60.0, 122.0, 255.0)
+PROBE = {"n": (89.9, 176.5, 239.3), "w": (43.2, 112.9, 214.2),
+         "e": (21.1, 68.8, 177.1),  "s": (14.9, 57.0, 162.7)}
 
-# The photographs: 'Movie Room v3 4.jpg' south upper 169.4 / west upper 182.9;
-# 'Movie room.jpg' west upper 184.7 / north upper 205.6.  Range 169-206, and a
-# 13-21 byte break across one corner IN ONE EXPOSURE.  That is what this ladder
-# reproduces -- the ordering is the renderer's own (north faces the 155-degree
-# sun, south never sees it), only the magnitude is corrected.
-UP_T = {"n": 190.0, "w": 183.0, "e": 172.0, "s": 170.0}
-LO_T = {"n": 162.0, "w": 156.0, "e": 147.0, "s": 145.0}
-# The ramp, expressed as an albedo-byte drop from the chair rail to the crown --
-# each wall's own local response converts it to about 35 render bytes over the
-# upper band and 20 over the wainscot.
-RAMP_UP = {"n": 45.0, "w": 70.0, "e": 30.0, "s": 62.0}
-RAMP_LO = {"n": 24.0, "w": 36.0, "e": 16.0, "s": 32.0}
-# The south wall renders 161.3 at PURE WHITE and cannot be painted brighter, so
-# the two dark walls carry a small uniform emissive -- the same value on all
-# four skins, full-wall and corner-to-corner, so it reads as paint value and
-# not as the hard-edged partial "wall wash" ROOM-BRIEF bans.
-SKIN_EMIS = "#4e4e4e"
+# *** THE ABSOLUTE CEILING, MEASURED. ***  At PURE WHITE and no emissive the
+# four walls cap at N 239.3 / W 214.2 / E 177.1 / S 162.7, and the south wall
+# also has to hold a downward vertical ramp, which eats ~20 more albedo bytes
+# off its usable middle.  So the SOUTH WALL CANNOT EXCEED ~147 -- 22 bytes
+# below the primary photograph's own south wall (169.4) and 59 below the
+# brighter exposure's north wall (205.6).  That is the one-sun/no-bounce limit
+# ROOM-BRIEF documents, not a defect in this room, and it is not chased.
+#
+# So the ladder is built from RATIOS instead, the way the Arcade's was, and the
+# scale is set by whatever the south wall can actually reach:
+#
+#     photograph                                       this room
+#     N/W  1.113  ('Movie room' 205.6 / 184.7)          1.113
+#     S/W  0.926  ('v3 4'       169.4 / 182.9)          0.926
+#     E/W  no photograph sees the east wall clean       0.940  (between S and W;
+#          the east wall's inner face looks WEST, away from the 155-deg sun,
+#          so it belongs on the dark side with south -- which is also the
+#          ordering the renderer's own probe gives, E 177 vs W 214 at white)
+#
+# The ordering is the renderer's own and the photograph's; only the magnitude
+# is corrected, and now only downward.
+SCALE_ANCHOR = 144.0                       # south wall, 98% of its hard cap
+RATIO = {"n": 1.113, "w": 1.000, "e": 0.940, "s": 0.926}
+UP_T = {k: round(SCALE_ANCHOR * v / RATIO["s"], 1) for k, v in RATIO.items()}
+# The chair-rail step.  Metered on clean boxes: 'v3 4' west upper 182.9 vs west
+# wainscot 153.5 = 0.839 (a 16.1% step); 'Movie room' west = 13.1%.  The round-2
+# critic's "9%" is not what either photograph meters -- see the report.
+WAINSCOT_RATIO = 0.840
+LO_T = {k: round(v * WAINSCOT_RATIO, 1) for k, v in UP_T.items()}
+# The vertical ramp, expressed as an albedo-byte drop from the chair rail to
+# the crown.  KEPT from round 2 -- it is one of the findings that mattered --
+# but re-expressed so the RENDER-byte ramp is unchanged now that the emissive
+# is gone and every wall's response per albedo byte has risen 26-54%:
+#   n 45 x 0.374/0.472, w 70 x 0.540/0.762, s 62 x 0.514/0.795.
+# East is the exception and is raised, not preserved: round 2 recorded in its
+# own _gaps that the east skin was pinned at albedo 253-255 and could only ramp
+# downward from white, which is why its slope metered 4.3 against the others'
+# 12.6-13.9.  Dropping the ladder frees that headroom, so east now carries the
+# same render-byte ramp as west and that gap closes.
+RAMP_UP = {"n": 36.0, "w": 50.0, "e": 46.0, "s": 40.0}
+RAMP_LO = {"n": 19.0, "w": 26.0, "e": 24.0, "s": 21.0}
+# *** ROUND 2b: THE EMISSIVE IS GONE. ***
+# Round 2 gave all four skins a uniform full-wall #4e4e4e emissive to buy back
+# absolute exposure.  It works in daylight and DESTROYS the room at night: the
+# app's daylight is driven live from Home Assistant, and at the night state the
+# upper walls metered 112.0 against room 2 Arcade's 24.3 and room 5 Living's
+# 10.6 -- ten times any other room.  The walls and ceiling floated as lit planes
+# while every object in front of them went black: the room read as glowing
+# partitions, which is exactly the failure ROOM-BRIEF's "do not fight it with
+# emissive" section describes, for the third time in this project.
+#
+# The lost absolute luminance is NOT chased with albedo either.  The south wall
+# renders 161.3 at PURE WHITE with no emissive; that is the one-sun/no-bounce
+# ceiling and it is not ours to beat.  The room is re-targeted on RELATIONSHIPS
+# instead -- the photograph's wall-to-wainscot step, wall-to-ceiling,
+# wall-to-rug and wall-to-plank ratios and its corner breaks -- exactly the way
+# the Arcade was judged when its RGB-lit night photographs put absolute
+# luminance out of reach.
+SKIN_EMIS = None
 
 PV = None
 PE = SKIN_EMIS
@@ -138,12 +190,17 @@ def l2s(x):
 
 
 def alb_for(wall, target_byte):
-    """Invert the probe: what grey albedo BYTE renders `target_byte`."""
-    hi, lo = PROBE[wall]
-    if wall == "n" and target_byte < lo:
-        a2, r2 = PROBE_LO_N
-        return a2 + (122.0 - a2) * (target_byte - r2) / (lo - r2)
-    return 122.0 + 133.0 * (target_byte - lo) / (hi - lo)
+    """Invert the probe: what grey albedo BYTE renders `target_byte`.
+
+    Piecewise-linear through the three measured points, extrapolating on the
+    end segments.  The old two-point linear fit was 96 bytes out on the north
+    wall's wainscot and needed a hand-measured exception; this needs none.
+    """
+    r = PROBE[wall]
+    i = 0 if target_byte < r[1] else 1
+    a0, a1 = PROBE_A[i], PROBE_A[i + 1]
+    r0, r1 = r[i], r[i + 1]
+    return a0 + (a1 - a0) * (target_byte - r0) / (r1 - r0)
 
 
 def hexof(v255):
@@ -211,8 +268,58 @@ FANW = Material("m2fw", "#e2e0da", roughness=0.5)
 STUD = Material("m2stud", "#8e9295", roughness=0.35, metallic=0.45)
 RUGM = Material("m2rug", "#a5a099", roughness=1.0, tex=T_RUG)
 RUGM2 = Material("m2rug2", "#9f9a93", roughness=1.0, tex=T_RUG)
-CEILM = Material("m2ceil", "#ffffff", roughness=0.95, emissive="#8a8a8a",
+# The CEILING is a room-scale surface too, and it carried the same cheat
+# (round 1 #626262, round 2 #8a8a8a).  It is the brightest thing in the night
+# shot -- a glowing lid over black furniture -- so it goes with the wall skins.
+# Pure white is now the ceiling's whole budget; see the report for what that
+# costs in absolute terms and why the ratio to the wall is what matters.
+CEILM = Material("m2ceil", "#ffffff", roughness=0.95,
                  double_sided=False, tex=T_CEIL)
+
+
+# ------------------------------------------- room-wide exposure RE-BASE (2b)
+# Round 2 lifted every white and cream albedo to chase the photograph's
+# ABSOLUTE luminance and then held that exposure up with a full-wall emissive.
+# The emissive is gone, so the walls now sit where one sun and no bounce light
+# can actually put them -- about 0.86 of round 2's bytes.  Every other value in
+# the room has to come down with them, or the RELATIONSHIPS break, and the
+# relationships are what this round is judged on: a rug left at 206 against a
+# 156 wall reads 1.32x the wall where BOTH photographs meter 1.14.
+#
+# The factor is applied to the sRGB BYTE, which is very close to right here:
+# solving each surface individually in linear light off its own metered render
+# gives 0.86 (rug), 0.86 (console), 0.88 (sofa) -- one number, except the floor
+# plank, which wants a deeper cut because the photograph puts it at 0.71 of the
+# wall and round 2 had it at 0.87.
+TONE = 0.862
+TONE_PLANK = 0.810
+
+
+def dim(mat, f=None):
+    f = TONE if f is None else f
+    mat.color = tuple(min(1.0, c * f) for c in mat.color)
+    return mat
+
+
+# Everything whose value is read AGAINST the wall.  Near-blacks are left out:
+# 0.86 x 11 is 9, which is not a visible change, and the photograph's blacks
+# are crushed anyway.
+for _m in (FAB, FAB_D, BACKC, SLATE, BOUCLE, GEO, THROW, IVORY, IVORY_IN,
+           GREYWD, GREYWD2, WHTOP, SPKR, GREEN, TBLWOOD, FANW, STUD,
+           RUGM, RUGM2, ARTM, TRIM, TRIM_D, WHITEWD, DOORSHADE):
+    dim(_m)
+
+# The recessed-can cones and the return-register plate come out of the shared
+# shellpass kit carrying emissive #828280 / #8e8e8e.  They are fixture-scale,
+# not room-scale, so ROOM-BRIEF's ban does not name them -- but with the
+# ceiling's own emissive gone they would be the only lit things on it, and
+# they would read as "the lights are on" in a night shot taken with every
+# light off.  Cleared HERE, on this process's copy, not in kit.py, which four
+# other rooms import.  LENS keeps its glow: it is the lamp.
+CAN_CONE.emissive = (0.0, 0.0, 0.0)
+VENT.emissive = (0.0, 0.0, 0.0)
+dim(CAN_CONE)
+dim(VENT)
 
 
 def blit2(m, sub, wall, W_, D_, depth0):
@@ -495,7 +602,8 @@ def build_floor():
     sd 1.5 / |d1| 1.1 against the photo's 12.0 / 3.9 -- flat plastic at the
     scale a human reads.  One tiled quad fixes that for ~1 KB."""
     m = Model()
-    PLK = Material("m2plk", "#52555a", roughness=0.90, tex=T_PLANK)
+    PLK = dim(Material("m2plk", "#52555a", roughness=0.90, tex=T_PLANK),
+              TONE_PLANK)
     y = 0.042
     tu, tv = 7.4, 1.62
     m.add(Part([(0.02, y, D - 0.02), (W - 0.02, y, D - 0.02),

@@ -1,0 +1,24 @@
+{
+ "scratchpad/shots/v3_movie/pC_look_n.png": {
+   "n_upper":  [640,275,890,455],
+   "n_wain":   [660,505,890,600],
+   "ceiling":  [560,55,820,140],
+   "rug":      [300,780,700,840],
+   "plank":    [730,655,880,700],
+   "console":  [200,590,450,640]
+ },
+ "scratchpad/shots/v3_movie/pC_look_s.png": {
+   "s_upper":  [130,265,300,470],
+   "s_wain":   [80,505,175,610]
+ },
+ "scratchpad/shots/v3_movie/pC_look_e.png": {
+   "e_upper":  [70,175,370,500],
+   "e_wain":   [70,590,370,770],
+   "chair_cream": [620,760,700,830]
+ },
+ "scratchpad/shots/v3_movie/pC_look_w.png": {
+   "w_upper":  [975,240,1085,460],
+   "w_wain":   [760,505,900,620],
+   "sofa_seat":[150,700,350,780]
+ }
+}
