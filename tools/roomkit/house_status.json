@@ -1,59 +1,59 @@
 {
  "_note": "Whole-house gauntlet status. Update state/round/note/render per room as critics report, then run: python -m roomkit.house_progress",
  "headline": "The outside of the house, and the four rooms nobody had judged",
- "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. This run covers the five spaces the owner photographed last: the front and back of the house, the garage, the movie room and the arcade.",
- "stamp": "v3 run · 23 Aug 2026 · all five built, all four critics lost to a session limit — nothing here has been judged yet",
+ "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. This run covers the five spaces the owner photographed last: the front and back of the house, the garage, the movie room and the arcade. Round one went to the critics and none of the five survived.",
+ "stamp": "v3 run · 23 Aug 2026 · all five judged, all five rejected, all five back with builders",
  "hero": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\dollhouse\\house_low.png",
  "hero_label": "Every room in the house furnished. 241 pieces, all 423 Home Assistant device markers intact.",
  "rooms": [
   {
    "id": 11,
    "name": "Frontyard",
-   "state": "judging",
-   "round": 1,
+   "state": "building",
+   "round": 2,
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Frontyard v3 3.jpg",
-   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_ext\\front_cut3.png",
-   "render_label": "round 1 — awaiting critic",
-   "note": "The front beds were being sited off the roof outline rather than the real walls, so the whole planting bed stood four to five feet out on the lawn, and the wheeled bin was inside the garage. Everything is now anchored to landmarks raycast off the shell itself: the driveway is a poured slab with real control joints, a dry-stacked slate course retains the pad, and the beds, flagstone, boxwood and lamp post sit where the photograph puts them. The concrete matches the photo on value, spread and fine-scale gradient. No lights: the photographs are dusk shots and the owner has held those back."
+   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_ext\\front_check.png",
+   "render_label": "round 1 — rejected, round 2 building",
+   "note": "Rejected. The beds are in the right place now — they had been sited off the roof outline and stood four to five feet out on the lawn — and the driveway concrete passes on value, spread and fine gradient. What gives it away is the ground itself: the lawn is one untextured plate, three times too smooth and two and a half times too green, and the planting beds are about seventeen per cent covered in stone where the photograph is wall to wall. The critic traced that to a single constant, half a cobble per square foot, and said raising it is worth more than any amount of new material. The lot also has no edge: the driveway runs to a street that was never built."
   },
   {
    "id": 3,
    "name": "Backyard",
-   "state": "judging",
-   "round": 1,
+   "state": "building",
+   "round": 2,
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Backyard v3 7.jpg",
-   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_ext\\back_cut3.png",
-   "render_label": "round 1 — awaiting critic",
-   "note": "The emptiest space in the project, and it was worse than empty — the entire back yard was rendering as the shell's bare white site pad. It now has the deck the photographs show, built against the real rear wall with its rail, steps, grill, closed parasol and wicker seating, over a lawn edged with rock borders, stepping stones, free-standing clipped mounds and a treeline moved out to the lot lines. The shell's own patio set was hidden; its baked open parasol had to be cut out of the 79,000-triangle mesh it was merged into, along with the SketchUp edge overlay that kept drawing its ribs in mid-air."
+   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_ext\\back_nofence2.png",
+   "render_label": "round 1 — rejected, round 2 building",
+   "note": "Rejected, and worse than the front — but its biggest fault is already gone. A white fence enclosed the entire rear lot, three times the deck's footprint standing in open grass, and there is no such fence in any photograph. It was baked into the shell, so no builder could remove it; it has been cut out by world box, along with the open parasol the shell also carries. What is left is emptiness — a flat green plate to a straight horizon where the photographs show a dense treeline, neighbour roofs, a weeping maple and grass clumps — and a burgundy shrub that turns out to have been authored to hide a bug rather than to match the plant, which is olive green with red new growth."
   },
   {
    "id": 7,
    "name": "Garage",
-   "state": "judging",
-   "round": 1,
-   "note": "Had no reference photo at all before this run, and its contents had been inferred rather than observed — the photographs contradicted most of them, so fourteen invented pieces were replaced with what is actually there: the black coin-tile floor, the printed banner, grey metal cabinets, the wreathed service door up two steps. The wall spread came down from 91.5 to 13.0 after the builder found the previous fit had been measuring the neighbouring rooms' walls, which push a third of a foot through into this one.",
+   "state": "building",
+   "round": 2,
+   "note": "Rejected. Not the room — the surfaces standing in for pictures. The KIES banner, a photographic print of a white BMW on the real garage wall, was built as a mosaic of about twenty-five boxes; the wall clock is a sphere with a red rectangle on it; the child's ride-on is a flat wedge. All three sit in the middle of the hero frame, and the toolchain had gained textured quads that morning. The floor and the walls both passed: the coin tile's fine gradient measures higher than the photograph's, and the four walls sit within seventeen bytes. Shadows are the other half — forty-eight per cent under the door step and nothing at all under the tool chest.",
    "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_garage\\final_photo_lookN.png",
-   "render_label": "round 1 — awaiting critic",
+   "render_label": "round 1 — rejected, round 2 building",
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Garage v3 1.jpg"
   },
   {
    "id": 1,
    "name": "Movie Room",
-   "state": "judging",
+   "state": "building",
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Movie Room v3 4.jpg",
-   "note": "Rebuilt for a footprint that had been re-traced 3.4 ft wider since the last pass, which had left its ceiling, crown, baseboards and chair rail all stopping short of the east wall. It also settled a long-standing puzzle: the north wall's 'clipping' was never a tone-curve problem, it was the Arcade Room's wall standing a third of a foot inside this room. A skin authored clear of it fixed the wall outright and gave the chair rail a step that had never rendered.",
-   "round": 1,
-   "render_label": "round 1 — awaiting critic",
+   "note": "Rejected. The walls read as camouflage rather than paint — a coarse grey blotch at foot scale, traced to one parameter where the mottle amplitude is seven times the grain. The more interesting finding overturned what the room was aiming at: the builder reported its four walls within 3.5 bytes of each other and the critic measured 1.6, then measured the photograph and found twenty-one bytes across a single corner in one exposure, with walls that ramp visibly from floor to ceiling. The render's walls are mathematically flat because four different paints were chosen to force one number. A near-zero spread was never the goal.",
+   "round": 2,
+   "render_label": "round 1 — rejected, round 2 building",
    "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_movie\\photo4_match.png"
   },
   {
    "id": 2,
    "name": "Arcade Room",
-   "state": "judging",
+   "state": "building",
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Arcade Room v3 4.jpg",
-   "note": "Was 180 degrees out: the arcade cabinets had been built along the west wall and they are on the east. That is the seventh room in this project to ship a structural orientation error, and it was caught by registering the basement plan against the stairwell row and the doorway it shares with the Movie Room. Rebuilt from the corrected orientation, its four walls now sit within 11 bytes of each other — the tightest in the house.",
-   "round": 1,
-   "render_label": "round 1 — awaiting critic",
+   "note": "Rejected. The cabinet run — the room's whole identity — is one box reused with the hue swapped, and the critic found the number behind it: the control decks project six hundredths of a foot where a real one juts out about seven tenths, so the machines read as painted slabs. A quarter of the room is also simply unbuilt: the north wall carries four more cabinets, a lit display cabinet of figures and a hung plush in the photographs, and the west wall has two recessed gaming booths. The orientation correction held up under independent re-derivation, and the contact shadows metered better than claimed.",
+   "round": 2,
+   "render_label": "round 1 — rejected, round 2 building",
    "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_arcade\\a_look_s.png"
   },
   {

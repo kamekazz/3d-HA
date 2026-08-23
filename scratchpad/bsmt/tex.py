@@ -79,11 +79,13 @@ def plank_tile(n=96, boards=3, seed=5):
         edge = (y % bh) < 2
         tint = (-14, 6, 20)[b % 3]
         for x in range(n):
-            # stretch the noise along u so the grain runs lengthwise
-            v = 238 + tint + coarse[(y * 4) % n][x] * 17 + fine[(y * 9) % n][x] * 11
-            v += rnd.f(-7, 7)
+            # stretch the noise along u so the grain runs lengthwise.  Contrast
+            # raised in round 2b: the photographed plank meters sd 26-36 and
+            # |dh| 3.2-5.0, the render was at sd 9.1 / |dh| 2.1.
+            v = 238 + tint * 1.6 + coarse[(y * 4) % n][x] * 26 + fine[(y * 9) % n][x] * 19
+            v += rnd.f(-11, 11)
             if edge:
-                v -= 40
+                v -= 52
             row.append(max(0, min(255, int(round(v)))))
         rows.append(row)
     return png_gray(rows)
@@ -156,12 +158,19 @@ def geo_tile(n=32, seed=21):
     return png_gray(rows)
 
 
-def grid_panel(pt, a0, a1, y0, y1, tile, rnd, amp=0.030, cell=1.7, flip=False):
+def grid_panel(pt, a0, a1, y0, y1, tile, rnd, amp=0.030, cell=1.7, flip=False,
+               tone=None):
     """A subdivided plane in a wall's own (a, y) frame.
 
     `pt(a, y) -> (x, y, z)`.  Carries UVs for a repeating tile AND a smooth
     per-vertex colour jitter, so the surface has both fine grain (tile) and
     soft large-scale variation (vertex colour) at ~4 bytes/vertex.
+
+    `tone(y) -> 0..1` is an optional multiplier in the SAME space Part.colors
+    is authored in (glb.py runs COLOR_0 through srgb->linear on export).  It is
+    how the top-to-bottom brightness RAMP a real wall has under ceiling
+    downlights gets baked in: round 2 shipped a plane-fit slope of -0.5..0.0
+    lum/100 px on all four walls where the photographs meter +14 to +35.
     """
     nx = max(1, int(round(abs(a1 - a0) / cell)))
     ny = max(1, int(round(abs(y1 - y0) / cell)))
@@ -173,6 +182,9 @@ def grid_panel(pt, a0, a1, y0, y1, tile, rnd, amp=0.030, cell=1.7, flip=False):
             verts.append(pt(a, y))
             uv.append((a / tile, y / tile))
             c = 1.0 + rnd.f(-amp, amp)
+            if tone is not None:
+                c *= tone(y)
+            c = max(0.0, min(1.0, c))
             cols.append((c, c, c))
     tris = []
     for j in range(ny):

@@ -43,19 +43,27 @@ BASE = "http://127.0.0.1:5000"
 
 NF = 0.36                       # north wall's true inner face (arcade wall mass)
 RAIL = 3.40                     # chair-rail top
-DOOR = (13.35, 16.05)           # north wall, local x
-WINW = (5.40, 9.00)             # west wall, local z
-WINS = (2.40, 6.00)             # south wall, local x
+# The door sits ON the NE corner.  Both photographs show the casing hard against
+# it (gap/door-width 0.02 in 'Movie room.jpg', 0.29 in 'v3 3'); round 2 left
+# 4.35 ft of blank wall.  The project spec is edge 0 / offset 17.3 / width 3.2 --
+# 3.2 runs 0.1 ft past this room's east wall line (room 1 ends at world x 18.5,
+# the Arcade at 18.6), so 3.10 is the widest that fits.  PAIRING: the Arcade must
+# cut edge_index 2, offset 0.10, width 3.10 for the two holes to register.
+DOOR = (17.30, 20.40)           # north wall, local x
+WINW = (5.20, 8.80)             # west wall, local z -- NORTH egress window
+WINW2 = (19.30, 22.90)          # west wall, local z -- SOUTH egress window
 SILL, HEAD = 5.50, 7.35
 SWX = (16.74, 17.06)            # stair partition, local x
 SWZ = (4.05, 16.28)             # ... and its z run
-RUG = (1.90, 15.20, 4.00, 22.40)
+SWO = 10.20                     # ... south of this it drops to a knee wall
+ART = (11.20, 18.20)            # five-panel print, local z on the west wall
+RUG = (1.90, 15.60, 1.95, 22.40)
 RUG_Y = 0.098                   # rug top
 
 
 # ------------------------------------------------------------------ tiles
-T_WALL = TX.grain_tile(96, 246, 2.2, blotch=15.0, cells=13, seed=17)
-T_WAIN = TX.grain_tile(96, 246, 2.2, blotch=15.0, cells=13, seed=23)
+T_WALL = TX.grain_tile(96, 246, 5.0, blotch=3.0, cells=13, seed=17)
+T_WAIN = TX.grain_tile(96, 246, 5.0, blotch=3.0, cells=13, seed=23)
 T_RUG = TX.grain_tile(96, 240, 15.0, blotch=13.0, cells=26, seed=31)
 T_PLANK = TX.plank_tile(96, 3, seed=5)
 T_FAB = TX.weave_tile(64, 240, 17.0, seed=41, warp=7)
@@ -64,29 +72,127 @@ T_ART = TX.art_tile()
 T_CEIL = TX.grain_tile(80, 249, 2.0, blotch=6.0, cells=8, seed=53)
 
 
-# --------------------------------------------------------------- palette
-# Wall skins are solved by probe (see report); --pv=<hex> paints all four the
-# same value so one render gives each wall's response.
+# ------------------------------------------------------- wall tone solving
+# ROUND 2 FAILED here on two counts and this is the rebuild.
+#
+#   (a) Round 2 hand-solved FOUR different albedos so all four walls rendered
+#       the same 158-162.  A room whose four walls are four different paints
+#       exists only to force one number: it cannot respond to light, and it
+#       metered a plane-fit slope of -0.5..0.0 lum/100 px where the photographs
+#       meter +14 to +35 and break 13-21 bytes across a single corner.
+#   (b) It shipped 46 bytes dark on every white surface.
+#
+# So: ONE paint, one wainscot, and everything else derived -- the per-wall skin
+# now carries only the correction that turns this renderer's 78-byte natural
+# spread into the photograph's ~20, plus the vertical ramp a real basement wall
+# has under recessed cans.  Every number below is a two-point probe measured on
+# --day look_* renders on 2026-08-23 with the blotch=2.5 tile, clean bare-wall
+# boxes verified against an overlay:  render(255-white) , render(#8c8c8c).
+#
+# FINAL probe, re-run with the shipped emissive in place: render byte at grey
+# albedo 255 and at 122, per wall, same clean boxes.  Inside [122, 255] the
+# response is close enough to linear in the sRGB byte to invert directly; the
+# north wall is strongly NON-linear below that (a near-black skin metered 77.7,
+# not the ~174 a two-point linear fit predicts), so its wainscot uses a third
+# measured point at albedo 36.
+PROBE = {"n": (240.1, 190.3), "w": (218.9, 147.1),
+         "e": (173.7, 66.3),  "s": (180.5, 112.1)}
+PROBE_LO_N = (36.0, 77.7)      # north wall, third point
+
+# The photographs: 'Movie Room v3 4.jpg' south upper 169.4 / west upper 182.9;
+# 'Movie room.jpg' west upper 184.7 / north upper 205.6.  Range 169-206, and a
+# 13-21 byte break across one corner IN ONE EXPOSURE.  That is what this ladder
+# reproduces -- the ordering is the renderer's own (north faces the 155-degree
+# sun, south never sees it), only the magnitude is corrected.
+UP_T = {"n": 190.0, "w": 183.0, "e": 172.0, "s": 170.0}
+LO_T = {"n": 162.0, "w": 156.0, "e": 147.0, "s": 145.0}
+# The ramp, expressed as an albedo-byte drop from the chair rail to the crown --
+# each wall's own local response converts it to about 35 render bytes over the
+# upper band and 20 over the wainscot.
+RAMP_UP = {"n": 45.0, "w": 70.0, "e": 30.0, "s": 62.0}
+RAMP_LO = {"n": 24.0, "w": 36.0, "e": 16.0, "s": 32.0}
+# The south wall renders 161.3 at PURE WHITE and cannot be painted brighter, so
+# the two dark walls carry a small uniform emissive -- the same value on all
+# four skins, full-wall and corner-to-corner, so it reads as paint value and
+# not as the hard-edged partial "wall wash" ROOM-BRIEF bans.
+SKIN_EMIS = "#4e4e4e"
+
 PV = None
+PE = SKIN_EMIS
 for a in sys.argv:
     if a.startswith("--pv="):
         PV = a.split("=", 1)[1]
+    if a.startswith("--pe="):
+        PE = a.split("=", 1)[1] or None
 
-SKIN_UP = {"n": "#6a6c6f", "w": "#a4a6a9", "e": "#d3d5d8", "s": "#fbfdff"}
-SKIN_LO = {"n": "#56585b", "w": "#8f9194", "e": "#babcbf", "s": "#dadce0"}
+
+def s2l(v):
+    u = v / 255.0
+    return u / 12.92 if u <= 0.04045 else ((u + 0.055) / 1.055) ** 2.4
+
+
+def l2s(x):
+    x = max(0.0, min(1.0, x))
+    u = 12.92 * x if x <= 0.0031308 else 1.055 * x ** (1 / 2.4) - 0.055
+    return u * 255.0
+
+
+def alb_for(wall, target_byte):
+    """Invert the probe: what grey albedo BYTE renders `target_byte`."""
+    hi, lo = PROBE[wall]
+    if wall == "n" and target_byte < lo:
+        a2, r2 = PROBE_LO_N
+        return a2 + (122.0 - a2) * (target_byte - r2) / (lo - r2)
+    return 122.0 + 133.0 * (target_byte - lo) / (hi - lo)
+
+
+def hexof(v255):
+    k = int(round(max(0.0, min(255.0, v255))))
+    return "#%02x%02x%02x" % (k, k, k)
+
+
+def skin_band(wall, ya, yb, targ, ramp):
+    """(albedo hex, tone(y)) for one band.
+
+    `ramp` is an albedo-byte drop from the band's bottom (chair rail) to its
+    top (crown): the material carries the BOTTOM albedo and the per-vertex
+    colour walks it down, which is the only mechanism this scene has for the
+    vertical gradient a real wall gets from ceiling downlights.  Part.colors
+    are run through srgb->linear on export, so a colour c multiplies the sRGB
+    albedo byte by c to within a fraction of a byte.
+    """
+    a_mid = alb_for(wall, targ)
+    a_bot = min(255.0, a_mid + ramp / 2.0)
+    a_top = max(4.0, a_bot - ramp)
+
+    def tone(y):
+        t = (y - ya) / max(yb - ya, 1e-6)          # 0 at the bottom, 1 at top
+        t = max(0.0, min(1.0, t))
+        return (a_bot + (a_top - a_bot) * t) / a_bot
+
+    return hexof(a_bot), tone
+
+
+SKIN_UP = {w: hexof(alb_for(w, UP_T[w])) for w in "nswe"}
+SKIN_LO = {w: hexof(alb_for(w, LO_T[w])) for w in "nswe"}
 if PV:
     SKIN_UP = {k: PV for k in SKIN_UP}
     SKIN_LO = {k: PV for k in SKIN_LO}
 
-FAB = Material("m2fab", "#767472", roughness=0.95, tex=T_FAB)
-FAB_D = Material("m2fabd", "#6b6966", roughness=0.95, tex=T_FAB)
-BACKC = Material("m2back", "#7d7b78", roughness=0.95, tex=T_FAB)
-SLATE = Material("m2slate", "#6d7c85", roughness=0.95, tex=T_FAB)
-BOUCLE = Material("m2bou", "#a59f96", roughness=1.0, tex=T_FAB)
+# EXPOSURE, round 2b.  Every white and cream surface shipped 27-51 bytes below
+# the photograph (ceiling -34, rug -27, plank -30, cream chair -51, wall -46):
+# the photographed room is a bright near-white space and round 2's was mid-grey.
+# Each albedo below is lifted by the LINEAR ratio the metered gap calls for.
+FAB = Material("m2fab", "#807e7b", roughness=0.95, tex=T_FAB)
+FAB_D = Material("m2fabd", "#757370", roughness=0.95, tex=T_FAB)
+BACKC = Material("m2back", "#8a8884", roughness=0.95, tex=T_FAB)
+SLATE = Material("m2slate", "#7a8992", roughness=0.95, tex=T_FAB)
+BOUCLE = Material("m2bou", "#b5afa5", roughness=1.0, tex=T_FAB)
 GEO = Material("m2geo", "#868c91", roughness=0.95, tex=T_GEO)
 BLKPILL = Material("m2bp", "#252629", roughness=0.90, tex=T_FAB)
-THROW = Material("m2throw", "#464a4f", roughness=1.0, tex=T_FAB)
-IVORY = Material("m2iv", "#9d9a92", roughness=0.95, tex=T_FAB)
+THROW = Material("m2throw", "#575b60", roughness=1.0, tex=T_FAB)
+IVORY = Material("m2iv", "#b2afa6", roughness=0.95, tex=T_FAB)
+IVORY_IN = Material("m2ivin", "#e9e5da", roughness=0.95, tex=T_FAB)
 DKWOOD = Material("m2dw", "#2c2825", roughness=0.6)
 BLK = Material("m2blk", "#0b0c0e", roughness=0.28)
 BEZ = Material("m2bez", "#1e1f22", roughness=0.42)
@@ -103,9 +209,9 @@ LAMPSHD = Material("m2ls", "#191a1d", roughness=0.85)
 TBLWOOD = Material("m2tw", "#4c453e", roughness=0.7)
 FANW = Material("m2fw", "#e2e0da", roughness=0.5)
 STUD = Material("m2stud", "#8e9295", roughness=0.35, metallic=0.45)
-RUGM = Material("m2rug", "#8a857e", roughness=1.0, tex=T_RUG)
-RUGM2 = Material("m2rug2", "#847f79", roughness=1.0, tex=T_RUG)
-CEILM = Material("m2ceil", "#ffffff", roughness=0.95, emissive="#626262",
+RUGM = Material("m2rug", "#a5a099", roughness=1.0, tex=T_RUG)
+RUGM2 = Material("m2rug2", "#9f9a93", roughness=1.0, tex=T_RUG)
+CEILM = Material("m2ceil", "#ffffff", roughness=0.95, emissive="#8a8a8a",
                  double_sided=False, tex=T_CEIL)
 
 
@@ -127,7 +233,7 @@ def blit2(m, sub, wall, W_, D_, depth0):
 
 
 FABRICS = ("m2fab", "m2fabd", "m2back", "m2slate", "m2bou", "m2geo",
-           "m2bp", "m2throw", "m2iv")
+           "m2bp", "m2throw", "m2iv", "m2ivin")
 
 
 def fabricate(m, amp=0.060, seed=9):
@@ -165,7 +271,7 @@ def cush(m, mat, x0, x1, y0, y1, z0, z1, r=0.14, nub=0.0, rnd=None,
           at=((x0 + x1) / 2, y0, (z0 + z1) / 2))
 
 
-def cshadow(m, cx, cz, hx, hz, y, out=0.80, strength=0.58, steps=10,
+def cshadow(m, cx, cz, hx, hz, y, out=0.80, strength=0.58, steps=16,
             room=None, tone="#26262a"):
     """Contact shadow whose ramp actually lands OUTSIDE the piece's footprint.
 
@@ -174,11 +280,19 @@ def cshadow(m, cx, cz, hx, hz, y, out=0.80, strength=0.58, steps=10,
     object and only ~3 of 12 layers ever show -- measured 9% darkening at the
     contact edge against ROOM-BRIEF's 34% target.  Here `hx, hz` are the
     piece's own half-extents and the ramp runs from 0.55x that out to
-    (h + out), so roughly half the layers overlap at the footprint edge.
+    (h + out).
+
+    These layers OVERLAP -- that is the mechanism, and round 2's write-up
+    calling them "one coplanar layer of non-overlapping annuli" was simply
+    wrong about its own code.  Each is a full disc at alpha `a`, stacked, so
+    the darkening at radius r is 1 - (1-a)^(layers covering r).  `steps` was 10,
+    which put ~5 blend steps across a 0.8 ft ramp and the rings were countable
+    under the swivel chairs at eye level; at 16 the step is ~0.05 ft and the
+    outline is a gradient, not a stack of countable annuli.
     """
     a = round(1.0 - (1.0 - strength) ** (1.0 / steps), 4)
     mat = Material("csh%d" % int(strength * 100), tone, roughness=0.98, opacity=a)
-    seg, n = 32, 2.7
+    seg, n = 20, 2.7
     for i in range(steps):
         t = (i / (steps - 1.0)) ** 1.15          # 0 outermost -> 1 innermost
         rx = (hx + out) + (hx * 0.55 - (hx + out)) * t
@@ -209,16 +323,33 @@ def openings():
     with urllib.request.urlopen(f"{BASE}/api/house", timeout=30) as r:
         house = json.loads(r.read().decode())
     room = next(rm for f in house["floors"] for rm in f["rooms"] if rm["id"] == ROOM)
-    have = {(o["edge_index"], o["type"]): o for o in room.get("openings", [])}
+    have = {}
+    for o in room.get("openings", []):
+        have.setdefault((o["edge_index"], o["type"]), []).append(o)
+    for k in have:
+        have[k].sort(key=lambda o: o["offset"])
 
     # The east-wall 'passage' (id 94) was cut when this room stopped at local
     # x 17 and the stairwell was OUTSIDE the footprint.  The re-trace pulled the
     # east wall out to 20.4, so that hole now punches 6.9 x 7.2 ft straight
     # through the basement's EXTERIOR wall.  Remove it.
-    for (edge, typ), o in list(have.items()):
+    for (edge, typ), lst in list(have.items()):
         if edge == 1 and typ == "passage":
-            api("DELETE", f"/api/house/opening/{o['id']}")
-            print("  opening east passage %d deleted (stale, exterior wall)" % o["id"])
+            for o in lst:
+                api("DELETE", f"/api/house/opening/{o['id']}")
+                print("  opening east passage %d deleted (stale, exterior wall)" % o["id"])
+            have.pop((edge, typ))
+        # ROUND 2 put an egress window on the SOUTH wall.  Both windows are on
+        # the WEST wall -- see the report: 'Movie Room v3 4.jpg' shows the whole
+        # south wall at 1200 px carrying two in-wall surround speakers and NO
+        # opening, and a window immediately past the SW corner on the west side;
+        # 'Movie room.jpg' and 'v3 3' show the second window north of the print;
+        # 'v3 2' shows window - print - window in one sweep.
+        if edge == 2 and typ == "window":
+            for o in lst:
+                api("DELETE", f"/api/house/opening/{o['id']}")
+                print("  opening south window %d deleted (it is on the west wall)"
+                      % o["id"])
             have.pop((edge, typ))
 
     want = [
@@ -226,17 +357,24 @@ def openings():
              height=6.83, elevation=0.0),
         dict(edge_index=3, type="window", offset=D - WINW[1],
              width=WINW[1] - WINW[0], height=HEAD - SILL, elevation=SILL),
-        dict(edge_index=2, type="window", offset=W - WINS[1],
-             width=WINS[1] - WINS[0], height=HEAD - SILL, elevation=SILL),
+        dict(edge_index=3, type="window", offset=D - WINW2[1],
+             width=WINW2[1] - WINW2[0], height=HEAD - SILL, elevation=SILL),
     ]
     for spec in want:
         key = (spec["edge_index"], spec["type"])
-        if key in have:
-            api("PATCH", f"/api/house/opening/{have[key]['id']}", spec)
-            print(f"  opening {key} updated")
+        pool = have.get(key, [])
+        if pool:
+            o = pool.pop(0)
+            api("PATCH", f"/api/house/opening/{o['id']}", spec)
+            print(f"  opening {key} {o['id']} -> offset {spec['offset']:.2f}"
+                  f" width {spec['width']:.2f}")
         else:
             api("POST", f"/api/house/room/{ROOM}/opening", spec)
-            print(f"  opening {key} created")
+            print(f"  opening {key} created offset {spec['offset']:.2f}")
+    for key, pool in have.items():
+        for o in pool:
+            api("DELETE", f"/api/house/opening/{o['id']}")
+            print(f"  opening {key} {o['id']} deleted (surplus)")
 
 
 # --------------------------------------------------------- per-wall frames
@@ -278,33 +416,48 @@ def build_skins():
     keeps it unpickable and cutaway.js fades each one with its own wall."""
     out = []
     holes = {"n": [(DOOR[0], DOOR[1], 0.0, 6.83)],
-             "w": [(D - WINW[1], D - WINW[0], SILL, HEAD)],
-             "s": [(W - WINS[1], W - WINS[0], SILL, HEAD)],
+             "w": [(D - WINW[1], D - WINW[0], SILL, HEAD),
+                   (D - WINW2[1], D - WINW2[0], SILL, HEAD)],
+             "s": [],
              "e": []}
     for wall in "nswe":
         m = Model()
         rnd = TX.R(1000 + ord(wall))
         total = W if wall in "ns" else D
-        up = Material("skinU" + wall, SKIN_UP[wall], roughness=0.95, tex=T_WALL)
-        lo = Material("skinL" + wall, SKIN_LO[wall], roughness=0.95, tex=T_WAIN)
+        hx_up, tone_up = skin_band(wall, RAIL - 0.14, H, UP_T[wall], RAMP_UP[wall])
+        hx_lo, tone_lo = skin_band(wall, 0.0, RAIL - 0.14, LO_T[wall], RAMP_LO[wall])
+        if PV:
+            hx_up = hx_lo = PV
+            tone_up = tone_lo = None
+        # "e" carries NO emissive: its response was probed on the stair
+        # partition, which is the east-facing surface you actually see, and the
+        # two must agree or the corner between them shows a seam.
+        pe = None if wall == "e" else PE
+        up = Material("skinU" + wall, hx_up, roughness=0.95, tex=T_WALL,
+                      emissive=pe)
+        lo = Material("skinL" + wall, hx_lo, roughness=0.95, tex=T_WAIN,
+                      emissive=pe)
         pt = frame(wall, (NF + 0.03) if wall == "n" else 0.03)
         flip = wall in ("n", "e")
-        for (mat, ya, yb, t) in ((lo, 0.0, RAIL - 0.14, 1.8),
-                                 (up, RAIL - 0.14, H, 2.0)):
+        # cell 3.6 gave the upper band TWO rows of vertices -- no room for a
+        # ramp, and its 2.2% jitter then read as ~3.6 ft soft blotches.  1.15 ft
+        # cells with a 0.9% jitter cost ~90 vertices a wall.
+        for (mat, ya, yb, t, tn) in ((lo, 0.0, RAIL - 0.14, 1.8, tone_lo),
+                                     (up, RAIL - 0.14, H, 2.0, tone_up)):
             cuts = [(a0, a1) for (a0, a1, hy0, hy1) in holes[wall]
                     if hy1 > ya + 0.01 and hy0 < yb - 0.01]
             for (a0, a1) in spans(total, cuts):
-                m.add(TX.grid_panel(pt, a0, a1, ya, yb, t, rnd, amp=0.022,
-                                    cell=3.6, flip=flip), mat)
+                m.add(TX.grid_panel(pt, a0, a1, ya, yb, t, rnd, amp=0.009,
+                                    cell=1.15, flip=flip, tone=tn), mat)
             for (a0, a1, hy0, hy1) in holes[wall]:
                 if not (hy1 > ya + 0.01 and hy0 < yb - 0.01):
                     continue
                 if hy0 > ya + 0.05:
-                    m.add(TX.grid_panel(pt, a0, a1, ya, hy0, t, rnd, amp=0.022,
-                                        cell=3.6, flip=flip), mat)
+                    m.add(TX.grid_panel(pt, a0, a1, ya, hy0, t, rnd, amp=0.009,
+                                        cell=1.15, flip=flip, tone=tn), mat)
                 if hy1 < yb - 0.05:
-                    m.add(TX.grid_panel(pt, a0, a1, hy1, yb, t, rnd, amp=0.022,
-                                        cell=3.6, flip=flip), mat)
+                    m.add(TX.grid_panel(pt, a0, a1, hy1, yb, t, rnd, amp=0.009,
+                                        cell=1.15, flip=flip, tone=tn), mat)
         out.append(save_and_place(f"Movie Wall Wash {wall}", m, ROOM))
     return out
 
@@ -324,10 +477,12 @@ def build_ceiling():
     m._parts[0] = (uv_quad((0, Y, 0), (W, Y, 0), (W, Y, D), (0, Y, D),
                            (0, 0), (W / 2.0, 0), (W / 2.0, D / 2.0), (0, D / 2.0)),
                    CEILM)
-    for y0, y1, dep in ((H - CROWN_H, H - 0.30, 0.055),
-                        (H - 0.30, H - 0.145, 0.115),
-                        (H - 0.145, H - 0.008, 0.185)):
-        mat = TRIM if dep > 0.09 else TRIM_D
+    # A SLIM COVE.  Round 2 ran a heavy three-step 0.46 ft band at depths up to
+    # 0.185; every photograph shows a plain ~3 in cove, and the heavy version
+    # read as a bright fin round the top of the room.
+    for y0, y1, dep in ((H - 0.30, H - 0.115, 0.042),
+                        (H - 0.115, H - 0.008, 0.100)):
+        mat = TRIM if dep > 0.06 else TRIM_D
         for w in "nswe":
             band(m, mat, w, y0, y1, dep)
     m.add(cylinder(0.30, 0.10, 16), Material("m2sd", "#e9e7e2", roughness=0.6),
@@ -354,20 +509,46 @@ def build_floor():
 # ================================================================ trim runs
 def build_trim():
     m = Model()
-    gaps = {"n": [(DOOR[0] - CASE_W, DOOR[1] + CASE_W)], "s": [], "w": [], "e": []}
+    gaps = {"n": [(DOOR[0] - CASE_W, W)], "s": [], "w": [], "e": []}
     for w in "nswe":
         band(m, TRIM, w, 0.0, BB_H - 0.06, BB_T, gaps[w])
         band(m, TRIM, w, BB_H - 0.06, BB_H, BB_T * 0.72, gaps[w])
-        band(m, TRIM, w, RAIL - 0.14, RAIL - 0.035, 0.085, gaps[w])
-        band(m, TRIM, w, RAIL - 0.035, RAIL, 0.052, gaps[w])
+        # the chair rail's own relief halved: round 2's 0.085/0.052 step threw a
+        # shadow that read ~2x the photograph's break across the rail.
+        band(m, TRIM, w, RAIL - 0.12, RAIL - 0.030, 0.052, gaps[w])
+        band(m, TRIM, w, RAIL - 0.030, RAIL, 0.032, gaps[w])
     sub = Model()
-    for a, b in ((DOOR[0] - CASE_W, DOOR[0] + 0.03),
-                 (DOOR[1] - 0.03, DOOR[1] + CASE_W)):
-        bx(sub, TRIM, a, b, 0.0, 6.83 + CASE_W, 0.0, 0.20)
-    bx(sub, TRIM, DOOR[0] - CASE_W, DOOR[1] + CASE_W, 6.83, 6.83 + CASE_W, 0.0, 0.20)
+    # The door is ON the corner, so only the west casing is a free-standing
+    # jamb; the east one is a thin return against the east wall.  A CLOSED
+    # six-panel leaf with a black lever, which is what every photograph shows --
+    # and which is also why moving the opening does not leave a blind recess
+    # while the Arcade side is still cut 4 ft west of here (see the report).
+    panel_door(sub, WHITEWD, DOOR[0] + 0.14, DOOR[1] - 0.16, 0.0, 6.79,
+               0.005, 0.135)
+    hx = DOOR[0] + 0.50
+    sub.add(cylinder(0.075, 0.05, 12), BLACKMET, at=(hx, 3.02, 0.20), rot_x=R(90))
+    sub.add(box(0.065, 0.065, 0.27), BLACKMET, at=(hx + 0.10, 2.98, 0.32))
+    bx(sub, TRIM, DOOR[0] - CASE_W, DOOR[0] + 0.14, 0.0, 6.83 + CASE_W, 0.0, 0.20)
+    bx(sub, TRIM, DOOR[1] - 0.16, DOOR[1], 0.0, 6.83 + CASE_W, 0.0, 0.20)
+    bx(sub, TRIM, DOOR[0] - CASE_W, DOOR[1], 6.79, 6.83 + CASE_W, 0.0, 0.20)
     blit(m, sub, "n", W, D, NF)
     win_trim(m, "w", D - WINW[1], D - WINW[0])
-    win_trim(m, "s", W - WINS[1], W - WINS[0])
+    win_trim(m, "w", D - WINW2[1], D - WINW2[0])
+    # the two SOUTH-wall in-wall surround speakers, plus outlet and switch
+    # plates -- all four of these are visible in 'Movie Room v3 4.jpg' and none
+    # were modelled.  (The south speakers are also the datum the south-wall
+    # camera map was fitted to.)
+    sub2 = Model()
+    for sx in (6.10, 16.55):
+        bx(sub2, TRIM, sx - 0.42, sx + 0.42, 4.40, 6.15, 0.0, 0.030)
+        bx(sub2, SPKR, sx - 0.36, sx + 0.36, 4.46, 6.09, 0.030, 0.055)
+    for ox in (3.60, 9.40, 18.90):
+        bx(sub2, TRIM, ox - 0.14, ox + 0.14, 1.05, 1.50, 0.0, 0.030)
+    blit(m, sub2, "s", W, D, 0.0)
+    sub3 = Model()
+    for oz in (3.20, 13.40, 21.60):
+        bx(sub3, TRIM, oz - 0.14, oz + 0.14, 1.05, 1.50, 0.0, 0.030)
+    blit(m, sub3, "w", W, D, 0.0)
     return save_and_place("Movie Baseboards", m, ROOM)
 
 
@@ -414,7 +595,6 @@ def build_console():
     cx0, cx1 = 2.20, 9.90
     z0 = NF
     cz1 = z0 + 1.55
-    cshadow(m, (cx0 + cx1) / 2, z0 + 0.80, 3.85, 0.80, y=0.058, strength=0.72, room=(W, D))
     bx(m, GREYWD, cx0, cx1, 0.46, 2.22, z0 + 0.12, cz1)
     for i in range(4):
         dw = (cx1 - cx0 - 0.16) / 4
@@ -432,8 +612,6 @@ def build_console():
         bx(m, BLACKMET, px_, px_ + 0.10, 0.0, 0.46, cz1 - 0.22, cz1 - 0.12)
         bx(m, BLACKMET, px_, px_ + 0.10, 0.40, 0.46, z0 + 0.28, cz1 - 0.12)
     for (sx, sw, sh, sd) in ((0.45, 1.60, 1.86, 1.62), (9.98, 2.05, 2.18, 2.02)):
-        cshadow(m, sx + sw / 2, z0 + sd / 2, sw / 2, sd / 2, y=0.058,
-                out=0.65, strength=0.72, room=(W, D))
         bx(m, BOXBLK, sx, sx + sw, 0.0, sh, z0, z0 + sd)
         bx(m, BEZ, sx + 0.10, sx + sw - 0.10, sh * 0.14, sh * 0.88,
            z0 + sd, z0 + sd + 0.012)
@@ -460,48 +638,81 @@ def build_stairwall():
     SKINL = Material("m2swl", SKIN_LO["e"], roughness=0.95, tex=T_WAIN)
     FLAT = Material("m2swf", SKIN_UP["e"], roughness=0.95)
     FLATL = Material("m2swfl", SKIN_LO["e"], roughness=0.95)
+    # The partition is FULL HEIGHT only over the enclosed upper flight; from
+    # SWO south it drops to a knee wall and the balustrade takes over.  Every
+    # photograph (v3 5 is the clearest) shows exactly that: solid wall with the
+    # room's own chair rail, then white spindles under a raked black handrail.
     bx(m, FLATL, x0, x1, 0.0, RAIL - 0.14, z0, z1)
-    bx(m, FLAT, x0, x1, RAIL - 0.14, H, z0, z1)
+    bx(m, FLAT, x0, x1, RAIL - 0.14, H, z0, SWO)
+    bx(m, FLAT, x0, x1, RAIL - 0.14, RAIL, SWO, z1)
     bx(m, FLATL, x0, W, 0.0, RAIL - 0.14, z0, z0 + 0.32)
     bx(m, FLAT, x0, W, RAIL - 0.14, H, z0, z0 + 0.32)
     rnd = TX.R(4242)
+    _, tup = skin_band("e", RAIL - 0.14, H, UP_T["e"], RAMP_UP["e"])
+    _, tlo = skin_band("e", 0.0, RAIL - 0.14, LO_T["e"], RAMP_LO["e"])
     face = lambda a, y: (x0 - 0.008, y, a)
     m.add(TX.grid_panel(face, z0, z1, 0.0, RAIL - 0.14, 1.8, rnd,
-                        amp=0.014, cell=3.2, flip=True), SKINL)
-    m.add(TX.grid_panel(face, z0, z1, RAIL - 0.14, H, 2.0, rnd,
-                        amp=0.014, cell=3.2, flip=True), SKIN)
+                        amp=0.009, cell=1.15, flip=True, tone=tlo), SKINL)
+    m.add(TX.grid_panel(face, z0, SWO, RAIL - 0.14, H, 2.0, rnd,
+                        amp=0.009, cell=1.15, flip=True, tone=tup), SKIN)
     cface = lambda a, y: (a, y, z0 - 0.008)
     m.add(TX.grid_panel(cface, x0, W, 0.0, RAIL - 0.14, 1.8, rnd,
-                        amp=0.014, cell=3.2, flip=False), SKINL)
+                        amp=0.009, cell=1.15, flip=False, tone=tlo), SKINL)
     m.add(TX.grid_panel(cface, x0, W, RAIL - 0.14, H, 2.0, rnd,
-                        amp=0.014, cell=3.2, flip=False), SKIN)
+                        amp=0.009, cell=1.15, flip=False, tone=tup), SKIN)
     bx(m, TRIM, x0 - BB_T, x0, 0.0, BB_H - 0.06, z0, z1)
     bx(m, TRIM, x0 - BB_T * 0.72, x0, BB_H - 0.06, BB_H, z0, z1)
-    bx(m, TRIM, x0 - 0.085, x0, RAIL - 0.14, RAIL - 0.035, z0, z1)
-    bx(m, TRIM, x0 - 0.052, x0, RAIL - 0.035, RAIL, z0, z1)
-    for y0, y1, dep in ((H - CROWN_H, H - 0.30, 0.055),
-                        (H - 0.30, H - 0.145, 0.115),
-                        (H - 0.145, H - 0.008, 0.185)):
-        bx(m, TRIM if dep > 0.09 else TRIM_D, x0 - dep, x0, y0, y1, z0, z1)
-    bx(m, BEZ, x0 - 0.10, x0 - 0.02, 3.82, 6.22, 8.35, 12.55)
-    bx(m, BLK, x0 - 0.19, x0 - 0.10, 3.90, 6.14, 8.45, 12.45)
-    bx(m, TRIM, x0 - 0.05, x0 - 0.02, 4.40, 5.30, 13.30, 13.62)
+    bx(m, TRIM, x0 - 0.052, x0, RAIL - 0.12, RAIL - 0.030, z0, z1)
+    bx(m, TRIM, x0 - 0.032, x0, RAIL - 0.030, RAIL, z0, z1)
+    for y0, y1, dep in ((H - 0.30, H - 0.115, 0.042),
+                        (H - 0.115, H - 0.008, 0.100)):
+        bx(m, TRIM if dep > 0.06 else TRIM_D, x0 - dep, x0, y0, y1, z0, SWO)
+    # the SECOND flat TV: v3 5 and v3 3 both put it on the wall SOUTH of the
+    # stair foot, i.e. this room's east wall, not on the partition.
+    bx(m, BEZ, W - 0.10, W - 0.02, 3.95, 6.15, 17.60, 21.30)
+    bx(m, BLK, W - 0.19, W - 0.10, 4.03, 6.07, 17.70, 21.20)
+    # switch plate + outlet on the partition
+    bx(m, TRIM, x0 - 0.05, x0 - 0.02, 4.05, 4.55, 12.10, 12.40)
+    bx(m, TRIM, x0 - 0.04, x0 - 0.02, 1.15, 1.55, 15.10, 15.34)
     return save_and_place("Movie Stair Wall", m, ROOM)
 
 
 def build_stairrail():
-    """Black newel and cap rail with white balusters at the foot of the flight."""
+    """THE BALUSTRADE -- round 2's second-largest dollhouse failure was that
+    this side of the room was a blank slab.  In every photograph the black
+    handrail and white spindles rising over the knee wall are the strongest
+    graphic element on the east side, so they are built to the real flight:
+    the DB stairs row runs local z 3.8-16.2 and climbs the floor's full 8 ft,
+    i.e. 0.645 ft of rise per ft of run.
+    """
     m = Model()
     NEWEL = Material("m2newel", "#121214", roughness=0.42)
-    x0 = SWX[1]
-    zf = SWZ[1]
-    nx, nz = x0 + 0.34, zf - 0.24
-    m.add(box(0.34, 3.34, 0.34), NEWEL, at=(nx, 0.0, nz))
-    m.add(box(0.44, 0.17, 0.44), NEWEL, at=(nx, 3.34, nz))
-    m.add(box(0.15, 0.15, 5.60), NEWEL, at=(nx, 3.02, nz - 3.10))
-    for i in range(9):
-        z = nz - 0.55 - i * 0.58
-        m.add(box(0.10, 2.85 - i * 0.02, 0.10), TRIM, at=(nx, 0.10 + i * 0.30, z))
+    xc = SWX[0] + 0.16                      # centred on the partition line
+    z_foot, z_head = SWZ[1] - 0.10, SWO
+    y_foot, y_head = 3.52, 3.52 + (z_foot - z_head) * 0.645
+
+    def rail_y(z):
+        return y_foot + (z_foot - z) * 0.645
+
+    # newel at the foot, and the cap that the handrail dies into
+    m.add(box(0.32, y_foot, 0.32), NEWEL, at=(xc, 0.0, z_foot))
+    m.add(box(0.42, 0.16, 0.42), NEWEL, at=(xc, y_foot, z_foot))
+    m.add(box(0.30, min(H, y_head + 0.9), 0.30), NEWEL, at=(xc, 0.0, z_head))
+
+    # ONE raked handrail bar, rotated to the flight's own pitch -- a run of
+    # stepped boxes reads as a staircase of blocks at eye level.
+    ang = math.atan(0.645)
+    L = math.hypot(z_foot - z_head, y_foot - y_head)
+    m.add(box(0.185, 0.150, L), NEWEL,
+          at=(xc, (y_foot + y_head) / 2, (z_foot + z_head) / 2), rot_x=ang)
+    # white square spindles from the knee-wall cap up to the rail
+    z = z_foot - 0.42
+    while z > z_head + 0.30:
+        top = rail_y(z) - 0.09
+        m.add(box(0.095, top - RAIL, 0.095), TRIM, at=(xc, RAIL, z))
+        z -= 0.42
+    # the knee wall's own cap, raked nowhere -- it is the room's chair rail line
+    bx(m, TRIM, xc - 0.20, xc + 0.20, RAIL, RAIL + 0.075, z_head, z_foot + 0.16)
     return save_and_place("Movie Stair Rail", m, ROOM)
 
 
@@ -521,96 +732,154 @@ def build_rug():
     bx(m, RUGM2, x0, x0 + 0.22, RUG_Y - 0.014, RUG_Y - 0.002, z0, z1)
     bx(m, RUGM2, x1 - 0.22, x1, RUG_Y - 0.014, RUG_Y - 0.002, z0, z1)
     Y = RUG_Y + 0.006     # 0.104: clears the rug top and the slab offset
-    for (cx, cz, hx, hz) in ((1.97, 15.20, 1.75, 4.65),    # sectional, west leg
+    for (cx, cz, hx, hz) in ((2.04, 15.45, 1.82, 4.90),    # sectional, west leg
                              (5.76, 21.84, 5.54, 1.49),    # sectional, south leg
                              (7.82, 16.05, 1.78, 2.00),    # ottoman
                              (14.35, 13.25, 1.45, 1.45),   # swivel chair
-                             (14.45, 8.55, 1.45, 1.45)):
+                             (14.45, 8.55, 1.45, 1.45),    # swivel chair
+                             (14.60, 16.60, 0.86, 0.86),   # pouf
+                             (6.05, 1.15, 3.85, 0.80),     # media console
+                             (1.25, 1.15, 0.80, 0.80),     # subwoofer, west
+                             (11.00, 1.35, 1.05, 1.00)):   # subwoofer, east
         cshadow(m, cx, cz, hx, hz, y=Y, strength=0.76, room=(W, D))
     return save_and_place("Movie Floor Rug", m, ROOM)
 
 
 # =============================================================== sectional
 def build_sectional():
+    """ROUND 2 FAILED here: 'the sectional has no back cushions ... black
+    bolsters sit directly on a low back rail over flat slab seats; in doll_se it
+    reads as two hospital beds.'  Correct, and the fix is structural, not
+    tonal.  What 'Movie room.jpg' (x 150-420, y 830-900) and 'Movie Room v3 4'
+    actually show:
+
+      * ONE plump seat cushion per seat, ~0.62 ft thick with a soft rolled
+        front edge -- not a 0.30 ft slab with an 0.18 ft gap beside it;
+      * a full-height upholstered BACK with individual back cushions standing
+        proud of it, each about 1.05 ft tall and 0.6 ft thick;
+      * ROLLED (not square-track) arms: a body with a fat cylinder capping it;
+      * NAILHEAD TRIM, the sofa's most distinctive detail -- a dense row of
+        small domed studs down the front edge of every arm and along the arm's
+        outer face.  Round 2 drew five studs on one edge.
+    """
     m = Model()
-    rnd = Rnd(20260822)
-    BASE_Y, SEAT_Y, ARM_Y, BACK_Y = 0.46, 1.46, 2.10, 2.78
-    ARM_W = 0.42
+    rnd = Rnd(20260823)
+    BASE_Y = 0.42          # deck top / cushion seat line
+    SEAT_Y = BASE_Y + 0.62
+    BACK_Y = 2.62          # back cushion top
+    FRAME_Y = 2.30         # upholstered back frame top (roll sits on it)
+    ARM_Y = 2.06
+    ARM_W = 0.56
+    BACK_D = 0.74
+    STUD_S = 0.145         # nailhead pitch
+
+    def studs(p0, p1, y0, y1=None, face="z"):
+        """A dense run of nailheads from (x,z,y0) to (x,z,y1 or y0).
+
+        `face` is the axis the dome's own flat faces look along -- get it wrong
+        and every stud is edge-on and invisible, which is most of why round 2's
+        nailheads did not read at all."""
+        y1 = y0 if y1 is None else y1
+        span = math.hypot(p1[0] - p0[0], p1[1] - p0[1]) + abs(y1 - y0)
+        n = max(2, int(round(span / STUD_S)))
+        rx, rz = (R(90), 0.0) if face == "z" else (0.0, R(90))
+        for i in range(n):
+            t = (i + 0.5) / n
+            m.add(cylinder(0.030, 0.030, 8), STUD,
+                  at=(p0[0] + (p1[0] - p0[0]) * t, y0 + (y1 - y0) * t,
+                      p0[1] + (p1[1] - p0[1]) * t), rot_x=rx, rot_z=rz)
 
     def run(x0, x1, z0, z1, facing, seats, arms=(True, True)):
-        if facing == "e":
-            back_x = x0 + 0.66
+        if facing == "e":                      # back on the WEST, front is +x
+            back_x = x0 + BACK_D
             ia = z0 + (ARM_W if arms[0] else 0.0)
             ib = z1 - (ARM_W if arms[1] else 0.0)
-            slab(m, FAB_D, x0, x1 - 0.16, 0.05, BASE_Y, z0 + 0.05, z1 - 0.05)
-            slab(m, FAB, x0, back_x, BASE_Y, BACK_Y - 0.44, z0, z1, r=0.06)
-            slab(m, FAB_D, back_x, x1, BASE_Y, SEAT_Y - 0.26, ia, ib, r=0.06)
+            slab(m, FAB_D, x0 + 0.04, x1 - 0.14, 0.06, BASE_Y, z0 + 0.06, z1 - 0.06)
+            slab(m, FAB, x0, back_x, BASE_Y, FRAME_Y, z0, z1, r=0.07)
+            m.add(cylinder(0.20, z1 - z0, 12), FAB,
+                  at=(x0 + BACK_D * 0.5, FRAME_Y, z0), rot_x=R(90))
             for i in range(seats):
-                a = ia + 0.05 + i * (ib - ia) / seats
-                b = a + (ib - ia) / seats - 0.18
-                slab(m, FAB, back_x + 0.04, x1 - 0.12, SEAT_Y - 0.30, SEAT_Y,
-                     a, b, r=0.09)
-                cush(m, BACKC, x0 + 0.10, back_x + 0.26, SEAT_Y - 0.10,
-                     BACK_Y, a, b, r=0.17, nub=0.012, rnd=rnd)
+                a = ia + 0.04 + i * (ib - ia) / seats
+                b = a + (ib - ia) / seats - 0.08
+                cush(m, FAB, back_x + 0.02, x1 - 0.10, BASE_Y, SEAT_Y, a, b,
+                     r=0.17, nub=0.010, rnd=rnd, seg=12, rings=5)
+                cush(m, BACKC, x0 + 0.16, back_x + 0.50, SEAT_Y - 0.14, BACK_Y,
+                     a + 0.03, b - 0.03, r=0.24, nub=0.014, rnd=rnd,
+                     seg=12, rings=5)
             for k, on in enumerate(arms):
                 if not on:
                     continue
                 za, zb = (z0, z0 + ARM_W) if k == 0 else (z1 - ARM_W, z1)
-                slab(m, FAB, x0, x1, BASE_Y, ARM_Y, za, zb, r=0.12)
-                nailheads(m, STUD, (x1 - 0.01, za + 0.07), (x1 - 0.01, zb - 0.07),
-                          ARM_Y - 0.20, 5)
-            for cz in (z0 + 0.32, z1 - 0.32):
-                for cx in (x0 + 0.34, x1 - 0.30):
-                    leg(m, DKWOOD, cx, cz, 0.46, 0.16)
-        else:
-            back_z = z1 - 0.66
+                slab(m, FAB, x0, x1 - 0.02, BASE_Y - 0.02, ARM_Y - 0.19,
+                     za, zb, r=0.10)
+                m.add(cylinder(0.195, x1 - 0.02 - x0, 12), FAB,
+                      at=(x0, ARM_Y - 0.19, (za + zb) / 2), rot_z=R(-90))
+                zc = za + 0.09 if k == 0 else zb - 0.09
+                studs((x1 - 0.03, zc), (x1 - 0.03, zc), 0.56, ARM_Y - 0.14,
+                      face="x")
+                studs((x1 - 0.03, za + 0.09), (x1 - 0.03, zb - 0.09),
+                      ARM_Y - 0.10, face="x")
+            for cz in (z0 + 0.30, z1 - 0.30):
+                for cx in (x0 + 0.32, x1 - 0.34):
+                    leg(m, DKWOOD, cx, cz, BASE_Y + 0.02, 0.17)
+        else:                                   # back on the SOUTH, front -z
+            back_z = z1 - BACK_D
             ia = x0 + (ARM_W if arms[0] else 0.0)
             ib = x1 - (ARM_W if arms[1] else 0.0)
-            slab(m, FAB_D, x0 + 0.05, x1 - 0.05, 0.05, BASE_Y, z0 + 0.16, z1)
-            slab(m, FAB, x0, x1, BASE_Y, BACK_Y - 0.44, back_z, z1, r=0.06)
-            slab(m, FAB_D, ia, ib, BASE_Y, SEAT_Y - 0.26, z0, back_z, r=0.06)
+            slab(m, FAB_D, x0 + 0.06, x1 - 0.06, 0.06, BASE_Y, z0 + 0.14, z1 - 0.04)
+            slab(m, FAB, x0, x1, BASE_Y, FRAME_Y, back_z, z1, r=0.07)
+            m.add(cylinder(0.20, x1 - x0, 12), FAB,
+                  at=(x0, FRAME_Y, z1 - BACK_D * 0.5), rot_z=R(-90))
             for i in range(seats):
-                a = ia + 0.05 + i * (ib - ia) / seats
-                b = a + (ib - ia) / seats - 0.18
-                slab(m, FAB, a, b, SEAT_Y - 0.30, SEAT_Y, z0 + 0.12,
-                     back_z - 0.04, r=0.09)
-                cush(m, BACKC, a, b, SEAT_Y - 0.10, BACK_Y,
-                     back_z - 0.26, z1 - 0.10, r=0.17, nub=0.012, rnd=rnd)
+                a = ia + 0.04 + i * (ib - ia) / seats
+                b = a + (ib - ia) / seats - 0.08
+                cush(m, FAB, a, b, BASE_Y, SEAT_Y, z0 + 0.10, back_z - 0.02,
+                     r=0.17, nub=0.010, rnd=rnd, seg=12, rings=5)
+                cush(m, BACKC, a + 0.03, b - 0.03, SEAT_Y - 0.14, BACK_Y,
+                     back_z - 0.50, z1 - 0.16, r=0.24, nub=0.014, rnd=rnd,
+                     seg=12, rings=5)
             for k, on in enumerate(arms):
                 if not on:
                     continue
                 xa, xb = (x0, x0 + ARM_W) if k == 0 else (x1 - ARM_W, x1)
-                slab(m, FAB, xa, xb, BASE_Y, ARM_Y, z0, z1, r=0.12)
-                nailheads(m, STUD, (xa + 0.07, z0 + 0.01), (xb - 0.07, z0 + 0.01),
-                          ARM_Y - 0.20, 5)
-            for cx in (x0 + 0.32, x1 - 0.32):
-                for cz in (z0 + 0.30, z1 - 0.34):
-                    leg(m, DKWOOD, cx, cz, 0.46, 0.16)
+                slab(m, FAB, xa, xb, BASE_Y - 0.02, ARM_Y - 0.19,
+                     z0 + 0.02, z1, r=0.10)
+                m.add(cylinder(0.195, z1 - z0 - 0.02, 12), FAB,
+                      at=((xa + xb) / 2, ARM_Y - 0.19, z0 + 0.02), rot_x=R(90))
+                xc = xa + 0.09 if k == 0 else xb - 0.09
+                studs((xc, z0 + 0.05), (xc, z0 + 0.05), 0.56, ARM_Y - 0.14)
+                studs((xa + 0.09, z0 + 0.05), (xb - 0.09, z0 + 0.05),
+                      ARM_Y - 0.10)
+            for cx in (x0 + 0.30, x1 - 0.30):
+                for cz in (z0 + 0.28, z1 - 0.32):
+                    leg(m, DKWOOD, cx, cz, BASE_Y + 0.02, 0.17)
 
-    run(0.22, 3.72, 10.55, 19.85, "e", 3, arms=(True, False))
+    run(0.22, 3.86, 10.55, 20.35, "e", 3, arms=(True, False))
     run(0.22, 11.30, 20.35, 23.32, "n", 4, arms=(False, True))
 
-    for cz, mat in ((11.45, GEO), (12.75, SLATE), (14.05, GEO),
-                    (15.35, BOUCLE), (16.75, SLATE), (18.15, GEO)):
-        cush(m, mat, 0.80, 1.36, 1.52, 2.44, cz - 0.48, cz + 0.48,
-             r=0.20, nub=0.02, rnd=rnd)
-    for cx, mat in ((2.20, SLATE), (4.40, GEO), (6.70, BOUCLE),
-                    (8.90, GEO), (10.40, SLATE)):
-        cush(m, mat, cx - 0.48, cx + 0.48, 1.52, 2.44, 22.18, 22.74,
-             r=0.20, nub=0.02, rnd=rnd)
+    # throw pillows, standing in FRONT of the back cushions
+    for cz, mat in ((11.60, GEO), (12.95, SLATE), (14.30, GEO),
+                    (15.65, BOUCLE), (17.05, SLATE), (18.45, GEO)):
+        cush(m, mat, 1.02, 1.62, SEAT_Y - 0.02, SEAT_Y + 1.06, cz - 0.50,
+             cz + 0.50, r=0.20, nub=0.02, rnd=rnd, seg=11, rings=4)
+    for cx, mat in ((2.30, SLATE), (4.55, GEO), (6.85, BOUCLE),
+                    (9.05, GEO), (10.45, SLATE)):
+        cush(m, mat, cx - 0.50, cx + 0.50, SEAT_Y - 0.02, SEAT_Y + 1.06,
+             21.86, 22.46, r=0.20, nub=0.02, rnd=rnd, seg=11, rings=4)
 
     # BLACK BOLSTERS lying flat along the tops of the backs -- the single most
-    # conspicuous thing in the v3 photos and absent from every earlier round.
-    for cz in (12.10, 14.05, 16.00, 17.95):
-        cush(m, BLKPILL, 0.32, 1.14, BACK_Y - 0.06, BACK_Y + 0.62,
-             cz - 0.78, cz + 0.78, r=0.24, nub=0.02, rnd=rnd)
+    # conspicuous thing in the v3 photos.
+    for cz in (12.20, 14.15, 16.10, 18.05):
+        cush(m, BLKPILL, 0.30, 1.10, BACK_Y - 0.10, BACK_Y + 0.56,
+             cz - 0.78, cz + 0.78, r=0.24, nub=0.02, rnd=rnd, seg=11, rings=4)
     for cx in (2.55, 4.35, 8.30, 10.10):
-        cush(m, BLKPILL, cx - 0.78, cx + 0.78, BACK_Y - 0.06, BACK_Y + 0.62,
-             22.44, 23.26, r=0.24, nub=0.02, rnd=rnd)
-    m.add(sag_plane(2.40, 3.30, 0.05, 9, 11, edge_drop=0.34), THROW,
-          at=(1.70, BACK_Y + 0.30, 18.10))
-    m.add(sag_plane(2.60, 2.20, 0.05, 9, 8, edge_drop=0.30), THROW,
-          at=(6.30, BACK_Y + 0.28, 22.60))
+        cush(m, BLKPILL, cx - 0.78, cx + 0.78, BACK_Y - 0.10, BACK_Y + 0.56,
+             22.40, 23.20, r=0.24, nub=0.02, rnd=rnd, seg=11, rings=4)
+    # the grey throws draped over the back -- sagged planes with a rolled hem so
+    # they are not the flat grey slabs the round-2 critic saw
+    for (tx, tz, tw, td) in ((1.05, 18.20, 1.45, 3.10), (6.30, 22.86, 2.40, 1.35)):
+        m.add(sag_plane(tw, td, 0.05, 9, 11, edge_drop=0.30), THROW,
+              at=(tx, BACK_Y - 0.02, tz))
     return save_and_place("Movie Sectional", fabricate(m), ROOM)
 
 
@@ -637,7 +906,7 @@ def build_ottoman():
     return save_and_place("Movie Ottoman", fabricate(m), ROOM)
 
 
-def shell(m, mat, cx, cz, r, thick, a0, a1, y0, h0, h1, steps=30):
+def shell(m, mat, cx, cz, r, thick, a0, a1, y0, h0, h1, steps=30, inner=None):
     """One smooth swept upholstered shell -- the wrap-around back of a barrel
     chair.  bkit.barrel() lays 26 separate boxes on the arc and they render as
     a fan of ribs (visible in every earlier round's render); this is a single
@@ -662,7 +931,8 @@ def shell(m, mat, cx, cz, r, thick, a0, a1, y0, h0, h1, steps=30):
                 t += [(a, c, b), (b, c, d)]
         return t
     m.add(Part(vo, strip(vo, steps, 2), smooth=True), mat)
-    m.add(Part(vi, [(c, b, a) for (a, b, c) in strip(vi, steps, 2)], smooth=True), mat)
+    m.add(Part(vi, [(c, b, a) for (a, b, c) in strip(vi, steps, 2)],
+               smooth=True), inner or mat)
     m.add(Part(vt, strip(vt, steps, 3), smooth=True), mat)
     # end caps
     for i, sgn in ((0, 1), (steps, -1)):
@@ -686,12 +956,18 @@ def build_chairs():
         seat_y = 1.46
         sub.add(cylinder(0.72, 0.13, 16), DKWOOD, at=(0, 0.0, 0))
         sub.add(cylinder(0.36, 0.24, 12), DKWOOD, at=(0, 0.13, 0))
-        sub.add(puff(2.72, 1.14, 2.72, r=0.38), IVORY, at=(0, 0.30, 0.02))
-        slab(sub, IVORY, -0.94, 0.94, seat_y - 0.30, seat_y, -0.70, 1.24, r=0.16)
+        sub.add(puff(2.72, 1.14, 2.72, r=0.38, seg=18, rings=7), IVORY,
+                at=(0, 0.30, 0.02))
+        # the seat pad is CREAM in every photograph -- round 2's read dark grey
+        # because the pad was too small and what showed was the shell's own
+        # unlit inner wall.  Fill the barrel and give the inner wall its own
+        # brighter albedo (it sees nothing but hemisphere light).
+        cush(sub, IVORY, -1.02, 1.02, seat_y - 0.36, seat_y + 0.10,
+             -0.86, 1.30, r=0.20, nub=0.012, rnd=rnd, seg=14, rings=5)
         shell(sub, IVORY, 0.0, 0.0, 1.20, 0.62, R(163), R(377),
-              seat_y - 0.34, 0.64, 1.42, steps=30)
-        cush(sub, GEO, -0.60, 0.60, seat_y - 0.02, seat_y + 1.08,
-             -0.72, -0.26, r=0.16, nub=0.02, rnd=rnd)
+              seat_y - 0.34, 0.64, 1.42, steps=44, inner=IVORY_IN)
+        cush(sub, GEO, -0.60, 0.60, seat_y + 0.06, seat_y + 1.12,
+             -0.74, -0.28, r=0.16, nub=0.02, rnd=rnd)
         ca, sa = math.cos(R(rot)), math.sin(R(rot))
         for part, mm in sub._parts:
             v = [(cx + x * ca + z * sa, y, cz - x * sa + z * ca)
@@ -710,7 +986,7 @@ def build_art():
     and its corner -- photos 2 and 3 both put it between the west window and
     the SW corner."""
     m = Model()
-    z0, z1 = 13.60, 21.10
+    z0, z1 = ART
     y0, y1 = 4.05, 6.55
     n, gap = 5, 0.13
     pw = (z1 - z0 - gap * (n - 1)) / n
@@ -751,11 +1027,11 @@ def _tiered_table(m, tx, tz, w=0.90, d=1.05):
 def build_side():
     """West wall: tiered side table + black lamp, and the tall tower purifier."""
     m = Model()
-    tx, tz = 1.28, 10.35
+    tx, tz = 1.30, 9.90
     cshadow(m, tx, tz, 0.45, 0.53, y=0.058, out=0.55, strength=0.66, room=(W, D))
     _tiered_table(m, tx, tz)
     _lamp(m, tx, tz)
-    fx, fz = 0.92, 7.30
+    fx, fz = 0.95, 4.60
     cshadow(m, fx, fz, 0.52, 0.52, y=0.058, out=0.55, strength=0.66, room=(W, D))
     m.add(cylinder(0.52, 0.09, 18), FANW, at=(fx, 0.0, fz))
     m.add(cylinder(0.42, 1.05, 16, r_top=0.40), FANW, at=(fx, 0.09, fz))
@@ -768,27 +1044,45 @@ def build_side():
 
 
 def build_corner():
-    """South wall, east end: black cabinet, the bladeless ring fan, a small
-    cart and a second side table + lamp."""
+    """South wall, EAST end: black cabinet, the bladeless ring fan, the black
+    wire media rack and a second side table + lamp -- plus the round pouf that
+    stands beside the stair foot in v3 5.
+
+    Re-solved from 'Movie Room v3 4.jpg' by the same south-wall camera map used
+    for the two in-wall surround speakers: round 2 had the ring fan WEST of the
+    black cabinet and the whole cluster ~3 ft too far west.
+    """
     m = Model()
-    cx0, cx1 = 11.60, 13.45
-    cshadow(m, (cx0 + cx1) / 2, 22.55, 0.93, 0.79, y=0.058, out=0.6, strength=0.72, room=(W, D))
+    cx0, cx1 = 13.95, 15.70
+    cshadow(m, (cx0 + cx1) / 2, 22.55, 0.88, 0.79, y=0.058, out=0.6,
+            strength=0.72, room=(W, D))
     bx(m, BOXBLK, cx0, cx1, 0.0, 2.28, 21.75, 23.32)
     bx(m, BEZ, cx0 + 0.06, cx1 - 0.06, 0.12, 2.16, 21.72, 21.75)
     bx(m, Material("m2cabtop", "#1b1c1f", roughness=0.35),
        cx0 - 0.05, cx1 + 0.05, 2.28, 2.36, 21.70, 23.34)
-    fx, fz = 10.55, 22.75
+    fx, fz = 16.45, 22.35
     cshadow(m, fx, fz, 0.44, 0.44, y=0.058, out=0.55, strength=0.66, room=(W, D))
     m.add(cylinder(0.44, 0.07, 16), FANW, at=(fx, 0.0, fz))
     m.add(cylinder(0.21, 1.30, 12, r_top=0.19), FANW, at=(fx, 0.07, fz))
     m.add(torus(0.56, 0.085, 24, 8), FANW, at=(fx, 2.12, fz),
           rot_x=R(90), scale=(0.90, 1.0, 1.32))
-    _tiered_table(m, 9.55, 22.72, w=0.80, d=0.90)
-    tx, tz = 12.05, 20.55
+    # the black wire media rack beside the sectional
+    rx, rz = 12.85, 22.60
+    cshadow(m, rx, rz, 0.42, 0.48, y=0.058, out=0.5, strength=0.62, room=(W, D))
+    _tiered_table(m, rx, rz, w=0.82, d=0.94)
+    bx(m, BOXBLK, rx - 0.30, rx + 0.30, 0.52, 0.80, rz - 0.30, rz + 0.30)
+    bx(m, BEZ, rx - 0.26, rx + 0.26, 1.30, 1.52, rz - 0.26, rz + 0.26)
+    tx, tz = 12.15, 20.60
     cshadow(m, tx, tz, 0.45, 0.53, y=0.104, out=0.55, strength=0.66, room=(W, D))
     _tiered_table(m, tx, tz)
     _lamp(m, tx, tz)
-    return save_and_place("Movie Corner Props", m, ROOM)
+    # THE POUF -- v3 5, standing against the east wall just south of the newel
+    px, pz = 18.60, 18.20
+    cshadow(m, px, pz, 0.86, 0.86, y=0.058, out=0.6, strength=0.70, room=(W, D))
+    m.add(puff(1.86, 1.28, 1.86, r=0.52, seg=20, rings=7), BOUCLE,
+          at=(px, 0.0, pz))
+    m.add(cylinder(0.62, 0.06, 20), BOUCLE, at=(px, 1.22, pz))
+    return save_and_place("Movie Corner Props", fabricate(m), ROOM)
 
 
 BUILD = [build_skins, build_ceiling, build_floor, build_trim, build_screen, build_console,
@@ -800,7 +1094,7 @@ if __name__ == "__main__":
     surfaces(ROOM, wall_color="#dcdbd8", floor_color="#5b5d61",
              floor_texture="wood")
     if "--skins-only" in sys.argv:
-        out = build_skins()
+        out = build_skins() + [build_stairwall()]
     else:
         openings()
         out = []

@@ -97,7 +97,10 @@ DOORW = Material("gdoorw", "#f6f5f2", roughness=0.55)      # door leaf face
 DOORP = Material("gdoorp", "#e4e2dc", roughness=0.58)      # sunk door panel
 BLK = Material("gblk", "#1e1f22", roughness=0.55)          # TV face, hardware
 BLKM = Material("gblkm", "#2a2c30", roughness=0.45, metallic=0.35)
-CHAR = Material("gchar", "#3a3d41", roughness=0.80)        # pegboard
+# pegboard.  Photo-verified GREY, not the black the round-1 evidence note
+# claimed: the eastwall crop of Garage v3 1.jpg shows a mid-grey perforated
+# panel carrying BLACK hooks, and the hooks are what read as black at distance.
+CHAR = Material("gchar", "#5e6367", roughness=0.80)
 RUB = Material("grub", "#303236", roughness=0.72)          # rubber floor base
 GREY = Material("ggrey", "#9fa4a8", roughness=0.55, metallic=0.20)   # metal cabinet
 GREYD = Material("ggreyd", "#7e8489", roughness=0.55, metallic=0.20)
@@ -126,7 +129,7 @@ BANNERS = Material("gbans", "#d3dae4", roughness=0.74)     # its blue splash
 
 # ------------------------------------------------------------ contact shadow
 def contact(m, cx, cz, rx, rz, y=0.075, tone="#17181a", strength=0.34,
-            steps=8, out=0.78, exp=1.15):
+            steps=8, out=0.68, exp=1.15, cap_k=0.78):
     """Alpha-blended radial falloff that runs `out` feet PAST the footprint.
 
     Four things have to be true at once (ROOM-BRIEF): y above the slab's
@@ -143,8 +146,12 @@ def contact(m, cx, cz, rx, rz, y=0.075, tone="#17181a", strength=0.34,
     rough = 0.62
     # cap: the footprint itself, at the darkest step, so a piece you can see
     # under (the ride-on car leaning on the wall) is not standing on bare floor
+    # the cap is the footprint INTERIOR -- mostly hidden, but visible under a
+    # chair or the tipped ride-on, so it is held below the ramp's alpha: at the
+    # ~0.9 the ramp now needs it reads as a black hole rather than a shadow.
     cap = Material("cshcap", tone, roughness=rough,
-                   opacity=round(strength / 0.005) * 0.005, double_sided=False)
+                   opacity=round(strength * cap_k / 0.005) * 0.005,
+                   double_sided=False)
     v = [(cx, y, cz)]
     for k in range(seg):
         th = 2 * math.pi * k / seg
@@ -155,36 +162,53 @@ def contact(m, cx, cz, rx, rz, y=0.075, tone="#17181a", strength=0.34,
                           0.03), D - 0.03)))
     m.add(Part(v, [(0, 1 + (k + 1) % seg, 1 + k) for k in range(seg)],
                smooth=True), cap)
-    for i in range(steps):
-        t0 = (i / steps) ** exp
-        t1 = ((i + 1) / steps) ** exp
-        # quantised so rings of different pieces share ONE material, which is
-        # what keeps the whole room's shadows inside the 300 KB piece cap:
-        # Model.add groups by material, and every distinct alpha was its own
-        # primitive with its own duplicated vertices.
-        a = round(strength * (1.0 - (t0 + t1) * 0.5) / 0.005) * 0.005
-        if a <= 0.004:
-            continue
-        mat = Material("csh%03d" % int(round(a * 1000)), tone, roughness=rough,
-                       opacity=a, double_sided=False)
-        v, tris = [], []
-        for k in range(seg):
-            th = 2 * math.pi * k / seg
-            ct, st = math.cos(th), math.sin(th)
-            ux = math.copysign(abs(ct) ** (2.0 / n), ct)
-            uz = math.copysign(abs(st) ** (2.0 / n), st)
-            for (t, ) in ((t0, ), (t1, )):
-                px = cx + ux * (rx + out * t)
-                pz = cz + uz * (rz + out * t)
-                v.append((min(max(px, 0.03), W - 0.03), y,
-                          min(max(pz, 0.03), D - 0.03)))
-        for k in range(seg):
-            a0, b0 = 2 * k, 2 * k + 1
-            a1, b1 = (2 * k + 2) % (2 * seg), (2 * k + 3) % (2 * seg)
-            tris += [(a0, b1, b0), (a0, a1, b1)]        # faces UP
-        # smooth=True only to SHARE vertices: the ring is flat, so its averaged
-        # normal is the same straight-up vector the flat path would give.
-        m.add(Part(v, tris, smooth=True), mat)
+    # TWO passes, deliberately.  ONE alpha layer cannot reach the brief's 34%
+    # in this scene: the decal is a LIT surface and at albedo #17181a it still
+    # renders at ~0.57 of the floor, because a black diffuse surface's output
+    # here is dominated by the 4% Fresnel specular reflecting a bright sky.  So
+    # even alpha 0.92 measured only 21% darkening.  A second, inner layer at
+    # +0.006 ft composites over the first: 0.92 twice leaves 0.6% of the floor
+    # showing instead of 8%, which takes the contact edge to the low 30s.  This
+    # is NOT the accidental stacking ROOM-BRIEF warns against -- each layer is
+    # still one coplanar set of NON-OVERLAPPING annuli, and the second stops
+    # halfway out so the ramp still eases to zero.
+    for layer, (yy, k_a, k_out) in enumerate(((y, 1.0, 1.0),
+                                              (y + 0.006, 0.90, 0.52))):
+        for i in range(steps):
+            t0 = (i / steps) ** exp
+            t1 = ((i + 1) / steps) ** exp
+            if layer and t0 >= k_out:
+                break
+            # quantised so rings of different pieces share ONE material, which
+            # is what keeps the whole room's shadows inside the 300 KB piece
+            # cap: Model.add groups by material, and every distinct alpha was
+            # its own primitive with its own duplicated vertices.
+            f = 1.0 - (t0 + t1) * 0.5
+            if layer:
+                f *= max(0.0, 1.0 - t1 / k_out)
+            a = round(strength * k_a * f / 0.005) * 0.005
+            if a <= 0.004:
+                continue
+            mat = Material("csh%03d" % int(round(a * 1000)), tone,
+                           roughness=rough, opacity=a, double_sided=False)
+            v, tris = [], []
+            for k in range(seg):
+                th = 2 * math.pi * k / seg
+                ct, st = math.cos(th), math.sin(th)
+                ux = math.copysign(abs(ct) ** (2.0 / n), ct)
+                uz = math.copysign(abs(st) ** (2.0 / n), st)
+                for (t, ) in ((t0, ), (t1, )):
+                    px = cx + ux * (rx + out * t)
+                    pz = cz + uz * (rz + out * t)
+                    v.append((min(max(px, 0.03), W - 0.03), yy,
+                              min(max(pz, 0.03), D - 0.03)))
+            for k in range(seg):
+                a0, b0 = 2 * k, 2 * k + 1
+                a1, b1 = (2 * k + 2) % (2 * seg), (2 * k + 3) % (2 * seg)
+                tris += [(a0, b1, b0), (a0, a1, b1)]        # faces UP
+            # smooth=True only to SHARE vertices: the ring is flat, so its
+            # averaged normal is the same straight-up vector flat would give.
+            m.add(Part(v, tris, smooth=True), mat)
 
 
 # ------------------------------------------------------------------ helpers
@@ -204,6 +228,69 @@ def panel(m, mat, wall, a0, a1, y0, y1, off=0.03):
     else:
         x = W - off
         m.add(quad((x, y0, a0), (x, y0, a1), (x, y1, a1), (x, y1, a0)), mat)
+
+
+def uv_panel(m, mat, wall, a0, a1, y0, y1, off=0.03, uv=(0.0, 0.0, 1.0, 1.0)):
+    """`panel`, but TEXTURED: one repeat of `mat.tex` across the panel.
+
+    Round 1 built every graphic surface in this room -- the KIES banner, the
+    clock dial, the prints, the deck art -- out of axis-aligned boxes, which is
+    the one gap the critic named.  This is the replacement.
+
+    The four wall cases share ONE uv tuple because `panel`'s vertex order is
+    already (bottom-left, bottom-right, top-right, top-left) *as seen from
+    inside the room* on every wall: on the south and west walls the room-frame
+    coordinate `a` runs right-to-left, and `panel` already reverses it.  glTF
+    puts (0,0) at the image's TOP-left, hence v=1 on the bottom pair.
+    """
+    u0, v0, u1, v1 = uv
+    q = [(u0, v1), (u1, v1), (u1, v0), (u0, v0)]
+    if wall == "n":
+        z = NF + off
+        p = [(a0, y0, z), (a1, y0, z), (a1, y1, z), (a0, y1, z)]
+    elif wall == "s":
+        z = D - off
+        p = [(a1, y0, z), (a0, y0, z), (a0, y1, z), (a1, y1, z)]
+    elif wall == "w":
+        p = [(off, y0, a1), (off, y0, a0), (off, y1, a0), (off, y1, a1)]
+    else:
+        x = W - off
+        p = [(x, y0, a0), (x, y0, a1), (x, y1, a1), (x, y1, a0)]
+    m.add(uv_quad(p[0], p[1], p[2], p[3], q[0], q[1], q[2], q[3]), mat)
+
+
+def uv_disc(m, mat, wall, ca, cy, r, off=0.03, seg=32):
+    """A textured disc facing into the room -- the Liqui Moly clock dial.
+
+    The photo has a FLAT disc on the wall; round 1 built a sphere, which read
+    as a bulge.  UVs are the unit square inscribing the circle, so a square
+    dial texture maps straight on.
+    """
+    v, uvs = [], []
+    for k in range(seg):
+        th = 2 * math.pi * k / seg
+        ct, st = math.cos(th), math.sin(th)
+        if wall == "n":
+            v.append((ca + r * ct, cy + r * st, NF + off))
+        elif wall == "s":
+            v.append((ca - r * ct, cy + r * st, D - off))
+        elif wall == "w":
+            v.append((off, cy + r * st, ca - r * ct))
+        else:
+            v.append((W - off, cy + r * st, ca + r * ct))
+        uvs.append((0.5 + 0.5 * ct, 0.5 - 0.5 * st))
+    cen = len(v)
+    if wall == "n":
+        v.append((ca, cy, NF + off))
+    elif wall == "s":
+        v.append((ca, cy, D - off))
+    elif wall == "w":
+        v.append((off, cy, ca))
+    else:
+        v.append((W - off, cy, ca))
+    uvs.append((0.5, 0.5))
+    tris = [(cen, k, (k + 1) % seg) for k in range(seg)]
+    m.add(Part(v, tris, uv=uvs, smooth=True), mat)
 
 
 def slab(m, mat, wall, a0, a1, y0, y1, t=0.09, off=0.0):

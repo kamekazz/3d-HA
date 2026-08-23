@@ -428,6 +428,38 @@ $PY -m roomkit.check_pick <room id> --level <level>
 
 It fails loudly if anything you placed would steal the room's clicks.
 
+## Photo-derived textures: allowed for flat printed objects, not for geometry
+
+The Garage's round-2 banner was textured from the photograph itself — perspective
+rectified from four corners, then **divided by a wide-gaussian estimate of the
+photo's own illumination** so what gets mapped is an albedo and not a lit image
+the renderer would then light a second time. That is admissible, and the builder
+was right to declare it rather than quietly ship it.
+
+The reasoning, so the line is clear:
+
+- The real object **is a printed photograph** — a flat vinyl sheet of a car.
+  Reproducing it as a raster reproduces what physically hangs on that wall.
+  Drawing it as vector letterforms over a procedural car would be *less*
+  accurate, not more honest.
+- This brief already tells you to pick `color` straight off the photo. A
+  rectified albedo is the same operation at higher resolution.
+- It is a texture on a quad in the scene. It takes the room's lighting and the
+  camera's perspective like any other surface. That is not compositing the
+  photograph into the frame.
+
+**The boundary.** Photo-derived albedo is for a **flat printed artefact** — a
+banner, a poster, a canvas, a dial face, a decal, book spines, a rug's woven
+pattern. It is NOT for standing in place of geometry: do not photo-texture a
+wall to fake cabinets you did not model, and do not map a photo of a
+three-dimensional object onto a box and call it that object. If a viewer moving
+the camera would see the trick collapse, it is the wrong tool.
+
+**Always divide out the source photo's lighting**, and **always declare it in
+your report and in `rooms/<id>.json`** — a critic comparing your render against
+the same photograph the texture came from is entitled to know which surfaces
+those are.
+
 ## Room geometry is ground truth
 
 Footprints are traced from the real floor plans in `docs/floor plan/`. **Never

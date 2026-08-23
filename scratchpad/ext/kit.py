@@ -76,21 +76,75 @@ def board_tex(seed=7, px=96, boards=4, base=238, seam=150, grain=13):
     return png_rgb(rows)
 
 
-def wicker_tex(seed=11, px=64, base=242, dark=196):
-    """Open basket weave for the outdoor furniture."""
+def wicker_tex(seed=11, px=64, base=250, dark=138):
+    """Open basket weave for the outdoor furniture.
+
+    Round 1's version was correct in principle and invisible in practice for
+    two separate reasons, both fixed here:
+
+    1. `box()` emits NO UVs, so every wicker panel sampled texel (0,0) and
+       rendered as flat paint. Use `uv_box()` below for anything carrying a
+       texture. (Metered: photo RGB 167,165,174 with a strong basketweave;
+       round 1 rendered 195,193,187 with none.)
+    2. Even sampled correctly the weave was too faint -- 242 against 196 on a
+       4 px cell is a 19% modulation. A real basketweave alternates a lit
+       strand against a shadowed GAP, which is nearer 45%.
+
+    So: 8 px cells (one full over-under pair), warp and weft that swap which
+    is on top per cell, and a dark gap line between strands.
+    """
     r = rng(seed)
     rows = []
     for y in range(px):
         row = []
         for x in range(px):
-            cell = ((x // 4) + (y // 4)) % 2
-            edge = (x % 4 in (0,)) or (y % 4 in (0,))
-            v = dark if edge else base - (6 if cell else 0)
-            v += int((r() - 0.5) * 10)
+            cx, cy = x % 8, y % 8
+            over = ((x // 8) + (y // 8)) % 2 == 0   # which strand is on top
+            gap = cx == 0 or cy == 0               # the shadow between strands
+            if gap:
+                v = dark
+            elif over:
+                # horizontal strand on top: shade across its width
+                v = base - int(abs(cy - 4) / 4.0 * 46)
+            else:
+                v = base - int(abs(cx - 4) / 4.0 * 46) - 16
+            v += int((r() - 0.5) * 14)
             v = max(0, min(255, v))
-            row.append((v, v, v - 3 if v > 3 else 0))
+            row.append((v, v, min(255, v + 3)))    # the photo reads B > R
         rows.append(row)
     return png_rgb(rows)
+
+
+def uv_box(w, h, d, scale=1.0, anchor="base"):
+    """Axis-aligned box WITH per-face planar UVs, so a tiled texture shows.
+
+    `roomkit.glb.box()` emits no UVs at all -- a `tex=` on it samples texel
+    (0,0) and renders as flat paint, which is why round 1's wicker had no
+    weave. Each face gets its own quad (24 verts) so the tiling never smears
+    across a corner; `scale` is texture repeats per foot.
+    """
+    y0, y1 = (0.0, h) if anchor == "base" else (-h / 2, h / 2)
+    x0, x1, z0, z1 = -w / 2, w / 2, -d / 2, d / 2
+    faces = [
+        # (verts CCW seen from outside, u-extent, v-extent)
+        ([(x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)], w, h),   # +z
+        ([(x1, y0, z0), (x0, y0, z0), (x0, y1, z0), (x1, y1, z0)], w, h),   # -z
+        ([(x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1)], d, h),   # +x
+        ([(x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0)], d, h),   # -x
+        ([(x0, y1, z1), (x1, y1, z1), (x1, y1, z0), (x0, y1, z0)], w, d),   # +y
+        ([(x0, y0, z0), (x1, y0, z0), (x1, y0, z1), (x0, y0, z1)], w, d),   # -y
+    ]
+    verts, tris, uvs = [], [], []
+    for vs, uw, vh in faces:
+        b = len(verts)
+        verts += vs
+        uvs += [(0, 0), (uw * scale, 0), (uw * scale, vh * scale), (0, vh * scale)]
+        tris += [(b, b + 1, b + 2), (b, b + 2, b + 3)]
+    return Part(verts, tris, uv=uvs)
+
+
+def add_uv_box(m, mat, w, h, d, x, y, z, ry=0.0, scale=1.0):
+    m.add(uv_box(w, h, d, scale), mat, at=(x, y, z), rot_y=ry)
 
 
 # ---------------------------------------------------------------- geometry

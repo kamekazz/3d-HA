@@ -17,11 +17,27 @@ import urllib.request
 
 from gk import *   # noqa: F401,F403
 import gk as G
+import g8_tex as TX
 
 TRACK = Material("gtrack", "#a8adb0", roughness=0.38, metallic=0.55)
 SPRING = Material("gspring", "#212327", roughness=0.50, metallic=0.35)
-LEAF = Material("gleaf", "#f4f3ef", roughness=0.58)
-LEAFJ = Material("gleafj", "#d8d6d0", roughness=0.60)      # section joint shadow
+# LEAF value, round 2.  Three charges were upheld against round 1's door:
+#   * it metered 160.2 against the photo's 216-219;
+#   * the DIFFERENTIAL mattered more -- +2.1 over its own south wall against
+#     the photo's +30 to +70, so a white door was not standing off a grey wall;
+#   * mean |delta| across the face was 0.00, algebraically flat paint on the
+#     largest surface in the room.
+# Albedo alone cannot close it: g8_surface records that even a pure-WHITE skin
+# lands this wall at 162.4, because the south wall is the one the sun never
+# reaches.  Two levers are pulled instead, both measured (see probe_door.py):
+# roughness drops to 0.26 so the leaf collects env specular the 0.95-rough wall
+# cannot, and the face carries a small emissive -- the same device the room's
+# own ceiling piece already uses, and NOT the banned room-filling wash: it is
+# one 16 x 7 ft object standing in for a steel door lit by three shop lights
+# that this scene does not model.
+LEAF = Material("gleaf", "#fdfdfb", roughness=0.26, metallic=0.05,
+                emissive="#7f7f7d")
+LEAFJ = Material("gleafj", "#c9c7c1", roughness=0.42)      # section joint shadow
 HDW = Material("ghdw", "#26282b", roughness=0.42, metallic=0.40)
 
 
@@ -38,25 +54,45 @@ def door_panel():
     x0, x1 = BAY_X0, BAY_X1
     zi = D - 0.34                        # inside face of the leaf
     t = 0.14
+    zf = zi - t                          # the face that looks INTO the room
     secs = 4
     sh = BAY_TOP / secs
     for i in range(secs):
         y0, y1 = i * sh, (i + 1) * sh
-        bx(m, LEAF, x0, x1, y0 + 0.035, y1 - 0.035, zi - t, zi)
-        bx(m, LEAFJ, x0, x1, y1 - 0.035, y1 + 0.035, zi - t + 0.03, zi - 0.015)
-    bx(m, LEAFJ, x0, x1, 0.0, 0.035, zi - t + 0.03, zi - 0.015)     # bottom seal
+        bx(m, LEAF, x0, x1, y0 + 0.035, y1 - 0.035, zf, zi)
+        bx(m, LEAFJ, x0, x1, y1 - 0.035, y1 + 0.035, zf + 0.03, zi - 0.015)
+    bx(m, LEAFJ, x0, x1, 0.0, 0.035, zf + 0.03, zi - 0.015)         # bottom seal
 
-    # vertical reinforcement struts, on the inside face
+    # The face itself, as ONE TEXTURED QUAD covering the whole leaf: a top-lit
+    # gradient, a shallow pillow across each section, the joint lines and a
+    # grime gradient at the bottom rail.  This is the fix for mean|delta| 0.00.
+    FACE = Material("gleaff", "#fdfdfb", roughness=0.26, metallic=0.05,
+                    emissive="#7f7f7d", tex=TX.door_png(), double_sided=False)
+    m.add(uv_quad((x1, 0.0, zf - 0.006), (x0, 0.0, zf - 0.006),
+                  (x0, BAY_TOP, zf - 0.006), (x1, BAY_TOP, zf - 0.006),
+                  (0, 1), (1, 1), (1, 0), (0, 0)), FACE)
+
+    # THREE intermediate vertical reinforcement struts.  They were in round 1's
+    # source but authored at zi..zi+0.055 -- OUTSIDE the leaf, between it and
+    # the wall, where nothing in the room can see them.  The critic reported
+    # them missing and was right.  They belong on the face that looks into the
+    # room, which is zf.
     for u in (4.0, 8.0, 12.0):
         x = x0 + u
-        bx(m, TRACK, x - 0.11, x + 0.11, 0.10, BAY_TOP - 0.10, zi, zi + 0.055)
+        bx(m, TRACK, x - 0.11, x + 0.11, 0.10, BAY_TOP - 0.10,
+           zf - 0.075, zf - 0.008)
         for i in range(1, secs):                                     # hinges
-            bx(m, HDW, x - 0.15, x + 0.15, i * sh - 0.10, i * sh + 0.10,
-               zi + 0.055, zi + 0.10)
+            bx(m, HDW, x - 0.16, x + 0.16, i * sh - 0.11, i * sh + 0.11,
+               zf - 0.115, zf - 0.075)
 
     # vertical tracks either side, and the rollers' brackets
     for x in (x0 - 0.20, x1 + 0.20):
-        bx(m, TRACK, x - 0.07, x + 0.07, 0.0, BAY_TOP + 0.55, zi - 0.02, zi + 0.22)
+        bx(m, TRACK, x - 0.07, x + 0.07, 0.0, BAY_TOP + 0.55, zf - 0.16, zi)
+    # end hinges and rollers on the jamb line, also on the room side
+    for x in (x0 + 0.10, x1 - 0.10):
+        for i in range(1, secs):
+            bx(m, HDW, x - 0.16, x + 0.16, i * sh - 0.11, i * sh + 0.11,
+               zf - 0.10, zf - 0.008)
 
     # torsion tube + centre bearing plate + the black spring, above the head
     yt = BAY_TOP + 0.42

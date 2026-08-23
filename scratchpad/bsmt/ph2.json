@@ -1,0 +1,10 @@
+{
+ "docs/photos-jpg/Movie Room v3 4.jpg": {
+   "wain_south": [170,560,290,650],
+   "wain_west":  [1000,640,1090,700]
+ },
+ "docs/photos-jpg/Movie room.jpg": {
+   "wain_west":  [440,760,470,820],
+   "wain_north": [575,745,610,800]
+ }
+}
