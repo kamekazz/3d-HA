@@ -214,5 +214,39 @@
   "Wall skins meter sd 0.00 / mean|d1| 0.00 against the photo 13.60-26.40 / 0.37-1.19."
  ],
  "_surfaces_v2_note": "V2 SURFACES+SOFT GOODS pass (scratchpad/hall2/build.py; probe.py solves the skins, wallmeter.py meters every wall over its own probe mask, m.py meters the photo). THE FINDING THAT MATTERS FOR EVERY ROOM: house.js extrudes each wall OUTWARD from its own footprint line, so on a party wall the NEIGHBOUR's 0.35 ft slab lands INSIDE this room and is the surface the camera actually sees. In room 17 that is room 13 over local x 0..0.35 for z -0.10..10.70, room 14 over local z -0.30..0.05, room 16 over local x 7.75..8.10, room 26 over local z 16.45..16.80. Anything mounted against the footprint line renders inside the neighbour's slab and is INVISIBLE -- that is why the round-1 sculpture could not be seen and why the previous skins metered as if absent. build.py's FACE dict / wface() offset every wall-mounted piece onto the visible face. Skins solved by probe: n #6f6f6f -> 169.4, s #f7f7f7 -> 164.4, e #cacaca -> 157.6, w #b2b2b2 -> 176.1 (photo: west wall 171-182, north 165.7, ceiling 144-148). Ceiling emissive dropped to #5c5c5c -> 148.7 (kit.CEIL's #b0b0b0 gave 207.7). Runner: 3-tone basketweave height field, 200.4/197.2 north and 166.7 south against the photo's 181.2.",
- "_runner_note": "Hall2F Floor Runner has failed three ways, all from REGULARITY: r1 full-width cylinders over a slab (piano keyboard), r2 a light/dark pair across straight ropes (painted stripes), r3 a basketweave on a straight lattice (a floor GRATE from the plan/doll poses).  It is now a quasi-periodic sum of five waves in five directions with mutually irrational periods, so no rib ever crosses the rug; the three tones are picked from that same height field so they are blobs following the wool, not cells following the mesh; cell split diagonals alternate; and the tone range is 18 levels, not 40.  CHECK IT FROM `plan` AND `doll_se`, not only at eye level -- it looked acceptable at eye level twice while being wrong from above."
+ "_runner_note": "Hall2F Floor Runner has failed three ways, all from REGULARITY: r1 full-width cylinders over a slab (piano keyboard), r2 a light/dark pair across straight ropes (painted stripes), r3 a basketweave on a straight lattice (a floor GRATE from the plan/doll poses).  It is now a quasi-periodic sum of five waves in five directions with mutually irrational periods, so no rib ever crosses the rug; the three tones are picked from that same height field so they are blobs following the wool, not cells following the mesh; cell split diagonals alternate; and the tone range is 18 levels, not 40.  CHECK IT FROM `plan` AND `doll_se`, not only at eye level -- it looked acceptable at eye level twice while being wrong from above.",
+ "_ceiling_v3": {
+  "piece": "Hall2F Ceiling",
+  "script": "scratchpad/hall2/ceiling.py  (idempotent, owns this piece alone)",
+  "kb": 149.5,
+  "covers": "union of room 17's 10-vertex L AND the stair opening + shaft (local x 7.61..11.92, z 6.81..16.89); room 28 is is_void=1 so nothing else draws that lid. Two abutting rects R1 x 3.72..12.06 full z, R2 (alcove) x -0.14..3.72, z 10.63..16.29.",
+  "cans_local_xz": [
+   [
+    5.8,
+    7.18
+   ],
+   [
+    7.75,
+    7.18
+   ],
+   [
+    6.1,
+    4.18
+   ],
+   [
+    8.22,
+    4.1
+   ],
+   [
+    10.03,
+    12.74
+   ],
+   [
+    1.93,
+    13.46
+   ]
+  ],
+  "cans_note": "The first four are un-projected from saturated blobs in hallway_looking_towards_stairs.jpg / hallway_with_white_runner_rug.jpg through v3.py's own poses; the fifth from staircase_looking_up.jpg; the sixth (west alcove) is a GUESS -- no photograph sees that ceiling. Flush LED wafers: 0.28 ft lit aperture in a slim 0.336 ft trim, protruding 0.011 ft. No drum, no crown.",
+  "metered": "ceiling field 150.4-156.9 sd 1.6-2.2 against the photos' 148.5-166.1 sd 1.9-2.9, both at 450x600."
+ }
 }

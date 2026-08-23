@@ -451,9 +451,15 @@ def openings():
     raise SystemExit("openings are frozen -- see the module docstring")
 
 
+# NOTE (round V3): "Hall2F Baseboards" moved OUT of this file and into
+# `base.py`.  `piece_baseboards` below is kept only as the record of what round
+# 3 built; it is wired to the OLD 8.10 x 16.70 rectangle, so re-running it would
+# put a phantom board through the stairwell void and leave the west alcove bare
+# again.  `roomkit.place` is idempotent by NAME, so leaving it in PIECES meant
+# any `python doors.py` would silently overwrite the new run.  Build the
+# skirting with `python base.py`.
 PIECES = {
     "doors": ("Hall2F Doors", piece_doors),
-    "base": ("Hall2F Baseboards", piece_baseboards),
 }
 
 

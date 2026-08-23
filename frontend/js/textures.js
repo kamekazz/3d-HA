@@ -12,6 +12,13 @@ export const TEXTURE_PRESETS = {
   wood:     { name: 'Wood planks', url: 'textures/wood.png',     size: 2.2, use: 'floor' },
   tile:     { name: 'Tile',        url: 'textures/tile.png',     size: 4, use: 'floor' },
   carpet:   { name: 'Carpet',      url: 'textures/carpet.png',   size: 6, use: 'floor' },
+  // Grey wood-look LVP, 12 boards of 8 in over an 8 ft repeat (96 px/ft), with
+  // micro-bevelled long edges, staggered butt joints, per-board value and real
+  // lengthwise grain — see scratchpad/hall2/planktex.py. `wood` above cannot do
+  // this job: it is constant down its length and has no joints. `aniso` is
+  // clamped to the GPU's max by three; a floor read down a 17 ft hall is all
+  // grazing angle, and at anisotropy 1 the grain mips away by mid-hall.
+  plank_grey: { name: 'Grey plank', url: 'textures/plank_grey.png', size: 8, use: 'floor', aniso: 16 },
 };
 
 const loader = new THREE.TextureLoader();
@@ -35,6 +42,7 @@ function baseTexture(key) {
     });
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = TEXTURE_PRESETS[key].aniso || 1;   // clones copy this
     baseCache.set(key, tex);
   }
   return tex;

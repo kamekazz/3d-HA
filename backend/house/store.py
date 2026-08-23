@@ -38,7 +38,11 @@ CREATE TABLE IF NOT EXISTS rooms (
     wall_color TEXT NOT NULL DEFAULT '#f2ede3',
     floor_color TEXT NOT NULL DEFAULT '#e5decf',
     wall_texture TEXT,
-    floor_texture TEXT
+    floor_texture TEXT,
+    -- A stairwell shaft: the footprint is a hole in this floor, not floor. Its
+    -- walls still draw (the shaft is drywalled) but the slab and its plinth cap
+    -- are skipped, so you can see down the well.
+    is_void INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS stairs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,7 +108,8 @@ CREATE TABLE IF NOT EXISTS house_shell (
 
 ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height",
                "color", "points",
-               "wall_color", "floor_color", "wall_texture", "floor_texture")
+               "wall_color", "floor_color", "wall_texture", "floor_texture",
+               "is_void")
 PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible",
                     "model_id", "rot_y", "scale")
 # Standalone furniture/decor: a library model placed in a room, no HA entity.
@@ -216,6 +221,7 @@ class HouseStore:
             " DEFAULT '#e5decf'",
             "ALTER TABLE rooms ADD COLUMN wall_texture TEXT",
             "ALTER TABLE rooms ADD COLUMN floor_texture TEXT",
+            "ALTER TABLE rooms ADD COLUMN is_void INTEGER NOT NULL DEFAULT 0",
         ):
             try:
                 self._db.execute(ddl)

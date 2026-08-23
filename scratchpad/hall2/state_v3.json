@@ -1,0 +1,135 @@
+{
+  "round": "V3 · round 2 wave A building",
+  "headline": "Round 1 was judged by nine blind critics and lost every view. Round 2's first attempt was killed mid-iteration by a session limit and left the room rendering as a neon test card; that has been repaired and the failure written into the brief. Wave A is now rebuilding the room's light and its four largest surfaces.",
+  "stat_pieces": "4",
+  "stat_done": "0 / 6",
+  "stat_open": "9",
+  "verdicts": {
+    "p_runner": {
+      "state": "fail",
+      "badge": "critic: certain",
+      "gap": "The floor gives it away in two seconds. Ours is the darkest thing in the frame — roughly half the photograph's luminance, cool near-charcoal — where the real floor is a light greige that sits within about 15% of the wall grey and bounces light up onto the skirting. It also has no plank structure at all: no bevelled long edges, no staggered butt joints, no board-to-board value change, no sheen running away toward the door."
+    },
+    "p_stairs": {
+      "state": "fail",
+      "badge": "critic: certain",
+      "gap": "The ceiling's tone is inverted. Ours is a flat mid-grey slab darker than the walls beneath it, reading as an unlit plane with four decals stuck to it. In the photograph the ceiling is the brightest surface in the frame and carries the evidence of its own fittings — a soft pool of light spreading a foot or two around each can."
+    },
+    "p_down": {
+      "state": "fail",
+      "badge": "critic: certain",
+      "gap": "The treads are the wrong build entirely. Ours carpets each step wall-to-wall in flat beige with no nosing overhang and no shadow under it, so the flight reads as stacked extruded blocks. The photograph has grey plank treads with a narrow carpet runner down the centre, five inches of exposed wood either side of every step, and a crisp white skirt board raking down the wall."
+    },
+    "p_up": {
+      "state": "part",
+      "badge": "not judged in round 1",
+      "gap": "Held back until the stair dressing exists. Round 2 builds the newel, the black rail over white square balusters, the string, and the runner wrapping each nosing."
+    },
+    "p_doors2": {
+      "state": "fail",
+      "badge": "critic: certain",
+      "gap": "The skirting has no profile and nothing to die into. Ours is a flat sliver with one chamfer, about half the height it should be, and where it reaches the door trim it merges into the casing as one undifferentiated white mass. The photograph has a five-inch board with a moulded cove cap catching light as a continuous bright ribbon, standing proud of the wall, butting into the side of a casing that stands proud of it in turn."
+    },
+    "p_doors1": {
+      "state": "fail",
+      "badge": "critic: certain",
+      "gap": "The raised-panel moulding is wrong on every panel. Ours is a single flat 45° chamfer with hard mitred corners driving thirty levels of value between a blown highlight and the panel field. The real doors are moulded-skin colonial: a stepped cove with two changes of curvature, visibly rounded corners, and a panel field the same white as the stiles — the relief read from one thin bright band along each panel's top edge."
+    }
+  },
+  "pieces": [
+    {
+      "name": "Knee wall",
+      "status": "round 2",
+      "cls": "bad",
+      "kb": "129 KB",
+      "note": "Rebuilt: flat cap board, square end, vertex-toned faces, contact shadow. Critics still split it — cap reads as a chunky slab from one end and as a flush razor arris from the other, and the drop behind it is still visible from the hall."
+    },
+    {
+      "name": "Doors + casings",
+      "status": "round 2",
+      "cls": "bad",
+      "kb": "270 + 50 KB",
+      "note": "Built from nothing: five six-panel leaves, jamb linings, levers, hinges, casings. Solved the double-slab problem — every doorway used to carry two coincident panels, ours and the neighbour's. Panels now need cove sticking with rounded corners and far less bevel contrast."
+    },
+    {
+      "name": "Ceiling + lights",
+      "status": "round 2",
+      "cls": "bad",
+      "kb": "56 KB",
+      "note": "Now covers the whole L. Tone is inverted — the ceiling must be the brightest surface, not the dimmest — and the fittings need real pools, two fixture types and an untidy layout."
+    },
+    {
+      "name": "Baseboards",
+      "status": "round 2",
+      "cls": "bad",
+      "kb": "87 KB",
+      "note": "Needs a real section: square back, cove cap, standing 3/4in proud, butting into the casing's side, with a contact hairline at the plank."
+    },
+    {
+      "name": "Floor planks",
+      "status": "round 2",
+      "cls": "bad",
+      "kb": "16 KB",
+      "note": "The loudest failure in the room — five critics reached for it as their opening tell, three of them judging something else. Value inverted, no joints, no board-to-board variation, no sheen."
+    },
+    {
+      "name": "Wall skins",
+      "status": "round 2",
+      "cls": "warn",
+      "kb": "161 KB",
+      "note": "Seven of nine critics volunteered the walls without being asked: poster-flat colour fields, no falloff, no occlusion into any corner. Re-probing every wall of the re-traced L."
+    },
+    {
+      "name": "Stair dressing",
+      "status": "round 2",
+      "cls": "warn",
+      "kb": "—",
+      "note": "The well is open now. Inside it: narrow centre runner over exposed plank treads, white raking skirt, slim rail on shaped brackets, raked soffit, and a first-floor landing with real daylight coming through the front door."
+    },
+    {
+      "name": "Runner + decor",
+      "status": "round 2",
+      "cls": "warn",
+      "kb": "290 KB",
+      "note": "Critics judging other subjects volunteered all of it: the runner is \"a lumpy melted blob\", the plants are \"stiff extruded cactus proxies\", the sculpture's rods hover unattached."
+    }
+  ],
+  "log": [
+    {
+      "when": "repair",
+      "what": "The killed round-2 agents left three pieces placed in debug state — the knee wall in per-part R/G/B mask colours, the baseboards in magenta and the ceiling as a calibration fan — and a fourth, the wall skins, holding a near-black panel that punched two pure-black voids into the hallway above and beside the far door. All four are repaired: the real pieces re-placed, the doors reverted to the round-1 build, and the broken wall skin deleted so the room renders on the engine's own wall grey until it is rebuilt."
+    },
+    {
+      "when": "repair",
+      "what": "Those black voids had been present since round 1 and no critic caught them, because each critic was told to judge one subject. Round 2 adds two critics whose subject is the room as a whole."
+    },
+    {
+      "when": "round 2",
+      "what": "Eight builders now working every verdict below, then twelve blind critics — including two judging the room as a whole rather than any one object."
+    },
+    {
+      "when": "round 1",
+      "what": "Nine blind critics, nine failures, all certain. Four themes ran through every verdict: no texture anywhere, nothing touches the ground, every white is the same white, and no light falloff."
+    },
+    {
+      "when": "round 1",
+      "what": "The \"extra door\" is answered without touching the plan. All five openings are supported by the photographs and the plan. The extra door people were seeing was a rendering artefact — every doorway carried two coincident white slabs a wall-thickness apart, ours and the neighbouring room's. That is now fixed."
+    },
+    {
+      "when": "structural",
+      "what": "Added rooms.is_void and set it on room 28 \"Stairwell\". house.js now skips a void room's floor slab and plinth cap, so the stairwell is a hole in the second floor instead of a slab capping it. Looking down the flight now reaches the first-floor front door."
+    },
+    {
+      "when": "structural",
+      "what": "Cut full-span floor-to-ceiling openings on room 17 edge 1 and room 28 edge 3, which makes buildRoom skip those walls outright. The full-height wall standing where the knee wall belongs is gone; the knee wall now carries the whole boundary."
+    },
+    {
+      "when": "cameras",
+      "what": "Re-aimed all six cameras onto the re-traced footprint. The room's anchor had moved 3.8 ft west when its east arm was added, which left the old poses pointing at the wrong walls."
+    },
+    {
+      "when": "unchanged",
+      "what": "The floor plan is untouched — the polygon, the anchor and all five door positions are exactly as the owner signed them off. No other room has been modified."
+    }
+  ]
+}

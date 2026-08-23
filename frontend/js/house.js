@@ -428,11 +428,19 @@ function buildRoom(room, floor) {
     }
   }
 
+  // A void room (`is_void`) is a stairwell shaft: its footprint is a HOLE in
+  // this floor, so it gets walls but no floor plate. Skipping the slab (and the
+  // plinth cap below) is the only way to see down a well — the app draws one
+  // opaque slab per footprint and a polygon cannot carry an interior hole, so
+  // the shaft has to be its own room and that room has to be floorless.
+  const isVoid = !!room.is_void;
   const slabShape = new THREE.Shape(pts.map(([px, pz]) => new THREE.Vector2(px, -pz)));
-  const slabGeo = new THREE.ShapeGeometry(slabShape);
-  slabGeo.rotateX(-Math.PI / 2);
-  slab = new THREE.Mesh(slabGeo, slabMat);
-  slab.position.y = 0.01;
+  if (!isVoid) {
+    const slabGeo = new THREE.ShapeGeometry(slabShape);
+    slabGeo.rotateX(-Math.PI / 2);
+    slab = new THREE.Mesh(slabGeo, slabMat);
+    slab.position.y = 0.01;
+  }
 
   walls.userData = {
     kind: 'room', roomId: room.id, roomName: room.name,
@@ -445,8 +453,10 @@ function buildRoom(room, floor) {
     wallByEdge: new Map(wallMeshes.map((w) => [w.userData.edgeIndex, w])),
   };
 
-  slab.userData.part = 'slab';
-  walls.add(slab);
+  if (slab) {
+    slab.userData.part = 'slab';
+    walls.add(slab);
+  }
 
   // The plinth gives the floor a body, so a room whose near walls have faded
   // still reads as a solid platform instead of a floating decal. Its rim is
@@ -462,15 +472,17 @@ function buildRoom(room, floor) {
   // so seen from above its projection slides out past the slab's along the near
   // edges and paints exactly the colored kerb the fading skirt just removed.
   // Facing it down means it only ever draws when you are actually beneath it.
-  const capGeo = new THREE.ShapeGeometry(slabShape);
-  capGeo.rotateX(-Math.PI / 2);
-  const cap = new THREE.Mesh(capGeo, new THREE.MeshStandardMaterial({
-    color: accent.clone().multiplyScalar(0.85), roughness: 0.85,
-    side: THREE.BackSide,
-  }));
-  cap.position.y = -PLINTH_DEPTH;
-  cap.userData.part = 'plinthCap';
-  walls.add(cap);
+  if (!isVoid) {
+    const capGeo = new THREE.ShapeGeometry(slabShape);
+    capGeo.rotateX(-Math.PI / 2);
+    const cap = new THREE.Mesh(capGeo, new THREE.MeshStandardMaterial({
+      color: accent.clone().multiplyScalar(0.85), roughness: 0.85,
+      side: THREE.BackSide,
+    }));
+    cap.position.y = -PLINTH_DEPTH;
+    cap.userData.part = 'plinthCap';
+    walls.add(cap);
+  }
 
   return walls;
 }
