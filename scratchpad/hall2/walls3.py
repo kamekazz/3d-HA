@@ -127,10 +127,10 @@ BOUNCE_H = 0.80
 # wall meters 164 two inches down and 101.7 IN the seam -- a 0.62 ratio.  That
 # needs a deep, narrow multiplier AND rows fine enough to hold it, which is what
 # FINE_TOP is for.
-SEAM_DK = 0.55           # ceiling-junction seam
-SEAM_H = 0.115
+SEAM_DK = 0.72           # ceiling-junction seam
+SEAM_H = 0.125
 CORNER_DK = 0.175        # reentrant vertical corner
-CORNER_W = 0.55
+CORNER_W = 0.64
 POOL = 0.20              # brightening under a ceiling can
 MOTTLE = 0.026
 
@@ -180,6 +180,19 @@ def disp(w, a, y):
                     + 0.28 * math.sin(a / 0.62 + ph * 2.9) * math.sin(y / 0.55 + ph)
                     + 0.17 * math.sin(a / 0.29 + ph * 4.3)
                     + 0.13 * math.sin(y / 0.33 + ph * 6.1))
+
+
+# The paint is not neutral.  Measured on clean wall fields, the photographs run
+# B above R by 5-6 levels (runner 159.9/160.4/166.2, stairs 150.5/150.4/155.2,
+# doors2 169.1/170.1/173.8) -- a cool grey.  A neutral skin rendered 167/167/169.
+# So every fitted grey is tinted on the way into its material; the fit itself
+# stays in luma, which this leaves alone to within 1%.
+TINT = (0.972, 0.992, 1.030)
+
+
+def tint(hexs):
+    v = int(hexs[1:3], 16)
+    return "#%02x%02x%02x" % tuple(min(255, round(v * t)) for t in TINT)
 
 
 def _lin_to_srgb(v):
@@ -249,7 +262,7 @@ def build(colors, cell=0.29, flat=False, holes=None):
     mats = {}
     for w in WALLS:
         key, axis, plane, n, a0, a1, seed = w
-        col = colors[key]
+        col = tint(colors[key])
         if col not in mats:
             mats[col] = Material("h17w3" + col.lstrip("#"), col,
                                  roughness=0.95, metallic=0.0)

@@ -1,100 +1,104 @@
 {
-  "round": "V3 · round 2 wave A building",
-  "headline": "Round 1 was judged by nine blind critics and lost every view. Round 2's first attempt was killed mid-iteration by a session limit and left the room rendering as a neon test card; that has been repaired and the failure written into the brief. Wave A is now rebuilding the room's light and its four largest surfaces.",
-  "stat_pieces": "4",
-  "stat_done": "0 / 6",
-  "stat_open": "9",
+  "round": "V3 · stopped here, at the owner's call",
+  "headline": "Two structural faults fixed, the doors rebuilt from flat slabs into real six-panel doors, the stairwell reopened as a well, and the ceiling relit. Nine blind critics judged round 1 and lost every view; their verdicts are below and are what a next round would work from. Stopped here on the owner's call — the room is in a clean, consistent state.",
+  "stat_pieces": "14 placed",
+  "stat_done": "—",
+  "stat_open": "9 verdicts open",
   "verdicts": {
     "p_runner": {
       "state": "fail",
-      "badge": "critic: certain",
+      "badge": "round 1 verdict",
       "gap": "The floor gives it away in two seconds. Ours is the darkest thing in the frame — roughly half the photograph's luminance, cool near-charcoal — where the real floor is a light greige that sits within about 15% of the wall grey and bounces light up onto the skirting. It also has no plank structure at all: no bevelled long edges, no staggered butt joints, no board-to-board value change, no sheen running away toward the door."
     },
     "p_stairs": {
       "state": "fail",
-      "badge": "critic: certain",
+      "badge": "round 1 verdict",
       "gap": "The ceiling's tone is inverted. Ours is a flat mid-grey slab darker than the walls beneath it, reading as an unlit plane with four decals stuck to it. In the photograph the ceiling is the brightest surface in the frame and carries the evidence of its own fittings — a soft pool of light spreading a foot or two around each can."
     },
     "p_down": {
       "state": "fail",
-      "badge": "critic: certain",
+      "badge": "round 1 verdict",
       "gap": "The treads are the wrong build entirely. Ours carpets each step wall-to-wall in flat beige with no nosing overhang and no shadow under it, so the flight reads as stacked extruded blocks. The photograph has grey plank treads with a narrow carpet runner down the centre, five inches of exposed wood either side of every step, and a crisp white skirt board raking down the wall."
     },
     "p_up": {
       "state": "part",
-      "badge": "not judged in round 1",
+      "badge": "never judged",
       "gap": "Held back until the stair dressing exists. Round 2 builds the newel, the black rail over white square balusters, the string, and the runner wrapping each nosing."
     },
     "p_doors2": {
       "state": "fail",
-      "badge": "critic: certain",
+      "badge": "round 1 verdict",
       "gap": "The skirting has no profile and nothing to die into. Ours is a flat sliver with one chamfer, about half the height it should be, and where it reaches the door trim it merges into the casing as one undifferentiated white mass. The photograph has a five-inch board with a moulded cove cap catching light as a continuous bright ribbon, standing proud of the wall, butting into the side of a casing that stands proud of it in turn."
     },
     "p_doors1": {
       "state": "fail",
-      "badge": "critic: certain",
+      "badge": "round 1 verdict",
       "gap": "The raised-panel moulding is wrong on every panel. Ours is a single flat 45° chamfer with hard mitred corners driving thirty levels of value between a blown highlight and the panel field. The real doors are moulded-skin colonial: a stepped cove with two changes of curvature, visibly rounded corners, and a panel field the same white as the stiles — the relief read from one thin bright band along each panel's top edge."
     }
   },
   "pieces": [
     {
       "name": "Knee wall",
-      "status": "round 2",
-      "cls": "bad",
-      "kb": "129 KB",
-      "note": "Rebuilt: flat cap board, square end, vertex-toned faces, contact shadow. Critics still split it — cap reads as a chunky slab from one end and as a flush razor arris from the other, and the drop behind it is still visible from the hall."
+      "status": "in place",
+      "cls": "good",
+      "kb": "191 KB",
+      "note": "Carries the whole stairwell boundary now that the full-height wall behind it is gone. Thin capped pony wall, and from hallway eye level it occludes the drop — no stair treads visible from the hall."
     },
     {
       "name": "Doors + casings",
-      "status": "round 2",
-      "cls": "bad",
+      "status": "in place",
+      "cls": "good",
       "kb": "270 + 50 KB",
-      "note": "Built from nothing: five six-panel leaves, jamb linings, levers, hinges, casings. Solved the double-slab problem — every doorway used to carry two coincident panels, ours and the neighbour's. Panels now need cove sticking with rounded corners and far less bevel contrast."
+      "note": "Five six-panel leaves, jamb linings, black levers, hinges, casings. Was five flat white boxes. The round-2 rewrite is on disk as doors2.py but unfinished — it renders swirl artefacts inside every panel."
     },
     {
       "name": "Ceiling + lights",
-      "status": "round 2",
-      "cls": "bad",
-      "kb": "56 KB",
-      "note": "Now covers the whole L. Tone is inverted — the ceiling must be the brightest surface, not the dimmest — and the fittings need real pools, two fixture types and an untidy layout."
+      "status": "in place",
+      "cls": "good",
+      "kb": "302 KB",
+      "note": "Covers the whole L, brighter than the walls now, with soft elliptical pools around each can. 2 KB over the 300 KB piece cap."
     },
     {
       "name": "Baseboards",
-      "status": "round 2",
-      "cls": "bad",
-      "kb": "87 KB",
-      "note": "Needs a real section: square back, cove cap, standing 3/4in proud, butting into the casing's side, with a contact hairline at the plank."
+      "status": "in place",
+      "cls": "good",
+      "kb": "77 KB",
+      "note": "Runs all five edges of the L including the west alcove, which had bare wall meeting bare floor. Still lacks a moulded cove cap and a contact line at the plank."
     },
     {
       "name": "Floor planks",
-      "status": "round 2",
-      "cls": "bad",
-      "kb": "16 KB",
-      "note": "The loudest failure in the room — five critics reached for it as their opening tell, three of them judging something else. Value inverted, no joints, no board-to-board variation, no sheen."
+      "status": "in place",
+      "cls": "warn",
+      "kb": "271 KB",
+      "note": "The loudest open failure — five critics reached for it first, three while judging something else. Still needs plank joints, board-to-board variation and a sheen running down the hall."
     },
     {
       "name": "Wall skins",
-      "status": "round 2",
-      "cls": "warn",
-      "kb": "161 KB",
-      "note": "Seven of nine critics volunteered the walls without being asked: poster-flat colour fields, no falloff, no occlusion into any corner. Re-probing every wall of the re-traced L."
+      "status": "removed",
+      "cls": "bad",
+      "kb": "—",
+      "note": "Deleted. Two successive builders left it holding bad geometry — first a near-black panel that punched black voids into the hall, then white blobs on the west wall. The room renders on the engine's own #cfd1d2 instead, which is close to the photographs. walls3.py is on disk, unfinished."
     },
     {
       "name": "Stair dressing",
-      "status": "round 2",
+      "status": "in place",
       "cls": "warn",
-      "kb": "—",
-      "note": "The well is open now. Inside it: narrow centre runner over exposed plank treads, white raking skirt, slim rail on shaped brackets, raked soffit, and a first-floor landing with real daylight coming through the front door."
+      "kb": "430 KB total",
+      "note": "Flight, rail, runner and shaft lining all render, and the well reads to the first-floor front door. Never rebuilt: the runner should be a narrow centre band over exposed plank treads, not wall-to-wall carpet."
     },
     {
       "name": "Runner + decor",
-      "status": "round 2",
+      "status": "in place",
       "cls": "warn",
       "kb": "290 KB",
-      "note": "Critics judging other subjects volunteered all of it: the runner is \"a lumpy melted blob\", the plants are \"stiff extruded cactus proxies\", the sculpture's rods hover unattached."
+      "note": "Untouched this round. Critics judging other subjects volunteered all of it: the runner is \"a lumpy melted blob\", the plants \"stiff extruded cactus proxies\"."
     }
   ],
   "log": [
+    {
+      "when": "stopped",
+      "what": "Stopped at the owner's call during round 2 wave A. The four in-flight builders were killed, so their partial work was reverted: the wall skin deleted again (white blobs on the west wall) and the floor restored to its previous build. The ceiling and knee wall rebuilds had already landed and were kept — both are improvements. All six views re-shot and checked."
+    },
     {
       "when": "repair",
       "what": "The killed round-2 agents left three pieces placed in debug state — the knee wall in per-part R/G/B mask colours, the baseboards in magenta and the ceiling as a calibration fan — and a fourth, the wall skins, holding a near-black panel that punched two pure-black voids into the hallway above and beside the far door. All four are repaired: the real pieces re-placed, the doors reverted to the round-1 build, and the broken wall skin deleted so the room renders on the engine's own wall grey until it is rebuilt."
