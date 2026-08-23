@@ -1,5 +1,146 @@
 # Where the dollhouse build stands — resume here
 
+## 2026-08-23 — the v3 run. FOUR SPACES BUILT, NO CRITIC HAS SEEN THEM.
+
+**Resume here.** The owner dropped new reference photography in `docs/v3/` for
+five spaces and asked for a last gauntlet run over those, and only those:
+**Movie Room (1), Arcade Room (2), Garage (7), Frontyard (11), Backyard (3)**.
+All five are built. **All four critics died on a session limit before
+reporting**, so nothing below has been judged. Running them is the next job —
+see "Next actions".
+
+The 27 photos are converted and registered in `photos.json`, with per-room notes
+recording which are 450x600 (layout only — their sd is scale-inflated), which
+two back-yard PNGs are duplicate downscales, and that both exteriors were shot
+at dusk. `scripts/heic_to_jpg.py` takes `--src`/`--name` now.
+
+**The owner's standing instruction for the exterior: build NO lights.** The
+eave, porch and garden string lights are lit in the photographs and are
+deliberately a future job. Daytime geometry only, no emissive fixtures, front
+or back.
+
+### Three structural findings, each of which invalidated something we believed
+
+1. **Walls are extruded OUTWARD from their own footprint line** (`house.js`,
+   `WALL_THICKNESS 0.35`, `geo.translate(0, 0, -t)`), so on a shared wall **each
+   room's wall mass lands inside its neighbour**. Two builders found this
+   independently this run. Consequences already paid for:
+   - The Movie Room's north wall "clipping at 238" was the **Arcade's wall
+     face**, not tone-curve saturation. Open item 3 below used to say an albedo
+     skin could not fix it; a skin authored at local z 0.39 fixed it outright,
+     238 -> 161.9, with a 26-point chair-rail step that had never rendered.
+   - The Garage's round-1 per-wall fit was **void**: its probe had been reading
+     the Pantry's and Laundry's paint, which push 0.35 ft through into it.
+
+   **So: author anything on a shared wall at depth >= 0.36, and re-probe a wall
+   before trusting any value you did not measure yourself this round.**
+2. **The Arcade Room was 180 degrees out on X.** The cabinet run is on the
+   **east** wall. That is the **seventh** room in this project to ship a
+   structural orientation error. The verification step in `ROOM-BRIEF.md` is not
+   optional.
+3. **`kit.contact_shadow` does not work in this scene.** Its stacked coincident
+   translucent layers meter **0.5-9% darkening** where the brief calls for 34% —
+   coincident transparent triangles inside one primitive do not accumulate here.
+   This is very likely why several rooms have shipped shadows that meter as no
+   shadow at all. Both basement builders replaced it with **one coplanar layer
+   of non-overlapping annuli**, each with its own alpha, running the ramp from
+   ~0.55x the piece's half-extents out past the footprint, and hit 30-33%.
+   **`shellpass/kit.py` still has the broken version — fix it for everyone.**
+
+### Toolchain changes this run
+
+- `glb.py` now supports **tiled textures**: `Material(tex=...)`, `Part(uv=...)`,
+  `uv_quad`, `uv_floor`, `png_gray`, `png_rgb`, and `_weld(parts,
+  with_uv=True)`. Purely additive — the legacy call path is unchanged and was
+  re-verified while three agents were still using it. This closes the
+  "`Material` has no texture-map support" blocker three rooms have now hit.
+  Caveat found in the same run: **`puff`/`slab`/`cylinder` emit no UVs**, so a
+  `tex=` on them samples texel (0,0) and renders as flat paint. The Movie Room
+  worked around it with a planar UV projection in a post-pass.
+- `shot.py` takes **`--sun-azimuth`** and `--sun-elevation`. `--day` hardcoded
+  azimuth 155, which is the **front** of this house, so every back-yard
+  comparison shot rendered the rear elevation a flat unlit grey. The default is
+  unchanged at 155; **use `--sun-azimuth 335` for anything facing the rear**,
+  and say which you used — a critic comparing a differently-lit shot is not
+  looking at what you built.
+- **`--no-cutaway` is mandatory for any eye-level photo-matched interior pose.**
+  Without it the ceiling is culled and the shot shows the night sky. Not
+  currently mentioned in `ROOM-BRIEF.md` section 3.
+- **`kit._blit` drops `Part.uv` and `Part.colors`**, turning textured panels
+  into flat paint. And **its wall frame runs backwards on the south and west
+  walls** (s: `world x = W - a`; w: `world z = D - a`) while `wall_band`'s does
+  not — feeding room coordinates straight into `cased_opening` draws the casing
+  several feet from the hole. `scratchpad/bsmt/ar2.py` has `SA()`/`WA()`
+  converters. The same trap is live in every other room script.
+- **`check_pick` is not a meaningful test for an outdoor room.** It samples the
+  room slab at world y 8 and every yard piece sits below that, so it always
+  passes and proves nothing.
+
+### App changes (frontend) — do not undo these
+
+- **The Frontyard and Backyard no longer isolate when tapped.** They are the
+  outside of the house, and focusing one used to drop the level selector onto
+  the first floor, leave House mode, and blank the shell, the lawn, the trees
+  and every other room. `focus.js` has an outdoor branch that hides nothing,
+  stays on level `'all'`, and flies to an exterior three-quarter view; the
+  stand-off snaps to the cardinal axis the yard sits on, so the front frames the
+  facade rather than a corner.
+- `house.js` owns **`isOutdoorRoom()`** (three modules need it) and
+  **`getBuildingBox()`**, which isolates the building mass from the shell GLB —
+  the shell's own bbox is the whole **lot**, 113 x 152 ft, and centres nowhere
+  near the house.
+- **Objects in an outdoor room survive the House-mode sweep** (`objects.js`),
+  and the **focused yard's device markers** survive it too (`devices.js`).
+  Without the first, a deck is invisible on the only view the exterior is ever
+  seen from. `cutaway.js` skips outdoor rooms — a yard has nothing to cut away.
+- `house.js` **`maskShellProps()`** cuts the shell's baked **open cantilever
+  parasol** by world box — 5,631 triangles merged into `Root_Node`, the
+  79k-triangle catch-all, so the object could not be hidden without taking the
+  siding with it. They separate cleanly by height: below y 5.5 in that footprint
+  is terrace slab and boundary fence, above it there is nothing but parasol. It
+  must run **after** `applyShellTransform`: `SHELL_CUTS` is in world feet and the
+  shell's `matrixWorld` is the identity until it is placed. Deleting the faces
+  then left the **SketchUp edge overlay** drawing the ribs as bare white lines in
+  mid-air, so the whole `LineSegments` overlay is hidden too. Add a box to
+  `SHELL_CUTS` for any other baked prop that has to go.
+
+### Open items from this run
+
+- **An unpaired opening.** The 3.2 ft opening at the SE corner of the Arcade's
+  south wall, to the stair landing, is real in the plan and **is not cut**.
+  Cutting one side only leaves the neighbour's wall standing in the hole. Spec:
+  Arcade `edge_index 2, offset 0.0, width 3.2`; Movie Room `edge_index 0,
+  offset 17.3, width 3.2`.
+- **The deck cannot sit at the photographed height.** The photos show 4-5 risers
+  down to the lawn; the shell puts its rear grade flush with its own ground
+  floor and the rear ground-floor sill measures y 5.5, so a deck at photo height
+  would run its rail across those windows. Built at 3.95/3.30. Matching the
+  photo means dropping the shell's rear grade.
+- **River rock is ~3x too smooth** (mean|d1| 5.5 against the photo's 15.8). The
+  right next fix is a cobble normal map on the beds material, not more geometry.
+- **The shell has a SketchUp scale figure** baked into `Root_Node` at about
+  x -16.5, z 44.7, standing on the front lawn. A `SHELL_CUTS` box would remove
+  it now; currently a tree is planted over it.
+- All 69 device markers in the two yards are flagged **hidden by the user**, so
+  tapping a yard shows no devices even though the code path now allows it. That
+  is the owner's own setting, not a bug.
+- House payload is **22.5 MB / 285 models**, up from 18.9. Only ~0.36 MB of that
+  is the yards.
+
+### Next actions for this run, in order
+
+1. **Run the four blind critics** — Garage, Movie Room, Arcade, and the exterior
+   (front and back judged separately). Each must be a **fresh-context** agent
+   that opens the actual images, compares against `docs/photos-jpg/` and
+   `docs/ref-sims4/`, answers "which of these is the photograph" and "which
+   reads as finished", and names **one** biggest gap. Renders are in
+   `scratchpad/shots/v3_garage/`, `v3_movie/`, `v3_arcade/`, `v3_ext/`.
+2. Feed each verdict back to a builder and loop until the critic picks ours.
+3. **Do not touch any room outside those five** — the owner scoped this run to
+   them explicitly.
+
+---
+
 Last session ended **2026-08-16** at a clean stopping point: the Living Room and
 Kitchen rounds below were carried further, everything was verified in the
 running app and committed. Health check at close: **423 device markers, 241
