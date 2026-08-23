@@ -85,6 +85,16 @@ rail for "HA has no cameras" and two writers of `.hidden` would fight; CSS resol
 the same rail lies down as a bottom filmstrip (`--rail-h`, `auto-fill` columns) — a side rail there
 leaves the house a 480px stage and pushes the framing to ~209 ft. Room-card brightness is the rail's
 hierarchy: `.lit` (lights on) keeps the photo at full brightness, everything else recedes.
+**Rail order is earned**: every card tap and card light-toggle scores that room a point in a
+localStorage table (`roomUse:v1`) whose scores halve every 14 days, and the rail sorts by that —
+so the rooms this house actually uses hold the top slots and the rest fall past the "All rooms"
+button. Ties and never-used rooms keep the natural floor order, so a fresh install looks exactly
+as it did before. Two things are deliberate: the re-rank is applied only while the rail is
+off-screen (otherwise a tap would slide the grid out from under the finger that made it, and a
+toggle would move its own card mid-gesture), and it is triggered by `onFocusChanged`, not by the
+`ResizeObserver` on `#room-cards` — Chrome reports *nothing* for an element with no box, so that
+observer never fires on a `display:none` transition (measured). The all-rooms overlay stays
+grouped by floor: that view exists to find the room you rarely open.
 
 **Dynamic lighting** follows Home Assistant's sun and weather — frontend-only, no backend changes.
 `frontend/js/daylight.js` reads `sun.sun` (`elevation`/`azimuth`) and the first `weather.*` entity

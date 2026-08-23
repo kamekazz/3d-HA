@@ -13,8 +13,16 @@
 // per-room optimistic toggle state lives in roomState while DOM refs live in
 // railInstances/overlayInstances; updateCard() computes the light state once
 // and applies it to whichever instances exist.
+//
+// RAIL ORDER IS EARNED, not structural: every card tap (fly into the room) and
+// every card light-toggle scores that room a point, and the rail sorts by that
+// score so the rooms this house actually uses claim the top slots and the ones
+// it doesn't fall past the "All rooms" button. See the "usage" section below
+// for the decay model and for why the reorder is deferred until the rail is
+// off-screen. The all-rooms overlay stays grouped by floor — that view is for
+// finding a room you rarely open, so it must not move under you too.
 import { api } from './api.js';
-import { enterFocus } from './focus.js';
+import { enterFocus, onFocusChanged } from './focus.js';
 import { getRoomLightIds, getRoomsForEntity } from './roomlights.js';
 import { isHiddenRoom } from './house.js';
 import { isOn, getState, onStateApplied } from './state.js';
@@ -35,11 +43,12 @@ const overlayInstances = new Map(); // roomId -> DOM refs of the all-rooms card
 const roomState = new Map();        // roomId -> {pendingUntil, intended}
 const pictureAreas = new Set();     // HA area_ids whose registry entry has a picture
 
-let floorsData = []; // filtered + sorted floors from the last setRoomCardsData
-let roomsFlat = [];  // rooms flattened in floor order (rail slice order)
-let capacity = 0;    // grid slots that fit the rail with no scrolling
-let railSig = '';    // capacity + visible ids — skip no-op rebuilds
-let allOpen = false; // all-rooms overlay up
+let floorsData = [];   // filtered + sorted floors from the last setRoomCardsData
+let naturalFlat = [];  // rooms flattened in floor order (the overlay's order)
+let roomsFlat = [];    // the same rooms in usage order — the rail's slice order
+let capacity = 0;      // grid slots that fit the rail with no scrolling
+let railSig = '';      // capacity + visible ids — skip no-op rebuilds
+let allOpen = false;   // all-rooms overlay up
 
 const $ = (id) => document.getElementById(id);
 
@@ -56,6 +65,73 @@ function roomEmoji(name) {
   for (const [re, emoji] of ROOM_EMOJI) if (re.test(name)) return emoji;
   return '🏠';
 }
+
+// ---------------------------------------------------------------- usage
+
+// Which rooms this tablet actually gets used for, so the rail can rank them.
+// A plain hit counter would freeze the order a month in: the room you opened
+// forty times last winter would outrank the one you have opened daily since.
+// So each room keeps a *decaying* score — one point per use, halving every
+// HALF_LIFE_MS — which is a running average of recent use, not a lifetime
+// total. Decay is applied lazily (on write, and again when reading for the
+// sort) rather than on a timer, so an idle tab costs nothing and a tablet left
+// asleep for a week wakes up with the right order.
+const USE_KEY = 'roomUse:v1';
+const HALF_LIFE_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+let useScores = {};      // roomId -> {score, ts} , ts = when score was last decayed
+let orderDirty = false;  // a use was scored; rail order is stale
+
+function loadUse() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(USE_KEY));
+    if (raw && typeof raw === 'object') {
+      for (const [id, rec] of Object.entries(raw)) {
+        if (Number.isFinite(rec?.score) && Number.isFinite(rec?.ts)) useScores[id] = rec;
+      }
+    }
+  } catch { /* garbage or private mode — everyone starts at zero */ }
+}
+
+function saveUse() {
+  try { localStorage.setItem(USE_KEY, JSON.stringify(useScores)); } catch { /* private mode */ }
+}
+
+loadUse(); // at import, not in initRoomCards — setRoomCardsData must never
+           // run first and rank a house against an empty score table
+
+const decayed = (rec, now) =>
+  (rec ? rec.score * Math.pow(0.5, Math.max(0, now - rec.ts) / HALF_LIFE_MS) : 0);
+
+// Called from the card itself: a tap that flies into the room, or a flip of the
+// room's light switch. Both are "I came here for this room". Deliberately NOT
+// wired to focus.js — entering a room by clicking it in the 3D scene shouldn't
+// silently reshuffle a rail the user wasn't even looking at.
+function recordUse(roomId) {
+  const now = Date.now();
+  useScores[roomId] = { score: decayed(useScores[roomId], now) + 1, ts: now };
+  saveUse();
+  orderDirty = true;
+}
+
+// Adopt the new ranking. Only ever called with the rail off-screen — see
+// renderRail() and the onFocusChanged hook in initRoomCards().
+function rerank() {
+  roomsFlat = byUsage(naturalFlat);
+  orderDirty = false;
+}
+
+// Most-used first; equal scores (and every never-used room) keep their natural
+// floor order, so a fresh install looks exactly like it did before.
+function byUsage(rooms) {
+  const now = Date.now();
+  return rooms
+    .map((room, i) => ({ room, i, score: decayed(useScores[room.id], now) }))
+    .sort((a, b) => (b.score - a.score) || (a.i - b.i))
+    .map((e) => e.room);
+}
+
+// ----------------------------------------------------------------
 
 function instancesOf(roomId) {
   return [railInstances.get(roomId), overlayInstances.get(roomId)].filter(Boolean);
@@ -178,11 +254,15 @@ function buildCard(room, inOverlay) {
   knob.className = 'knob';
   switchEl.append(input, knob);
   switchEl.addEventListener('click', (e) => e.stopPropagation());
-  input.addEventListener('change', () => toggleRoomLights(room.id));
+  input.addEventListener('change', () => {
+    recordUse(room.id);
+    toggleRoomLights(room.id);
+  });
 
   body.append(text, switchEl);
   card.append(img, placeholder, body);
   card.addEventListener('click', () => {
+    recordUse(room.id);
     if (inOverlay) closeAllRooms(); // first, so the 3D fly-in is visible
     enterFocus(room.id);
   });
@@ -214,6 +294,14 @@ function computeCapacity() {
 function renderRail() {
   const panel = $('room-cards');
   if (!capacity) computeCapacity();
+
+  // Re-rank only while the rail is off-screen. Promoting a card the instant it
+  // is used would slide the rest of the grid out from under the finger that
+  // just tapped it, and a light toggle would move its own card mid-gesture; the
+  // order the user sees is always the one they arrived on. This covers the
+  // rail's own tab switch (siderail.js bumpLayout()s into the layout bus);
+  // room focus arrives via onFocusChanged in initRoomCards.
+  if (orderDirty && panel.offsetWidth === 0) rerank();
 
   // rooms overflow the rail → the last slot becomes the "All rooms" button
   const overflow = roomsFlat.length > capacity;
@@ -332,7 +420,19 @@ export function setRoomCardsData(house, structure) {
     .map((f) => ({ ...f, rooms: (f.rooms || []).filter((r) => !isHiddenRoom(r.name)) }))
     .filter((f) => f.rooms.length)
     .sort((a, b) => b.level - a.level); // top floor first, like the building
-  roomsFlat = floorsData.flatMap((f) => f.rooms);
+  naturalFlat = floorsData.flatMap((f) => f.rooms);
+  // Rooms deleted in the planner would otherwise keep their score forever and
+  // hand it straight to whatever row id SQLite reuses next.
+  const live = new Set(naturalFlat.map((r) => String(r.id)));
+  let pruned = false;
+  for (const id of Object.keys(useScores)) {
+    if (!live.has(id)) { delete useScores[id]; pruned = true; }
+  }
+  if (pruned) saveUse();
+  // A full reload rebuilds every card anyway, so this is the one moment the
+  // reorder is free — no gesture to disturb, no DOM to keep.
+  roomsFlat = byUsage(naturalFlat);
+  orderDirty = false;
   railSig = ''; // same ids may carry new names/colors — force the rebuild
   computeCapacity();
   renderRail();
@@ -375,6 +475,22 @@ export function initRoomCards() {
     } else if (entityId.startsWith('light.')) {
       for (const roomId of getRoomsForEntity(entityId)) updateCard(roomId);
     }
+  });
+
+  // Entering a room display:none's the whole rail, and a ResizeObserver does
+  // NOT fire for that (Chrome reports nothing for an element with no box, only
+  // 0x0 for one that still has one) — measured, not assumed. So the reorder
+  // takes its cue from the focus bus instead: rebuild the rail off-screen while
+  // the user is inside the room, and it is already re-ranked when they come
+  // back out. Nothing re-ranks on the way back in.
+  // rerank() rather than letting renderRail()'s width guard decide: this
+  // listener and the one in dashboard.js that actually sets body.room-focused
+  // fire off the same bus, in registration order, so the rail may still measure
+  // non-zero here.
+  onFocusChanged((roomId) => {
+    if (roomId === null) return;
+    if (orderDirty) rerank();
+    renderRail();
   });
 
   // One layout bus (stage.js) instead of a private debounce: it coalesces
