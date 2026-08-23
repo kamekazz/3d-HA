@@ -214,6 +214,40 @@ empty room's spread improved only 80 → 71 bytes while the exterior roof and
 siding visibly flattened. So a residual 50–80 byte spread is the renderer's
 limit, not a defect in your room.
 
+**Do not fight it with emissive. This has now been tried three times and
+measured failing.** The third attempt was the subtlest and nearly shipped: not a
+box, not a partial skin, but ONE uniform full-wall emissive at `#4e4e4e` across
+all four skins of the Movie Room, to lift a room whose south wall renders 161.3
+at pure white. It looked right in every daylight comparison. Shot at the app's
+night state with the lights off, same pose class and crop:
+
+| room | night upper-wall |
+|---|---|
+| Movie Room, with the emissive | **mean 112.0** |
+| Arcade Room, no emissive | 24.3 |
+| Living Room, untouched | 10.6 |
+
+Ten times any other room. The walls and ceiling float as lit planes while every
+piece of furniture goes black, so the room reads as glowing partitions with dark
+objects in front of them. **This app's daylight is driven live from Home
+Assistant, so a room is seen at night for half of every day, and a day-only
+critic comparison cannot catch this.** If you touch emissive on anything
+room-scale, shoot a night frame before you report.
+
+The rule that survives all three attempts: emissive belongs on a **fixture the
+photograph shows**, at the size the photograph shows it. Never on a wall, a
+skin, a trim run, a ceiling or a floor.
+
+**When the absolute value is genuinely unreachable, re-target on relationships.**
+The Arcade Room's photographs are an RGB-lit night shot whose absolute luminance
+can never be matched; it was judged on ratios and texture statistics instead and
+its critic accepted that explicitly. Do the same rather than reaching for
+emissive: match the wall-to-wainscot step, the wall-to-ceiling ratio, the
+wall-to-rug ratio and the corner breaks, and say plainly in your report which
+absolutes are unreachable and why.
+
+Original guidance follows.
+
 **Do not fight it with emissive.** Two rounds of builders did, and both were
 rejected: room-filling emissive boxes read as hard-edged rectangles, and
 emissive on room-scale *runs* (crown, baseboards) makes them glow as bright fins

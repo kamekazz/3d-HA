@@ -62,8 +62,8 @@ RUG_Y = 0.098                   # rug top
 
 
 # ------------------------------------------------------------------ tiles
-T_WALL = TX.grain_tile(96, 246, 5.0, blotch=3.0, cells=13, seed=17)
-T_WAIN = TX.grain_tile(96, 246, 5.0, blotch=3.0, cells=13, seed=23)
+T_WALL = TX.grain_tile(96, 246, 8.5, blotch=3.2, cells=13, seed=17)
+T_WAIN = TX.grain_tile(96, 246, 8.5, blotch=3.2, cells=13, seed=23)
 T_RUG = TX.grain_tile(96, 240, 15.0, blotch=13.0, cells=26, seed=31)
 T_PLANK = TX.plank_tile(96, 3, seed=5)
 T_FAB = TX.weave_tile(64, 240, 17.0, seed=41, warp=7)
@@ -802,10 +802,10 @@ def build_sectional():
                 a = ia + 0.04 + i * (ib - ia) / seats
                 b = a + (ib - ia) / seats - 0.08
                 cush(m, FAB, back_x + 0.02, x1 - 0.10, BASE_Y, SEAT_Y, a, b,
-                     r=0.17, nub=0.010, rnd=rnd, seg=12, rings=5)
+                     r=0.28, nub=0.010, rnd=rnd, seg=14, rings=6)
                 cush(m, BACKC, x0 + 0.16, back_x + 0.50, SEAT_Y - 0.14, BACK_Y,
-                     a + 0.03, b - 0.03, r=0.24, nub=0.014, rnd=rnd,
-                     seg=12, rings=5)
+                     a + 0.03, b - 0.03, r=0.30, nub=0.014, rnd=rnd,
+                     seg=13, rings=6)
             for k, on in enumerate(arms):
                 if not on:
                     continue
@@ -834,10 +834,10 @@ def build_sectional():
                 a = ia + 0.04 + i * (ib - ia) / seats
                 b = a + (ib - ia) / seats - 0.08
                 cush(m, FAB, a, b, BASE_Y, SEAT_Y, z0 + 0.10, back_z - 0.02,
-                     r=0.17, nub=0.010, rnd=rnd, seg=12, rings=5)
+                     r=0.28, nub=0.010, rnd=rnd, seg=14, rings=6)
                 cush(m, BACKC, a + 0.03, b - 0.03, SEAT_Y - 0.14, BACK_Y,
-                     back_z - 0.50, z1 - 0.16, r=0.24, nub=0.014, rnd=rnd,
-                     seg=12, rings=5)
+                     back_z - 0.50, z1 - 0.16, r=0.30, nub=0.014, rnd=rnd,
+                     seg=13, rings=6)
             for k, on in enumerate(arms):
                 if not on:
                     continue
@@ -956,14 +956,14 @@ def build_chairs():
         seat_y = 1.46
         sub.add(cylinder(0.72, 0.13, 16), DKWOOD, at=(0, 0.0, 0))
         sub.add(cylinder(0.36, 0.24, 12), DKWOOD, at=(0, 0.13, 0))
-        sub.add(puff(2.72, 1.14, 2.72, r=0.38, seg=18, rings=7), IVORY,
+        sub.add(puff(2.72, 1.14, 2.72, r=0.55, seg=24, rings=8), IVORY,
                 at=(0, 0.30, 0.02))
         # the seat pad is CREAM in every photograph -- round 2's read dark grey
         # because the pad was too small and what showed was the shell's own
         # unlit inner wall.  Fill the barrel and give the inner wall its own
         # brighter albedo (it sees nothing but hemisphere light).
         cush(sub, IVORY, -1.02, 1.02, seat_y - 0.36, seat_y + 0.10,
-             -0.86, 1.30, r=0.20, nub=0.012, rnd=rnd, seg=14, rings=5)
+             -0.86, 1.30, r=0.36, nub=0.012, rnd=rnd, seg=18, rings=7)
         shell(sub, IVORY, 0.0, 0.0, 1.20, 0.62, R(163), R(377),
               seat_y - 0.34, 0.64, 1.42, steps=44, inner=IVORY_IN)
         cush(sub, GEO, -0.60, 0.60, seat_y + 0.06, seat_y + 1.12,

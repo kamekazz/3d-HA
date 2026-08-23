@@ -512,7 +512,10 @@ function addStoneEdge(rng, pts, y, h, beds) {
                         0.52 - c * 0.05, ax + ux * t, cy, az + uz * t, ang);
         // slate: dark, cool, and a WIDE value range — a dry-stacked wall
         // reads as stone because every slab catches the light differently
-        paint(g, hsl(0.08, 0.045, 0.17 + rng() * 0.16));
+        // grey slate, NOT the warm 0.08 the first pass used: at hue 0.08
+        // a run of these renders as a brown timber edging board, which is
+        // the exact thing round 1 was failed for
+        paint(g, hsl(0.60, 0.025, 0.185 + rng() * 0.20));
         beds.push(g);
       }
     }
@@ -543,11 +546,11 @@ function addBoxwood(rng, x, z, r, y, leaves, sp = 'boxwood') {
 // Low spreading groundcover mass — the sheet of green that carpets the
 // lamp-post bed in "Front of the house, a little bit of the garage...".
 function addGroundCoverMass(rng, x, z, rx, rz, y, leaves) {
-  const n = Math.max(3, Math.round(rx * rz * 0.5));
+  const n = Math.max(3, Math.round(rx * rz * 1.6));
   for (let i = 0; i < n; i++) {
-    const r = 0.55 + rng() * 0.75;
+    const r = 0.34 + rng() * 0.42;
     const g = new THREE.IcosahedronGeometry(r, 1);
-    g.scale(1.4, 0.34, 1.4);
+    g.scale(1.15, 0.52, 1.15);
     g.rotateY(rng() * 6.283);
     const a = rng() * Math.PI * 2, d = Math.sqrt(rng());
     g.translate(x + Math.cos(a) * d * rx, y + r * 0.28, z + Math.sin(a) * d * rz);
@@ -650,18 +653,20 @@ function addWeeper(rng, x, z, s, trunks, leaves) {
   const t = new THREE.CylinderGeometry(0.16 * s, 0.30 * s, h, 6);
   t.translate(x, h / 2, z);
   trunks.push(t);
-  const tiers = 2 + Math.floor(rng() * 2);
+  const tiers = 3;
   for (let i = 0; i < tiers; i++) {
-    const r = (2.9 - i * 0.5 + rng() * 0.7) * s;
+    const r = (2.6 - i * 0.42 + rng() * 0.6) * s;
     const g = new THREE.IcosahedronGeometry(r, 1);
-    // round 1's first pass used 0.30 in y, which rendered as brown lily pads
-    g.scale(1.18, 0.62, 1.18);
+    // Two earlier passes used 0.30 and 0.62 in y with 1.55 s tier spacing and
+    // both rendered as a stack of brown lily pads. A weeping specimen reads as
+    // a soft DOME with a layered edge, so the tiers overlap heavily now.
+    g.scale(1.06, 0.66, 1.06);
     g.rotateY(rng() * 6.283);
-    g.translate(x + (rng() - 0.5) * 1.0 * s, h - i * 1.55 * s + 0.5 * s,
-                z + (rng() - 0.5) * 1.0 * s);
+    g.translate(x + (rng() - 0.5) * 0.7 * s, h - i * 0.95 * s + 0.4 * s,
+                z + (rng() - 0.5) * 0.7 * s);
     // bronze-OLIVE. A first pass at hue 0.09-0.14 rendered these as brown
     // mud blobs; the photographed specimen is a bronzed green, not a rock.
-    paintNoisy(g, hsl(0.155 + rng() * 0.045, 0.26, 0.175 + rng() * 0.05),
+    paintNoisy(g, hsl(0.195 + rng() * 0.05, 0.30, 0.175 + rng() * 0.05),
                rng, 0.34);
     leaves.push(g);
   }
@@ -720,7 +725,7 @@ function addSlate(rng, along, a0, a1, b, yBot, yTop, beds) {
       const g = along === 'x'
         ? boxAt(len, ch * 1.06, out, a + len / 2, y, b)
         : boxAt(out, ch * 1.06, len, b, y, a + len / 2);
-      paint(g, hsl(0.09, 0.05, 0.20 + rng() * 0.08));
+      paint(g, hsl(0.62, 0.03, 0.20 + rng() * 0.10));
       beds.push(g);
     }
   }
@@ -876,12 +881,12 @@ function addStreet(L, rng, beds, props) {
   // Mailbox. INFERRED, not measured: the street photograph shows a
   // post-mounted black object at the kerb by the neighbouring lot but our own
   // is out of frame in every shot. Reported as such.
-  const mx = L.driveR + 3.0, mz = L.street - 2.6;
-  const post = boxAt(0.30, 3.6, 0.30, mx, L.lo, mz);
+  const mx = L.driveR + 2.2, mz = L.street - 3.2;
+  const post = boxAt(0.22, 3.2, 0.22, mx, L.lo, mz);
   paint(post, _c.setHex(0x1d1e20)); props.push(post);
-  const arm = boxAt(0.26, 0.26, 1.5, mx, L.lo + 3.3, mz - 0.5);
+  const arm = boxAt(0.20, 0.20, 1.1, mx, L.lo + 3.0, mz - 0.35);
   paint(arm, _c.setHex(0x1d1e20)); props.push(arm);
-  const bxg = boxAt(0.72, 0.78, 1.55, mx, L.lo + 3.6, mz - 0.5);
+  const bxg = boxAt(0.55, 0.58, 1.20, mx, L.lo + 3.2, mz - 0.35);
   paint(bxg, _c.setHex(0x24262a)); props.push(bxg);
 }
 
@@ -998,7 +1003,16 @@ function landmarks(R) {
 // the photographs show as lawn; only the driveway, the walk and the planting
 // beds are left as hardscape, and those are drawn back on top.
 function addGroundCover(L, lawns) {
-  const g = (x0, z0, x1, z1, y) => lawns.push(slab(x0, z0, x1, z1, y));
+  // Subdivided at ~3.5 ft. slab()'s segment arguments default to 1, so round 1
+  // laid every lawn patch as a SINGLE QUAD — the whole yard's lawn merged to
+  // 30 triangles. That was invisible while the lawn was flat colour; the
+  // moment the mown-patch tint went into vertex colours (see buildYard) it
+  // meant the field was being sampled at four corners per patch and almost
+  // none of it reached the screen.
+  const g = (x0, z0, x1, z1, y) => lawns.push(slab(
+    x0, z0, x1, z1, y,
+    Math.min(90, Math.max(2, Math.round((x1 - x0) / 3.5))),
+    Math.min(90, Math.max(2, Math.round((z1 - z0) / 3.5)))));
   // --- ONE base sheet at the low grade, covering the whole site pad and 8 ft
   //     past every edge of it. Round 1 patched the pad region by region and
   //     left slivers of the GLB's pale slab showing wherever a patch stopped
@@ -1013,7 +1027,7 @@ function addGroundCover(L, lawns) {
   //     world-space mown-patch tint (see buildYard), so it runs 45 ft past
   //     the pad on every side: outside it the 1200 ft disc takes over and
   //     that IS one flat plate.
-  g(L.padW - 45, L.yardN - 45, L.padE + 45, L.street + 30, L.lo);
+  g(L.padW - 45, L.yardN - 45, L.padE + 45, L.street + 1.0, L.lo);
   // --- back yard: the big one. All of this was bare concrete before.
   g(L.padW, -31, L.padE, L.wingN, L.hi);                  // raised, full width
   g(L.padW, L.padN, L.lowE, -31, L.hi);                   // raised, west half
@@ -1032,8 +1046,8 @@ function addGroundCover(L, lawns) {
   // --- front: the apron in front of the porch, west of the driveway. Runs
   //     PAST the pad's own front edge and all the way to the street, so no
   //     sliver of the GLB's slab is left to read as a kerb across the lawn.
-  g(L.padW - 9, L.padF, L.driveL + 0.4, L.street + 4, L.lo);
-  g(L.driveR - 0.4, L.houseF - 1, L.padE + 9, L.street + 4, L.lo);
+  g(L.padW - 9, L.padF, L.driveL + 0.4, L.street + 1.0, L.lo);
+  g(L.driveR - 0.4, L.houseF - 1, L.padE + 9, L.street + 1.0, L.lo);
   g(L.porchE, L.houseF, L.driveL, L.padF, L.hi);
   // the pad's east kerb, clothed as a bank rather than left as a white line
   lawns.push(quadAt([L.padE, L.hi, L.wingN], [L.padE, L.hi, -31],
@@ -1230,7 +1244,9 @@ function addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   // 1. Rock beds edging the lawn. NARROW: the photographs are lawn-dominated
   //    with the rock confined to a border at the foot of the treeline and one
   //    wider apron beside the deck steps.
-  addBed(rng, L.padW - 2, yN - 6.5, L.padE + 2, yN - 1.5, L.lo + 0.04, beds, 4.4);
+  // straddles the pad's rear edge, which is where "Backyard v3 5" puts the
+  // mulch border: on the far edge of the lawn, not out beyond it
+  addBed(rng, L.padW - 2, yN - 2.6, L.padE + 2, yN + 2.6, L.lo + 0.04, beds, 4.4);
   addBed(rng, L.padW - 1.5, -46, L.padW + 3.0, L.wingN - 6, L.hi + 0.04, beds, 4.4);
   addBed(rng, L.padE - 7.5, -47, L.padE + 2, -28, L.lo + 0.04, beds, 4.4);
   // stepping stones running away from the deck's east flight, as in the aerial
@@ -1264,7 +1280,7 @@ function addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
 
   // 3. Ornamental grasses and low shrubs along the bed edges
   for (let x = L.padW; x < L.padE; x += 3.4 + rng() * 3.2) {
-    addGrassClump(rng, x, yN - 4.5 + (rng() - 0.5) * 3, L.lo + 0.04, leaves);
+    addGrassClump(rng, x, yN - 0.4 + (rng() - 0.5) * 3, L.lo + 0.04, leaves);
   }
   for (let z = -46; z < L.wingN - 7; z += 3.6 + rng() * 3) {
     if (rng() < 0.6) addGrassClump(rng, L.padW + 0.8 + rng() * 1.6, z, L.hi + 0.04, leaves);
@@ -1542,9 +1558,9 @@ function buildYard() {
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
       uv.setXY(i, x / 2400 + 0.5, -z / 2400 + 0.5);
-      const f = 1 + (worldNoise(x, z, 54) - 0.5) * 0.17
-                  + (worldNoise(x + 313, z + 129, 19) - 0.5) * 0.22
-                  + (worldNoise(x + 91, z - 47, 7) - 0.5) * 0.13;
+      const f = 1 + (worldNoise(x, z, 54) - 0.5) * 0.14
+                  + (worldNoise(x + 313, z + 129, 19) - 0.5) * 0.19
+                  + (worldNoise(x + 91, z - 47, 7) - 0.5) * 0.11;
       col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = f;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(col, 3));

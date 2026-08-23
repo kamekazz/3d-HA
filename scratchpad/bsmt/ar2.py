@@ -41,7 +41,7 @@ import urllib.request
 
 from bkit import *          # noqa: F401,F403
 from a2kit import (         # noqa: F401  -- round-3 texture + sweep helpers
-    ART, ART_D, ART_DK, ART_TEX, MQ_MATS, sweep, uvq, uvr, uvblit,
+    ART, ART_B, ART_D, ART_DK, ART_TEX, MQ_MATS, sweep, uvq, uvr, uvblit,
     noise_tex)
 from roomkit.glb import uv_quad          # noqa: E402
 
@@ -196,7 +196,7 @@ def plant(m, cx, cz, h, scale=1.0, seed=1, pot=None, on=0.0):
     m.add(cylinder(pr * 0.80, 0.06, 10),
           Material("a2soil", "#3a352e", roughness=0.95),
           at=(cx, on + 0.44 * scale, cz))
-    n = 9
+    n = 7
     for k in range(n):
         a = R(360.0 * k / n + rnd.f(-14, 14))
         lean = 0.30 + rnd.f(0.0, 0.42)
@@ -429,22 +429,31 @@ def upright(m, cx, cz, rot, art_i, bw=2.20, bd=2.55, top=6.10, seed=1,
                     dy + 0.018, dz0 + 0.10 + 0.055 * (b % 2),
                     dz0 + 0.21 + 0.055 * (b % 2))
 
-    # raked screen in a dark bezel, on the profile's screen plane
-    sz = ft - (0.30 if style == "slope" else 0.04)
-    bx(sub, CABDK, x0 + 0.05, x1 - 0.05, dy + 0.30, mq_lo - 0.10,
-       sz - 0.10, sz - 0.03)
-    sub.add(quad((x0 + 0.17, dy + 0.42, sz - 0.028),
-                 (x1 - 0.17, dy + 0.42, sz - 0.028),
-                 (x1 - 0.17, mq_lo - 0.22, sz - 0.028),
-                 (x0 + 0.17, mq_lo - 0.22, sz - 0.028)), SCRN)
+    # Screen + marquee ride the PROFILE's own front plane.  Round 3a put them
+    # at a fixed ft - 0.04, which is INSIDE the body for the straight and step
+    # silhouettes -- two of the four machines rendered as a blank grey slab.
+    rk = {"straight": (0.02, 0.02), "step": (0.02, 0.02),
+          "slope": (0.02, -0.30), "riser": (0.02, -0.16)}[style]
+    zb0, zb1 = ft + rk[0], ft + rk[1]
+    yb0, yb1 = dy + 0.30, mq_lo - 0.10
+    # printed bezel round the screen -- in the photos the monitor surround is
+    # part of the machine's artwork, not a black frame
+    uvq(sub, ART_B, [(x0 + 0.05, yb0, zb0), (x1 - 0.05, yb0, zb0),
+                     (x1 - 0.05, yb1, zb1), (x0 + 0.05, yb1, zb1)], uvr(art_f))
+    fy0, fy1 = dy + 0.46, mq_lo - 0.26
+    t0 = (fy0 - yb0) / max(0.01, yb1 - yb0)
+    t1 = (fy1 - yb0) / max(0.01, yb1 - yb0)
+    zs0 = zb0 + (zb1 - zb0) * t0 + 0.014
+    zs1 = zb0 + (zb1 - zb0) * t1 + 0.014
+    sub.add(quad((x0 + 0.17, fy0, zs0), (x1 - 0.17, fy0, zs0),
+                 (x1 - 0.17, fy1, zs1), (x0 + 0.17, fy1, zs1)), SCRN)
     # marquee -- a real backlit lamp in the photos, so legitimately emissive,
     # and it carries a printed title band rather than a colour field
-    mz = ft + (0.06 if style in ("slope", "riser") else 0.0)
-    bx(sub, CABDK, x0 + 0.02, x1 - 0.02, mq_lo - 0.05, mq_hi + 0.05,
-       mz - 0.075, mz - 0.02)
+    mz = ft + {"straight": 0.03, "slope": 0.08, "riser": 0.13,
+               "step": -0.37}[style]
     uvq(sub, MQ_MATS[mq_i % 4],
-        [(x0 + 0.06, mq_lo, mz - 0.015), (x1 - 0.06, mq_lo, mz - 0.015),
-         (x1 - 0.06, mq_hi, mz - 0.015), (x0 + 0.06, mq_hi, mz - 0.015)],
+        [(x0 + 0.06, mq_lo, mz), (x1 - 0.06, mq_lo, mz),
+         (x1 - 0.06, mq_hi, mz), (x0 + 0.06, mq_hi, mz)],
         uvr(12 + (mq_i + 1) % 4))
     # pale cap: end-on from the dollhouse quadrant an all-black run merges into
     # one mass, and this line breaks it into machines
@@ -734,14 +743,14 @@ def build_east_shelf():
     # from beneath, and the wall behind them takes the colour.
     bx(m, SHELFW, W - 0.86, W, SHELF_Y, SHELF_Y + 0.075, sz0, sz1)
     bx(m, SHELFW, W - 0.16, W, SHELF_Y - 0.40, SHELF_Y, sz0, sz1)
-    n = 46
+    n = 40
     step = (sz1 - sz0) / n
     nseg = 10
     for k in range(nseg):                      # the under-shelf glow itself
         a = sz0 + k * (sz1 - sz0) / nseg
         b = sz0 + (k + 1) * (sz1 - sz0) / nseg
-        bx(m, LEDS[k % 5], W - 0.30, W - 0.11, SHELF_Y - 0.115, SHELF_Y - 0.045,
-           a, b)
+        bx(m, BRIGHT[k % 5], W - 0.30, W - 0.11, SHELF_Y - 0.115,
+           SHELF_Y - 0.045, a, b)
         # the lit back panel the figures stand against
         bx(m, LEDS[(k + 2) % 5], W - 0.055, W - 0.03,
            SHELF_Y + 0.075, SHELF_Y + 0.52, a, b)
@@ -815,7 +824,7 @@ LITM = Material("a2hexl", "#f2f7ff", roughness=0.4, emissive="#c7dcff",
 
 
 BRIGHT = [Material("a2ybr%d" % i, c, roughness=0.25, emissive=c,
-                   emissive_strength=6.0)
+                   emissive_strength=9.0)
           for i, c in enumerate(("#ff4fa0", "#ffc24a", "#57e08a",
                                  "#49c6ff", "#a97dff"))]
 
@@ -1096,14 +1105,15 @@ def build_tables():
 
 
 # ==================================================== per-wall albedo skins
-SKIN = {"n": "#fafafa", "e": "#fafafa", "s": "#fafafa", "w": "#6e6e6e"}
-# solved 2026-08-22 by probe2.py: skin at albedo 250 rendered
-#   N 239.1 / E 187.0 / S 163.7 / W 214.7  -- spread 75.4 -- and at
-# albedo 110  N 168.0 / E 75.3 / S 51.9 / W 106.0.  Two-point power fits
-# (gamma N .43 E 1.11 S 1.40 W .86) inverted for a common target of 172.
-# The south wall is the one the sun never reaches: it caps at 168 even
-# pure white, so it is left at white and lands ~3 under the others.
-# Greys are nudged 1.5% warm to sit in the room's #dcdbd8 hue.
+SKIN = {"n": "#71706e", "e": "#e2e0dc", "s": "#fffefb", "w": "#b0aeaa"}
+# RE-SOLVED 2026-08-23 by probe2.py against the TEXTURED skin and the corrected
+# south plane.  At #fafafa the four walls render N 235.3 / E 185.8 / S 160.2 /
+# W 213.5 and at #6e6e6e they render N 165.2 / E 73.2 / S 50.6 / W 105.3; the
+# two-point power fits (gamma N 0.431, E 1.135, S 1.403, W 0.861) inverted for a
+# common target of 170 give 118 / 231 / 255 / 192, then ONE measured nudge (the fits landed
+# N 173.1 / E 173.9 / S 162.6 / W 182.9) and 1.5% warm to sit
+# in the room's #dcdbd8 hue.  The south wall is the one the sun never reaches --
+# it reaches only 165 at pure white, so it is left white and lands ~5 under.
 
 
 WALL_TEX = noise_tex(64, 250, 6.0, 4.0, seed=41, streak=0.20)

@@ -132,9 +132,10 @@ ART_D = Material("a2artd", "#c9c9c9", roughness=0.72, tex=ART_TEX)
 # an UP-facing surface in this scene collects roughly twice what a
 # vertical one does, so control-deck art needs a much darker factor
 ART_DK = Material("a2artk", "#4c4c4c", roughness=0.80, tex=ART_TEX)
-MQ_MATS = [Material("a2mqx%d" % i, "#d6d2ca", roughness=0.42, tex=ART_TEX,
-                    emissive=c, emissive_strength=0.95)
-           for i, c in enumerate(("#e8b878", "#7fb6e0", "#e09ec0", "#9ad8a8"))]
+ART_B = Material("a2artb2", "#3c3c3c", roughness=0.66, tex=ART_TEX)
+MQ_MATS = [Material("a2mqx%d" % i, "#efece6", roughness=0.42, tex=ART_TEX,
+                    emissive=c, emissive_strength=1.7)
+           for i, c in enumerate(("#ff9c3c", "#4fa8ff", "#ff6fb0", "#5fe07a"))]
 
 
 def uvr(i, inset=0.5):
