@@ -127,6 +127,52 @@ or back.
 - House payload is **22.5 MB / 285 models**, up from 18.9. Only ~0.36 MB of that
   is the yards.
 
+### The emissive-ceiling finding — house-wide, and NOT this run's doing
+
+The Arcade's round-3 critic found a **482 sq ft emissive ceiling plane** in room 2
+(`model_171`, material `ceil`, `emissiveFactor 0.434`) and called it the thing
+ROOM-BRIEF forbids by name. It measured the night frame: **ceiling 198.1 while
+the south upper wall reads 13.7** — the walls fall 12x and every object goes
+black, the ceiling drops 5%.
+
+The finding is real. **Charging it to this run's builder is not.** I audited the
+whole house rather than take it on trust — `python -m roomkit.emissive_audit`,
+which is now a permanent tool. It measures the **area of the geometry actually
+carrying each emissive material** (in sq ft, after the glTF metre->foot
+conversion), because a recessed can lens and a 480 sq ft ceiling plane are both
+"emissive material on an object called Ceiling" and only one of them is
+forbidden. Results:
+
+- **136 room-scale emissive surfaces across 21 rooms.** 39 of them are ceilings.
+- The biggest: Arcade 482.3 sq ft @ 0.434, Movie 479.4 @ 0.089, Garage 442.7 @
+  0.202, Living Room 335.4 @ **0.552**, Kitchen 225.9 @ 0.445, Rios 146.3 @
+  0.503. A dozen more ceilings sit at exactly 0.434.
+- `git log --diff-filter=A` on the GLBs: the Arcade's ceiling was added
+  **2026-08-16** and the Living Room's **2026-08-15**. This run's first commit is
+  **2026-08-22**. They predate it by six and seven days.
+
+So **lighting a ceiling with emissive is long-standing house-wide practice in
+this project**, inherited by every room that has one. What was genuinely wrong in
+room 2 was the *declaration*: `rooms/2.json _gaps` stated "there is deliberately
+NO room-filling emissive box and no emissive on any room-scale trim run" and
+enumerated the emissive inventory, and the ceiling was not on that list. That
+sentence was false about the room as it stood, whoever authored the plane.
+
+**Do not quietly strip 39 ceilings.** That is a whole-house decision with a
+whole-house look attached to it, and it is outside the five rooms the owner
+scoped this run to. What it needs is an owner call, and then one pass. The
+question to put to them: **the rooms currently read as lit at night when their
+lights are off**, because the ceiling keeps emitting while everything else goes
+dark. Two honest options — drop the ceiling emissive and accept darker night
+rooms, or drive it from HA light state the way `roomlights.js` already drives the
+slab glow, which is the fix that actually matches the app's premise.
+
+Note the distinction the audit exists to enforce, because it is the whole point:
+**a can lens, an LED strip, a marquee, a monitor — fixtures the photograph shows,
+at the size it shows them — are legitimate and must stay.** The Arcade is lit by
+RGB strips in real life and its emissive inventory is almost entirely correct.
+It is the 482 sq ft *plane* that is not a fixture.
+
 ### Next actions for this run, in order
 
 1. **Run the four blind critics** — Garage, Movie Room, Arcade, and the exterior
