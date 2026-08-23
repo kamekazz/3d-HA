@@ -2,59 +2,59 @@
  "_note": "Whole-house gauntlet status. Update state/round/note/render per room as critics report, then run: python -m roomkit.house_progress",
  "headline": "The outside of the house, and the four rooms nobody had judged",
  "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. This run covers the five spaces the owner photographed last: the front and back of the house, the garage, the movie room and the arcade. Round one went to the critics and none of the five survived.",
- "stamp": "v3 run · 23 Aug 2026 · all five judged, all five rejected, all five back with builders",
+ "stamp": "v3 run · 23 Aug 2026 · second rounds landing · garage and arcade rejected again, movie room and the exterior with critics",
  "hero": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\dollhouse\\house_low.png",
  "hero_label": "Every room in the house furnished. 241 pieces, all 423 Home Assistant device markers intact.",
  "rooms": [
   {
    "id": 11,
    "name": "Frontyard",
-   "state": "building",
+   "state": "judging",
    "round": 2,
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Frontyard v3 3.jpg",
-   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_ext\\front_check.png",
-   "render_label": "round 1 — rejected, round 2 building",
-   "note": "Rejected. The beds are in the right place now — they had been sited off the roof outline and stood four to five feet out on the lawn — and the driveway concrete passes on value, spread and fine gradient. What gives it away is the ground itself: the lawn is one untextured plate, three times too smooth and two and a half times too green, and the planting beds are about seventeen per cent covered in stone where the photograph is wall to wall. The critic traced that to a single constant, half a cobble per square foot, and said raising it is worth more than any amount of new material. The lot also has no edge: the driveway runs to a street that was never built."
+   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_ext\\r2_front_norails.png",
+   "render_label": "round 2 — awaiting critic",
+   "note": "Round 2 rebuilt the ground layer, which was the instant tell. The lawn's fine gradient is up three and a third times and its green cast down from plus thirty-three to plus twelve against the photograph's plus thirteen; the planting beds went from half a stone per square foot to seven, with smaller stones measured off the photograph rather than guessed. The lot now ends in a sidewalk, verge, curb, asphalt and mailbox instead of a driveway running to a street that was never built. Two engine bugs surfaced on the way, both invisible until something depended on them: every lawn patch was a single quad, so the whole yard's grass was thirty triangles, and the neighbour house rendered as a grey roofless mass because a colour helper returns a shared object, so its walls and roof were the same variable."
   },
   {
    "id": 3,
    "name": "Backyard",
-   "state": "building",
+   "state": "judging",
    "round": 2,
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Backyard v3 7.jpg",
-   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_ext\\back_nofence2.png",
-   "render_label": "round 1 — rejected, round 2 building",
-   "note": "Rejected, and worse than the front — but its biggest fault is already gone. A white fence enclosed the entire rear lot, three times the deck's footprint standing in open grass, and there is no such fence in any photograph. It was baked into the shell, so no builder could remove it; it has been cut out by world box, along with the open parasol the shell also carries. What is left is emptiness — a flat green plate to a straight horizon where the photographs show a dense treeline, neighbour roofs, a weeping maple and grass clumps — and a burgundy shrub that turns out to have been authored to hide a bug rather than to match the plant, which is olive green with red new growth."
+   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_ext\\r2_back_norails.png",
+   "render_label": "round 2 — awaiting critic",
+   "note": "The fence that appears in no photograph is gone, and so are the parasol and the fence rails that were left lying on the grass as white lines — all cut out of the shell by measured world box, since no builder can edit it. Behind where it stood there is now an actual boundary: two jittered ranks of trees, small flowering trees inside the line, understory and five neighbour massings, with a weeping maple, a bird feeder and grass clumps on the lawn. The deck height is committed rather than compromised — the photographs fix the deck's relationship to the house, not to the lawn, and the opening behind it is a full-height patio door rather than the high-silled window an earlier round read it as."
   },
   {
    "id": 7,
    "name": "Garage",
-   "state": "building",
+   "state": "fail",
    "round": 2,
-   "note": "Rejected. Not the room — the surfaces standing in for pictures. The KIES banner, a photographic print of a white BMW on the real garage wall, was built as a mosaic of about twenty-five boxes; the wall clock is a sphere with a red rectangle on it; the child's ride-on is a flat wedge. All three sit in the middle of the hero frame, and the toolchain had gained textured quads that morning. The floor and the walls both passed: the coin tile's fine gradient measures higher than the photograph's, and the four walls sit within seventeen bytes. Shadows are the other half — forty-eight per cent under the door step and nothing at all under the tool chest.",
-   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_garage\\final_photo_lookN.png",
-   "render_label": "round 1 — rejected, round 2 building",
+   "note": "Round 2 replaced the box-collage banner with a real printed vinyl, moved the contact shadows into the floor's own vertex colours after working out that an alpha decal physically cannot reach the target — a lit black patch still returns about four per cent off a bright sky — and took the item count from thirty-four to forty-eight. The critic rejected it anyway, and for a good reason: the banner was rectified from a bad four-point solve and then mapped onto a quad whose shape came from the same bad solve, so it shipped squeezed by a fifth, car and lettering together. Four independent recoveries caught it. The floor is the other half — matte where the photograph is glossy and carrying the whole room's light.",
+   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_garage\\r2_photo.png",
+   "render_label": "round 2 — rejected, round 3 queued",
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Garage v3 1.jpg"
   },
   {
    "id": 1,
    "name": "Movie Room",
-   "state": "building",
+   "state": "judging",
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Movie Room v3 4.jpg",
-   "note": "Rejected. The walls read as camouflage rather than paint — a coarse grey blotch at foot scale, traced to one parameter where the mottle amplitude is seven times the grain. The more interesting finding overturned what the room was aiming at: the builder reported its four walls within 3.5 bytes of each other and the critic measured 1.6, then measured the photograph and found twenty-one bytes across a single corner in one exposure, with walls that ramp visibly from floor to ceiling. The render's walls are mathematically flat because four different paints were chosen to force one number. A near-zero spread was never the goal.",
+   "note": "The walls were reading as camouflage, and the builder found a second cause nobody had spotted: the skin mesh used a cell wider than the wall band was tall, so its colour jitter WAS the blotch. Then it lifted the room's exposure with a uniform emissive across all four walls and disclosed it — which is how it got caught. Measured at night against two control rooms it ran ten times brighter than either, walls and ceiling floating as lit planes while the furniture went black. That is how the room looks for half of every day, and no daylight comparison could ever have found it. The emissive is out, the room now sits in normal company at night, and the exposure is re-targeted on the photograph's relationships instead.",
    "round": 2,
-   "render_label": "round 1 — rejected, round 2 building",
-   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_movie\\photo4_match.png"
+   "render_label": "round 2b — awaiting critic",
+   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_movie\\chk_night2.png"
   },
   {
    "id": 2,
    "name": "Arcade Room",
-   "state": "building",
+   "state": "fail",
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Arcade Room v3 4.jpg",
-   "note": "Rejected. The cabinet run — the room's whole identity — is one box reused with the hue swapped, and the critic found the number behind it: the control decks project six hundredths of a foot where a real one juts out about seven tenths, so the machines read as painted slabs. A quarter of the room is also simply unbuilt: the north wall carries four more cabinets, a lit display cabinet of figures and a hung plush in the photographs, and the west wall has two recessed gaming booths. The orientation correction held up under independent re-derivation, and the contact shadows metered better than claimed.",
-   "round": 2,
-   "render_label": "round 1 — rejected, round 2 building",
-   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_arcade\\a_look_s.png"
+   "note": "Round 3 rebuilt every cabinet as a swept side profile instead of a stack of boxes, with decks that project more than a foot further, built the missing north wall and the two gaming booths, and paid for all of it by making the geometry cheaper. It also found the wall bug in a third room: the entire south wall of the previous round was invisible, because the Movie Room's wall mass stands a third of a foot inside this one and everything had been authored behind it — what the previous round measured as its own wall was next door's paint. The critic still rejected it: the cabinet artwork is one machine repeated sixteen times in different hues, where the photograph shows four unrelated printed graphics.",
+   "round": 3,
+   "render_label": "round 3 — rejected, round 4 queued",
+   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_arcade\\r2_a_look_s.png"
   },
   {
    "id": 14,
