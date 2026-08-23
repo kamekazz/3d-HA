@@ -7,7 +7,7 @@
 // (environment.js / weather.js); daylight.js skips background/fog writes
 // while the backdrop texture is installed.
 import * as THREE from 'three';
-import { scene, camera, controls, flyTo, getViewPose, setMaxZoom, MIN_ZOOM, MAX_ZOOM } from './scene.js';
+import { scene, camera, controls, flyTo, getViewPose, setMaxZoom, fitDistance, MIN_ZOOM, MAX_ZOOM } from './scene.js';
 import { roomMeshes } from './house.js';
 import { repaintSky } from './daylight.js';
 
@@ -72,10 +72,9 @@ function frameFloor(level) {
   if (!box) return; // empty floor: keep the current pose/zoom cap
   const center = box.getCenter(new THREE.Vector3());
   const radius = 0.5 * box.getSize(new THREE.Vector3()).length();
-  const vFov = THREE.MathUtils.degToRad(camera.fov);
-  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
-  const fit = Math.min(vFov, hFov);
-  const dist = Math.max(0.92 * radius / Math.sin(fit / 2), MIN_ZOOM * 1.5);
+  // fitDistance, not min(vFov,hFov): camera.fov/aspect describe the virtual
+  // frame once scene.js has a view offset in play. See scene.js applyStage.
+  const dist = Math.max(fitDistance(radius, 0.92), MIN_ZOOM * 1.5);
   const az = Math.atan2(camera.position.x - center.x, camera.position.z - center.z);
   const polar = 0.68; // angle from vertical
   flyTo(new THREE.Vector3(
@@ -98,6 +97,12 @@ function recenterFloor(level) {
 }
 
 export function initFloorView() {
+  // A layout change re-fits whichever floor is showing; House view is handled
+  // by house.js/scene.js's refitStage instead.
+  window.addEventListener('stageChanged', () => {
+    if (activeLevel !== 'all') frameFloor(activeLevel);
+  });
+
   window.addEventListener('levelChanged', (e) => {
     const level = e.detail.level;
     if (level !== 'all') {

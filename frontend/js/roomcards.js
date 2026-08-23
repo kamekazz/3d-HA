@@ -19,9 +19,15 @@ import { getRoomLightIds, getRoomsForEntity } from './roomlights.js';
 import { isOn, getState, onStateApplied } from './state.js';
 import { showBanner } from './ui.js';
 import { getSnapshot, onSnapshotReady } from './snapshots.js';
+import { onLayoutChanged, bumpLayout } from './stage.js';
+import { tokenNum, tokenPx } from './layout.js';
 
-const GAP = 10;          // must match #room-cards / #rooms-all-grid CSS gap
-const CARD_ASPECT = 1.6; // must match .room-card aspect-ratio
+// Gaps and aspects used to be hand-kept copies of the CSS. They are read back
+// from what the browser actually laid out now, so the two cannot drift: the
+// gap off the element's own used value, the aspect off the token that the
+// stylesheet itself uses for .room-card.
+const gapOf = (el) => parseFloat(getComputedStyle(el).columnGap) || 0;
+const cardAspect = () => tokenNum('--card-aspect') || 1.6;
 
 const railInstances = new Map();    // roomId -> DOM refs of the rail card
 const overlayInstances = new Map(); // roomId -> DOM refs of the all-rooms card
@@ -76,6 +82,10 @@ function updateCard(roomId) {
 
   for (const c of entries) {
     c.switchEl.classList.toggle('pending', !!st.pendingUntil);
+    // .lit on the CARD is the rail's whole visual hierarchy: a lit room keeps
+    // its photo at full brightness, everything else recedes (see .room-card
+    // .rc-img in style.css). Every card used to shout equally.
+    c.card?.classList.toggle('lit', !!known.length && anyOn);
     if (!known.length) {
       c.sub.textContent = lightIds.length ? 'lights unavailable' : 'no lights';
       c.sub.classList.remove('lit');
@@ -119,7 +129,7 @@ function buildCard(room, inOverlay) {
   placeholder.className = 'rc-placeholder';
   placeholder.textContent = roomEmoji(room.name);
 
-  const entry = { sub: null, switchEl: null, input: null, img, placeholder,
+  const entry = { card, sub: null, switchEl: null, input: null, img, placeholder,
                   areaPic: false };
   if (room.ha_area_id && pictureAreas.has(room.ha_area_id)) {
     entry.areaPic = true;
@@ -187,15 +197,16 @@ function buildCard(room, inOverlay) {
 // ---------------------------------------------------------------- rail
 
 // Same measured-capacity trick as cameras.js computeCapacity(), but for
-// CARD_ASPECT cards and a column count the narrow-screen media query can
+// --card-aspect cards and a column count the breakpoints can
 // change. #room-cards is position:fixed, so detect display:none (edit mode /
 // room focus) by rendered size and keep the last good value.
 function computeCapacity() {
   const panel = $('room-cards');
   if (panel.offsetWidth === 0) return;
+  const gap = gapOf(panel);
   const cols = getComputedStyle(panel).gridTemplateColumns.split(' ').length;
-  const tileH = ((panel.clientWidth - (cols - 1) * GAP) / cols) / CARD_ASPECT;
-  const rows = Math.max(1, Math.floor((panel.clientHeight + GAP) / (tileH + GAP)));
+  const tileH = ((panel.clientWidth - (cols - 1) * gap) / cols) / cardAspect();
+  const rows = Math.max(1, Math.floor((panel.clientHeight + gap) / (tileH + gap)));
   capacity = rows * cols;
 }
 
@@ -237,7 +248,14 @@ function layoutAllRoomsGrid() {
   const grid = $('rooms-all-grid');
   const n = roomsFlat.length;
   if (!n) return;
-  const HEAD_H = 22; // .floor-heading row height incl. its top margin
+  // Measure a real heading rather than trusting a constant — renderAllRooms
+  // appends them before calling this, so one exists.
+  const headEl = grid.querySelector('.floor-heading');
+  const HEAD_H = headEl
+    ? headEl.offsetHeight + parseFloat(getComputedStyle(headEl).marginTop)
+    : tokenPx('--head-h');
+  const GAP = gapOf(grid);
+  const ASPECT = cardAspect();
   const style = getComputedStyle(grid);
   const W = grid.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
   const H = grid.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
@@ -245,7 +263,7 @@ function layoutAllRoomsGrid() {
   for (let cols = 1; cols <= n; cols++) {
     const cardRows = floorsData.reduce((s, f) => s + Math.ceil(f.rooms.length / cols), 0);
     const w = (W - (cols - 1) * GAP) / cols;
-    const h = w / CARD_ASPECT;
+    const h = w / ASPECT;
     const rowCount = cardRows + floorsData.length;
     const total = cardRows * h + floorsData.length * HEAD_H + (rowCount - 1) * GAP;
     if (w > best.w && total <= H) best = { cols, w };
@@ -334,20 +352,19 @@ export function initRoomCards() {
     }
   });
 
-  let resizeTimer = 0;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      computeCapacity();
-      renderRail();
-      if (allOpen) layoutAllRoomsGrid();
-    }, 150);
-  });
-
-  // leaving edit mode re-shows the rail — re-measure in case the window
-  // changed size while it was display:none (resize can't measure it then)
-  window.addEventListener('appModeChanged', () => {
+  // One layout bus (stage.js) instead of a private debounce: it coalesces
+  // window resize, orientationchange, visualViewport and the ResizeObserver on
+  // the stage probe, so a rotation and a breakpoint flip arrive identically.
+  onLayoutChanged(() => {
     computeCapacity();
     renderRail();
+    if (allOpen) layoutAllRoomsGrid();
   });
+
+  // ...and observe the rail itself. A display:none rail measures 0, so
+  // computeCapacity() bails and keeps the last value; window.resize fires
+  // while it is hidden (edit mode, room focus, the other rail tab) and is then
+  // never repeated, which is what left a capacity computed for the old
+  // orientation after rotating. This fires the moment it comes back at size.
+  new ResizeObserver(bumpLayout).observe($('room-cards'));
 }

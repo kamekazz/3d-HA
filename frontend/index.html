@@ -20,6 +20,11 @@
 <body>
   <div id="scene-container"></div>
 
+  <!-- The unobstructed rect the 3D house is framed into. Invisible; stage.js
+       measures it and scene.js frames into it, so moving the --stage-* tokens
+       re-frames the 3D for free and no JS ever knows the chrome layout. -->
+  <div id="stage-rect" aria-hidden="true"></div>
+
   <header id="topbar">
     <h1>3D HA House</h1>
     <span id="conn-status" class="status-dot" title="Realtime status"></span>
@@ -56,12 +61,9 @@
        room-card panel. -->
   <button id="home-btn" class="glass view-chrome" type="button" title="Whole house view">
     <span class="hb-icon">⌂</span>
-    <span class="hb-text">Home<span class="hb-sub" id="hb-sub">all systems</span></span>
+    <span class="hb-text">Home<span class="hb-sub" id="hb-sub">connecting…</span></span>
   </button>
 
-  <!-- Left column: a 2-column grid of idling camera snapshots (cameras.js
-       fills it; sized to fit with no scrolling — this is a touch tablet). -->
-  <aside id="left-dash" class="view-chrome hidden"></aside>
 
   <!-- Full-screen all-cameras grid, opened from the grid's "All cameras"
        tile. Sits under the live view so tapping a camera layers on top. -->
@@ -87,9 +89,21 @@
     </div>
   </div>
 
-  <!-- Right column: a 2-column grid of room cards (roomcards.js fills it;
-       sized to fit with no scrolling — this is a touch tablet). -->
-  <aside id="room-cards" class="view-chrome"></aside>
+  <!-- The one content rail. Rooms and cameras used to be two 380px columns
+       flanking the house, which covered 64% of an iPad Air's width; they now
+       share this single glass panel and only one is visible at a time.
+       siderail.js owns the tabs; cameras.js and roomcards.js are unchanged and
+       still own #left-dash and #room-cards respectively. -->
+  <section id="side-rail" class="glass view-chrome">
+    <div id="sr-tabs" role="tablist" aria-label="Rail contents">
+      <button id="sr-tab-rooms" type="button" role="tab" data-panel="rooms" aria-selected="true" aria-controls="room-cards">Rooms</button>
+      <button id="sr-tab-cams" type="button" role="tab" data-panel="cams" aria-selected="false" aria-controls="left-dash">Cameras</button>
+    </div>
+    <div id="sr-body" data-panel="rooms">
+      <aside id="room-cards" role="tabpanel" aria-labelledby="sr-tab-rooms"></aside>
+      <aside id="left-dash" role="tabpanel" aria-labelledby="sr-tab-cams"></aside>
+    </div>
+  </section>
 
   <!-- Full-screen all-rooms grid, opened from the rail's "All rooms" tile.
        Tile size is computed in roomcards.js so every room fits, no scroll. -->
@@ -101,18 +115,18 @@
     <div id="rooms-all-grid"></div>
   </div>
 
-  <footer id="bottom-bar" class="view-chrome">
-    <div class="glass bb-tile" id="bb-clock">
+  <footer id="bottom-bar" class="glass view-chrome">
+    <div class="bb-tile" id="bb-clock">
       <div class="bb-main">
         <div class="bb-value" id="bb-time">--:--</div>
         <div class="bb-label" id="bb-date">—</div>
       </div>
     </div>
-    <div class="glass bb-tile hidden" id="bb-temp"></div>
-    <div class="glass bb-tile tappable hidden" id="bb-lights"></div>
-    <div class="glass bb-tile hidden" id="bb-security"></div>
-    <div class="glass bb-tile hidden" id="bb-climate"></div>
-    <div class="glass bb-tile tappable hidden" id="bb-calendar"></div>
+    <div class="bb-tile hidden" id="bb-temp"></div>
+    <div class="bb-tile tappable hidden" id="bb-lights"></div>
+    <div class="bb-tile hidden" id="bb-security"></div>
+    <div class="bb-tile hidden" id="bb-climate"></div>
+    <div class="bb-tile tappable hidden" id="bb-calendar"></div>
   </footer>
 
   <!-- Upcoming-events popover, opened by tapping the calendar tile -->

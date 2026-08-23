@@ -7,6 +7,56 @@ does is readable from the files themselves; below is the part the code can't tel
 `shellLoadFailed` and `ui.js` raises a persistent banner — a silently missing house reads as a
 render bug rather than the deploy problem it usually is (see `docs/TROUBLESHOOTING-house-shell.md`).
 
+**The stage, and how the house gets framed** (`frontend/js/stage.js` + `scene.js`): the canvas is
+full-bleed (`#scene-container` is `inset:0`) but chrome covers part of it, so the house is framed
+into the *unobstructed* rect — "the stage" — and that rect is owned by **CSS, not JS**. `#stage-rect`
+is an invisible fixed div inset by the `--stage-*` tokens; `stage.js` measures it with one
+`getBoundingClientRect()`, which resolves `calc()`, `env()`, every media query, the orientation and
+any `body.*` override at once (`getComputedStyle` on an unregistered custom property returns its
+token *stream*, the literal `calc(...)` string, so it cannot do this). Move the tokens — including
+the `--stage-spill` knob, which is how far the house may tuck behind 80%-opaque glass — and the 3D
+re-frames itself. `visibility:hidden`, never `display:none`: the latter would not fire the
+`ResizeObserver` that drives everything.
+
+`stage.js` is also the app's **single layout bus**. `onStageChanged` (camera) fires before
+`onLayoutChanged` (panel capacity); it coalesces on a double `requestAnimationFrame`, because iOS
+reports a stale `innerWidth/innerHeight` for one frame after a rotation. It replaces the three
+private 150 ms debounces `roomcards.js`/`cameras.js` used to keep, and it listens to `visualViewport`
+too — the only signal when Safari's URL bar collapses or the keyboard opens. Each rail additionally
+has its own `ResizeObserver`: a `display:none` rail measures 0 so `computeCapacity()` bails, and a
+`window.resize` that fired while it was hidden is never repeated — which is exactly why rotating
+during room focus or edit mode used to leave a capacity computed for the old orientation.
+
+`scene.js applyStage` re-centres the **frustum** on the stage with `camera.setViewOffset`, treating
+the canvas as a window onto a larger virtual frame. `camera.fov`/`camera.aspect` therefore describe
+that **virtual** frame, not the visible one — so nothing may read them to compute a fit. Everything
+routes through `fitDistance(radius, pad)` instead (`focus.js` ×2, `floorview.js`); reading fov
+directly yields a larger fit, a shorter distance, and a cropped subject. `snapshots.js` is exempt and
+must stay so: `snapCam` is a separate camera that never gets the offset. Two consequences worth
+knowing: `controls.panSpeed = H/fullH` cancels the fov inflation for OrbitControls' pan, and picking
+needs no change *only because* the canvas is `inset:0` (`Raycaster.setFromCamera` unprojects through
+`projectionMatrixInverse`, which includes the offset).
+
+The whole-house shot (`scene.js frameAll`, which the Home button also re-runs) is **solved, not
+estimated**. A bounding sphere is badly wrong for a house, and because perspective is not affine,
+aiming at a box's 3D centre does not centre its silhouette. `solveHousePose` bisects the distance
+around an inner `aimFor(dist)` loop that slides the aim point until the projected outline sits on the
+stage centre — alternating a full rescale with a full recentre in one loop *oscillates* (measured:
+111 → 80 → 92 → 78 ft, never settling), which is why it is two nested solves and not one. It frames
+`getBuildingBox()` (the shell's mass) when a shell is loaded, because House mode hides every room
+mesh and the shell is all you see. `Vector3.project()` reads `matrixWorldInverse`, which only
+`renderer.render()` refreshes — the solve must invert it by hand each pass.
+
+**The one content rail** (`frontend/js/siderail.js`): rooms and cameras used to be two 380px columns
+flanking the house, covering 64% of an iPad Air's width with 19 photo tiles at equal weight. They now
+share one glass rail and only one grid shows at a time. `cameras.js` and `roomcards.js` are otherwise
+unchanged and still own `#left-dash`/`#room-cards`. Visibility is a `data-panel` attribute on
+`#sr-body`, not `.hidden` on the grids, because `cameras.js` already writes a `no-cams` class on the
+rail for "HA has no cameras" and two writers of `.hidden` would fight; CSS resolves both. In portrait
+the same rail lies down as a bottom filmstrip (`--rail-h`, `auto-fill` columns) — a side rail there
+leaves the house a 480px stage and pushes the framing to ~209 ft. Room-card brightness is the rail's
+hierarchy: `.lit` (lights on) keeps the photo at full brightness, everything else recedes.
+
 **Dynamic lighting** follows Home Assistant's sun and weather — frontend-only, no backend changes.
 `frontend/js/daylight.js` reads `sun.sun` (`elevation`/`azimuth`) and the first `weather.*` entity
 (via `state.js findEntities`), maps elevation through a keyframe ramp (night/dusk/golden/day) and

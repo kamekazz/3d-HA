@@ -13,11 +13,17 @@
 import { findEntities, friendlyName, onStateApplied } from './state.js';
 import { createCameraView } from './controls.js';
 import { showBanner } from './ui.js';
+import { onLayoutChanged, bumpLayout } from './stage.js';
+import { tokenNum } from './layout.js';
 
 const WORKERS = 2;        // concurrent snapshot fetches
 const REQUEST_GAP_MS = 200;
 const CYCLE_REST_MS = 5000; // pause between full refresh sweeps
-const GRID_GAP = 10;        // must match #left-dash / #cam-all-grid gap
+// Gap and aspect are read back from what the browser laid out, not hand-kept
+// copies of the CSS: the gap off the element's used value, the aspect off the
+// token .cam-tile itself uses.
+const gapOf = (el) => parseFloat(getComputedStyle(el).columnGap) || 0;
+const camAspect = () => tokenNum('--cam-aspect') || (16 / 9);
 const FAVS_KEY = '3dha.favCameras';
 
 let gridTiles = [];    // {id, tile, img, broken} — left-column grid
@@ -153,15 +159,20 @@ function makeCameraTile(id) {
 function computeCapacity() {
   const dash = $('left-dash');
   if (!dashVisible(dash)) return; // display:none measures 0 — keep last value
-  const tileH = ((dash.clientWidth - GRID_GAP) / 2) * (9 / 16);
-  const rows = Math.max(1, Math.floor((dash.clientHeight + GRID_GAP) / (tileH + GRID_GAP)));
-  capacity = rows * 2;
+  const gap = gapOf(dash);
+  const cols = getComputedStyle(dash).gridTemplateColumns.split(' ').length;
+  const tileH = ((dash.clientWidth - (cols - 1) * gap) / cols) / camAspect();
+  const rows = Math.max(1, Math.floor((dash.clientHeight + gap) / (tileH + gap)));
+  capacity = rows * cols;
 }
 
 function renderGrid() {
   const dash = $('left-dash');
   const all = orderedCameras();
-  dash.classList.toggle('hidden', !all.length);
+  // "HA has no cameras" is a property of the RAIL (it hides the switcher and
+  // pins it to Rooms), not of this grid — siderail.js owns which grid is
+  // displayed, and a .hidden set here would fight it.
+  $('side-rail')?.classList.toggle('no-cams', !all.length);
   if (!all.length) return;
   if (!capacity) computeCapacity();
 
@@ -197,20 +208,22 @@ function renderGrid() {
 // ---------------------------------------------------------------- all view
 
 // Pick the column count that maximizes tile size while every camera fits the
-// stage with no scrolling (16:9 tiles, GRID_GAP gaps).
+// stage with no scrolling.
 function layoutAllGrid() {
   const grid = $('cam-all-grid');
   const n = allTiles.length;
   if (!n) return;
+  const gap = gapOf(grid);
+  const aspect = camAspect();
   const style = getComputedStyle(grid);
   const W = grid.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
   const H = grid.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
   let best = { cols: Math.ceil(Math.sqrt(n)), w: 0 };
   for (let cols = 1; cols <= n; cols++) {
     const rows = Math.ceil(n / cols);
-    const w = (W - (cols - 1) * GRID_GAP) / cols;
-    const h = w * (9 / 16);
-    if (w > best.w && rows * h + (rows - 1) * GRID_GAP <= H) best = { cols, w };
+    const w = (W - (cols - 1) * gap) / cols;
+    const h = w / aspect;
+    if (w > best.w && rows * h + (rows - 1) * gap <= H) best = { cols, w };
   }
   grid.style.gridTemplateColumns = `repeat(${best.cols}, ${Math.floor(best.w)}px)`;
 }
@@ -329,15 +342,15 @@ export function initCameras() {
     if (allOpen) renderAll();
   };
 
-  let resizeTimer = 0;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      computeCapacity();
-      renderGrid();
-      if (allOpen) layoutAllGrid();
-    }, 150);
+  // One layout bus (stage.js) instead of a private debounce — see roomcards.js
+  onLayoutChanged(() => {
+    computeCapacity();
+    renderGrid();
+    if (allOpen) layoutAllGrid();
   });
+  // ...and the grid itself, so it re-measures when it comes back from
+  // display:none (the other rail tab, edit mode, room focus).
+  new ResizeObserver(bumpLayout).observe($('left-dash'));
 
   onStateApplied((entityId) => {
     if (entityId === null || entityId.startsWith('camera.')) {

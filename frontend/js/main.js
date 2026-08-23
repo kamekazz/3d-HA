@@ -1,8 +1,10 @@
 // Bootstrap: load data, build the 3D scene, wire UI + realtime.
 import * as THREE from 'three';
 import { api } from './api.js';
-import { initScene, scene, camera, renderer, applyEnvIntensity } from './scene.js';
-import { buildHouse, roomMeshes, stairGroups, paintRoomEmissive } from './house.js';
+import { initScene, scene, camera, renderer, applyEnvIntensity, refitStage, wasMultiTouch } from './scene.js';
+import { initStage } from './stage.js';
+import { initSideRail } from './siderail.js';
+import { buildHouse, roomMeshes, stairGroups, paintRoomEmissive, getLevel } from './house.js';
 import { buildDevices, markers } from './devices.js';
 import { buildObjects, objects3d } from './objects.js';
 import { setAllStates, applyState, friendlyName, stateLabel, styleMarker } from './state.js';
@@ -99,6 +101,11 @@ function setupPicking() {
   }
 
   function pick(event) {
+    // NDC off the window, not the canvas rect — correct only because
+    // #scene-container is position:fixed; inset:0. It stays correct under
+    // scene.js's view offset, since setFromCamera unprojects through
+    // projectionMatrixInverse, which includes it. If the canvas ever gets
+    // inset, switch to renderer.domElement.getBoundingClientRect().
     pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
     pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
@@ -228,8 +235,10 @@ function setupPicking() {
   renderer.domElement.addEventListener('pointerup', (e) => {
     if (!downAt) return;
     const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
+    const pinched = wasMultiTouch();
     downAt = null;
     if (moved > 5) return; // it was an orbit drag, not a click
+    if (pinched) return;   // a pinch whose fingers barely moved is not a tap
     const obj = pick(e);
 
     const now = performance.now();
@@ -275,6 +284,18 @@ function setupPicking() {
 // ------------------------------------------------------------- boot
 
 async function main() {
+  // First: the stage probe is what scene.js frames the house into, and
+  // initScene reads it during setup.
+  initStage();
+  initSideRail();
+  // House view's own re-fit. focus.js and floorview.js claim the stageChanged
+  // event when they own the camera; this is the remaining case. Registered
+  // before theirs, but it self-excludes on the same two conditions.
+  window.addEventListener('stageChanged', () => {
+    if (document.body.classList.contains('room-focused')) return;
+    if (getLevel() !== 'all') return;
+    refitStage();
+  });
   initScene(document.getElementById('scene-container'));
   initDaylight();
   initEnvironment();

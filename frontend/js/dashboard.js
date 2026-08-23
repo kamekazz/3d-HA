@@ -3,6 +3,7 @@
 // returns to the whole-house view. (The left column is the camera grid,
 // owned by cameras.js.) Every tile hides itself when HA has no matching
 // entities; everything updates live off state.js's onStateApplied.
+import { frameAll } from './scene.js';
 import { api } from './api.js';
 import { setLevel, getLevel } from './house.js';
 import { exitFocus, onFocusChanged } from './focus.js';
@@ -266,8 +267,13 @@ export function initDashboard() {
   setInterval(renderClock, 15_000);
 
   $('home-btn').onclick = () => {
-    exitFocus();
-    if (getLevel() !== 'all') setLevel('all');
+    exitFocus();                                  // queues a flyTo to its saved pose
+    if (getLevel() !== 'all') setLevel('all');    // floorview queues one to ITS saved pose
+    // frameAll LAST: scene.js's poseGoal is a single slot, so the last flyTo
+    // wins. Same override floorview.js already documents. Order also matters
+    // for the zoom cap — setLevel('all') restores floorview's captured house
+    // cap, and frameAll then installs its own.
+    frameAll({ animate: true });
   };
   $('bb-lights').onclick = allLightsOff;
 

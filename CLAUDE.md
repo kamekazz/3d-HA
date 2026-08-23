@@ -176,7 +176,15 @@ automatically whenever you work under `frontend/`.
   Three `linear-gradient`s survive as functional legibility scrims over photography
   (`.cam-label`, `.rc-body`, `.tile.camera .t-name`) — they are commented as such; decorative
   gradients are banned. `color-scheme: dark` themes the native controls (scrollbars, file input,
-  pickers). Out of scope and still on the old palette: the **planner's canvas drawing colours**
+  pickers). **Layout is tokenised too**: `--gutter`/`--gap`/`--rail-w`/`--dock-h`/`--sa-*`/
+  `--stage-*` at `:root` replaced ~30 hard-coded offsets, and `roomcards.js`/`cameras.js` read the
+  gaps and aspects back out of what the browser actually laid out
+  (`getComputedStyle(el).columnGap`, `layout.js tokenPx`) rather than keeping private copies.
+  Breakpoints key off **width**, not orientation — an iPad Air in portrait and an 11" Pro in
+  landscape are both ~820-834px and want the same treatment; orientation moves only the rail's
+  axis. Every fixed element folds `env(safe-area-inset-*)` into its own offset, since `<body>` is
+  not the containing block for `position:fixed`. See `frontend/CLAUDE.md` for the `--stage-*`
+  contract, which is what the 3D camera frames into. Out of scope and still on the old palette: the **planner's canvas drawing colours**
   (`planner.js` `ctx.fillStyle`, ~29 literals) and `floorview.js`'s blue studio backdrop —
   `snapshots.js`'s twin backdrop *was* reneutralised because it is deliberately matched to
   `.room-card`. The 3D scene is lit from HA state, not CSS, and this spec never governed it.

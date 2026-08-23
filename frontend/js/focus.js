@@ -9,7 +9,7 @@
 // at a bare 1 ft slab on a studio backdrop. Tapping the front of the house has
 // to show the front of the house. See enterOutdoorFocus below.
 import * as THREE from 'three';
-import { camera, controls, flyTo, getViewPose, MIN_ZOOM, MAX_ZOOM } from './scene.js';
+import { camera, controls, flyTo, getViewPose, fitDistance, MIN_ZOOM, MAX_ZOOM } from './scene.js';
 import { roomMeshes, stairGroups, setLevel, getLevel, setRoomOpacity, getBuildingBox,
          isOutdoorRoom } from './house.js';
 import { setFocusMarkerScope } from './devices.js';
@@ -102,11 +102,11 @@ function outdoorPose(mesh) {
 
   const fit = yard.clone().union(built);
   const size = fit.getSize(new THREE.Vector3());
-  const vFov = THREE.MathUtils.degToRad(camera.fov);
-  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+  // fitDistance, not min(vFov,hFov): with a view offset in play camera.fov and
+  // camera.aspect describe the VIRTUAL frame, not the visible one, so reading
+  // them here would overestimate the fit and crop the yard.
   const dist = THREE.MathUtils.clamp(
-    0.85 * (0.5 * size.length()) / Math.sin(Math.min(vFov, hFov) / 2),
-    MIN_ZOOM, MAX_ZOOM);
+    fitDistance(0.5 * size.length(), 0.85), MIN_ZOOM, MAX_ZOOM);
 
   const target = yc.clone().lerp(bc, 0.4);
   // Aim a bit above the eaves — high enough that the roofline stays in frame,
@@ -125,6 +125,24 @@ function outdoorPose(mesh) {
                                 target.z + away.z * h),
     target,
   };
+}
+
+// The room's own framing pose. Split out of enterFocus so a layout change
+// (rotation, breakpoint flip) can re-run it without re-entering focus.
+function framePose(mesh) {
+  const box = new THREE.Box3().setFromObject(mesh);
+  const center = box.getCenter(new THREE.Vector3());
+  const radius = 0.5 * box.getSize(new THREE.Vector3()).length();
+  // fitDistance, not min(vFov,hFov): camera.fov/aspect describe the virtual
+  // frame once scene.js has a view offset in play. See scene.js applyStage.
+  const dist = THREE.MathUtils.clamp(fitDistance(radius, 1.15), MIN_ZOOM, MAX_ZOOM);
+  // keep the user's current azimuth, come down to a ~30° elevation
+  const az = Math.atan2(camera.position.x - center.x, camera.position.z - center.z);
+  const polar = 1.05; // angle from vertical
+  flyTo(new THREE.Vector3(
+    center.x + dist * Math.sin(polar) * Math.sin(az),
+    center.y + dist * Math.cos(polar),
+    center.z + dist * Math.sin(polar) * Math.cos(az)), center);
 }
 
 // Hide nothing, drop no level, fly to the street. The only thing that narrows
@@ -197,22 +215,7 @@ export function enterFocus(roomId) {
   // frame the room: distance that fits its bounding sphere in the tighter FOV.
   // Box3 works for both BoxGeometry (rect) and ExtrudeGeometry (polygon)
   // rooms and is world-space, so the floor's Y offset is already included.
-  const box = new THREE.Box3().setFromObject(mesh);
-  const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3());
-  const radius = 0.5 * size.length();
-  const vFov = THREE.MathUtils.degToRad(camera.fov);
-  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
-  const fit = Math.min(vFov, hFov);
-  const dist = THREE.MathUtils.clamp(
-    1.15 * radius / Math.sin(fit / 2), MIN_ZOOM, MAX_ZOOM);
-  // keep the user's current azimuth, come down to a ~30° elevation
-  const az = Math.atan2(camera.position.x - center.x, camera.position.z - center.z);
-  const polar = 1.05; // angle from vertical
-  flyTo(new THREE.Vector3(
-    center.x + dist * Math.sin(polar) * Math.sin(az),
-    center.y + dist * Math.cos(polar),
-    center.z + dist * Math.sin(polar) * Math.cos(az)), center);
+  framePose(mesh);
 
   controls.enablePan = false;
   const chip = document.getElementById('focus-exit');
@@ -243,6 +246,21 @@ export function exitFocus({ flyBack = true } = {}) {
 }
 
 export function initFocus() {
+  // A layout change (rotation, breakpoint flip, rail switch) moves the stage
+  // rect, so a focused room has to be re-fitted into the new one. framePose
+  // keeps the user's current azimuth, so this reads as a re-frame, not a jump.
+  window.addEventListener('stageChanged', () => {
+    if (focusedRoomId === null) return;
+    const mesh = roomMeshes.get(focusedRoomId);
+    if (!mesh) return;
+    if (isOutdoorRoom(mesh.userData.roomName)) {
+      const pose = outdoorPose();
+      if (pose) flyTo(pose.position, pose.target);
+    } else {
+      framePose(mesh);
+    }
+  });
+
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') exitFocus();
   });

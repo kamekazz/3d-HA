@@ -58,6 +58,58 @@
      must fail loudly rather than quietly keep the old look. */
   --shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px 0;
 
+  /* ── Layout ─────────────────────────────────────────────────────────────
+     Every chrome offset in this file used to be a literal (14 / 18 / 20 / 22 /
+     60 / 82 / 100 / 240 / 330 / 380), and roomcards.js + cameras.js each kept a
+     private copy of the gaps. These are now the single source of truth for
+     both: the CSS lays out with them, and layout.js reads them back through a
+     probe element, so the JS capacity math can never drift from what the
+     browser actually rendered.
+
+     Safe area: every fixed element folds env(safe-area-inset-*) into its OWN
+     offset rather than padding <body>, because <body> is not the containing
+     block for position:fixed. env() is 0 everywhere else, so one expression is
+     correct on desktop too. index.html already ships viewport-fit=cover. */
+  --sa-t: env(safe-area-inset-top, 0px);
+  --sa-r: env(safe-area-inset-right, 0px);
+  --sa-b: env(safe-area-inset-bottom, 0px);
+  --sa-l: env(safe-area-inset-left, 0px);
+
+  --gutter: 20px;        /* chrome <-> screen edge */
+  --gap: 10px;           /* between tiles in a rail — roomcards GAP / cameras GRID_GAP */
+  --rail-w: 340px;       /* the one side rail's width */
+  --rail-cols: 2;        /* tiles per rail row; the width ladder drops it to 1 */
+  --tile-min: 140px;     /* narrowest a rail tile may get before dropping a column */
+  --card-aspect: 1.6;    /* .room-card aspect-ratio — roomcards.js CARD_ASPECT */
+  --cam-aspect: 1.7778;  /* .cam-tile aspect-ratio  — cameras.js 16/9 */
+  --head-h: 22px;        /* .floor-heading row incl. margin — roomcards.js HEAD_H */
+
+  --home-h: 63px;        /* #home-btn rendered height */
+  --tabs-h: 44px;        /* #sr-tabs segmented control */
+  --dock-h: 66px;        /* #bottom-bar tile height */
+  --dock-gap: 18px;      /* dock <-> rail bottom */
+
+  /* derived chrome offsets — 18 / 82 / 100 / 16 all come from here now */
+  --chrome-top:   calc(var(--sa-t) + 18px);
+  --rail-top:     calc(var(--chrome-top) + var(--home-h) + 1px);
+  --rail-bottom:  calc(var(--sa-b) + var(--gutter) + var(--dock-h) + var(--dock-gap));
+  --dock-bottom:  calc(var(--sa-b) + 16px);
+
+  /* ── THE STAGE ──────────────────────────────────────────────────────────
+     The rect the 3D house is framed into (#stage-rect, measured by stage.js).
+     Whatever the chrome layout becomes, move these four and the 3D re-frames
+     itself — no JS ever re-derives the layout.
+     --stage-spill is the one knob: the rail is 80%-opaque glass over a live
+     render, so the house SHOULD tuck partly behind it. 0 = never overlaps the
+     chrome, 1 = ignores it entirely. */
+  --stage-spill: 0.35;
+  --stage-top:    0px;
+  --stage-right:  calc(var(--sa-r) + var(--gutter) + var(--rail-w) * var(--stage-spill));
+  --stage-bottom: calc(var(--dock-bottom) + var(--dock-h) * var(--stage-spill));
+  --stage-left:   calc(var(--sa-l) + var(--gutter));
+
+  --hit-min: 44px;       /* minimum comfortable touch target */
+
   /* native chrome (scrollbars, file input, date/colour pickers) follows */
   color-scheme: dark;
 }
@@ -93,11 +145,24 @@ html, body { overscroll-behavior: none; }
 button, .cam-tile, .room-card, .bb-tile.tappable, .tswitch .knob,
 .tile.tappable, .chip { touch-action: manipulation; }
 button, .cam-tile, .room-card, .bb-tile { -webkit-tap-highlight-color: transparent; }
-#room-cards, #left-dash, #bottom-bar, #home-btn, #rooms-all, #cam-all {
+#side-rail, #bottom-bar, #home-btn, #rooms-all, #cam-all {
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
 
 #scene-container { position: fixed; inset: 0; }
+
+/* The unobstructed rect the 3D house is framed into. Invisible but laid out,
+   so ONE getBoundingClientRect() in stage.js resolves calc(), env(), every
+   media query, the live orientation and any body-state override at once —
+   getComputedStyle on --stage-left cannot, because an unregistered custom
+   property returns its token stream (the literal "calc(...)" string).
+   visibility:hidden, not display:none: display:none would not fire the
+   ResizeObserver that drives the re-framing. */
+#stage-rect {
+  position: fixed; visibility: hidden; pointer-events: none; z-index: -1;
+  top: var(--stage-top); right: var(--stage-right);
+  bottom: var(--stage-bottom); left: var(--stage-left);
+}
 
 .hidden { display: none !important; }
 .muted { color: var(--text-dim); font-size: 14px; letter-spacing: -0.224px; }
@@ -111,6 +176,13 @@ button, .cam-tile, .room-card, .bb-tile { -webkit-tap-highlight-color: transpare
 }
 #topbar h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.374px; }
 #topbar .spacer { flex: 1; }
+/* Nine edit buttons do not fit an iPad's 1180px topbar. Flex was shrinking
+   them until the labels wrapped to two lines and spilled out of the 48px bar
+   (and the h1 broke across three). Never wrap or shrink; scroll instead. */
+#topbar > * { flex: none; }
+#topbar h1, #topbar button, #topbar #conn-label { white-space: nowrap; }
+#topbar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+#topbar::-webkit-scrollbar { display: none; }
 
 /* View-only page ("/"): no topbar at all — panels reclaim the space it left
    at the top. Editing lives at "/edit". */
@@ -122,14 +194,31 @@ body.view-only #room-panel { top: 14px; }
    ambient columns yield to the focus panel while a room is focused. */
 body.app-edit .view-chrome { display: none !important; }
 
-/* previewing view mode on /edit keeps the topbar — clear it */
-body:not(.view-only) #home-btn { top: 58px; }
-body:not(.view-only) #left-dash { top: 122px; }
-body:not(.view-only) #room-cards { top: 122px; }
+/* previewing view mode on /edit keeps the topbar — clear it. One token does
+   what three per-element overrides used to, since --rail-top derives from it. */
+body:not(.view-only) { --chrome-top: calc(var(--sa-t) + 58px); }
 body.room-focused #home-btn,
-body.room-focused #left-dash,
-body.room-focused #bottom-bar,
-body.room-focused #room-cards { display: none; }
+body.room-focused #side-rail,
+body.room-focused #bottom-bar { display: none; }
+
+/* Stage overrides per body state. Room focus already display:none's all the
+   ambient chrome, so handing the canvas (minus the room panel) to the 3D makes
+   focus.js's fit follow for free, with no branch in the JS. */
+body.room-focused {
+  --stage-left: calc(var(--sa-l) + var(--gutter) + min(30vw, 460px) + var(--gutter));
+  --stage-right: calc(var(--sa-r) + var(--gutter));
+  --stage-bottom: calc(var(--sa-b) + 80px);   /* clears #focus-exit */
+}
+/* Edit mode hides all .view-chrome, so the stage is the whole canvas. The
+   device/object panels are transient — reserving their 330px permanently left
+   the house sitting off to one side whenever no panel was open, and following
+   them would yank the camera on every selection. They overlay instead. */
+body.app-edit {
+  --stage-left: calc(var(--sa-l) + var(--gutter));
+  --stage-right: calc(var(--sa-r) + var(--gutter));
+  --stage-top: calc(var(--sa-t) + 48px);   /* the topbar */
+  --stage-bottom: calc(var(--sa-b) + var(--gutter));
+}
 
 .status-dot {
   width: 10px; height: 10px; border-radius: 50%;
@@ -466,7 +555,7 @@ input[type="file"]::file-selector-button {
 
 /* room-focus exit chip */
 #focus-exit {
-  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: calc(var(--sa-b) + 22px); left: 50%; transform: translateX(-50%);
   z-index: 25; background: var(--glass-bg); color: var(--text);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -569,8 +658,11 @@ input[type="file"]::file-selector-button {
 
 /* Home button — top-left, above the left column */
 #home-btn {
-  position: fixed; top: 18px; left: 20px; z-index: 24;
-  width: 240px; padding: 12px 18px;
+  position: fixed; top: var(--chrome-top); left: calc(var(--sa-l) + var(--gutter));
+  z-index: 24;
+  /* sized to its content, not a fixed 240px: the left side is now clear and a
+     half-empty box reads as a placeholder */
+  min-width: 200px; padding: 12px 18px;
   display: flex; align-items: center; gap: 10px;
   background: var(--glass-bg); color: var(--text);
   font-size: 17px; font-weight: 600; letter-spacing: -0.374px; text-align: left;
@@ -585,19 +677,63 @@ input[type="file"]::file-selector-button {
   justify-content: center; font-size: 17px; flex: none;
 }
 #home-btn .hb-sub { display: block; font-size: 12px; font-weight: 400; letter-spacing: -0.12px; color: var(--text-dim); }
+/* readout, not an affordance — the accent stays reserved for taps */
+#home-btn .hb-sub.is-warn { color: var(--warn); }
 
-/* Left column: 2-column camera grid — capacity is computed in cameras.js so
-   it never scrolls (wall tablet, touch only); overflow:hidden is the backstop */
-#left-dash {
-  position: fixed; top: 82px; left: 20px; bottom: 100px; width: 380px;
-  z-index: 22; display: grid; grid-template-columns: repeat(2, 1fr);
-  gap: 10px; grid-auto-rows: max-content; align-content: start;
+/* The one content rail: a single glass panel holding the room grid and the
+   camera grid, one visible at a time (siderail.js). These used to be two
+   opaque 380px columns flanking the house — 19 photo tiles at equal weight
+   over 64% of an iPad Air's width. One panel is one object, and the tiles
+   inside it read as its contents rather than as chrome of their own. */
+#side-rail {
+  position: fixed; z-index: 22;
+  top: var(--rail-top); right: calc(var(--sa-r) + var(--gutter));
+  bottom: var(--rail-bottom); width: var(--rail-w);
+  padding: var(--gap);
+  display: flex; flex-direction: column; gap: var(--gap);
+}
+/* segmented control. Neutral on purpose — the accent is reserved for the
+   toggles inside the cards, and a filled segment would outrank them. */
+#sr-tabs {
+  flex: none; height: var(--tabs-h); display: grid;
+  grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px;
+  background: var(--surface-1); border-radius: var(--radius-sm);
+}
+#sr-tabs button {
+  padding: 0; background: transparent; border-radius: var(--radius-sm);
+  color: var(--text-dim); font-size: 14px; font-weight: 600; letter-spacing: -0.224px;
+}
+#sr-tabs button[aria-selected="true"] { background: var(--card-bg); color: var(--text); }
+@media (hover: hover) {
+  #sr-tabs button:not([aria-selected="true"]):hover { color: var(--text-faint); }
+}
+#sr-body { position: relative; flex: 1; min-height: 0; }
+/* which grid is showing (siderail.js sets data-panel) */
+#sr-body[data-panel="rooms"] #left-dash,
+#sr-body[data-panel="cams"] #room-cards { display: none; }
+/* HA has no cameras at all: drop the switcher and pin the rail to rooms.
+   Same specificity as the pair above, so source order decides — keep it here. */
+#side-rail.no-cams #sr-tabs { display: none; }
+#side-rail.no-cams #left-dash { display: none; }
+#side-rail.no-cams #room-cards { display: grid; }
+
+/* Both grids fill #sr-body. Capacity is computed in cameras.js / roomcards.js
+   so neither ever scrolls (wall tablet, touch only); overflow:hidden is the
+   backstop. */
+#left-dash, #room-cards {
+  position: absolute; inset: 0;
+  display: grid; grid-template-columns: repeat(var(--rail-cols), 1fr);
+  gap: var(--gap); grid-auto-rows: max-content; align-content: start;
   overflow: hidden;
 }
 
 .cam-tile {
-  position: relative; border-radius: var(--radius-lg); overflow: hidden;
-  background: var(--bg); border: 1px solid var(--glass-border); cursor: pointer;
+  /* aspect-ratio lives on the TILE, not just on its <img>: the tile is
+     border-box, so an img-only aspect made the tile 2px taller than
+     cameras.js's capacity math assumed, and five rows accumulated 10px. */
+  position: relative; aspect-ratio: var(--cam-aspect);
+  border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--bg); cursor: pointer;
   -webkit-tap-highlight-color: transparent; transition: transform 0.12s;
 }
 .cam-tile:active { transform: scale(0.95); }
@@ -610,7 +746,7 @@ input[type="file"]::file-selector-button {
 .cam-tile.broken > img { opacity: 0.35; }
 .cam-tile > img,
 .cam-tile .cam-view img {
-  position: relative; display: block; width: 100%; aspect-ratio: 16 / 9;
+  position: absolute; inset: 0; display: block; width: 100%; height: 100%;
   object-fit: cover; min-height: 0; border: 0; border-radius: 0;
 }
 .cam-label {
@@ -650,11 +786,14 @@ input[type="file"]::file-selector-button {
   display: flex; flex-direction: column;
 }
 #cam-all.hidden { display: none; }
-#cam-all-head { display: flex; align-items: center; padding: 14px 20px; flex: none; }
+#cam-all-head {
+  display: flex; align-items: center; flex: none;
+  padding: calc(14px + var(--sa-t)) calc(20px + var(--sa-r)) 14px calc(20px + var(--sa-l));
+}
 #cam-all-head h2 { flex: 1; font-size: 21px; font-weight: 600; letter-spacing: 0.231px; }
 #cam-all-grid {
   flex: 1; min-height: 0; padding: 0 20px 20px;
-  display: grid; gap: 10px;
+  display: grid; gap: var(--gap);
   align-content: center; justify-content: center;
 }
 
@@ -701,28 +840,29 @@ input[type="file"]::file-selector-button {
   transform: translateY(-50%) scale(0.95);
 }
 
-/* Right column: 2-column room-card grid — capacity is computed in
-   roomcards.js so it never scrolls (wall tablet, touch only); overflow:hidden
-   is the backstop. Mirrors #left-dash for a symmetric frame. */
-#room-cards {
-  position: fixed; top: 82px; right: 20px; bottom: 100px; width: 380px;
-  z-index: 22; display: grid; grid-template-columns: repeat(2, 1fr);
-  gap: 10px; grid-auto-rows: max-content; align-content: start;
-  overflow: hidden;
-}
 .floor-heading {
-  /* height budget: must stay <= roomcards.js HEAD_H (22px) */
+  /* height budget: --head-h, which roomcards.js reads back */
   font-size: 12px; line-height: 1; letter-spacing: -0.12px;
   color: var(--text-dim); font-weight: 600; margin: 8px 4px 0;
 }
 .room-card {
   /* fixed aspect on the card itself: rows line up evenly and roomcards.js's
-     capacity math stays exact (must match CARD_ASPECT there) */
-  position: relative; aspect-ratio: 1.6; cursor: pointer; overflow: hidden;
-  border-radius: var(--radius-lg); background: var(--card-bg);
-  border: 1px solid var(--glass-border);
+     capacity math stays exact (it reads --card-aspect back, so the two
+     cannot drift) */
+  position: relative; aspect-ratio: var(--card-aspect); cursor: pointer;
+  overflow: hidden; border-radius: var(--radius-lg); background: var(--card-bg);
+  border: 1px solid transparent;
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
+/* Hierarchy from state, not decoration: a room whose lights are on is the
+   thing you should read first, so everything else recedes rather than
+   competing. Every card used to shout equally. */
+.room-card .rc-img, .room-card .rc-placeholder {
+  transition: filter 0.25s ease;
+  filter: brightness(0.6) saturate(0.85);
+}
+.room-card.lit { border-color: rgba(41, 151, 255, 0.45); }
+.room-card.lit .rc-img, .room-card.lit .rc-placeholder { filter: none; }
 @media (hover: hover) {
   .room-card:hover { border-color: rgba(255, 255, 255, 0.18); }
 }
@@ -772,11 +912,14 @@ input[type="file"]::file-selector-button {
   display: flex; flex-direction: column;
 }
 #rooms-all.hidden { display: none; }
-#rooms-all-head { display: flex; align-items: center; padding: 14px 20px; flex: none; }
+#rooms-all-head {
+  display: flex; align-items: center; flex: none;
+  padding: calc(14px + var(--sa-t)) calc(20px + var(--sa-r)) 14px calc(20px + var(--sa-l));
+}
 #rooms-all-head h2 { flex: 1; font-size: 21px; font-weight: 600; letter-spacing: 0.231px; }
 #rooms-all-grid {
   flex: 1; min-height: 0; padding: 0 20px 20px;
-  display: grid; gap: 10px;
+  display: grid; gap: var(--gap);
   align-content: center; justify-content: center;
 }
 #rooms-all-grid .floor-heading { grid-column: 1 / -1; align-self: end; }
@@ -803,22 +946,39 @@ input[type="file"]::file-selector-button {
 .tswitch.pending { opacity: 0.55; }
 
 /* Bottom bar: glassy tiles, centered */
+/* Bottom dock. ONE glass bar with hairline dividers, not six floating pills:
+   six pills read as six more objects competing with the rail and the house.
+   The rail ends at --rail-bottom, so nothing can overlap it — the clamp only
+   keeps the dock off the screen edges. */
 #bottom-bar {
-  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-  z-index: 22; display: flex; gap: 10px; align-items: stretch;
-  /* the rails end at bottom:100px, so nothing can overlap the bar — the
-     clamp only keeps it off the screen edges */
-  max-width: calc(100vw - 40px);
+  position: fixed; bottom: var(--dock-bottom); left: 50%; transform: translateX(-50%);
+  z-index: 22; display: flex; align-items: stretch;
+  max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 2 * var(--gutter));
+  /* narrow screens: the cells do not shrink (.bb-main is nowrap), so scroll
+     the dock rather than clipping the last tile off */
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
 }
+#bottom-bar::-webkit-scrollbar { display: none; }
+#bottom-bar .bb-tile { flex: none; }
 #bottom-bar .bb-tile {
   display: flex; align-items: center; gap: 12px; padding: 10px 18px;
   color: var(--text);
+  /* the tiles are cells of one bar now: no glass of their own, just a rule.
+     dashboard.js still hides them individually, so the divider is drawn by
+     :not(.hidden) ~ so a hidden neighbour never leaves a stray edge. */
+  background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: 0; border-radius: 0;
+}
+#bottom-bar .bb-tile:not(.hidden) ~ .bb-tile:not(.hidden) {
+  border-left: 1px solid var(--glass-border);
 }
 #bottom-bar .bb-tile.tappable { cursor: pointer; }
 @media (hover: hover) {
-  #bottom-bar .bb-tile.tappable:hover { background: var(--glass-bg-strong); }
+  #bottom-bar .bb-tile.tappable:hover { background: rgba(255, 255, 255, 0.05); }
 }
-#bottom-bar .bb-tile.tappable:active { background: var(--glass-bg-strong); transform: scale(0.95); }
+/* no scale() here: these are cells of one bar, and scaling a cell tears the
+   hairline it shares with its neighbour */
+#bottom-bar .bb-tile.tappable:active { background: rgba(255, 255, 255, 0.07); }
 .bb-icon {
   width: 34px; height: 34px; border-radius: var(--radius-sm); flex: none;
   display: flex; align-items: center; justify-content: center; font-size: 17px;
@@ -848,7 +1008,7 @@ input[type="file"]::file-selector-button {
 /* upcoming-events popover, anchored above the calendar tile */
 #cal-popover {
   position: fixed; z-index: 24; padding: 10px 12px; min-width: 240px;
-  max-width: 340px; max-height: min(420px, 60vh); overflow-y: auto;
+  max-width: 340px; max-height: min(420px, 60dvh); overflow-y: auto;
   overscroll-behavior: contain; /* finger-scrolling it must not chain away */
 }
 .cal-pop-head {
@@ -863,9 +1023,80 @@ input[type="file"]::file-selector-button {
 .cal-when { flex: none; width: 96px; font-size: 14px; letter-spacing: -0.224px; color: var(--text-dim); }
 .cal-summary { font-size: 17px; letter-spacing: -0.374px; color: var(--text); overflow-wrap: anywhere; }
 
-/* small screens: give the 3D view room — drop the left column first and
-   narrow the right rail to one column (roomcards.js reads the real count) */
-@media (max-width: 980px) {
-  #left-dash { display: none; }
-  #room-cards { width: 200px; grid-template-columns: 1fr; }
+/* ── Breakpoints ───────────────────────────────────────────────────────────
+   Keyed off WIDTH, not orientation. An iPad Air in portrait is 820px and an
+   11" iPad Pro in landscape is 834px — same width, opposite orientation, and
+   they want the same rail treatment, because what actually runs out is the
+   width the 3D stage has left. Orientation moves only the rail's AXIS, below,
+   where the axis really is what changed.
+   Reference widths: 744 mini-P · 820 Air-P · 834 Pro11 either way ·
+   1024 Pro12.9-P · 1133 mini-L · 1180 Air-L · 1194 Pro11-L · 1366 Pro12.9-L.
+
+   This replaces `@media (max-width: 980px) { #left-dash { display: none } }`,
+   which deleted every camera on any iPad held in portrait (744–1024px wide)
+   with no affordance left to reach them. */
+@media (min-width: 1280px) {        /* 12.9" landscape, desktop */
+  :root { --rail-w: 380px; }
+}
+@media (max-width: 1023px) {        /* iPads in portrait, 11" Pro landscape */
+  :root { --rail-w: 300px; --gutter: 14px; }
+}
+/* Narrow LANDSCAPE only — a phone on its side, or an iPad Slide Over pane.
+   There is genuinely no room for a rail beside the house and none below it
+   either. Narrow portrait keeps the bottom dock (below), so rooms and cameras
+   stay reachable; dropping the rail outright there would repeat the bug this
+   replaced. */
+@media (max-width: 767px) and (orientation: landscape) {
+  :root {
+    --rail-w: 0px;
+    --stage-left: calc(var(--sa-l) + var(--gutter));
+    --stage-right: calc(var(--sa-r) + var(--gutter));
+  }
+  #side-rail { display: none; }
+}
+@media (max-width: 767px) {
+  :root { --rail-h: 220px; --tile-min: 120px; }
+}
+
+/* Portrait: the rail lies down. A 300px side rail on an 820px-wide screen
+   leaves the house a 480px stage and pushes the framing distance to ~209ft —
+   a toy in a slot. Docked along the bottom the house gets the full width and
+   frames at ~128ft instead. Same DOM, same JS: only the tokens move. */
+@media (orientation: portrait) and (max-width: 1023px) {
+  :root {
+    --rail-h: 300px;
+    --stage-left: calc(var(--sa-l) + var(--gutter));
+    --stage-right: calc(var(--sa-r) + var(--gutter));
+    --stage-bottom: calc(var(--rail-bottom) + var(--rail-h)
+                         - var(--rail-h) * var(--stage-spill));
+  }
+  #side-rail {
+    top: auto; bottom: var(--rail-bottom); height: var(--rail-h);
+    left: calc(var(--sa-l) + var(--gutter));
+    right: calc(var(--sa-r) + var(--gutter)); width: auto;
+  }
+  /* A fixed 2 columns is a rail's shape, not a dock's — across 780px it made
+     two 370px tiles. auto-fill sizes the column count off the box the browser
+     actually gave the grid, and roomcards.js / cameras.js read that count back
+     out of gridTemplateColumns, so their capacity math follows for free. */
+  #left-dash, #room-cards {
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
+  }
+}
+
+/* Coarse pointer: grow the real hit box rather than faking it with a halo.
+   Base button is padding 11/22 at 14px ≈ 40px tall — under the 44 minimum.
+   (hover: hover) already gates every :hover rule in this file, so a touch
+   device never gets a stuck hover state; this only fixes the target size. */
+@media (pointer: coarse) {
+  :root { --hit-min: 48px; --tabs-h: 48px; }
+  button { padding: 14px 22px; min-height: var(--hit-min); }
+  button.small { padding: 12px 16px; min-height: var(--hit-min); }
+  button.small::after { content: none; }   /* the inset halo is redundant now */
+  #levels button { min-height: var(--hit-min); }
+  /* dock cells and rail tabs size themselves; don't stretch them */
+  #bottom-bar .bb-tile, #sr-tabs button { min-height: 0; }
+  .tswitch { width: 46px; height: 28px; }
+  .tswitch .knob::before { width: 22px; height: 22px; }
+  .tswitch input:checked + .knob::before { transform: translateX(18px); }
 }

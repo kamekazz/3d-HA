@@ -286,10 +286,22 @@ export function updateData({ structure: s, house: h }) {
   updateAlignAvailability();
 }
 
+const CONN_TEXT = { connected: 'live', polling: 'polling', offline: 'offline' };
+
 export function setConnStatus(status) {
   const dot = $('conn-status');
   dot.className = 'status-dot ' + status;
   $('conn-label').textContent = status;
+  // The view-only home screen hides the whole topbar, so #conn-status is the
+  // one thing it has no way to show. #hb-sub used to read a hard-coded
+  // "all systems" that nothing ever updated — give it the real status instead.
+  // Not a light count: that would just repeat the dock's lights tile, and this
+  // house reports 1196 light entities (LED strip segments), so any count off
+  // them is noise rather than information.
+  const sub = $('hb-sub');
+  if (!sub) return;
+  sub.textContent = CONN_TEXT[status] || status;
+  sub.classList.toggle('is-warn', status !== 'connected');
 }
 
 let bannerTimer = null;

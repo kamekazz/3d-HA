@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { scene, focusOn, frameInitialView } from './scene.js';
+import { scene, focusOn, setHouseBounds, frameAll, refitStage } from './scene.js';
 import { getTiledTexture, textureSize } from './textures.js';
 import { onStateApplied, isOn } from './state.js';
 import { getInstance } from './models.js';
@@ -40,6 +40,40 @@ let shellConfig = null;   // { model_id, x, y, z, rot_y, scale } from the payloa
 // The opening camera shot is set once, from the first build that has rooms;
 // later rebuilds (edits, undo, sync) must not yank the camera around.
 let initialViewDone = false;
+
+// Bounds the whole-house shot is framed against. Measured off the built
+// geometry, never off the floor-height sum: `y` in buildHouse is the STACKING
+// offset and must keep counting every floor (a floor group's position depends
+// on it), but it also counts the junk HA "error" floor — 37.8ft on a ~22ft
+// house, which is why the old `ty = topY * 0.58` aimed the camera at open sky.
+// The yards go too: they are lot-sized pads and would nearly double the fit
+// radius, which is why environment.js and focus.js exclude them as well.
+function framingBox() {
+  // Frame what is actually on screen. In House mode ('all' with a shell) every
+  // room mesh is hidden and the shell GLB is the only thing drawn, so its mass
+  // IS the house — measuring the room stack instead added the upper floors'
+  // slabs and aimed the camera well above the roof.
+  const built = getBuildingBox(); // the shell's mass, once the GLB has landed
+  if (built) return built;
+
+  const box = new THREE.Box3();
+  const mb = new THREE.Box3();
+  for (const mesh of roomMeshes.values()) {
+    if (mesh.userData.errorFloor) continue;
+    if (isOutdoorRoom(mesh.userData.roomName)) continue;
+    box.union(mb.setFromObject(mesh));
+  }
+  return box.isEmpty() ? null : box;
+}
+
+// Hand scene.js the bounds it frames against. Returns false when nothing is
+// built yet (the very first build before any room mesh exists).
+function publishHouseBounds() {
+  const box = framingBox();
+  if (!box) return false;
+  setHouseBounds(box);
+  return true;
+}
 
 export function buildHouse(house) {
   if (houseRoot) scene.remove(houseRoot);
@@ -92,14 +126,14 @@ export function buildHouse(house) {
     y += floor.floor_height || 10.0;
   });
 
-  if (bbox) {
-    const cx = (bbox.minX + bbox.maxX) / 2;
-    const cz = (bbox.minZ + bbox.maxZ) / 2;
+  if (bbox && publishHouseBounds()) {
     if (!initialViewDone) {
       initialViewDone = true;
-      frameInitialView(cx, cz, bbox.maxX - bbox.minX, bbox.maxZ - bbox.minZ, y);
+      frameAll();
     } else {
-      focusOn(cx, 5, cz);
+      // a rebuild (edit, undo, sync) must not yank the camera — only re-aim it
+      const c = framingBox().getCenter(new THREE.Vector3());
+      focusOn(c.x, c.y, c.z);
     }
   }
   setLevel(currentLevel);
@@ -240,6 +274,11 @@ async function loadHouseShell(cfg) {
   // world feet, and until the shell is placed its matrixWorld is the identity
   maskShellProps(shell);
   houseShell = shell;
+  // The shell resolves AFTER the first framing pass and is the thing you
+  // actually see in House mode, so re-measure now that its mass exists.
+  // Re-frame only if the user has not taken the camera yet — environment.js
+  // re-measures on levelChanged for the same async-shell reason.
+  if (publishHouseBounds()) refitStage({ onlyIfUntouched: true });
   setLevel(currentLevel); // a shell now exists — apply House mode if on 'all'
 }
 
@@ -556,6 +595,9 @@ function buildRoom(room, floor) {
   walls.userData = {
     kind: 'room', roomId: room.id, roomName: room.name,
     haAreaId: room.ha_area_id, level: floor.level,
+    // HA's junk "error" floor is excluded from the framing box (framingBox);
+    // roomcards.js filters the same ha_floor_id out of the rail.
+    errorFloor: floor.ha_floor_id === 'error',
     baseOpacity: 1.0, baseEmissive: 0, accent,
     // cutaway.js walks these every frame, so they are cached rather than
     // re-filtered out of children; wallByEdge is keyed by edge index, which
