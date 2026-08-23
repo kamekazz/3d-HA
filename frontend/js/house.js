@@ -129,6 +129,24 @@ export function buildHouse(house) {
 // y-histogram in the commit message.
 const SHELL_CUTS = [
   { name: 'parasol frame', min: [30, 5.5, -48], max: [45, 14, -36] },
+  // The back garden's boundary fence. It encloses the whole rear lot — a closed
+  // rectangle with its west line at x ~ -5, its east at x ~ 45 and its back run
+  // at z ~ -50 — and there is no fence in any photograph of this garden: the
+  // lawn runs to a curved rock border and a treeline, and the only fence on the
+  // property is a dark wood neighbour panel at the far line. It is three times
+  // the deck's footprint standing in open grass, and it was the first thing a
+  // critic named in the view the app flies to when you tap the Backyard.
+  //
+  // The floor of the box is y 1.0, which keeps the terrace slab and the grade;
+  // the near face is z -26, which keeps the rear elevation (its wall is at
+  // -24.5) and the garage wing (-10.9). Measured on a 5 ft grid: the perimeter
+  // cells carry 90-740 triangles each and the interior cells 1-13, which is how
+  // you can tell it is a fence and not a lawn.
+  { name: 'rear boundary fence', min: [-8, 1.0, -80], max: [48, 9, -26] },
+  // ...and its east line, which carries on north up the side of the garage
+  // wing. Kept to y 7 and to z -11: the wing's own rear wall is at z -10.9 and
+  // rises past y 11, and the fence run never goes above 6.5.
+  { name: 'fence east return', min: [42, 1.0, -27], max: [48, 7, -11] },
 ];
 
 function maskShellProps(shell) {
