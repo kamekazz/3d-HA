@@ -38,10 +38,18 @@ export function areMarkersShown() {
 // THE single writer of marker.visible
 export function syncMarkerVisibility(marker) {
   const ud = marker.userData;
-  const focusHidden = !!focusScope &&
-    ud.level === focusScope.level && ud.roomId !== focusScope.roomId;
+  // Outdoor focus (focus.js) keeps the whole house on screen and scopes by ROOM
+  // alone — the yards sit on the first-floor level but the view stays on 'all',
+  // so the level test the indoor scope uses would match every ground-floor room.
+  const scoped = !!focusScope && (focusScope.outdoor || ud.level === focusScope.level);
+  const focusHidden = scoped && ud.roomId !== focusScope.roomId;
+  // ...and its own markers are the exception to House mode, which otherwise
+  // hides every marker: tapping the Backyard has to reach the outdoor cameras
+  // and lights, and that view is House mode.
+  const houseHidden = houseModeActive
+    && !(focusScope?.outdoor && ud.roomId === focusScope.roomId);
   marker.visible = !ud.hiddenByUser && (markersShown || editOverride) &&
-    !focusHidden && !houseModeActive;
+    !focusHidden && !houseHidden;
 }
 
 export function applyAllMarkerVisibility() {

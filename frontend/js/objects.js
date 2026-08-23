@@ -2,7 +2,7 @@
 // Mirrors devices.js — one root Group per object, added to its floor group so
 // the level selector shows/hides it for free.
 import * as THREE from 'three';
-import { floorGroups } from './house.js';
+import { floorGroups, isOutdoorRoom } from './house.js';
 import { getInstance } from './models.js';
 
 export const objects3d = new Map(); // object_id -> root Group
@@ -24,7 +24,12 @@ function syncObjectVisibility(root) {
   const focusHidden = !!focusScope &&
     ud.level === focusScope.level && ud.roomId !== focusScope.roomId;
   const cutAway = (ud.wallFade ?? 1) <= 0.01;
-  root.visible = !houseModeActive && !focusHidden && !cutAway;
+  // House mode hides the generated geometry and shows the shell instead. The
+  // yards' furniture is the one thing that must survive it: the deck, the
+  // porch and the driveway pieces ARE the outside of that shell, and hiding
+  // them leaves the whole-house view — the only view the exterior is ever seen
+  // from — showing a house with no deck on it.
+  root.visible = (!houseModeActive || ud.outdoor) && !focusHidden && !cutAway;
 }
 
 // Materials we have already flipped to transparent. Flipping it is what
@@ -141,6 +146,7 @@ function makeObject(o, room, floor) {
     roomId: room.id,
     roomName: room.name,
     level: floor.level,
+    outdoor: isOutdoorRoom(room.name), // cached: syncObjectVisibility is hot
     fpX: fp.x, // room footprint origin: converts world XZ <-> room-relative
     fpZ: fp.z,
   };

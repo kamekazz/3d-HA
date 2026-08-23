@@ -14,6 +14,22 @@ export const stairGroups = [];         // stairs span two levels, so they live
 let houseRoot = null;
 let currentLevel = 'all';
 
+// The Frontyard and Backyard are not rooms — they are the outside of the house,
+// carrying the porch, deck, driveway and the outdoor cameras and lights. Three
+// modules need to know that and would otherwise each keep their own copy of the
+// test (environment.js had the only one), so it lives here with the geometry:
+//
+//  * focus.js keeps the whole house on screen when you tap one, instead of
+//    isolating it the way it isolates a bedroom,
+//  * objects.js lets their furniture through the House-mode sweep, because a
+//    deck that vanishes on the whole-house view is a deck you can never see,
+//  * environment.js excludes their pads from the building bbox it plants around.
+const OUTDOOR_RE = /yard|patio|deck|outdoor|garden/i;
+
+export function isOutdoorRoom(name) {
+  return OUTDOOR_RE.test(name || '');
+}
+
 // The whole-house shell model: when configured, the "House" (level 'all') view
 // hides the generated geometry and shows this single model instead. Loads
 // async; until it resolves (or if it fails) the view falls back to the normal
@@ -528,6 +544,32 @@ export function setShellTransform(t) {
 // The shell root Group (for drag.js), or null when no shell is loaded.
 export function getShellRoot() {
   return houseShell;
+}
+
+// The BUILDING's world box, as opposed to the shell's whole-lot bounds. The
+// shell is one merged mesh per material, so its lot pad, driveway and fences
+// share a bbox with the house and a plain setFromObject lands on the lot line —
+// 113 x 152 ft here, against a house about half that. The roof masses are the
+// exception: they are separate meshes that start a storey up, so "elevated and
+// thick" isolates them, and a roof outline is the building outline. Returned
+// dropped to the ground (min.y = 0) because every caller wants the mass, not
+// the roof. Null when there is no shell, or no mesh that reads as a roof.
+//
+// environment.js anchors the foundation beds and driveway props off this, and
+// focus.js frames the yards against it.
+export function getBuildingBox() {
+  if (!houseShell) return null;
+  houseShell.updateWorldMatrix(true, true);
+  const box = new THREE.Box3();
+  const mb = new THREE.Box3();
+  houseShell.traverse((o) => {
+    if (!o.isMesh) return;
+    mb.setFromObject(o);
+    if (mb.min.y >= 8 && mb.max.y - mb.min.y >= 5) box.union(mb);
+  });
+  if (box.isEmpty()) return null;
+  box.min.y = 0;
+  return box;
 }
 
 // Current shell config { model_id, x, y, z, rot_y, scale }, or null.

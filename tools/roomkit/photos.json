@@ -1,17 +1,28 @@
 {
- "_note": "Reference photo -> room id map. Paths are relative to docs/photos-jpg/ (converted once from docs/Photos-1-001/*.heic by scripts/heic_to_jpg.py). The FIRST photo listed for a room is its primary reference — the one the critic judges from. Rooms with no photos are judged on the floor plan + Sims-4 dollhouse readability only.",
+ "_note": "Reference photo -> room id map. Paths are relative to docs/photos-jpg/ (converted once from docs/Photos-1-001/*.heic by scripts/heic_to_jpg.py). The FIRST photo listed for a room is its primary reference — the one the critic judges from. Rooms with no photos are judged on the floor plan + Sims-4 dollhouse readability only. Later drops (docs/v3/) are converted with `python scripts/heic_to_jpg.py --src \"docs/v3/<folder>\" --name \"<Room> v3\"`, which numbers them in sorted source order because they arrived with camera-roll filenames.",
  "rooms": {
   "1": {
    "name": "Movie Room",
    "photos": [
+    "Movie Room v3 4.jpg",
+    "Movie Room v3 2.jpg",
+    "Movie Room v3 3.jpg",
+    "Movie Room v3 5.jpg",
+    "Movie Room v3 1.jpg",
     "Movie room.jpg"
-   ]
+   ],
+   "_note": "v3 drop, 2026-08-22. v3 4 is the primary — 1200x1600 and the only shot of the whole room; v3 2 is the best single overview (TV wall, sectional and the stair together). v3 1 looks up the basement stair, which belongs to the stairwell, not this room. Everything else in the drop is 450x600 — do not meter sd from those, it is scale-inflated."
   },
   "2": {
    "name": "Arcade Room",
    "photos": [
+    "Arcade Room v3 4.jpg",
+    "Arcade Room v3 1.jpg",
+    "Arcade Room v3 3.jpg",
+    "Arcade Room v3 2.jpg",
     "Arcade Room.jpg"
-   ]
+   ],
+   "_note": "v3 drop, 2026-08-22. v3 4 and v3 1 are the two 1200x1600 shots and between them cover both long walls; 4 is the primary — the arcade cabinet run is the room. The room is lit almost entirely by RGB cove and hex-panel fixtures, so every surface is colour-cast: read albedo off the neutral patches, never off a magenta-washed wall. 2 and 3 are 450x600 — layout only, no metering."
   },
   "4": {
    "name": "Dining",
@@ -149,6 +160,44 @@
     "Walk in the closet to Master Bedroom.jpg",
     "Walking Closet for the Master bedroom.jpg"
    ]
+  },
+  "3": {
+   "name": "Backyard",
+   "photos": [
+    "Backyard v3 7.jpg",
+    "Backyard v3 5.jpg",
+    "Backyard v3 9.jpg",
+    "Backyard v3 1.jpg",
+    "Backyard v3 2.jpg",
+    "Backyard v3 3.jpg",
+    "Backyard v3 4.jpg"
+   ],
+   "_note": "v3 drop, 2026-08-22. 1-4 are phone shots of the rear elevation; 5,7,9 are wide security-camera stills of the deck and lawn (barrel-distorted — read layout and material from them, never proportion). NOT LISTED: \"Backyard v3 6/8.jpg\" are 600px downscales of 5 and 7 — their sd is scale-inflated, do not meter from them. Shot at dusk with the string lights lit: build the daytime geometry, no emissive."
+  },
+  "7": {
+   "name": "Garage",
+   "photos": [
+    "Garage v3 1.jpg",
+    "Garage v3 4.jpg",
+    "Garage v3 2.jpg",
+    "Garage v3 3.jpg",
+    "Garage v3 5.jpg",
+    "Garage v3 6.jpg"
+   ],
+   "_note": "v3 drop, 2026-08-22. v3 1 is the primary — 1200x1600, taken from the open door looking in, and the only one showing the whole back wall."
+  },
+  "11": {
+   "name": "Frontyard",
+   "photos": [
+    "Frontyard v3 3.jpg",
+    "Frontyard v3 1.jpg",
+    "Frontyard v3 2.jpg",
+    "Front of the house.jpg",
+    "Side of the house.jpg",
+    "Side of the house Outside.jpg",
+    "Front of the house, a little bit of the garage and car pointing to a different house.jpg"
+   ],
+   "_note": "v3 drop, 2026-08-22. This is the exterior of the house, not a room — it covers the facade, porch, driveway and front beds. Shot at dusk with the eave and porch string lights lit: build the daytime geometry, no emissive fixtures. Much of what these photos show is already built in frontend/js/environment.js addFrontYard, not as objects."
   }
  },
  "exterior": [

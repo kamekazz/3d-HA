@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene } from './scene.js';
-import { getShellRoot } from './house.js';
+import { getShellRoot, isOutdoorRoom, getBuildingBox } from './house.js';
 
 let root = null;     // whole environment (grass + yard)
 let yard = null;     // house-dependent part, rebuilt by setEnvironmentData
@@ -107,7 +107,7 @@ export function initEnvironment() {
     if (!lastHouse) return;
     const shell = getShellRoot();
     const r = shell ? rectOfShell(shell) : null;
-    const rr = shell ? rectOfRoof(shell) : null;
+    const rr = shell ? rectOfRoof() : null;
     if (JSON.stringify(r) !== JSON.stringify(shellRect)
         || JSON.stringify(rr) !== JSON.stringify(roofRect)) {
       shellRect = r;
@@ -132,23 +132,13 @@ function rectOfShell(shell) {
   return { x0: box.min.x, z0: box.min.z, x1: box.max.x, z1: box.max.z };
 }
 
-// The BUILDING footprint, as opposed to rectOfShell's whole-lot bounds: this
-// shell is one merged mesh per material, so its lot pad, driveway and fences
-// all share a bbox with the house and the union above lands on the lot line.
-// The roof masses are the exception — they are separate meshes that start a
-// storey up, so "elevated and thick" isolates them, and a roof outline is the
-// building outline. Used to anchor the foundation beds/driveway props, which
-// have to sit against the real walls rather than the lot edge.
-function rectOfRoof(shell) {
-  shell.updateWorldMatrix(true, true);
-  const box = new THREE.Box3();
-  const mb = new THREE.Box3();
-  shell.traverse((o) => {
-    if (!o.isMesh) return;
-    mb.setFromObject(o);
-    if (mb.min.y >= 8 && mb.max.y - mb.min.y >= 5) box.union(mb);
-  });
-  if (box.isEmpty()) return null;
+// The BUILDING footprint, as opposed to rectOfShell's whole-lot bounds above,
+// which lands on the lot line. Anchors the foundation beds and driveway props,
+// which have to sit against the real walls. The derivation lives in house.js
+// (getBuildingBox) because focus.js frames the yards against the same box.
+function rectOfRoof() {
+  const box = getBuildingBox();
+  if (!box) return null;
   return { x0: box.min.x, z0: box.min.z, x1: box.max.x, z1: box.max.z };
 }
 
@@ -500,7 +490,7 @@ export function setEnvironmentData(house) {
   lastHouse = house;
   const shell = getShellRoot();
   shellRect = shell ? rectOfShell(shell) : null;
-  roofRect = shell ? rectOfRoof(shell) : null;
+  roofRect = shell ? rectOfRoof() : null;
   buildYard();
 }
 
@@ -508,7 +498,6 @@ function buildYard() {
   const house = lastHouse;
   // building bbox excludes outdoor pseudo-rooms (Frontyard/Backyard = porch
   // and deck rects) — plants anchor to the building but must dodge every pad
-  const OUTDOOR = /yard|patio|deck|outdoor|garden/i;
   let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
   const pads = []; // every room rect (incl. outdoor) — nothing grows on one
   let garage = null;
@@ -517,7 +506,7 @@ function buildYard() {
       const fp = room.footprint;
       pads.push({ x0: fp.x, z0: fp.z, x1: fp.x + fp.width, z1: fp.z + fp.depth });
       if (!garage && /garage/i.test(room.name || '')) garage = fp;
-      if (OUTDOOR.test(room.name || '')) continue;
+      if (isOutdoorRoom(room.name)) continue;
       minX = Math.min(minX, fp.x);
       minZ = Math.min(minZ, fp.z);
       maxX = Math.max(maxX, fp.x + fp.width);

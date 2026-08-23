@@ -18,7 +18,7 @@
 // walls mean the single-floor view would otherwise be a row of sealed boxes.
 import * as THREE from 'three';
 import { scene, camera, onFrame } from './scene.js';
-import { roomMeshes, openingMeshes, wallParts, applyWallOpacity } from './house.js';
+import { roomMeshes, openingMeshes, wallParts, applyWallOpacity, isOutdoorRoom } from './house.js';
 import { objects3d, setObjectWallFade, fadeSubtree } from './objects.js';
 
 // Facing score = dot(wall's inward normal, horizontal direction to the camera).
@@ -128,6 +128,11 @@ export function setCutawayData(house) {
     for (const room of floor.rooms || []) {
       const mesh = roomMeshes.get(room.id);
       if (!mesh) continue;
+      // A yard has nothing to cut away — its "walls" are a 1 ft plinth round
+      // the pad. Binding to them would fade the deck out whenever the camera
+      // crossed a plinth edge, and WALL_ARCH_RE would claim any piece with a
+      // door or a rail in its name. Skip the whole room.
+      if (isOutdoorRoom(room.name)) continue;
       const walls = wallParts(mesh);
       for (const o of room.objects || []) {
         const name = o.name || o.model_name || '';

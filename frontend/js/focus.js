@@ -1,9 +1,17 @@
 // Room focus mode: single-click a room to fly the camera in and isolate it —
 // same-floor siblings ghost out, other floors hide, the room's device labels
 // show. Exit with Esc, the "back" chip, or clicking empty space.
+//
+// The Frontyard and Backyard are the exception, and deliberately so: they are
+// not rooms, they are the outside of the house. Isolating one used to drop the
+// level selector onto the first floor, which left House mode — so the shell,
+// the lawn, the trees and every other room went away and you were left staring
+// at a bare 1 ft slab on a studio backdrop. Tapping the front of the house has
+// to show the front of the house. See enterOutdoorFocus below.
 import * as THREE from 'three';
 import { camera, controls, flyTo, getViewPose, MIN_ZOOM, MAX_ZOOM } from './scene.js';
-import { roomMeshes, stairGroups, setLevel, getLevel, setRoomOpacity } from './house.js';
+import { roomMeshes, stairGroups, setLevel, getLevel, setRoomOpacity, getBuildingBox,
+         isOutdoorRoom } from './house.js';
 import { setFocusMarkerScope } from './devices.js';
 import { setObjectFocusScope } from './objects.js';
 import { hideAllLabels } from './labels.js';
@@ -49,6 +57,90 @@ function restoreLevelVisuals(level) {
   }
 }
 
+// ------------------------------------------------------------------- outdoor
+
+const _v = new THREE.Vector3();
+
+// Frame a yard from OUTSIDE, with the building in the shot. A yard only reads
+// as the front (or the back) of THIS house if the house is behind it, so the
+// fit box is the yard unioned with the building, the camera stands on the far
+// side of the yard from the building, and the target is biased back toward the
+// house so the yard holds the foreground. Nothing here is hard-coded to a
+// compass direction: the same code frames the Frontyard from the street and
+// the Backyard from the lawn, because it derives the stand-off from where the
+// yard sits relative to the building.
+function outdoorPose(mesh) {
+  const yard = new THREE.Box3().setFromObject(mesh);
+  const yc = yard.getCenter(new THREE.Vector3());
+
+  // The shell GLB is the visible house — but its own bbox is the whole LOT
+  // (113 x 152 ft here, pad and fences included), which centres nowhere near
+  // the building and points the stand-off at the wrong quadrant. getBuildingBox
+  // isolates the actual mass. Without a shell, the generated rooms are the house.
+  const built = getBuildingBox() ?? new THREE.Box3();
+  if (built.isEmpty()) {
+    for (const m of roomMeshes.values()) {
+      if (m === mesh || isOutdoorRoom(m.userData.roomName)) continue;
+      built.union(new THREE.Box3().setFromObject(m));
+    }
+  }
+  if (built.isEmpty()) built.copy(yard);
+  const bc = built.getCenter(new THREE.Vector3());
+
+  // Snap to the cardinal axis the yard is furthest out along, rather than
+  // using the raw yard-to-house vector: these rects overlap the building on
+  // the other axis, so raw comes out a 50-degree diagonal and you get the
+  // corner of the house instead of the back of it. The elevation is the
+  // subject — "the front of the house" means the front, square-on.
+  const dx = yc.x - bc.x, dz = yc.z - bc.z;
+  const away = Math.abs(dz) >= Math.abs(dx)
+    ? new THREE.Vector3(0, 0, Math.sign(dz) || 1)
+    : new THREE.Vector3(Math.sign(dx) || 1, 0, 0);
+  // Then swing off dead-on: a facade shot exactly square to the wall reads
+  // flat, and this is the one view where the house is the subject.
+  away.applyAxisAngle(_v.set(0, 1, 0), THREE.MathUtils.degToRad(25));
+
+  const fit = yard.clone().union(built);
+  const size = fit.getSize(new THREE.Vector3());
+  const vFov = THREE.MathUtils.degToRad(camera.fov);
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+  const dist = THREE.MathUtils.clamp(
+    0.85 * (0.5 * size.length()) / Math.sin(Math.min(vFov, hFov) / 2),
+    MIN_ZOOM, MAX_ZOOM);
+
+  const target = yc.clone().lerp(bc, 0.4);
+  // Aim a bit above the eaves — high enough that the roofline stays in frame,
+  // low enough that the yard keeps the bottom half. Off the BUILDING's height,
+  // not the fit box's: the fit box grows with the yard and would drift up.
+  target.y = built.min.y + (built.max.y - built.min.y) * 0.28;
+
+  // Much flatter than the 30-degree look-down a room gets: you walk up to a
+  // house, you do not hover over it. Not flat either — the yard is half the
+  // subject and it is on the ground.
+  const elev = THREE.MathUtils.degToRad(16);
+  const h = dist * Math.cos(elev);
+  return {
+    position: new THREE.Vector3(target.x + away.x * h,
+                                target.y + dist * Math.sin(elev),
+                                target.z + away.z * h),
+    target,
+  };
+}
+
+// Hide nothing, drop no level, fly to the street. The only thing that narrows
+// is the device markers, which scope to this yard — and which House mode would
+// otherwise hide outright, so this is also the only way to reach the outdoor
+// cameras and lights (devices.js reads focusScope.outdoor for both).
+function enterOutdoorFocus(mesh, roomId) {
+  focusedRoomId = roomId;
+  setLevel('all');
+  setActiveLevelButton('all');
+  setFocusMarkerScope({ outdoor: true, roomId });
+  setObjectFocusScope(null);
+  const pose = outdoorPose(mesh);
+  flyTo(pose.position, pose.target);
+}
+
 export function enterFocus(roomId) {
   const mesh = roomMeshes.get(roomId);
   if (!mesh || focusedRoomId === roomId) return;
@@ -62,6 +154,18 @@ export function enterFocus(roomId) {
     const prev = roomMeshes.get(focusedRoomId);
     if (prev) restoreLevelVisuals(prev.userData.level);
     hideAllLabels();
+  }
+
+  // the outdoor branch shares everything up to here — the saved pose, the
+  // previous room's restore — and none of the isolation below it
+  if (isOutdoorRoom(mesh.userData.roomName)) {
+    enterOutdoorFocus(mesh, roomId);
+    controls.enablePan = false;
+    const chipOut = document.getElementById('focus-exit');
+    chipOut.textContent = `← ${mesh.userData.roomName}`;
+    chipOut.classList.remove('hidden');
+    emitFocus(roomId);
+    return;
   }
   focusedRoomId = roomId;
 
