@@ -1,0 +1,18 @@
+{
+ "docs/photos-jpg/Movie Room v3 4.jpg": {
+   "south_upper": [300,395,560,495],
+   "west_upper":  [1055,455,1175,555],
+   "west_wainscot":[1060,600,1180,660],
+   "ceiling":     [300,120,700,235],
+   "rug":         [450,950,800,1150],
+   "plank":       [120,1180,300,1330],
+   "sofa_seat":   [500,640,640,700]
+ },
+ "docs/photos-jpg/Movie room.jpg": {
+   "west_upper":  [40,555,115,720],
+   "north_upper": [915,585,955,690],
+   "ceiling":     [300,250,700,400],
+   "rug":         [500,1250,800,1400],
+   "console":     [665,780,780,815]
+ }
+}
