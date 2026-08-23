@@ -51,6 +51,7 @@ export function isHiddenRoom(name) {
 // stacked all-floors geometry. See setLevel below.
 let houseShell = null;    // loaded shell root Group, or null (not loaded/failed)
 let shellConfig = null;   // { model_id, x, y, z, rot_y, scale } from the payload
+let shellSettled = Promise.resolve(); // see houseShellReady()
 
 // The opening camera shot is set once, from the first build that has rooms;
 // later rebuilds (edits, undo, sync) must not yank the camera around.
@@ -156,8 +157,17 @@ export function buildHouse(house) {
   // Kick off the whole-house shell (async). setLevel re-runs once it resolves.
   shellConfig = house.house_shell && house.house_shell.model_id
     ? { ...house.house_shell } : null;
-  if (shellConfig) loadHouseShell(shellConfig);
+  shellSettled = shellConfig ? loadHouseShell(shellConfig) : Promise.resolve();
 }
+
+// Resolves once the shell has been added to the scene, framed and levelled -
+// or once it has failed / there is no shell configured. boot.js's loader gate
+// cannot stand in for this: getInstance decrements its in-flight count in a
+// `finally`, so modelsIdle() can resolve a microtask BEFORE loadHouseShell has
+// added anything to the scene. Awaiting this is what makes "the curtain lifted
+// and the house wasn't there" structurally impossible rather than merely
+// unlikely.
+export function houseShellReady() { return shellSettled; }
 
 // Props baked into the shell that the real house does not have, cut by world
 // box at load time.

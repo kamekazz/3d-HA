@@ -10,7 +10,7 @@ render bug rather than the deploy problem it usually is (see `docs/TROUBLESHOOTI
 **The boot curtain** (`frontend/js/boot.js`): the app assembles itself over seconds — ~200 furniture
 GLBs, the DRACO house shell, wall/floor textures, then the room-card thumbnails — and every one of
 those used to land on screen as its own pop-in, with the camera visibly re-framing when the shell
-arrived (`house.js` `refitStage`). `#boot-screen` covers all of it and lifts once. Three things about
+arrived (`house.js` `refitStage`). `#boot-screen` covers all of it and lifts once. Five things about
 it are not readable from the code:
 
 - **The markup is static in `index.html`, deliberately.** `<head>` blocks on socket.io and the
@@ -26,9 +26,24 @@ it are not readable from the code:
 - **Never wait on a bare `requestAnimationFrame` in the gate.** Chrome pauses rAF whenever the tab is
   backgrounded, occluded or not being composited, so a bare rAF hangs the curtain until the failsafe
   — measured, not theoretical. `boot.js nextFrame()` races rAF against a 100 ms timer, and
-  `finishBoot` uses it too. Every wait is additionally bounded, and a 15 s failsafe reveals no matter
-  what; `main().catch` reveals first and *then* banners, or a boot error would be an unreadable black
-  screen. `window.__boot.state()` says which gate is holding during a hang.
+  `finishBoot` uses it too. Every wait is additionally bounded, and a 15 s failsafe reveals what has
+  assembled so far; `main().catch` reveals first and *then* banners, or a boot error would be an
+  unreadable black screen. `window.__boot.state()` says which gate is holding during a hang.
+- **The failsafe will not reveal an empty stage.** `main()` spends its first phase awaiting three
+  fetches, and if HA is still connecting they can outlast 15 s — at which point `buildHouse` has not
+  run and the old unconditional failsafe lifted the curtain onto nothing, which reads as "the app
+  opened and the house doesn't render". `main()` now calls `bootHouseBuilt()` the moment geometry is
+  in the scene; until then the failsafe re-arms every 500 ms (relabelling the curtain "Waiting for
+  Home Assistant…") up to a 60 s hard cap, past which a blank app beats a curtain that never lifts.
+- **`settleLoaders()` is not sufficient for the shell.** `getInstance` drops its in-flight count in a
+  `finally`, so `modelsIdle()` can resolve a microtask *before* `loadHouseShell`'s continuation has
+  added, masked and framed the shell. `house.js houseShellReady()` is the promise for that last step
+  (resolved when there is no shell, or when it failed), and `main()` awaits it after `settleLoaders`.
+- **The bar has to arrive at 100% before the fade starts.** `#boot-fill` animates its width over
+  0.3 s, so lifting the curtain one frame after `paint(1)` cut that animation off around 90% — the
+  bar visibly never finished. `finishBoot` waits on `barFull()` (transitionend raced against the
+  computed `transition-duration`, since transitionend never fires under `prefers-reduced-motion` or
+  in a backgrounded tab) before adding `body.booted`.
 
 The render loop keeps running behind the curtain **on purpose**: `snapshots.js` captures the room
 cards off the live canvas, and `scene.js`'s pose solve needs real renders. Because the shell now

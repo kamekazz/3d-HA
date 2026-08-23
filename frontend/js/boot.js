@@ -16,15 +16,31 @@ import { modelsIdle } from './models.js';
 
 const $ = (id) => document.getElementById(id);
 
-// Absolute wall-clock cap. A wedged GLB, an unreachable HA or a backgrounded
-// tab (snapshots.js parks its pump when document.hidden) must never leave the
-// user staring at a black screen forever.
+// Wall-clock cap on ASSEMBLY. A wedged GLB, a backgrounded tab (snapshots.js
+// parks its pump when document.hidden) or simply a slow machine must not leave
+// the user staring at a black screen forever, so at this point we reveal what
+// we have.
 const FAILSAFE_MS = 15000;
+
+// ...but only once there is something behind the curtain to reveal. main()
+// spends its first phase awaiting three fetches, and if HA is still connecting
+// they can outlast FAILSAFE_MS - at which point buildHouse has not run and the
+// old failsafe lifted the curtain onto an empty stage. That reads as "the app
+// opened and the house doesn't render", which is exactly the bug this cap was
+// meant to avoid. So while the house is missing we keep waiting (re-checking
+// at this interval) up to HARD_CAP_MS, the point past which a blank app beats
+// a curtain that never lifts.
+const HOUSE_POLL_MS = 500;
+const HARD_CAP_MS = 60000;
 
 let shown = 0;      // last painted fraction — the bar only ever moves forward
 let band = [0, 1];  // [floor, ceiling] the current stage may move within
 let done = false;
 let failsafe = null;
+let houseBuilt = false;
+
+/** main() calls this the moment buildHouse has put geometry in the scene. */
+export function bootHouseBuilt() { houseBuilt = true; }
 
 // ------------------------------------------------------------------ progress
 
@@ -76,7 +92,7 @@ THREE.DefaultLoadingManager.onProgress = (url, loaded, total) => {
 
 // console handle: __boot.state() during a hang says which gate is holding
 window.__boot = {
-  state: () => ({ managerIdle, mgrLoaded, mgrTotal, mgrLast, shown, band, done }),
+  state: () => ({ managerIdle, mgrLoaded, mgrTotal, mgrLast, shown, band, done, houseBuilt }),
   reveal: () => finishBoot(),
 };
 
@@ -145,11 +161,25 @@ let startedAt = 0;
 
 export function startBoot() {
   startedAt = performance.now();
+  armFailsafe(FAILSAFE_MS);
+}
+
+function armFailsafe(ms) {
   failsafe = setTimeout(() => {
     if (done) return;
-    console.warn(`boot: ${FAILSAFE_MS}ms failsafe fired — revealing anyway`);
+    const elapsed = performance.now() - startedAt;
+    if (!houseBuilt && elapsed < HARD_CAP_MS) {
+      // Nothing to show yet. Say so instead of silently sitting on a bar that
+      // has not moved since the first stage - the wait is HA's, not ours.
+      const status = $('boot-status');
+      if (status) status.textContent = 'Waiting for Home Assistant…';
+      armFailsafe(HOUSE_POLL_MS);
+      return;
+    }
+    console.warn(`boot: ${Math.round(elapsed)}ms failsafe fired — revealing`
+      + (houseBuilt ? ' anyway' : ' WITHOUT a house (Home Assistant never answered)'));
     finishBoot();
-  }, FAILSAFE_MS);
+  }, ms);
 }
 
 export function finishBoot() {
@@ -166,12 +196,35 @@ export function finishBoot() {
   paint(1);
   const screen = $('boot-screen');
   if (!screen) return;
-  // let the 100% bar paint before the fade starts - via nextFrame, never a bare
-  // rAF, or a backgrounded tab never lifts the curtain at all
-  nextFrame().then(() => {
+  // Let the bar actually ARRIVE at 100% before the fade starts. #boot-fill
+  // animates its width over 0.3s, so lifting the curtain one frame after
+  // paint(1) cut that animation off around 90% - the bar visibly never
+  // finished, which is what "it opens a second too early" looks like from the
+  // outside. nextFrame(), never a bare rAF, or a backgrounded tab never lifts
+  // the curtain at all.
+  barFull().then(nextFrame).then(() => {
     document.body.classList.add('booted');
     const drop = () => screen.remove();
     screen.addEventListener('transitionend', drop, { once: true });
     setTimeout(drop, 1000); // belt and braces: reduced motion has no transition
+  });
+}
+
+/**
+ * Resolves when the progress bar has finished animating to 100%.
+ *
+ * transitionend is the accurate signal, but it never fires at all when the bar
+ * was already full, when the transition is off (prefers-reduced-motion) or in
+ * a backgrounded tab, so it is raced against the transition's own duration.
+ */
+function barFull() {
+  const fill = $('boot-fill');
+  if (!fill) return Promise.resolve();
+  const ms = parseFloat(getComputedStyle(fill).transitionDuration) * 1000 || 0;
+  if (!ms) return Promise.resolve();
+  return new Promise((resolve) => {
+    const go = () => { fill.removeEventListener('transitionend', go); resolve(); };
+    fill.addEventListener('transitionend', go);
+    setTimeout(go, ms + 60);
   });
 }

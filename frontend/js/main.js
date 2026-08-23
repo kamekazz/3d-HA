@@ -4,7 +4,7 @@ import { api } from './api.js';
 import { initScene, scene, camera, renderer, applyEnvIntensity, refitStage, wasMultiTouch } from './scene.js';
 import { initStage } from './stage.js';
 import { initSideRail } from './siderail.js';
-import { buildHouse, roomMeshes, stairGroups, paintRoomEmissive, getLevel } from './house.js';
+import { buildHouse, roomMeshes, stairGroups, paintRoomEmissive, getLevel, houseShellReady } from './house.js';
 import { buildDevices, markers } from './devices.js';
 import { buildObjects, objects3d } from './objects.js';
 import { setAllStates, applyState, friendlyName, stateLabel, styleMarker } from './state.js';
@@ -26,8 +26,8 @@ import { initDashboard, calendarReady } from './dashboard.js';
 import { initCameras } from './cameras.js';
 import { initRoomCards, setRoomCardsData, cardImagesReady } from './roomcards.js';
 import { requestSnapshots, snapshotsIdle } from './snapshots.js';
-import { startBoot, bootStage, bootProgress, settleLoaders, orTimeout, finishBoot }
-  from './boot.js';
+import { startBoot, bootStage, bootProgress, settleLoaders, orTimeout, finishBoot,
+  bootHouseBuilt } from './boot.js';
 
 let structure = null;
 
@@ -331,6 +331,7 @@ async function main() {
   // DefaultLoadingManager reports its first item.
   bootStage('Building the house…', 0.15, 0.30);
   buildHouse(house);
+  bootHouseBuilt();   // there is a stage to reveal now; the failsafe may fire
   buildDevices(house);
   buildObjects(house);
   setCutawayData(house); // wall meshes + furniture are new objects after a rebuild
@@ -363,6 +364,11 @@ async function main() {
 
   // ---- hold the curtain until the scene has actually finished assembling
   await settleLoaders();          // every GLB, texture and the DRACO shell
+  // ...and until the shell is in the scene AND has re-framed the camera. The
+  // loader gate alone does not cover that last step: getInstance drops its
+  // in-flight count in a `finally`, so modelsIdle() can resolve before
+  // loadHouseShell's continuation has added, masked and framed anything.
+  await orTimeout(houseShellReady(), 5000);
 
   bootStage('Preparing the scene…', 0.85, 0.92);
   // Shaders for a few hundred fresh GLB materials compile on the first DRAW,
