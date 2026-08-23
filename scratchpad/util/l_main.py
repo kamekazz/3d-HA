@@ -1,4 +1,13 @@
-"""Laundry (room 9) -- appliance wall, uppers, shelf, baskets, floor marks.
+"""SUPERSEDED -- DO NOT RUN.  See scratchpad/laundry2/l9.py.
+
+This script was written when room 9 was traced 11.0 x 5.7 ft (world x
+21.9-32.9).  The footprint is now 4.4 x 5.7 (world x 28.5-32.9) and every
+coordinate below is 6.6 ft east of where it belongs: running this file puts the
+laundry's whole appliance wall inside room 22 (Office printers) and empties the
+laundry, which is exactly the state 2026-08-23 had to undo.  Kept only as the
+record of the round that derived the orientation.
+
+Laundry (room 9) -- appliance wall, uppers, shelf, baskets, floor marks.
 
 ORIENTATION CORRECTION.  The shell pass put the washer/dryer at the WEST end of
 the north wall, which is where the floor plan puts the STEP AND DOOR IN FROM THE

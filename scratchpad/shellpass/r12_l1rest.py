@@ -214,6 +214,12 @@ def bathroom():
 
 # ================================================================= 9 laundry
 def laundry():
+    # STALE FOOTPRINT -- DO NOT RUN THIS FUNCTION.  Room 9 was re-traced from
+    # 11.0 x 5.7 to 4.4 x 5.7 (world x 28.5-32.9); everything below is 6.6 ft
+    # east of the room and lands in room 22.  The laundry's ceiling,
+    # baseboards, doors and wall skins are rebuilt at the real size by
+    # scratchpad/laundry2/l9.py -- run that instead.
+    raise SystemExit("r12_l1rest.laundry() is stale; run scratchpad/laundry2/l9.py")
     ROOM, W, D, H = 9, 11.0, 5.7, 9.0
     print("room 9 Laundry")
     surfaces(ROOM, wall_color="#dbdbda", floor_color="#6b6967",

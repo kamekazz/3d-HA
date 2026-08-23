@@ -1,5 +1,72 @@
 # Where the dollhouse build stands — resume here
 
+## 2026-08-23 (later) - the Laundry appliance wall, and a bug class nobody was looking for
+
+The owner asked for the laundry's appliance side only.  It turned out not to be
+a finish problem: **room 9 had been re-traced from 11.0 x 5.7 ft to 4.4 x 5.7,
+and its furnishings still carried the OLD local frame.**  The whole run --
+washer, dryer, ledge, baskets, uppers, floating shelf, framed print, ceiling,
+baseboards, wall skins -- stood **6.6 ft east of the room, inside room 22
+(Office printers)**, while the laundry itself rendered empty.
+
+**This is a bug class, not one room.**  Placements are stored in room-LOCAL
+feet, so re-tracing a footprint silently moves every piece in it, and nothing in
+the toolchain notices.  Anyone re-tracing a footprint must re-run that room's
+build script, and it is worth sweeping the other rooms for pieces whose local
+coordinates fall outside their room's current rect.
+
+Rebuilt by `scratchpad/laundry2/l9.py` (316 KB, six pieces).  The two stale
+builders now **raise / carry a DO-NOT-RUN header** so they cannot put it back:
+`scratchpad/util/l_main.py` and `r12_l1rest.laundry()`.
+
+### Four engine findings, each of which had already cost a round somewhere
+
+1. **`COLOR_0` is clamped at 1.0.**  `glb.py` packs vertex colours as a
+   normalised UBYTE *after* an sRGB->linear conversion, so any authored value
+   above 1.0 clamps silently.  A shading field centred on 1.0 loses its whole
+   bright half.  Ride the field DOWN from 1.0 and brighten the material to
+   compensate (`l9.py lift`).  Vertex colours *do* work otherwise -- a grey
+   probe at amp 0.40 metered sd 11.2 on a mean of 175.7.
+2. **`cylinder()` welds smooth normals across its end caps**, so a short wide
+   cylinder shades like a dome: the dryer's dial rendered as a brass ball.  Use
+   a flat fan/annulus wound in the face plane (`disc_z` / `ring_z` in l9.py).
+   And never put a ring at the same z as a cylinder cap -- they z-fight into a
+   shimmering saw-edge.
+3. **`bx()`/`box()` emit no UVs**, so a `tex=` on one samples texel (0,0) and
+   renders as flat paint.  The "Wash Dry Fold" print shipped as a blank white
+   panel until it was re-authored as a `uv_quad`.  ROOM-BRIEF records this for
+   `puff`/`slab`/`cylinder`; `box` belongs on that list.
+4. **`skinkit.build`'s flat 0.022 ft inset buries a skin** on any wall a
+   neighbour's mass pokes through.  Room 9 sees its north wall at local z 0.15
+   (the Office's wall), its south at 5.35 (the Garage's) and its east at 4.35
+   (room 22's), so three of its four skins were behind the wall they painted and
+   the room rendered unpainted **even though a skin was placed**.  Place each
+   skin on the face a viewer in the room can actually see.
+
+### What it measures now
+
+| surface | render (mean / sd / \|d1\|) | photo |
+|---|---|---|
+| seagrass basket | 122.3 / 41.2 / 6.0 | 118.9 / 36.7 / 16.1 |
+| woven box on the dryer | 200.3 / 9.7 / 6.9 | 185.1 / 29.8 / 12.5 |
+| wall under the cabinets | 195.2 / 6.0 / 0.06 | 206.4 / 11.8 / 0.32 |
+| cabinet door panel | 234.6 / 2.4 / 0.07 | 230.5 / 7.0 / 0.51 |
+
+Round 1 of this refit shipped the painted surfaces at **sd 0.00-0.50** -- the
+"algebraically perfect paint" ROOM-BRIEF warns about -- and the baskets at mean
+181 against the photo's 119.  Residual: the weave is still coarser than real
+seagrass (|d1| 6.0 vs 16.1), and the painted surfaces sit at about half the
+photo's sd.
+
+Declared: the appliances are authored **7% narrower** than the real Samsung pair
+because 4.54 ft of machine will not fit a 4.40 ft wall, and the print's paper is
+a **photo-derived albedo** (corners, scale reference and built size are recorded
+in `rooms/9.json`).  No camera inside a 5.7 ft deep room reproduces the
+photographer's ~9 ft standoff, so the side-by-side is a content match.
+
+Shots: `scratchpad/laundry2/FINAL_laundry_{wall,alcove,doll_sw}.png` and
+`FINAL_laundry_sbs.jpg`.  **No critic has judged this.**
+
 ## 2026-08-23 — the v3 run. FOUR SPACES BUILT, NO CRITIC HAS SEEN THEM.
 
 **Resume here.** The owner dropped new reference photography in `docs/v3/` for

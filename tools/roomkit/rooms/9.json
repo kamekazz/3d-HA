@@ -1,138 +1,87 @@
 {
-  "_note": "FURNISHING PASS. ORIENTATION CORRECTION: the washer/dryer run moved from the WEST end of the north wall to the EAST end -- see _evidence. Build script: scratchpad/util/l_main.py.",
+  "_note": "REFIT ROUND (2026-08-23). Room 9 was re-traced from 11.0 x 5.7 to 4.4 x 5.7 ft and the previous round's placements still carried the OLD local frame, so the entire appliance wall stood 6.6 ft east of the room, inside room 22 (Office printers), while the laundry itself was empty. Everything is rebuilt in the new frame by scratchpad/laundry2/l9.py. scratchpad/util/l_main.py and r12_l1rest.laundry() are the stale 11-ft builders and are now guarded so they cannot be re-run.",
+  "build": "scratchpad/laundry2/l9.py (idempotent: builds + places every piece)",
+  "payload_kb": 316.1,
   "_room": {
     "id": 9,
     "name": "Laundry",
-    "floor": {
-      "id": 2,
-      "name": "First floor",
-      "level": 1,
-      "floor_height": 10.0
-    },
-    "rect_world": {
-      "x": [
-        21.9,
-        32.9
-      ],
-      "z": [
-        7.3,
-        13.0
-      ]
-    },
-    "size_ft": [
-      11.0,
-      5.7
-    ],
+    "floor": {"id": 2, "name": "First floor", "level": 1, "floor_height": 10.0},
+    "rect_world": {"x": [28.5, 32.9], "z": [7.3, 13.0]},
+    "size_ft": [4.4, 5.7],
     "wall_height": 9.0
   },
-  "_evidence": [
-    "MEASURED (floor plan): the plan's appliance icon sits at world x 29.4-31.9, z 7.7-10.5 = local x 7.5-10.0, z 0.4-3.2 -- against the NORTH wall at the EAST end, with a partition drawn at local x 7.5. The 'Indoor garage door' hatch is at world x 21.8-26.5 = local x 0-4.6, i.e. the WEST end. The shell pass had the appliances at local x 0.05-6.0, sitting on top of the garage doorway.",
-    "MEASURED (Laundry.jpg + 'Laundry room and garage door right next to it.jpg'): top-load Samsung washer LEFT, front-load dryer RIGHT with a rose-gold facia band and a dark glass door; white shaker uppers with BLACK BAR PULLS and crown; a full-width white ledge under them carrying two woven baskets and a white box; a floating white shelf with three dark bottles under a framed print between the two cabinets; a woven box on the dryer top; a white floor register; tall white baseboard; grey wood-look plank floor.",
-    "NOT RECONCILABLE: no camera position inside an 11.0 x 5.7 ft rectangle reproduces the photo's geometry. The photo shows the appliance wall and the garage-door wall meeting at a corner immediately right of the dryer; the traced footprint merges the real mudroom and the laundry alcove and has no such corner. The floor plan was used as the tie-breaker for WHICH END each element sits on."
+  "_orientation": [
+    "The run is on the NORTH wall (z=0), washer WEST, dryer EAST.",
+    "1. MEASURED (floor plan): the plan's appliance icon registers to this room's north side.",
+    "2. MEASURED (photo): the dryer's right flank meets an INSIDE CORNER immediately -- that is the east wall; the washer's left is closed by a full-height white return -- the west wall.",
+    "3. ARITHMETIC: a real Samsung pair is 27.5 + 27 in = 4.54 ft. The north wall is 4.40 ft. Every other wall in this room is 5.7."
+  ],
+  "_wall_faces": {
+    "_why": "Walls extrude OUTWARD from their own footprint line, so a neighbour's wall mass stands INSIDE this room. These are the surfaces a viewer in room 9 actually sees, derived from the room rects.",
+    "north": "local z 0.15 (Office's south wall, z 7.1 + 0.35)",
+    "south": "local z 5.35 (Garage's north wall, z 13.0 - 0.35)",
+    "east": "local x 4.35 (room 22's west wall, x 33.2 - 0.35)",
+    "west": "local x 0.0 (nothing adjoins)",
+    "consequence": "Content is authored at z >= 0.18 and x <= 4.33. The previous wall skin sat at a flat 0.022 inset (skinkit.build's default) and was buried behind the neighbours' wall mass -- which is why this room's walls rendered unpainted even though a skin was placed."
+  },
+  "_declared_compromises": [
+    "APPLIANCE WIDTH: 4.54 ft of real appliance will not fit a 4.40 ft wall. Each machine is authored 2.10 / 2.13 ft -- about 7% narrower than the product. Room geometry is ground truth, so the machines give.",
+    "NO CAMERA REPRODUCES THE PHOTO. The photographer stood ~9 ft back; this footprint is 5.7 ft deep, so the comparison view is a wide-angle shot from just inside the south wall and the appliance fronts are foreshortened. The side-by-side is a CONTENT match, not a geometry match.",
+    "GARAGE DOOR MOVED. The old south-wall door span (local x 7.40-10.10) is off the end of the re-traced room. The garage is directly south and 2.7 ft now only fits at x 0.85-3.55, so that is where it is. The west door (z 1.50-4.20) is unchanged and still valid."
+  ],
+  "_photo_derived": {
+    "surface": "the 'Wash Dry Fold' paper inside the framed print (the frame itself is geometry)",
+    "source": "docs/photos-jpg/Laundry room and garage door right next to it.jpg (1200x1600)",
+    "corners_px": {"UL": [215.0, 441.3], "LL": [223.8, 627.5], "LR": [313.0, 631.3], "UR": [320.0, 471.3]},
+    "scale_reference": "the print's width against the cabinet gap it hangs in, corrected for the 1.25x magnification of the cabinet faces (1.2 ft nearer the camera than the wall): 0.71 x 1.36 ft = 0.97 ft wide",
+    "built_size_ft": [0.95, 1.21],
+    "note": "an 11 x 14 in. frame. Illumination divided out with a wide gaussian before use; the black soap bottle that occludes the bottom-centre is painted out with the paper's own near-white AFTER the division, and the script is dilated one pixel so it survives mipmapping at render scale."
+  },
+  "pieces": {
+    "Laundry Ceiling": {"pos_room_local_ft": [2.20, 8.54, 2.85], "rot_y": 0.0, "scale": 1.0},
+    "Laundry Baseboards": {"pos_room_local_ft": [2.20, 0.0, 2.85], "rot_y": 0.0, "scale": 1.0},
+    "Laundry Wall Wash": {"pos_room_local_ft": [2.20, 0.0, 2.85], "rot_y": 0.0, "scale": 1.0},
+    "Laundry Washer Dryer": {"pos_room_local_ft": [2.20, 0.0, 1.52], "rot_y": 0.0, "scale": 1.0},
+    "Laundry Uppers": {"pos_room_local_ft": [2.17, 3.40, 0.85], "rot_y": 0.0, "scale": 1.0},
+    "Laundry Floor Marks": {"pos_room_local_ft": [2.20, 0.0, 2.41], "rot_y": 0.0, "scale": 1.0}
+  },
+  "_dropped": [
+    "Laundry Tall Cabinet -- invented last round to fill the dead west end of an 11 ft room that no longer exists; it does not appear in either photo and would eat the whole walkway of a 4.4 ft room.",
+    "Laundry Hamper -- appears in neither photo and would stand in the doorway."
   ],
   "_surfaces": {
     "wall_color": "#dbdbda",
     "floor_color": "#6b6967",
     "floor_texture": "wood",
-    "per_wall_skin": {
-      "n": "#7f7f7e",
-      "w": "#b3b3b2",
-      "e": "#f2f2f1",
-      "s": "#fffffe"
-    }
+    "per_wall_skin": {"n": "#a1a1a0", "w": "#b3b3b2", "e": "#f2f2f1", "s": "#fffffe"},
+    "_skin_note": "w/e/s carry over from the previous round's probe fit (the fit is a property of wall ORIENTATION, which a change of footprint does not alter). n was re-fitted this round: at the old #7f7f7e the north wall metered 165.9 against the photo's 206.4, because that hex was solved for an 11-ft room whose north wall took much more sun. Not re-probed: w/e/s were not re-metered this round -- this pass was scoped to the appliance wall."
   },
+  "_metered": {
+    "_method": "roomkit-style: mean, sd AND mean|d1| between adjacent pixels, at native resolution, on clean fields. Render = scratchpad/laundry2/FINAL_laundry_wall.png. Photo = the reference jpg.",
+    "seagrass basket": {"render": [122.3, 41.20, 6.02], "photo": [118.9, 36.72, 16.07]},
+    "woven box on dryer": {"render": [200.3, 9.71, 6.94], "photo": [185.1, 29.82, 12.52]},
+    "wall, band under the cabinets": {"render": [195.2, 5.97, 0.06], "photo": [206.4, 11.82, 0.32]},
+    "cabinet door panel": {"render": [234.6, 2.35, 0.07], "photo": [230.5, 6.97, 0.51]},
+    "_residuals": [
+      "The baskets' |d1| is 6.0 against the photo's 16.1: the weave tile is the right amplitude (sd 41 vs 37) but coarser than real seagrass. A finer tile is the next move, not more geometry.",
+      "The painted surfaces still meter about half the photo's sd. They are no longer flat (round 1 here shipped sd 0.00-0.50 -- algebraically perfect paint), but this scene has one sun and no bounce, so a wall's real falloff has to be authored rather than lit, and pushing the field further starts to read as mottling rather than shading."
+    ]
+  },
+  "_engine_findings": [
+    "COLOR_0 IS CLAMPED AT 1.0. glb.py packs vertex colours as normalised UBYTE after an sRGB->linear conversion, so any authored value above 1.0 silently clamps. A field centred on 1.0 loses its entire bright half. Ride the field DOWN from 1.0 and brighten the material to compensate (l9.py `lift`). This cost two rounds here.",
+    "cylinder() welds SMOOTH normals across its end caps, so a short wide cylinder (a dial, a door glass) shades like a dome. Round 1 here rendered the dryer's dial as a brass ball. Flat discs/annuli wound in the face plane are the fix (l9.py disc_z / ring_z).",
+    "A ring drawn at the same z as a cylinder's front cap z-fights into a shimmering saw-edge -- the dryer door showed this at close range.",
+    "bx()/box() emit NO UVs, so a `tex=` on a bx() samples texel (0,0) and renders as flat paint. The framed print shipped as a blank white panel until it was re-authored as a uv_quad. This is the same trap ROOM-BRIEF records for puff/slab/cylinder."
+  ],
   "_camera": {
     "judge_from": "doll_sw",
-    "why": "doll_sw culls SOUTH+WEST and leaves NORTH (the appliance wall: washer, dryer, ledge, uppers, floating shelf, framed print) and EAST standing -- the north wall carries this room's entire content."
-  },
-  "_metered_srgb_luma": {
-    "_target": "photo 'Laundry room and garage door right next to it.jpg': wall 192.9 (n=99900, sd 12.9) and 186.1 (n=88000, sd 12.8) -> aim 189; floor 138.7 (n=89300, sd 13.4); ceiling 180.0 (n=85500, sd 4.4)",
-    "walls_before_skin": {
-      "north": "234.0 (n=64800)",
-      "west": "209.7 (n=155000)",
-      "east": "168.0 (n=103600)",
-      "south": "144.4 (n=162000)",
-      "spread": 89.6
-    },
-    "walls_after_skin": {
-      "north": "186.9 (n=100000, sd 0.0)",
-      "east": "183.3 (n=103600, sd 4.4)",
-      "west": "175.7 (n=53340, sd 3.3)",
-      "south": "168.7 (n=162000, sd 0.0)",
-      "spread": 18.2,
-      "avg": 178.7
-    },
-    "floor": "143.0 (n=57500, sd 3.0) against the photo's 138.7 (sd 13.4): mean within 4.3, but the plank texture is much flatter than the real LVP (sd 3.0 vs 13.4)"
-  },
-  "pieces": {
-    "Laundry Baseboards": {
-      "pos_room_local_ft": [
-        5.5,
-        0.0,
-        2.85
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Laundry Ceiling": {
-      "pos_room_local_ft": [
-        5.5,
-        8.54,
-        2.85
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Laundry Floor Marks": {
-      "pos_room_local_ft": [
-        5.5,
-        0.0,
-        2.665
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Laundry Hamper": {
-      "pos_room_local_ft": [
-        3.675,
-        0.0,
-        1.37
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Laundry Tall Cabinet": {
-      "pos_room_local_ft": [
-        1.09,
-        0.0,
-        1.287
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Laundry Wall Wash": {
-      "pos_room_local_ft": [
-        5.5,
-        0.0,
-        2.85
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    },
-    "Laundry Washer Dryer": {
-      "pos_room_local_ft": [
-        8.18,
-        0.0,
-        1.47
-      ],
-      "rot_y": 0.0,
-      "scale": 1.0
-    }
+    "why": "doll_sw culls SOUTH+WEST and leaves NORTH (the appliance wall, which carries this room's entire content) and EAST standing.",
+    "comparison_pose": "pos [30.70, 12.45, 12.72] target [30.70, 12.05, 7.45] fov 78 size 660x1200, --no-cutaway --day. Wide because the room is only 5.7 ft deep; see _declared_compromises."
   },
   "_gaps": [
-    "The traced 11.0 x 5.7 ft footprint is not the shape of the real room (see _evidence), so the side-by-side is a content match, not a geometry match. No camera reproduces the photo.",
-    "The framed 'Wash Dry Fold' print and the left upper cabinet are hidden behind the alcove end panel from the reference camera; they are visible from doll_sw.",
-    "Woven baskets are modelled as banded boxes -- at close range they read as boxes, not wicker.",
-    "Floor sd 3.0 vs the photo's 13.4: the plank texture has far less variation than real LVP."
+    "The traced 4.4 x 5.7 ft footprint is narrower and shallower than the room in the photograph, so the side-by-side is a content match, not a geometry match.",
+    "The west and east walls' skins were not re-probed for the new footprint; only the north was.",
+    "No night frame was captured -- nothing emissive was added this round (the ceiling's emissive is the pre-existing documented exception and is unchanged), so there is nothing new to glow.",
+    "Contact shadows under both machines are authored with the working annuli shape but are almost entirely hidden by the machines themselves from every camera this room allows; they were not metered."
   ]
 }
