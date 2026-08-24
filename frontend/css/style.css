@@ -78,6 +78,9 @@
   --gutter: 20px;        /* chrome <-> screen edge */
   --gap: 10px;           /* between tiles in a rail — roomcards GAP / cameras GRID_GAP */
   --rail-w: 340px;       /* the one side rail's width */
+  --editor-w: clamp(330px, 38vw, 560px); /* room editor — a device row is a name
+                            plus three coordinates plus a delete, and 330px left
+                            the name about 80px of it */
   --rail-cols: 2;        /* tiles per rail row; the width ladder drops it to 1 */
   --tile-min: 140px;     /* narrowest a rail tile may get before dropping a column */
   --card-aspect: 1.6;    /* .room-card aspect-ratio — roomcards.js CARD_ASPECT */
@@ -266,7 +269,7 @@ body.app-edit {
    that room's controls are on screen, so the 3D has to sit beside it — and
    focus.js re-frames off stageChanged, so moving the token is the whole fix. */
 body.app-edit.editor-room {
-  --stage-left: calc(var(--sa-l) + var(--gutter) + 330px + var(--gutter));
+  --stage-left: calc(var(--sa-l) + var(--gutter) + var(--editor-w) + var(--gutter));
 }
 body.editor-room #levels { display: none; }      /* focus pins the level anyway */
 body.editor-room #focus-exit { display: none; }  /* the panel carries its own back */
@@ -364,7 +367,7 @@ button.small::after { content: ""; position: absolute; inset: -5px 0; }
   .panel .close:hover { color: #fff; background: var(--surface-2); }
 }
 .panel .close:active { color: #fff; background: var(--surface-2); }
-#editor { right: auto; left: 14px; top: 100px; z-index: 35; }
+#editor { right: auto; left: 14px; top: 100px; z-index: 35; width: var(--editor-w); }
 /* the room screen hides #levels, so the panel reclaims the space it sat below */
 body.editor-room #editor { top: 60px; }
 body.view-only.editor-room #editor { top: 14px; }
@@ -381,7 +384,7 @@ body.view-only.editor-room #editor { top: 14px; }
   border-bottom: 1px solid var(--glass-border);
 }
 #editor-head h2 { margin-bottom: 0; }
-#editor-head .muted { font-size: 12px; letter-spacing: -0.12px; margin-top: 2px; }
+#editor-head .muted { font-size: 13px; letter-spacing: -0.078px; margin-top: 3px; }
 #editor-back {
   background: transparent; color: var(--accent-link);
   padding: 4px 0 6px; font-size: 14px; letter-spacing: -0.224px;
@@ -604,9 +607,13 @@ input[type="file"]::file-selector-button {
 }
 #room-list .room-item.selected { outline: 2px solid var(--accent-hover); outline-offset: -2px; }
 .room-item .name, .entity-item .name, .placed-item .name {
-  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
 }
-.placed-item input { width: 52px; padding: 5px 6px; font-size: 12px; font-family: inherit;
+/* the coordinates are a fixed cost per row; the name takes what is left */
+.placed-item input, .placed-model-row input { flex: 0 0 auto; }
+.placed-item input { width: 72px; padding: 7px 9px; font-size: 14px;
+  letter-spacing: -0.224px; font-family: inherit;
   background: var(--surface-1); color: var(--text);
   border: 1px solid var(--glass-border); border-radius: var(--radius-sm); }
 
@@ -616,11 +623,13 @@ input[type="file"]::file-selector-button {
   margin: -2px 0 6px; padding: 0 8px;
 }
 .placed-model-row select {
-  flex: 1; min-width: 0; padding: 5px 6px; font-size: 12px; font-family: inherit;
+  flex: 1; min-width: 0; padding: 7px 9px; font-size: 14px;
+  letter-spacing: -0.224px; font-family: inherit;
   background: var(--surface-1); color: var(--text);
   border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
 }
-.placed-model-row input { width: 52px; padding: 5px 6px; font-size: 12px; font-family: inherit;
+.placed-model-row input { width: 72px; padding: 7px 9px; font-size: 14px;
+  letter-spacing: -0.224px; font-family: inherit;
   background: var(--surface-1); color: var(--text);
   border: 1px solid var(--glass-border); border-radius: var(--radius-sm); }
 #obj-model-select {
