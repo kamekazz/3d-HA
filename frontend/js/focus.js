@@ -153,8 +153,10 @@ function framePose(mesh) {
 
 // Hide nothing, drop no level, fly to the street. The only thing that narrows
 // is the device markers, which scope to this yard — and which House mode would
-// otherwise hide outright, so this is also the only way to reach the outdoor
-// cameras and lights (devices.js reads focusScope.outdoor for both).
+// otherwise hide outright, so in edit mode this is the only way to reach the
+// outdoor cameras and lights in 3D (devices.js reads focusScope.outdoor for
+// both). In view mode there are no markers at all; the room panel's tiles are
+// the way to those entities.
 function enterOutdoorFocus(mesh, roomId, frame) {
   focusedRoomId = roomId;
   setLevel('all');

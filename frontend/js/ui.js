@@ -5,7 +5,7 @@ import { floorGroups, setLevel, getLevel, highlightRoom,
 import { getState, friendlyName, stateLabel, onStateApplied } from './state.js';
 import { enterFocus, exitFocus, getFocusedRoomId, onFocusChanged } from './focus.js';
 import { renderControls, createCameraView, isSliderActive } from './controls.js';
-import { markers, areMarkersShown, setMarkersShown } from './devices.js';
+import { markers } from './devices.js';
 import { objects3d, applyAllObjectVisibility } from './objects.js';
 import { setSelected, onDragMoved, setGizmoMode } from './drag.js';
 import { setRoomLightsData } from './roomlights.js';
@@ -42,27 +42,10 @@ export function setAppMode(mode) {
   // dashboard.js/roomcards.js hide their chrome off this class (CSS-only)
   document.body.classList.toggle('app-edit', mode === 'edit');
 
-  // Update scene background and grid when mode changes
+  // Update scene background and grid when mode changes. devices.js also
+  // listens: markers are edit-only, so this is what shows/hides them.
   const ev = new CustomEvent('appModeChanged', { detail: { mode } });
   window.dispatchEvent(ev);
-  paintMarkersBtn();
-}
-
-// ○ Devices topbar button: show/hide device markers on floor levels. The
-// House (shell) view always hides markers, and edit mode force-shows them
-// (drag/placement need them) — the button is disabled in both, and the
-// user's preference resumes on a normal floor view.
-let inHouseMode = false; // kept fresh via onLevelChanged in initUI
-function paintMarkersBtn() {
-  const btn = $('btn-markers');
-  if (!btn) return;
-  btn.textContent = areMarkersShown() ? '◉ Devices' : '○ Devices';
-  btn.disabled = appMode === 'edit' || inHouseMode;
-  btn.title = inHouseMode
-    ? 'Devices are hidden in the House view'
-    : appMode === 'edit'
-      ? 'Markers are always visible in edit mode'
-      : 'Show or hide device markers';
 }
 
 // ---------------------------------------------------------------- helpers
@@ -132,14 +115,6 @@ export function initUI({ structure: s, house: h, onReload }) {
   $('chk-edit-mode').onchange = (e) => {
     setAppMode(e.target.checked ? 'edit' : 'view');
   };
-  $('btn-markers').onclick = () => {
-    setMarkersShown(!areMarkersShown());
-    paintMarkersBtn();
-  };
-  window.addEventListener('levelChanged', (e) => {
-    inHouseMode = e.detail.houseMode;
-    paintMarkersBtn();
-  });
   // The house shell GLB failed to fetch/parse (house.js). Everything else in
   // the scene is procedural, so this looks like a render glitch instead of the
   // deploy problem it almost always is — say so instead of hiding it in the
@@ -1167,8 +1142,8 @@ function applyObjectLocally(objectId, data) {
 
   if (data.visible !== undefined) applyAllObjectVisibility();
   if (rebuildLabels) buildLabels(house);
-  // rebuilds fixture records, boundEntities and marker suppression from the
-  // cached house copy we just edited
+  // rebuilds fixture records and boundEntities from the cached house copy
+  // we just edited
   if (rebindLights) setRoomLightsData({ house, structure });
 }
 

@@ -15,7 +15,6 @@ import { roomMeshes, floorBaseY, getLevel } from './house.js';
 import { getState, isOn, onStateApplied, paintModelState } from './state.js';
 import { getNightFactor } from './daylight.js';
 import { objects3d } from './objects.js';
-import { setBoundEntities } from './devices.js';
 import { getFocusedRoomId } from './focus.js';
 
 // The pool is fixed-size and its lights are never added/removed/HIDDEN.
@@ -263,8 +262,6 @@ export function setRoomLightsData({ house, structure }) {
 
   for (const r of rooms) refreshLit(r);
   for (const f of fixtures) refreshFixture(f);
-  // hand devices.js the set so it can stand the duplicate markers down
-  setBoundEntities(boundEntities);
   assignmentDirty = true;
 }
 

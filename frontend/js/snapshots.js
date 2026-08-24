@@ -114,7 +114,10 @@ function captureRoom(roomId) {
   for (const child of group.children) {
     if (child === mesh) { setVis(child, true); continue; }
     if (child.isSprite) continue; // hover labels own their visibility
-    const keep = child.userData.roomId === roomId; // this room's markers/objects
+    // this room's markers/objects. Markers are edit-only, so scope them but
+    // never promote a hidden one -- the card must match the live scene.
+    const keep = child.userData.roomId === roomId
+      && (child.userData.kind !== 'device' || child.visible);
     setVis(child, keep);
   }
   for (const st of stairGroups) setVis(st, false);

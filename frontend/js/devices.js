@@ -8,32 +8,19 @@ import { styleMarker } from './state.js';
 export const markers = new Map(); // entity_id -> marker root (Mesh or Group)
 
 // ------------------------------------------------------- global visibility
-// Markers show on floor levels (○ Devices topbar button can hide them) but
-// are ALWAYS hidden in House mode — the shell view is a clean exterior.
-// Edit mode force-shows them on floor levels (drag/placement need visible
-// markers) without touching the persisted preference. Focus mode hides the
-// other rooms' markers on the focused level. All writers funnel through
-// syncMarkerVisibility so the states can't fight each other.
-const MARKERS_KEY = '3dha.markersShown';
-let markersShown = true;
-try { markersShown = localStorage.getItem(MARKERS_KEY) !== '0'; } catch { /* private mode */ }
-let editOverride = false;
+// Device markers are EDIT-ONLY chrome: they are the handles you drag and
+// click to place a device, so they show on floor levels in edit mode and
+// nowhere else. The plain viewer ("/" or the View toggle) shows the house
+// itself -- rooms, furniture and bound light fixtures -- with no floating
+// primitives over it. House mode (the clean exterior shell) hides them even
+// in edit mode, and focus mode scopes them to the focused room. All writers
+// funnel through syncMarkerVisibility so the states can't fight each other.
+let editMode = false;
 let houseModeActive = false; // 'all' level with a shell loaded
 let focusScope = null; // {level, roomId} while a room is focused
-// Entities that a furniture fixture now stands in for (objects.entity_id).
-// Their auto-generated primitive marker is noise once a real lamp represents
-// them, so it is suppressed -- but only in view mode: edit mode still needs it
-// findable. Pushed in by roomlights.js rather than imported, to keep devices.js
-// free of a roomlights dependency.
-let boundEntities = new Set();
-
-export function setBoundEntities(set) {
-  boundEntities = set || new Set();
-  applyAllMarkerVisibility();
-}
 
 window.addEventListener('appModeChanged', (e) => {
-  editOverride = e.detail.mode === 'edit';
+  editMode = e.detail.mode === 'edit';
   applyAllMarkerVisibility();
 });
 
@@ -42,15 +29,11 @@ window.addEventListener('levelChanged', (e) => {
   applyAllMarkerVisibility();
 });
 
-export function areMarkersShown() {
-  return markersShown;
-}
-
 // THE single writer of marker.visible
 export function syncMarkerVisibility(marker) {
   const ud = marker.userData;
   // Outdoor focus (focus.js) keeps the whole house on screen and scopes by ROOM
-  // alone — the yards sit on the first-floor level but the view stays on 'all',
+  // alone -- the yards sit on the first-floor level but the view stays on 'all',
   // so the level test the indoor scope uses would match every ground-floor room.
   const scoped = !!focusScope && (focusScope.outdoor || ud.level === focusScope.level);
   const focusHidden = scoped && ud.roomId !== focusScope.roomId;
@@ -59,21 +42,11 @@ export function syncMarkerVisibility(marker) {
   // and lights, and that view is House mode.
   const houseHidden = houseModeActive
     && !(focusScope?.outdoor && ud.roomId === focusScope.roomId);
-  // a bound fixture is the entity's visible body now; the marker would just
-  // be a second, floating copy of it
-  const replaced = !editOverride && boundEntities.has(ud.entityId);
-  marker.visible = !ud.hiddenByUser && (markersShown || editOverride) &&
-    !focusHidden && !houseHidden && !replaced;
+  marker.visible = editMode && !ud.hiddenByUser && !focusHidden && !houseHidden;
 }
 
 export function applyAllMarkerVisibility() {
   for (const m of markers.values()) syncMarkerVisibility(m);
-}
-
-export function setMarkersShown(shown) {
-  markersShown = !!shown;
-  try { localStorage.setItem(MARKERS_KEY, shown ? '1' : '0'); } catch { /* private mode */ }
-  applyAllMarkerVisibility();
 }
 
 export function setFocusMarkerScope(scope) {
