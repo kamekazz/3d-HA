@@ -281,6 +281,7 @@ export function applyStage(rect = getStageRect()) {
   // element.clientHeight and knows nothing about the view offset, so the
   // inflated fov would make a pan drag travel fullH/H too far. Cancel it.
   controls.panSpeed = H / fullH;
+  stageFovScale = H / fullH;
 
   // Pixels are square in tangent space, so one scalar drives every fit.
   stagePx = 2 * tanBase / H;
@@ -293,6 +294,13 @@ export function applyStage(rect = getStageRect()) {
     renderer.setSize(W, H);
   }
 }
+
+// Same correction, for anything else that has to undo the inflated fov.
+// TransformControls sizes its gizmo from camera.fov directly, so without this
+// the handles render fullH/H too large — ~40% in portrait, where the bottom
+// filmstrip pushes the stage furthest off-centre.
+let stageFovScale = 1;
+export function getStageFovScale() { return stageFovScale; }
 
 // Distance at which a bounding sphere of `radius` exactly fills the stage rect.
 // THE single fit primitive. With a view offset in play camera.fov/camera.aspect

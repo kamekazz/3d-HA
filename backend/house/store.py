@@ -82,7 +82,15 @@ CREATE TABLE IF NOT EXISTS objects (
     y REAL NOT NULL DEFAULT 0,
     z REAL NOT NULL DEFAULT 0,
     rot_y REAL NOT NULL DEFAULT 0,
-    scale REAL NOT NULL DEFAULT 1.0
+    scale REAL NOT NULL DEFAULT 1.0,
+    -- A furnished piece can BE an HA entity: bind a lamp GLB to light.x and
+    -- clicking it toggles that light and it emits real light (roomlights.js).
+    -- Nullable, and not an FK -- HA entity ids live in HA, not this DB.
+    entity_id TEXT,
+    visible INTEGER NOT NULL DEFAULT 1,
+    -- JSON overrides for a bound fixture's light (LIGHT_CFG_FIELDS below).
+    -- NULL = derive everything from the HA state.
+    light_cfg TEXT
 );
 CREATE TABLE IF NOT EXISTS openings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -112,8 +120,11 @@ ROOM_FIELDS = ("name", "ha_area_id", "x", "z", "width", "depth", "height",
                "is_void")
 PLACEMENT_FIELDS = ("entity_id", "x", "y", "z", "type", "visible",
                     "model_id", "rot_y", "scale")
-# Standalone furniture/decor: a library model placed in a room, no HA entity.
-OBJECT_FIELDS = ("name", "model_id", "x", "y", "z", "rot_y", "scale")
+# Furniture/decor: a library model placed in a room. `entity_id` is optional --
+# bind one and the piece becomes the control surface (and light source) for that
+# HA entity; leave it NULL and it is plain scenery.
+OBJECT_FIELDS = ("name", "model_id", "x", "y", "z", "rot_y", "scale",
+                 "entity_id", "visible", "light_cfg")
 OPENING_FIELDS = ("type", "edge_index", "offset", "width", "height", "elevation", "entity_id")
 MODEL_FIELDS = ("name",)
 # The whole-house shell: one chosen library model + a single rigid transform
@@ -196,6 +207,42 @@ def normalize_points(points):
     return json.dumps(norm), min_x, min_z, width, depth
 
 
+# ---- bound-fixture light config -------------------------------------------
+# objects.light_cfg is nullable TEXT holding a small JSON object, same shape of
+# storage as rooms.points. Everything in it is an OVERRIDE: with no config the
+# frontend derives colour and brightness from the HA state alone.
+# `emit` is the opt-out: binding is also how a fan or a lock becomes
+# clickable in 3D, and those must not glow like a lamp. Default is by
+# domain (see roomlights.js EMITTING_DOMAINS); this overrides either way.
+LIGHT_CFG_FIELDS = ("color", "intensity", "offset_y", "range", "glow_part",
+                    "emit")
+
+
+def _dump_light_cfg(cfg):
+    """dict -> JSON TEXT. None/empty -> NULL (meaning 'derive it all from HA')."""
+    if cfg is None or cfg == "":
+        return None
+    if isinstance(cfg, str):
+        cfg = json.loads(cfg)  # already-serialised; validate by round-tripping
+    if not isinstance(cfg, dict):
+        raise ValueError("light_cfg must be an object")
+    clean = {k: cfg[k] for k in LIGHT_CFG_FIELDS
+             if k in cfg and cfg[k] is not None and cfg[k] != ""}
+    return json.dumps(clean) if clean else None
+
+
+def _load_light_cfg(raw):
+    """JSON TEXT -> dict, or None. Never raises: a corrupt blob must not take
+    down the whole /api/house payload, it just reverts to HA-derived values."""
+    if not raw:
+        return None
+    try:
+        val = json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    return val if isinstance(val, dict) else None
+
+
 class HouseStore:
     def __init__(self, db_path):
         self._lock = threading.Lock()
@@ -222,6 +269,9 @@ class HouseStore:
             "ALTER TABLE rooms ADD COLUMN wall_texture TEXT",
             "ALTER TABLE rooms ADD COLUMN floor_texture TEXT",
             "ALTER TABLE rooms ADD COLUMN is_void INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE objects ADD COLUMN entity_id TEXT",
+            "ALTER TABLE objects ADD COLUMN visible INTEGER NOT NULL DEFAULT 1",
+            "ALTER TABLE objects ADD COLUMN light_cfg TEXT",
         ):
             try:
                 self._db.execute(ddl)
@@ -292,6 +342,10 @@ class HouseStore:
                     "model_name": o["model_name"], "name": o["name"],
                     "rot_y": o["rot_y"], "scale": o["scale"],
                     "position": {"x": o["x"], "y": o["y"], "z": o["z"]},
+                    # bound-fixture fields; entity_id NULL = plain scenery
+                    "entity_id": o["entity_id"],
+                    "visible": int(o["visible"]),
+                    "light_cfg": _load_light_cfg(o["light_cfg"]),
                 })
         for op in openings:
             room = room_by_id.get(op["room_id"])
@@ -896,13 +950,17 @@ class HouseStore:
                 return None
             cur = self._db.execute(
                 "INSERT INTO objects (room_id, model_id, name, x, y, z,"
-                " rot_y, scale) VALUES (?,?,?,?,?,?,?,?)",
+                " rot_y, scale, entity_id, visible, light_cfg)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                 (room_id, int(data["model_id"]), data.get("name") or "",
                  float(pos.get("x", data.get("x", 0))),
                  float(pos.get("y", data.get("y", 0))),
                  float(pos.get("z", data.get("z", 0))),
                  float(data.get("rot_y", 0)),
-                 float(data.get("scale", 1.0))))
+                 float(data.get("scale", 1.0)),
+                 data.get("entity_id") or None,
+                 int(bool(data.get("visible", 1))),
+                 _dump_light_cfg(data.get("light_cfg"))))
             self._db.commit()
             return cur.lastrowid
 
@@ -913,6 +971,13 @@ class HouseStore:
         allowed = {k: flat[k] for k in OBJECT_FIELDS if k in flat}
         if not allowed:
             return False
+        if "visible" in allowed:
+            allowed["visible"] = int(bool(allowed["visible"]))
+        if "entity_id" in allowed:
+            # "" from a cleared <select> means unbind, not an entity named ""
+            allowed["entity_id"] = allowed["entity_id"] or None
+        if "light_cfg" in allowed:
+            allowed["light_cfg"] = _dump_light_cfg(allowed["light_cfg"])
         sets = ", ".join(f"{k}=?" for k in allowed)
         with self._lock:
             cur = self._db.execute(f"UPDATE objects SET {sets} WHERE id=?",

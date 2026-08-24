@@ -7,18 +7,18 @@ import { initSideRail } from './siderail.js';
 import { buildHouse, roomMeshes, stairGroups, paintRoomEmissive, getLevel, houseShellReady } from './house.js';
 import { buildDevices, markers } from './devices.js';
 import { buildObjects, objects3d } from './objects.js';
-import { setAllStates, applyState, friendlyName, stateLabel, styleMarker } from './state.js';
+import { setAllStates, applyState, friendlyName, stateLabel, styleMarker, paintModelState } from './state.js';
 import { buildLabels, showLabel, hideLabel } from './labels.js';
 import { initFocus, enterFocus, exitFocus } from './focus.js';
 import { connectRealtime } from './socket.js';
-import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, openObjectPanel, selectRoom } from './ui.js';
-import { initDrag } from './drag.js';
+import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, openObjectPanel, selectRoom, appMode } from './ui.js';
+import { initDrag, isTransforming, setSelected } from './drag.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
 import { initDaylight, settleDaylight } from './daylight.js';
 import { initEnvironment, setEnvironmentData } from './environment.js';
 import { initWeather } from './weather.js';
-import { initRoomLights, setRoomLightsData } from './roomlights.js';
+import { initRoomLights, setRoomLightsData, repaintFixture, settleRoomLights } from './roomlights.js';
 import { initFloorView } from './floorview.js';
 import { initCutaway, setCutawayData } from './cutaway.js';
 import { initUndo } from './undo.js';
@@ -53,6 +53,7 @@ async function loadStates(pending) {
 }
 
 async function reloadHouse() {
+  setSelected(null); // every mesh below is about to be replaced
   // rebuild disposes the meshes focus mode holds references to
   exitFocus({ flyBack: false });
   const house = await api.getHouse();
@@ -170,6 +171,12 @@ function setupPicking() {
     } else if (ud.kind === 'device') {
       styleMarker(ud.entityId); // state-driven restore, can't desync
       hideLabel(ud.entityId); // labels are hover-only now, even in focus mode
+    } else if (ud.kind === 'object' && ud.entityId) {
+      // roomlights.js owns this piece's emissive and repaints it whenever its
+      // eased glow moves; force that on the next tick so the boost comes off
+      // even while the light is sitting at a steady level.
+      repaintFixture(ud.objectId);
+      hideLabel(ud.entityId);
     }
     hovered = null;
   }
@@ -184,6 +191,11 @@ function setupPicking() {
       paintRoomEmissive(obj, (ud.baseEmissive ?? 0) + 0.15);
     } else if (ud.kind === 'device') {
       obj.scale.multiplyScalar(1.25);
+      showLabel(ud.entityId);
+    } else if (ud.kind === 'object' && ud.entityId) {
+      // a bound fixture gets an emissive lift, NOT the marker's 1.25x pop — a
+      // lamp that grows when you point at it reads as broken
+      paintModelState(obj, { emissiveHex: 0x2997ff, emissiveIntensity: 0.35 });
       showLabel(ud.entityId);
     }
   }
@@ -238,6 +250,10 @@ function setupPicking() {
 
   renderer.domElement.addEventListener('pointerup', (e) => {
     if (!downAt) return;
+    // A <=5px nudge on a gizmo arrow is not a click on the room behind it.
+    // This handler runs before TransformControls' own pointerup, so tc.dragging
+    // is still set here — which is the only way to tell the two apart.
+    if (isTransforming()) { downAt = null; return; }
     const moved = Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y);
     const pinched = wasMultiTouch();
     downAt = null;
@@ -257,32 +273,48 @@ function setupPicking() {
     }
 
     const ud = obj.userData;
+    // A furniture piece bound to an entity behaves exactly like that entity's
+    // marker in view mode -- it IS the device now. In edit mode it stays a
+    // piece of furniture, so it can be moved, rebound or hidden.
+    if (ud.kind === 'object' && ud.entityId && appMode !== 'edit') {
+      handleEntityClick(ud.entityId, isDouble);
+      return;
+    }
     if (ud.kind === 'device') {
-      const domain = ud.entityId.split('.')[0];
-      if (QUICK_TOGGLE_DOMAINS.has(domain)) {
-        // click = toggle (like a real switch), double-click = detail panel;
-        // the short window keeps a double-click from also toggling
-        if (!isDouble) {
-          if (toggleTimer) clearTimeout(toggleTimer);
-          toggleTimer = setTimeout(() => {
-            toggleTimer = null;
-            api.control({ entity_id: ud.entityId, domain, service: 'toggle' })
-              .catch((err) => showBanner(`Control failed: ${err.message}`, 4000));
-          }, DOUBLE_MS);
-        } else {
-          if (toggleTimer) { clearTimeout(toggleTimer); toggleTimer = null; }
-          openDevicePanel(ud.entityId);
-        }
-      } else {
-        openDevicePanel(ud.entityId);
-      }
+      handleEntityClick(ud.entityId, isDouble);
     } else if (ud.kind === 'object') {
-      openObjectPanel(ud.objectId);
+      if (appMode === 'edit') openObjectPanel(ud.objectId);
+      // view mode, unbound: plain scenery. Fall through to its room rather
+      // than opening an editor panel a viewer can't use.
+      else enterFocus(ud.roomId);
     } else if (ud.kind === 'room') {
       if (isDouble) selectRoom(ud.roomId);
       else enterFocus(ud.roomId);
     }
   });
+
+  // Shared by device markers and bound furniture: single click toggles (like a
+  // real switch), double click opens the detail panel.
+  function handleEntityClick(entityId, isDouble) {
+    const domain = entityId.split('.')[0];
+    if (!QUICK_TOGGLE_DOMAINS.has(domain)) {
+      openDevicePanel(entityId);
+      return;
+    }
+    // click = toggle (like a real switch), double-click = detail panel;
+    // the short window keeps a double-click from also toggling
+    if (isDouble) {
+      if (toggleTimer) { clearTimeout(toggleTimer); toggleTimer = null; }
+      openDevicePanel(entityId);
+      return;
+    }
+    if (toggleTimer) clearTimeout(toggleTimer);
+    toggleTimer = setTimeout(() => {
+      toggleTimer = null;
+      api.control({ entity_id: entityId, domain, service: 'toggle' })
+        .catch((err) => showBanner(`Control failed: ${err.message}`, 4000));
+    }, DOUBLE_MS);
+  }
 }
 
 // ------------------------------------------------------------- boot
@@ -378,6 +410,7 @@ async function main() {
   else renderer.compile(scene, camera);
   window.__cutaway?.settle();     // jump wall fades to target, don't fade them in
   settleDaylight();               // and don't fade day->night after the reveal
+  settleRoomLights();             // nor ramp a dozen lamps up once it lifts
 
   bootStage('Rendering room previews…', 0.92, 0.99);
   // immediate: settleLoaders() has resolved, so the 1.5s/6.5s guesswork the

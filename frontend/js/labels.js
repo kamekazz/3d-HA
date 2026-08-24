@@ -43,7 +43,7 @@ function drawLabel(sprite) {
   sprite.material.map.needsUpdate = true;
 }
 
-function makeLabel(dev, room, floor) {
+function makeLabel(dev, room, floor, yOffset = 0.7) {
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_W;
   canvas.height = CANVAS_H;
@@ -59,7 +59,7 @@ function makeLabel(dev, room, floor) {
   const fp = room.footprint;
   sprite.position.set(
     fp.x + dev.position.x,
-    dev.position.y + 0.7,
+    dev.position.y + yOffset,
     fp.z + dev.position.z);
   sprite.visible = false;
   sprite.userData = {
@@ -97,6 +97,18 @@ export function buildLabels(house) {
         const sprite = makeLabel(dev, room, floor);
         group.add(sprite);
         labels.set(dev.entity_id, sprite);
+      }
+      // A furniture piece bound to an entity IS that entity, and devices.js
+      // stands its floating marker down — so the label has to move to the
+      // fixture too, or hovering the lamp pops a pill over empty air where the
+      // marker used to be. Built second so it wins the map slot. Sits near the
+      // bulb: the object anchor is at its base (models.js 'bottom').
+      for (const o of room.objects || []) {
+        if (!o.entity_id) continue;
+        const y = (o.light_cfg?.offset_y ?? 1.0) + 0.7;
+        const sprite = makeLabel({ ...o, visible: 1 }, room, floor, y);
+        group.add(sprite);
+        labels.set(o.entity_id, sprite);
       }
     }
   }

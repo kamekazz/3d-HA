@@ -118,8 +118,22 @@ function applyStyle(marker, { color, emissiveHex, emissiveIntensity, grey, state
     return;
   }
 
-  marker.traverse((child) => {
+  paintModelState(marker, { emissiveHex, emissiveIntensity, grey });
+}
+
+// Repaint a GLB instance's materials from the per-instance originals stashed at
+// child.userData.__orig by models.js buildInstance. Authored colours are never
+// overwritten — state shows as an emissive glow, a grey tint (unavailable), or a
+// restore to the authored look. Exported because bound light fixtures
+// (roomlights.js) need exactly this and must NOT go through applyStyle, which
+// also rescales the object.
+//
+// partFilter(mesh) -> bool optionally narrows the glow to the shade/bulb
+// sub-meshes; meshes it rejects are restored to their authored materials.
+export function paintModelState(root, { emissiveHex, emissiveIntensity, grey, partFilter }) {
+  root.traverse((child) => {
     if (!child.isMesh || !child.userData.__orig) return;
+    const lit = !partFilter || partFilter(child);
     const mats = Array.isArray(child.material) ? child.material : [child.material];
     mats.forEach((m, i) => {
       const orig = child.userData.__orig[i];
@@ -129,7 +143,7 @@ function applyStyle(marker, { color, emissiveHex, emissiveIntensity, grey, state
         if (grey) m.color.lerp(GREY_LERP_TARGET, 0.7);
       }
       if (m.emissive) { // unlit materials (KHR_materials_unlit) have none
-        if (emissiveHex !== undefined && emissiveHex !== null && !grey) {
+        if (lit && emissiveHex !== undefined && emissiveHex !== null && !grey) {
           m.emissive.setHex(emissiveHex);
           m.emissiveIntensity = emissiveIntensity ?? 1;
         } else {

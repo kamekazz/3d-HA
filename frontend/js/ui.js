@@ -6,8 +6,10 @@ import { getState, friendlyName, stateLabel, onStateApplied } from './state.js';
 import { exitFocus, getFocusedRoomId } from './focus.js';
 import { renderControls, createCameraView, isSliderActive } from './controls.js';
 import { markers, areMarkersShown, setMarkersShown } from './devices.js';
-import { objects3d } from './objects.js';
-import { setSelected, onDragMoved } from './drag.js';
+import { objects3d, applyAllObjectVisibility } from './objects.js';
+import { setSelected, onDragMoved, setGizmoMode } from './drag.js';
+import { setRoomLightsData } from './roomlights.js';
+import { buildLabels } from './labels.js';
 import { invalidateModel } from './models.js';
 import { fillTextureSelect } from './textures.js';
 import { canEdit } from './route.js';
@@ -227,26 +229,45 @@ export function initUI({ structure: s, house: h, onReload }) {
 
   // drag ended: server already PATCHed — sync the cached house + open panels
   // without a full reload (the mesh is already where the user left it)
-  onDragMoved(({ kind, id, x, z }) => {
+  onDragMoved(({ kind, id, x, y, z, rot_y, scale }) => {
     if (kind === 'house-shell') {
-      setShellTransform({ x, z }); // keep shellConfig in sync with the drag
+      setShellTransform({ x, y, z, rot_y, scale }); // keep shellConfig in sync
       if (!$('shell-panel').classList.contains('hidden')) {
+        // every field, not just x/z: the panel PUTs all five back on the next
+        // keystroke, so a stale one silently reverts the gesture
         $('shell-x').value = +x.toFixed(2);
+        $('shell-y').value = +y.toFixed(2);
         $('shell-z').value = +z.toFixed(2);
+        $('shell-rot').value = Math.round(rot_y * 180 / Math.PI);
+        $('shell-scale').value = scale;
       }
       return;
     }
     if (kind === 'device') {
       const found = findPlacementById(id);
-      if (found) { found.dev.position.x = x; found.dev.position.z = z; }
+      if (found) {
+        Object.assign(found.dev.position, { x, y, z });
+        found.dev.rot_y = rot_y;
+        found.dev.scale = scale;
+      }
       if (selectedRoomId && found?.room.id === selectedRoomId) renderPlacementSection();
     } else {
       const found = findObjectById(id);
-      if (found) { found.obj.position.x = x; found.obj.position.z = z; }
-      if (panelObjectId === id) { $('op-x').value = x; $('op-z').value = z; }
+      if (found) {
+        Object.assign(found.obj.position, { x, y, z });
+        found.obj.rot_y = rot_y;
+        found.obj.scale = scale;
+      }
+      if (panelObjectId === id) {
+        $('op-x').value = x; $('op-y').value = y; $('op-z').value = z;
+        $('op-rot').value = Math.round(rot_y * 180 / Math.PI);
+        $('op-scale').value = scale;
+      }
       if (selectedRoomId && found?.room.id === selectedRoomId) renderPlacementSection();
     }
   });
+
+  wireGizmoBar();
 
   onStateApplied((entityId) => {
     if (isSliderActive()) return; // HA echoes mid-drag must not rebuild the slider
@@ -566,12 +587,138 @@ async function onRoomFormSubmit(e) {
 
 // ---------------------------------------------------------------- placements
 
+// ---- light fixtures: bind furniture to the entity it actually is ----------
+// Deliberately NOT matching "ceiling": that token names the room-scale ceiling
+// PLANE in ~7 rooms of this house, not a fixture. "Ceiling Fan" still matches
+// through `fan`.
+const FIXTURE_NAME_RE = /\b(lamp|light|sconce|chandelier|pendant|fan)\b/i;
+
+// Score a candidate pairing by shared words. Deliberately weak — this only
+// ORDERS the dropdown and seeds the auto-match proposal; a human confirms.
+function nameScore(objName, entity) {
+  const words = (t) => new Set(String(t).toLowerCase().match(/[a-z]{3,}/g) || []);
+  const a = words(objName);
+  const b = words(`${entity.name} ${entity.entity_id.split('.')[1] || ''}`);
+  let hits = 0;
+  for (const w of a) if (b.has(w)) hits++;
+  return hits;
+}
+
+function roomFixtureEntities(room) {
+  const area = areaById(room.ha_area_id);
+  return (area?.entities || []).filter((e) => {
+    const d = e.entity_id.split('.')[0];
+    return d === 'light' || d === 'switch' || d === 'fan';
+  });
+}
+
+function renderFixtureSection(room) {
+  const list = $('fixture-list');
+  list.innerHTML = '';
+  const candidates = (room.objects || [])
+    .filter((o) => o.entity_id || FIXTURE_NAME_RE.test(o.name || o.model_name || ''));
+  const entities = roomFixtureEntities(room);
+
+  if (!candidates.length) {
+    list.innerHTML = '<p class="muted">No lamp-like furniture in this room. '
+      + 'Bind any piece from its object panel instead.</p>';
+  }
+  if (!entities.length) {
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = room.ha_area_id
+      ? 'This room’s HA area has no light, switch or fan entity — nothing to bind here.'
+      : 'Link this room to an HA area to see its entities.';
+    list.appendChild(p);
+  }
+
+  for (const o of candidates) {
+    const row = document.createElement('div');
+    row.className = 'placed-item fixture-row';
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = o.name || o.model_name;
+    name.title = 'Open this piece';
+    name.onclick = () => openObjectPanel(o.id);
+    row.appendChild(name);
+
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="">— unbound —</option>';
+    // best name match first: in a room with one lamp and six lights that is
+    // usually the right answer already
+    const ranked = entities.slice()
+      .sort((a, b) => nameScore(o.name || o.model_name, b) - nameScore(o.name || o.model_name, a));
+    for (const e of ranked) {
+      const opt = document.createElement('option');
+      opt.value = e.entity_id;
+      opt.textContent = `${e.name} · ${e.entity_id}`;
+      sel.appendChild(opt);
+    }
+    if (o.entity_id && !ranked.some((e) => e.entity_id === o.entity_id)) {
+      const opt = document.createElement('option');
+      opt.value = o.entity_id;
+      opt.textContent = o.entity_id;
+      sel.appendChild(opt);
+    }
+    sel.value = o.entity_id || '';
+    sel.onchange = async () => {
+      try {
+        await api.updateObject(o.id, { entity_id: sel.value || null });
+        applyObjectLocally(o.id, { entity_id: sel.value || null });
+        if (panelObjectId === o.id) openObjectPanel(o.id);
+        renderPlacementSection();
+      } catch (e) {
+        alert(`Bind failed: ${e.message}`);
+      }
+    };
+    row.appendChild(sel);
+    list.appendChild(row);
+  }
+
+  // Auto-match proposes, never commits: name matching will not get
+  // "Master Lamp Small" -> light.rosemary_bedside_light on its own.
+  $('fx-auto').disabled = !candidates.length || !entities.length;
+  $('fx-auto').onclick = async () => {
+    const free = entities.filter((e) =>
+      !(room.objects || []).some((o) => o.entity_id === e.entity_id));
+    const proposals = [];
+    for (const o of candidates) {
+      if (o.entity_id) continue;
+      const best = free
+        .filter((e) => !proposals.some((p) => p.entity.entity_id === e.entity_id))
+        .map((e) => ({ e, s: nameScore(o.name || o.model_name, e) }))
+        .sort((a, b) => b.s - a.s)[0];
+      if (best && best.s > 0) proposals.push({ obj: o, entity: best.e });
+    }
+    if (!proposals.length) {
+      alert('No confident name matches. Bind them with the dropdowns instead.');
+      return;
+    }
+    const lines = proposals
+      .map((p) => `  ${p.obj.name || p.obj.model_name}  →  ${p.entity.entity_id}`)
+      .join('\n');
+    const msg = `Bind these ${proposals.length} fixture(s)?\n\n${lines}`;
+    if (!confirm(msg)) return;
+    for (const p of proposals) {
+      try {
+        await api.updateObject(p.obj.id, { entity_id: p.entity.entity_id });
+        applyObjectLocally(p.obj.id, { entity_id: p.entity.entity_id });
+      } catch (e) {
+        alert(`Bind failed for ${p.obj.name}: ${e.message}`);
+      }
+    }
+    renderPlacementSection();
+  };
+}
+
 function renderPlacementSection() {
   const found = findRoom(selectedRoomId);
   if (!found) return;
   const { room } = found;
   $('placement-section').classList.remove('hidden');
   $('placement-room-name').textContent = room.name;
+
+  renderFixtureSection(room);
 
   // already-placed devices with editable positions
   const placed = $('placed-list');
@@ -786,34 +933,185 @@ async function onAddObject() {
 
 // ---------------------------------------------------------------- object panel
 
+// Domains where binding a fixture means something you can click and light with.
+const FIXTURE_DOMAINS = new Set(['light', 'switch', 'fan', 'input_boolean']);
+
+// Entity picker: the room's own HA area first (that is nearly always the one
+// you want), then everything else. Sorted, and grouped so a house with several
+// hundred entities is still navigable.
+function fillEntitySelect(sel, room, current) {
+  sel.textContent = '';
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = '— none (plain furniture) —';
+  sel.appendChild(none);
+
+  const seen = new Set();
+  const addGroup = (label, entities) => {
+    const list = entities.filter((e) => !seen.has(e.entity_id));
+    if (!list.length) return;
+    const g = document.createElement('optgroup');
+    g.label = label;
+    for (const e of list) {
+      seen.add(e.entity_id);
+      const o = document.createElement('option');
+      o.value = e.entity_id;
+      o.textContent = `${e.name} · ${e.entity_id}`;
+      g.appendChild(o);
+    }
+    sel.appendChild(g);
+  };
+
+  const area = areaById(room?.ha_area_id);
+  const byName = (a, b) => a.entity_id.localeCompare(b.entity_id);
+  const areaEnts = (area?.entities || []).slice().sort(byName);
+  addGroup(area ? `This room — ${area.name}` : 'This room', areaEnts);
+  const rest = allAreas().flatMap((a) => a.entities || []).slice().sort(byName);
+  addGroup('Everywhere else', rest);
+
+  // A bound entity that is no longer in the registry must still be selectable,
+  // or opening the panel would silently unbind it on the next change.
+  if (current && !seen.has(current)) {
+    const g = document.createElement('optgroup');
+    g.label = 'Bound (not in the HA registry)';
+    const o = document.createElement('option');
+    o.value = current;
+    o.textContent = current;
+    g.appendChild(o);
+    sel.appendChild(g);
+  }
+  sel.value = current || '';
+}
+
+function paintLightSection(entityId, cfg) {
+  const domain = (entityId || '').split('.')[0];
+  const show = FIXTURE_DOMAINS.has(domain);
+  $('op-light').classList.toggle('hidden', !show);
+  if (!show) return;
+  const c = cfg || {};
+  $('op-lc-auto').checked = !c.color;
+  $('op-lc-color').value = c.color || '#ffb466';
+  $('op-lc-color').disabled = !c.color;
+  $('op-lc-intensity').value = c.intensity ?? '';
+  $('op-lc-offset').value = c.offset_y ?? '';
+  $('op-lc-range').value = c.range ?? '';
+}
+
 export function openObjectPanel(objectId) {
   const found = findObjectById(objectId);
   if (!found) return;
   panelObjectId = objectId;
-  const { obj } = found;
+  const { obj, room } = found;
   $('op-name').textContent = obj.name || obj.model_name;
-  $('op-model').textContent = `Model: ${obj.model_name} · ${found.room.name}`;
+  if (obj.entity_id) {
+    const tag = document.createElement('span');
+    tag.className = 'op-bound';
+    tag.textContent = `bound to ${obj.entity_id}`;
+    $('op-name').appendChild(tag);
+  }
+  $('op-model').textContent = `Model: ${obj.model_name} · ${room.name}`;
   $('op-x').value = obj.position.x;
   $('op-y').value = obj.position.y;
   $('op-z').value = obj.position.z;
   $('op-rot').value = Math.round((obj.rot_y || 0) * 180 / Math.PI);
   $('op-scale').value = obj.scale ?? 1;
   $('op-rename').value = obj.name || '';
+  $('op-visible').checked = obj.visible !== 0;
+  fillEntitySelect($('op-entity'), room, obj.entity_id);
+  paintLightSection(obj.entity_id, obj.light_cfg);
   setSelected(objects3d.get(objectId) || null);
   $('object-panel').classList.remove('hidden');
 }
 
+// Apply a saved object change to the live scene and the cached house copy,
+// WITHOUT a full reloadHouse. The old panel rebuilt the whole house on every
+// keystroke, which also drops you out of room focus — unusable for the "open a
+// room, tweak the lamp" flow this panel exists for.
+function applyObjectLocally(objectId, data) {
+  const found = findObjectById(objectId);
+  if (!found) return;
+  const { obj, room } = found;
+  const root = objects3d.get(objectId);
+  let rebindLights = false;
+  let rebuildLabels = false;
+
+  for (const [k, v] of Object.entries(data)) {
+    if (k === 'x' || k === 'y' || k === 'z') {
+      obj.position[k] = v;
+      if (root) {
+        root.position.set(
+          room.footprint.x + obj.position.x,
+          obj.position.y,
+          room.footprint.z + obj.position.z);
+      }
+    } else if (k === 'rot_y') {
+      obj.rot_y = v;
+      if (root) root.rotation.y = v;
+    } else if (k === 'scale') {
+      obj.scale = v;
+      if (root) { root.scale.setScalar(v); root.userData.userScale = v; }
+    } else if (k === 'name') {
+      obj.name = v;
+      if (root) {
+        root.userData.name = v;
+        root.userData.pickable = !!obj.entity_id || !SURFACE_NAME_RE.test(v);
+      }
+    } else if (k === 'entity_id') {
+      obj.entity_id = v || null;
+      if (root) {
+        root.userData.entityId = obj.entity_id;
+        // binding overrides the scenery name test — see objects.js isPickable
+        root.userData.pickable = !!obj.entity_id
+          || !SURFACE_NAME_RE.test(obj.name || obj.model_name || '');
+      }
+      rebindLights = true;
+      rebuildLabels = true;   // the label moves marker <-> fixture
+    } else if (k === 'visible') {
+      obj.visible = v ? 1 : 0;
+      if (root) root.userData.hiddenByUser = !v;
+      rebindLights = true;    // a hidden fixture stops lighting the room
+    } else if (k === 'light_cfg') {
+      obj.light_cfg = v;
+      if (root) root.userData.lightCfg = v;
+      rebindLights = true;
+    }
+  }
+
+  if (data.visible !== undefined) applyAllObjectVisibility();
+  if (rebuildLabels) buildLabels(house);
+  // rebuilds fixture records, boundEntities and marker suppression from the
+  // cached house copy we just edited
+  if (rebindLights) setRoomLightsData({ house, structure });
+}
+
+// objects.js's scenery test, mirrored so a rename can re-evaluate pickability
+// without a rebuild. Keep the two in step.
+const SURFACE_NAME_RE = /\b(floor|ceiling|wall wash|baseboards?|crown)\b/i;
+
 function wireObjectPanel() {
-  const patch = async (data) => {
+  const patch = async (data, { repaint = false } = {}) => {
     if (!panelObjectId) return;
     const keep = panelObjectId;
     try {
       await api.updateObject(keep, data);
-      await reloadHouse();
-      openObjectPanel(keep);
+      applyObjectLocally(keep, data);
+      if (repaint) openObjectPanel(keep);
+      if (selectedRoomId === findObjectById(keep)?.room.id) renderPlacementSection();
     } catch (e) {
       alert(`Update failed: ${e.message}`);
     }
+  };
+  const lightCfg = () => {
+    const num = (id) => {
+      const v = $(id).value.trim();
+      return v === '' ? null : Number(v);
+    };
+    return {
+      color: $('op-lc-auto').checked ? null : $('op-lc-color').value,
+      intensity: num('op-lc-intensity'),
+      offset_y: num('op-lc-offset'),
+      range: num('op-lc-range'),
+    };
   };
   $('op-x').onchange = () => patch({ x: Number($('op-x').value) });
   $('op-y').onchange = () => patch({ y: Number($('op-y').value) });
@@ -821,6 +1119,16 @@ function wireObjectPanel() {
   $('op-rot').onchange = () => patch({ rot_y: Number($('op-rot').value) * Math.PI / 180 });
   $('op-scale').onchange = () => patch({ scale: Number($('op-scale').value) || 1 });
   $('op-rename').onchange = () => patch({ name: $('op-rename').value.trim() });
+  $('op-entity').onchange = () =>
+    patch({ entity_id: $('op-entity').value || null }, { repaint: true });
+  $('op-visible').onchange = () => patch({ visible: $('op-visible').checked });
+  for (const id of ['op-lc-color', 'op-lc-intensity', 'op-lc-offset', 'op-lc-range']) {
+    $(id).onchange = () => patch({ light_cfg: lightCfg() });
+  }
+  $('op-lc-auto').onchange = () => {
+    $('op-lc-color').disabled = $('op-lc-auto').checked;
+    patch({ light_cfg: lightCfg() });
+  };
   $('op-delete').onclick = async () => {
     if (!panelObjectId) return;
     await api.deleteObject(panelObjectId);
@@ -830,6 +1138,29 @@ function wireObjectPanel() {
     reloadHouse();
   };
   $('object-form').onsubmit = (e) => e.preventDefault();
+}
+
+// ---- transform gizmo mode bar -------------------------------------------
+// Only meaningful while something is selected, so it follows selection rather
+// than sitting in the topbar. `.edit-only` already hides it in view mode.
+function wireGizmoBar() {
+  const bar = $('gizmo-bar');
+  if (!bar) return;
+  for (const btn of bar.querySelectorAll('button')) {
+    btn.onclick = () => {
+      setGizmoMode(btn.dataset.gizmo);
+      for (const b of bar.querySelectorAll('button')) {
+        b.classList.toggle('active', b === btn);
+      }
+    };
+  }
+  window.addEventListener('selectionChanged', (e) => paintGizmoBar(!!e.detail.kind));
+  window.addEventListener('appModeChanged', () => paintGizmoBar(false));
+  paintGizmoBar(false);
+}
+
+function paintGizmoBar(hasSelection) {
+  $('gizmo-bar')?.classList.toggle('hidden', !hasSelection || appMode !== 'edit');
 }
 
 // ---------------------------------------------------------------- model library

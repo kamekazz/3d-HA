@@ -120,13 +120,67 @@ the weather condition through a dim/desaturate table, and eases `scene.js`'s exp
 0=N maps to scene north = −Z). Renderer uses ACESFilmic tone mapping; shadows stay off (translucent
 walls). Topbar `☀ auto` button cycles auto/day/night (persisted in `localStorage['3dha.lightMode']`);
 `window.__daylight.simulate({elevation, azimuth, condition})` fakes states for testing,
-`simulate(null)` reverts. `frontend/js/roomlights.js` makes rooms glow at night when their HA
-`light.*` entities are on (placed devices ∪ the linked HA area's lights): slab emissive tint per lit
-room, plus a **fixed pool of 6 PointLights** (never added/removed — changing the scene's light count
-recompiles every MeshStandard shader; only intensities animate, scaled by `getNightFactor()`).
-When >6 rooms are lit, the ones nearest `controls.target` on visible levels win.
+`simulate(null)` reverts. `frontend/js/roomlights.js` turns HA lights into scene light, from **two sources feeding one pool**:
+
+- **Fixtures** — an `objects` row carrying an `entity_id` (see the root `CLAUDE.md`). The lamp's own
+  GLB materials glow (`state.js paintModelState`, factored out of `applyStyle` — a fixture must
+  *not* go through `applyStyle`, which also rescales and would pop the lamp 1.25× when it turns on),
+  and a pool light sits at the fixture.
+- **Rooms** — the old whole-room fallback, for any room with no *visible* bound fixture. The room
+  record is kept for **every** room regardless: `getRoomLightIds`/`getRoomsForEntity`/
+  `getAllHouseLightIds` are what `roomcards.js` counts and toggles off and what `dashboard.js`
+  scopes its tile to, so a fixture must never become a second `rooms[]` entry — `Array.find` would
+  return a 1-light set for a 5-light room and "all off" would turn one light off. Fixtures live in
+  their own array, and `getAllHouseLightIds` stays `light.*`-only because a fixture may be bound to
+  a `switch.*` (`roomcards.js toggleRoomLights` hardcodes `domain: 'light'`).
+
+Four things are load-bearing and not guessable:
+
+- **The pool is fixed-size and its lights are never added, removed *or hidden*.** `lights.point.length`
+  is baked into three's program cache key, so changing it — `light.visible = false` included —
+  recompiles every `MeshStandardMaterial`. Intensity 0 is free. The size is chosen **once**, in
+  `initRoomLights`, which `main.js` calls before `renderer.compileAsync`, so the one real compile
+  stays behind the boot curtain: 12 desktop / 8 coarse-pointer, capped by `MAX_FRAGMENT_UNIFORM_VECTORS`.
+  Never `castShadow` a pool light either — that is a second cache-key term.
+- **Intensities are candela under r160's physically-correct falloff** (`useLegacyLights` is gone),
+  with decay 2 and the world unit = 1 **foot**, so illuminance is `intensity / d²` — a 25× divisor
+  at 5 ft. The old `POOL_INTENSITY = 2.2` put ~0.06 on a surface, which is why lights read as doing
+  nothing at all; `FIXTURE_BASE` is 45 and `CENTRE_BASE` 90. Colour must go through
+  `setRGB(..., THREE.SRGBColorSpace)`: `Color.setRGB` defaults to the **linear** working space
+  (only `setHex` defaults to sRGB), and HA's `rgb_color` bytes are sRGB.
+- **Spill is no longer night-gated to zero** — `DAY_FLOOR + (1 - DAY_FLOOR) * getNightFactor()`, so
+  a light that is on reads as on at noon. Consequences: `settleRoomLights()` exists and is called
+  beside `settleDaylight()` (or the curtain lifts onto a dozen lamps ramping up), `snapshots.js`
+  brackets its capture with `suspendRoomLights()` (cards are keyed by *geometry* and persisted, so a
+  card shot while a lamp was on would bake it in forever — and the restore must be intensity-only,
+  see the pool rule above), and the single-floor dollhouse view scales spill by `FLOORVIEW_SPILL`
+  but **room focus does not**, being the one view close enough to want a lamp to read properly.
+- **A fixture's world position is computed, not read.** `getWorldPosition` is wrong here twice over:
+  frame callbacks run before `renderer.render` refreshes `matrixWorld`, and at `setRoomLightsData`
+  time it is still the identity. `houseRoot` is untransformed and a floor group carries only a Y
+  offset, so `floorBaseY.get(level) + root.position.y` is exact and synchronous — which is also what
+  makes the light follow a gizmo drag for free. Emission follows the *mesh* (`isShown` ancestor
+  walk, so House mode / focus / level all count) but deliberately **not** `wallFade`: the cutaway
+  binds any piece within 2 ft of a wall above 1.2 ft, which catches a table lamp, and dimming the
+  room's light because a wall dissolved defeats what the dissolve is for.
+
 `setRoomLightsData({house, structure})` must be re-called after every house rebuild
-(`main.js reloadHouse`) because slabs get fresh materials.
+(`main.js reloadHouse`) because slabs and object roots get fresh materials.
+
+**The transform gizmo** (`frontend/js/drag.js`) is three's `TransformControls`. In r160 it *is* an
+`Object3D` — `scene.add(tc)`, there is no `getHelper()`. Four non-obvious things:
+`applyStage` inflates `camera.fov` to describe the virtual frame and TransformControls sizes its
+handles straight off `camera.fov`, so `tc.size` is corrected by `getStageFovScale()` (the same
+`H/fullH` that `controls.panSpeed` already cancels) — picking needs no correction, since
+`setFromCamera` unprojects through `projectionMatrixInverse`. The capture-phase `pointerdown`
+pre-disable is kept from the old plane-drag: `dragging-changed` alone lets OrbitControls fire its
+`start` event first, which `scene.js` reads as "the user took the camera" and which would kill
+`refitStage` forever. `main.js`'s pointerup click handler runs *before* the gizmo's, so it guards on
+`isTransforming()` — otherwise a ≤5 px nudge on an arrow reads as a click on the room behind it.
+And the readback is normalised in `objectChange`: scale mode writes axes independently and goes
+negative past the pivot, while **rotation must be read off the quaternion, never `rotation.y`** —
+XYZ Euler decomposition expresses a 180° yaw as `(π, 0, π)`, so `rotation.y` reads exactly 0 and
+every half-turn-or-more was silently thrown away on save.
 
 **Outdoor environment & weather** (frontend-only): `frontend/js/environment.js` builds the yard —
 a grass disc reaching past fog-far, merged low-poly trees/bushes (two draw calls, vertex-colored

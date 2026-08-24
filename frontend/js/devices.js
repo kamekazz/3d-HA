@@ -20,6 +20,17 @@ try { markersShown = localStorage.getItem(MARKERS_KEY) !== '0'; } catch { /* pri
 let editOverride = false;
 let houseModeActive = false; // 'all' level with a shell loaded
 let focusScope = null; // {level, roomId} while a room is focused
+// Entities that a furniture fixture now stands in for (objects.entity_id).
+// Their auto-generated primitive marker is noise once a real lamp represents
+// them, so it is suppressed -- but only in view mode: edit mode still needs it
+// findable. Pushed in by roomlights.js rather than imported, to keep devices.js
+// free of a roomlights dependency.
+let boundEntities = new Set();
+
+export function setBoundEntities(set) {
+  boundEntities = set || new Set();
+  applyAllMarkerVisibility();
+}
 
 window.addEventListener('appModeChanged', (e) => {
   editOverride = e.detail.mode === 'edit';
@@ -48,8 +59,11 @@ export function syncMarkerVisibility(marker) {
   // and lights, and that view is House mode.
   const houseHidden = houseModeActive
     && !(focusScope?.outdoor && ud.roomId === focusScope.roomId);
+  // a bound fixture is the entity's visible body now; the marker would just
+  // be a second, floating copy of it
+  const replaced = !editOverride && boundEntities.has(ud.entityId);
   marker.visible = !ud.hiddenByUser && (markersShown || editOverride) &&
-    !focusHidden && !houseHidden;
+    !focusHidden && !houseHidden && !replaced;
 }
 
 export function applyAllMarkerVisibility() {

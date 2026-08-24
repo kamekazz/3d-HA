@@ -65,6 +65,13 @@
 
   <nav id="levels" class="edit-only hidden"></nav>
 
+  <!-- Transform handles for the selected piece (edit mode, something picked) -->
+  <div id="gizmo-bar" class="glass edit-only hidden">
+    <button type="button" data-gizmo="translate" class="active">Move</button>
+    <button type="button" data-gizmo="rotate">Rotate</button>
+    <button type="button" data-gizmo="scale">Scale</button>
+  </div>
+
   <div id="banner" class="hidden"></div>
   <div id="tooltip" class="hidden"></div>
 
@@ -175,7 +182,7 @@
     <button class="close" data-close="object-panel" type="button">&times;</button>
     <h2 id="op-name">Object</h2>
     <p id="op-model" class="muted"></p>
-    <p class="muted">Drag it in the 3D view, or edit the numbers:</p>
+    <p class="muted">Move it with the handles in the 3D view, or edit the numbers:</p>
     <form id="object-form">
       <div class="row3">
         <label>X <input id="op-x" type="number" step="0.1"></label>
@@ -187,6 +194,31 @@
         <label>Scale <input id="op-scale" type="number" step="0.05" min="0.01"></label>
         <label>Name <input id="op-rename" placeholder="(model name)"></label>
       </div>
+
+      <!-- Bind this piece to a Home Assistant entity: it then becomes that
+           entity's body — clicking it toggles, and a light lights the room. -->
+      <div class="op-section">
+        <label class="op-wide">Home Assistant entity
+          <select id="op-entity"><option value="">— none (plain furniture) —</option></select>
+        </label>
+        <label class="op-check">
+          <input id="op-visible" type="checkbox" checked> Show in the 3D view
+        </label>
+      </div>
+
+      <div id="op-light" class="op-section hidden">
+        <p class="muted op-wide">Light emitted by this fixture</p>
+        <div class="row3">
+          <label>Colour <input id="op-lc-color" type="color"></label>
+          <label>Strength <input id="op-lc-intensity" type="number" step="0.1" min="0" placeholder="1"></label>
+          <label>Bulb height (ft) <input id="op-lc-offset" type="number" step="0.1" placeholder="1.0"></label>
+        </div>
+        <div class="row3">
+          <label>Reach (ft) <input id="op-lc-range" type="number" step="1" min="1" placeholder="22"></label>
+          <label class="op-check"><input id="op-lc-auto" type="checkbox" checked> Colour from HA</label>
+        </div>
+      </div>
+
       <div class="btn-row">
         <button type="button" id="op-delete" class="danger">Delete object</button>
       </div>
@@ -281,6 +313,16 @@
       <div id="placed-list"></div>
       <h4>Entities in linked HA area</h4>
       <div id="entity-list" class="muted">Link the room to an HA area to list its entities.</div>
+      <h4>Light fixtures</h4>
+      <p class="muted" id="fx-hint">Bind a lamp, sconce or fan to the HA entity it
+        really is: it then lights the room from where it stands, and clicking it
+        toggles that entity.</p>
+      <div id="fixture-list"></div>
+      <div class="btn-row">
+        <button id="fx-auto" type="button" class="small secondary"
+                title="Propose bindings by matching names — you confirm each one">Auto-match…</button>
+      </div>
+
       <h4>Furniture &amp; objects</h4>
       <div id="object-list"></div>
       <div class="btn-row">

@@ -121,11 +121,28 @@ with **cloned materials** (originals stashed in `child.userData.__orig`) inside 
 colors) and composes `scale = userScale × stateScale`. `objects.js` builds furniture into floor
 groups (`userData.kind: 'object'`); `main.js pick()` raycasts markers+objects first (recursive,
 walks up to the `userData.kind` owner) so they win over translucent walls. `drag.js` drags the
-**selected** marker/object (selection = open device/object panel) on the horizontal plane through
-its own height, one PATCH on release, no rebuild. Endpoints: `POST /api/house/model` (multipart),
+**selected** marker/object (selection = open device/object panel) with three's `TransformControls`
+— translate (XYZ), rotate (Y only) and uniform scale, one PATCH on release, no rebuild. Endpoints:
+`POST /api/house/model` (multipart),
 `GET /api/house/models` (with usage counts), `GET /api/house/model/<id>/file`, `PATCH/DELETE
 /api/house/model/<id>`, `POST /api/house/room/<id>/object`, `PATCH/DELETE /api/house/object/<id>`.
 Max upload 64 MB (`app.py MAX_CONTENT_LENGTH`; api.js maps the bodyless 413 to a friendly error).
+
+**Bound light fixtures** — a furniture `objects` row can carry an `entity_id` and *be* that HA
+entity: the lamp GLB already in the room becomes the thing you click to toggle it, and the thing
+the room is lit from. Three nullable columns on `objects` (`entity_id`, `visible`, `light_cfg`
+JSON: `{color, intensity, offset_y, range, glow_part, emit}`), all in `OBJECT_FIELDS` so they PATCH
+through the existing `/api/house/object/<id>`; undo/redo needed no change (`objects` was already in
+`HISTORY_TABLES`, and `export_snapshot`/`restore_snapshot` are column-agnostic). Bind from the
+object panel's entity `<select>`, or from the room editor's **Light fixtures** section, which pairs
+the room's lamp-like objects against its HA area's light/switch/fan entities (name-matched on
+`/lamp|light|sconce|chandelier|pendant|fan/i` — deliberately **not** `ceiling`, which names the
+room-scale ceiling *plane* in ~7 rooms here; "Ceiling Fan" still matches via `fan`). "Auto-match"
+only *proposes* pairings — name matching will not get "Master Lamp Small" → `light.rosemary_bedside_light`.
+Binding also overrides `objects.js SURFACE_RE`, so a piece named "Ceiling Fan" becomes pickable.
+Not every binding emits: `roomlights.js EMITTING_DOMAINS` is `light`+`switch` (switch-controlled
+lamps are common here), so a fan or lock binds for *clicking* without glowing lamp-amber;
+`light_cfg.emit` overrides either way. See `frontend/CLAUDE.md` for the pool and the falloff.
 
 **Stairs** connect two floors: a `stairs` row (rect footprint + `direction` of ascent, n/s/e/w)
 belongs to the LOWER floor (`floor_id`) and rises that floor's full `floor_height`. In 3D they're

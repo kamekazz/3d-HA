@@ -21,6 +21,10 @@ let focusScope = null; // { level, roomId } | null
 
 function syncObjectVisibility(root) {
   const ud = root.userData;
+  // objects.visible: the user hid this piece from the object panel. Tested
+  // first because it outranks every other rule -- a hidden piece stays hidden
+  // in House mode, in room focus, everywhere.
+  if (ud.hiddenByUser) { root.visible = false; return; }
   const focusHidden = !!focusScope &&
     ud.level === focusScope.level && ud.roomId !== focusScope.roomId;
   const cutAway = (ud.wallFade ?? 1) <= 0.01;
@@ -119,6 +123,14 @@ export function buildObjects(house) {
 // which is what you want for a ceiling. Matched on the placed object's name.
 const SURFACE_RE = /\b(floor|ceiling|wall wash|baseboards?|crown)\b/i;
 
+// A piece bound to an HA entity is always pickable, whatever it is named:
+// binding is an explicit act, and the name test above would otherwise
+// swallow real fixtures -- "Ceiling Fan" matches the ceiling token and is
+// unclickable today.
+function isPickable(name, entityId) {
+  return !!entityId || !SURFACE_RE.test(name);
+}
+
 function makeObject(o, room, floor) {
   const root = new THREE.Group();
   getInstance(o.model_id, 'bottom')
@@ -141,8 +153,12 @@ function makeObject(o, room, floor) {
     kind: 'object',
     objectId: o.id,
     name,
-    pickable: !SURFACE_RE.test(name),
+    entityId: o.entity_id || null, // bound fixture: this piece IS that entity
+    lightCfg: o.light_cfg || null,
+    hiddenByUser: o.visible === 0,
+    pickable: isPickable(name, o.entity_id),
     modelId: o.model_id,
+    userScale: o.scale || 1, // mirrors devices.js; state.js composes with it
     roomId: room.id,
     roomName: room.name,
     level: floor.level,

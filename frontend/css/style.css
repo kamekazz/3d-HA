@@ -1142,3 +1142,55 @@ input[type="file"]::file-selector-button {
   .tswitch .knob::before { width: 22px; height: 22px; }
   .tswitch input:checked + .knob::before { transform: translateX(18px); }
 }
+
+/* ---- transform gizmo mode bar (edit mode, something selected) -------------
+   Sits ABOVE #focus-exit, not beside it: editing a fixture from inside room
+   focus is the whole point of the binding flow, so the two ARE on screen
+   together and a shared bottom-centre slot overlaps them. Its own centring
+   translate has to be restated in :active, or the press-scale drops it back to
+   the left edge. */
+#gizmo-bar {
+  position: fixed; bottom: calc(var(--sa-b) + 78px); left: 50%;
+  transform: translateX(-50%);
+  z-index: 25; display: flex; gap: 4px; padding: 4px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+#gizmo-bar button {
+  background: transparent; color: var(--text-dim); border: 0;
+  border-radius: var(--radius-pill); padding: 8px 18px;
+  font-size: 15px; font-weight: 400; letter-spacing: -0.24px;
+}
+#gizmo-bar button.active { background: var(--accent); color: var(--text); }
+@media (hover: hover) {
+  #gizmo-bar button:not(.active):hover { background: var(--surface-2); color: var(--text); }
+}
+#gizmo-bar button:active { transform: scale(0.95); }
+
+/* ---- object panel: entity binding + light config ------------------------- */
+.op-section {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--glass-border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.op-section.hidden { display: none; }
+.op-wide { display: block; width: 100%; }
+.op-wide select { width: 100%; }
+.op-check {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text-dim);
+}
+.op-check input { width: auto; }
+/* a bound piece is a device now — say so where the name is */
+#op-name .op-bound {
+  font-size: 12px; font-weight: 400; color: var(--accent-link);
+  display: block; margin-top: 2px;
+}
+
+/* fixture binding rows: name on the left, entity picker filling the rest */
+.fixture-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.fixture-row .name { flex: 0 0 40%; cursor: pointer; }
+.fixture-row select { flex: 1; min-width: 0; }
+#fx-hint { margin: 4px 0 8px; }

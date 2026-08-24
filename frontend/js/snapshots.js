@@ -16,6 +16,8 @@ import { scoreForCamera } from './cutaway.js';
 import { getEnvironmentRoot } from './environment.js';
 import { getWeatherRoot } from './weather.js';
 import { getFocusedRoomId } from './focus.js';
+import { suspendRoomLights } from './roomlights.js';
+import { GIZMO_NAME } from './drag.js';
 
 const SNAP_W = 384, SNAP_H = 240;      // card image (1.6 aspect)
 const ASPECT = SNAP_W / SNAP_H;
@@ -161,6 +163,15 @@ function captureRoom(roomId) {
   // the wall cutaway is scored against the live camera; re-score it for this
   // one or the card is shot through the back of a solid near wall
   const restoreCutaway = scoreForCamera(snapCam);
+  // Cards are keyed by GEOMETRY and persisted, so anything live in the pixels
+  // is baked in forever. The pool lights are scene children the per-room
+  // isolation sweep above never touches, and a fixture's glow is deliberately
+  // not night-gated — shoot the room unlit and let roomcards.js signal lit-ness
+  // with its own `.lit` class instead.
+  const restoreLights = suspendRoomLights();
+  // depthTest:false + renderOrder Infinity: the gizmo would paint straight over
+  // the card if anything happened to be selected when a sweep fired
+  setVis(scene.getObjectByName(GIZMO_NAME), false);
   renderer.render(scene, snapCam);
   let sw = src.width, sh = src.height, sx = 0, sy = 0;
   if (srcAspect > ASPECT) { sw = sh * ASPECT; sx = (src.width - sw) / 2; }
@@ -170,6 +181,7 @@ function captureRoom(roomId) {
 
   // ---- restore, then repaint the real view so no snapshot frame ever shows
   restoreCutaway();
+  restoreLights();
   for (const [o, v] of saved) o.visible = v;
   scene.background = savedBg;
   scene.fog = savedFog;

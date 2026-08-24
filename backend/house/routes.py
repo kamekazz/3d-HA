@@ -402,6 +402,8 @@ def place_object(room_id):
         object_id = _store().add_object(room_id, data)
     except sqlite3.IntegrityError:
         return jsonify({"error": "model not found"}), 400
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     if object_id is None:
         return jsonify({"error": "room not found"}), 404
     return jsonify({"id": object_id}), 201
@@ -414,6 +416,9 @@ def update_object(object_id):
         updated = _store().update_object(object_id, request.get_json(force=True))
     except sqlite3.IntegrityError:
         return jsonify({"error": "model not found"}), 400
+    except ValueError as exc:
+        # a malformed light_cfg is the caller's mistake, not a server fault
+        return jsonify({"error": str(exc)}), 400
     if not updated:
         return jsonify({"error": "object not found or nothing to update"}), 404
     return jsonify({"ok": True})
