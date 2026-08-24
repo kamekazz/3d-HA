@@ -3,7 +3,7 @@ import { api } from './api.js';
 import { floorGroups, setLevel, getLevel, highlightRoom,
          setShellTransform, getShellRoot, getShellConfig } from './house.js';
 import { getState, friendlyName, stateLabel, onStateApplied } from './state.js';
-import { exitFocus, getFocusedRoomId } from './focus.js';
+import { enterFocus, exitFocus, getFocusedRoomId, onFocusChanged } from './focus.js';
 import { renderControls, createCameraView, isSliderActive } from './controls.js';
 import { markers, areMarkersShown, setMarkersShown } from './devices.js';
 import { objects3d, applyAllObjectVisibility } from './objects.js';
@@ -33,7 +33,7 @@ export function setAppMode(mode) {
     el.classList.toggle('hidden', mode === 'view');
   });
   if (mode === 'view') {
-    $('editor').classList.add('hidden');
+    closeEditor();
     $('object-panel').classList.add('hidden');
     $('models-modal').classList.add('hidden');
     $('planner').classList.add('hidden');
@@ -153,7 +153,29 @@ export function initUI({ structure: s, house: h, onReload }) {
   $('chk-edit-mode').checked = canEdit;
   setAppMode(canEdit ? 'edit' : 'view');
 
-  $('btn-editor').onclick = () => $('editor').classList.toggle('hidden');
+  $('btn-editor').onclick = () => {
+    if ($('editor').classList.contains('hidden')) openEditor();
+    else closeEditor();
+  };
+  $('editor-back').onclick = leaveRoomScreen;
+  $('btn-add-room').onclick = () => {
+    resetRoomForm();      // blank fields, #placement-section hidden
+    setEditorView('room'); // no focus: there is no room to fly to yet
+    $('rf-name').focus();
+  };
+
+  // The 3D view is the other way into a room. Clicking a room mesh focuses it
+  // (main.js), and this brings the editor along, so the mesh and the room list
+  // land in exactly the same place. Rebuilds are invisible here — focus.js
+  // suspends and resumes around them without emitting.
+  onFocusChanged((roomId) => {
+    if (appMode !== 'edit') return;
+    if (roomId === null) {
+      if ($('editor').dataset.view === 'room') backToRoomList();
+    } else if (roomId !== selectedRoomId) {
+      selectRoom(roomId);
+    }
+  });
   $('btn-refresh').onclick = async () => {
     try { await api.refreshHA(); } catch { /* not configured */ }
     setTimeout(reloadHouse, 1500);
@@ -213,11 +235,12 @@ export function initUI({ structure: s, house: h, onReload }) {
       if (btn.dataset.close === 'shell-panel') {
         setSelected(null); // stop dragging the shell
       }
+      if (btn.dataset.close === 'editor') closeEditor();
     };
   });
 
   $('room-form').onsubmit = onRoomFormSubmit;
-  $('rf-cancel').onclick = resetRoomForm;
+  $('rf-cancel').onclick = leaveRoomScreen;
 
   $('btn-models').onclick = openModelsModal;
   $('mm-upload-form').onsubmit = onModelUpload;
@@ -285,8 +308,8 @@ export function updateData({ structure: s, house: h }) {
   fillAreaSelect();
   renderRoomList();
   if (selectedRoomId && !findRoom(selectedRoomId)) {
-    selectedRoomId = null;
-    resetRoomForm();
+    // deleted, or undone out of existence, while its screen was open
+    backToRoomList();
   }
   if (selectedRoomId) renderPlacementSection();
   // scene was rebuilt: re-point the drag selection at the fresh meshes
@@ -471,16 +494,61 @@ function fillAreaSelect() {
   }
 }
 
+// --------------------------------------------------- the editor's two screens
+//
+// #editor is a room LIST and a single ROOM, not one long column. Picking a room
+// flies the camera into it (focus.js does the isolating) and swaps the panel to
+// that room's controls; the back button flies out again. Both screens live in
+// the same markup and are switched by one attribute.
+
+function setEditorView(view) {
+  $('editor').dataset.view = view;
+  document.body.classList.toggle('editor-room', view === 'room');
+  $('editor').scrollTop = 0;
+}
+
+function openEditor() {
+  $('editor').classList.remove('hidden');
+}
+
+function closeEditor() {
+  $('editor').classList.add('hidden');
+  // leaving by the X or by flipping to view mode still means leaving the room
+  if (getFocusedRoomId()) exitFocus();
+  selectedRoomId = null;
+  setEditorView('list');
+  document.body.classList.remove('editor-room');
+}
+
+// Back out to the list. Routed through exitFocus where possible so the camera
+// flies home; the direct call covers a room that never had a mesh to fly to.
+function leaveRoomScreen() {
+  if (getFocusedRoomId()) exitFocus(); // emits null -> backToRoomList below
+  else backToRoomList();
+}
+
+function backToRoomList() {
+  selectedRoomId = null;
+  resetRoomForm();          // clears the fields and hides #placement-section
+  setEditorView('list');
+}
+
 function renderRoomList() {
   const list = $('room-list');
   list.innerHTML = '';
   for (const f of [...house.floors].sort((a, b) => a.level - b.level)) {
+    if (!(f.rooms || []).length) continue;
+    // a floor heading beats an "(L1)" suffix on all 24 rows
+    const head = document.createElement('h4');
+    head.className = 'ed-floor';
+    head.textContent = `${f.level} · ${f.name}`;
+    list.appendChild(head);
     for (const room of f.rooms || []) {
       const item = document.createElement('div');
       item.className = 'room-item' + (room.id === selectedRoomId ? ' selected' : '');
       const name = document.createElement('span');
       name.className = 'name';
-      name.textContent = `${room.name} (L${f.level})`;
+      name.textContent = room.name;
       name.onclick = () => selectRoom(room.id);
       const edit = document.createElement('button');
       edit.className = 'small secondary';
@@ -500,20 +568,29 @@ function renderRoomList() {
     }
   }
   if (!list.children.length) {
-    list.innerHTML = '<p class="muted">No rooms yet — add one below.</p>';
+    list.innerHTML = '<p class="muted">No rooms yet — use “+ Room”.</p>';
   }
 }
 
 export function selectRoom(roomId) {
-  selectedRoomId = roomId;
   const found = findRoom(roomId);
   if (!found) return;
+  // before enterFocus: the focus event it emits comes straight back to our own
+  // listener, which compares against this and drops the re-entry
+  selectedRoomId = roomId;
   const { room, floor } = found;
-  // focus mode owns room opacities while active — don't fight its fades
+  openEditor();
+  // Transport. Drops the level selector to the room's floor, hides its
+  // siblings, scopes markers + furniture to it and flies in. A no-op when we
+  // are already focused there, so refreshing the form never re-flies.
+  enterFocus(roomId);
+  setEditorView('room');
+  // fallback for a room with no mesh yet (just created, pre-rebuild), where
+  // enterFocus early-returns: focus mode otherwise owns room opacities
   if (!getFocusedRoomId()) highlightRoom(roomId);
-  $('editor').classList.remove('hidden');
 
-  $('room-form-title').textContent = `Edit: ${room.name}`;
+  $('room-form-title').textContent = room.name;
+  $('room-form-sub').textContent = `${floor.level} · ${floor.name}`;
   $('rf-id').value = room.id;
   $('rf-name').value = room.name;
   $('rf-floor').value = floor.id;
@@ -538,7 +615,8 @@ export function selectRoom(roomId) {
 function resetRoomForm() {
   selectedRoomId = null;
   if (!getFocusedRoomId()) highlightRoom(null);
-  $('room-form-title').textContent = 'Add room';
+  $('room-form-title').textContent = 'New room';
+  $('room-form-sub').textContent = '';
   $('room-form').reset();
   $('rf-id').value = '';
   $('rf-width').value = 13; $('rf-depth').value = 10; $('rf-height').value = 8;
@@ -618,6 +696,7 @@ function renderFixtureSection(room) {
   const candidates = (room.objects || [])
     .filter((o) => o.entity_id || FIXTURE_NAME_RE.test(o.name || o.model_name || ''));
   const entities = roomFixtureEntities(room);
+  setSectionCount('ed-n-fixtures', candidates.length);
 
   if (!candidates.length) {
     list.innerHTML = '<p class="muted">No lamp-like furniture in this room. '
@@ -711,13 +790,20 @@ function renderFixtureSection(room) {
   };
 }
 
+// A collapsed section shows nothing of what it holds, so each one carries its
+// own count in the summary.
+function setSectionCount(id, n) {
+  $(id).textContent = n ? ` ${n}` : '';
+}
+
 function renderPlacementSection() {
   const found = findRoom(selectedRoomId);
   if (!found) return;
   const { room } = found;
   $('placement-section').classList.remove('hidden');
-  $('placement-room-name').textContent = room.name;
 
+  setSectionCount('ed-n-devices', (room.devices || []).length);
+  setSectionCount('ed-n-objects', (room.objects || []).length);
   renderFixtureSection(room);
 
   // already-placed devices with editable positions
@@ -762,6 +848,7 @@ function renderPlacementSection() {
   list.innerHTML = '';
   const area = areaById(room.ha_area_id);
   if (!area) {
+    setSectionCount('ed-n-entities', 0);
     list.innerHTML = structure
       ? '<p class="muted">Link the room to an HA area to list its entities.</p>'
       : '<p class="muted">HA structure not loaded.</p>';
@@ -769,6 +856,7 @@ function renderPlacementSection() {
   }
   const placedIds = new Set((room.devices || []).map((d) => d.entity_id));
   const candidates = area.entities.filter((e) => !e.hidden && !placedIds.has(e.entity_id));
+  setSectionCount('ed-n-entities', candidates.length);
   for (const ent of candidates) {
     const item = document.createElement('div');
     item.className = 'entity-item';

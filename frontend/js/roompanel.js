@@ -318,8 +318,16 @@ export function initRoomPanel({ house: h }) {
   house = h;
 
   onFocusChanged((roomId) => {
+    // In edit mode the room editor's room screen IS this panel, and both are
+    // pinned at left:14px — opening this one would stack it on top.
+    if (document.body.classList.contains('app-edit')) { closeRoomPanel(); return; }
     if (roomId) openRoomPanel(roomId);
     else closeRoomPanel();
+  });
+
+  // ...and flipping View -> Edit while a room is open has to close it too.
+  window.addEventListener('appModeChanged', (e) => {
+    if (e.detail.mode === 'edit') closeRoomPanel();
   });
 
   $('rp-close').onclick = () => exitFocus(); // emits null -> closeRoomPanel

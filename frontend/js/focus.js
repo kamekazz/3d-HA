@@ -19,6 +19,11 @@ import { hideAllLabels } from './labels.js';
 let focusedRoomId = null;
 let savedPose = null;  // camera pose before the first enterFocus
 let savedLevel = null; // level selector value before the first enterFocus
+// A house rebuild disposes every mesh we hold, so focus has to let go and then
+// re-attach — but the user did not navigate anywhere. While `quiet` is set the
+// enter/exit below run their teardown and setup without telling any listener.
+let quiet = false;
+let rebindRoomId = null; // room to re-enter once the new meshes exist
 
 export function getFocusedRoomId() {
   return focusedRoomId;
@@ -33,6 +38,7 @@ export function onFocusChanged(fn) {
 }
 
 function emitFocus(roomId) {
+  if (quiet) return;
   for (const fn of focusListeners) fn(roomId);
 }
 
@@ -149,17 +155,21 @@ function framePose(mesh) {
 // is the device markers, which scope to this yard — and which House mode would
 // otherwise hide outright, so this is also the only way to reach the outdoor
 // cameras and lights (devices.js reads focusScope.outdoor for both).
-function enterOutdoorFocus(mesh, roomId) {
+function enterOutdoorFocus(mesh, roomId, frame) {
   focusedRoomId = roomId;
   setLevel('all');
   setActiveLevelButton('all');
   setFocusMarkerScope({ outdoor: true, roomId });
   setObjectFocusScope(null);
+  if (!frame) return;
   const pose = outdoorPose(mesh);
   flyTo(pose.position, pose.target);
 }
 
-export function enterFocus(roomId) {
+// `frame: false` re-attaches to a room without moving the camera. That is what
+// a rebuild needs: re-running framePose there would snap the view back to the
+// framing shot and throw away whatever orbit the user had while editing.
+export function enterFocus(roomId, { frame = true } = {}) {
   const mesh = roomMeshes.get(roomId);
   if (!mesh || focusedRoomId === roomId) return;
   const level = mesh.userData.level;
@@ -177,7 +187,7 @@ export function enterFocus(roomId) {
   // the outdoor branch shares everything up to here — the saved pose, the
   // previous room's restore — and none of the isolation below it
   if (isOutdoorRoom(mesh.userData.roomName)) {
-    enterOutdoorFocus(mesh, roomId);
+    enterOutdoorFocus(mesh, roomId, frame);
     controls.enablePan = false;
     const chipOut = document.getElementById('focus-exit');
     chipOut.textContent = `← ${mesh.userData.roomName}`;
@@ -215,7 +225,7 @@ export function enterFocus(roomId) {
   // frame the room: distance that fits its bounding sphere in the tighter FOV.
   // Box3 works for both BoxGeometry (rect) and ExtrudeGeometry (polygon)
   // rooms and is world-space, so the floor's Y offset is already included.
-  framePose(mesh);
+  if (frame) framePose(mesh);
 
   controls.enablePan = false;
   const chip = document.getElementById('focus-exit');
@@ -245,6 +255,54 @@ export function exitFocus({ flyBack = true } = {}) {
   emitFocus(null);
 }
 
+// ------------------------------------------------- rebuild suspend / resume
+
+// main.js reloadHouse replaces every mesh in the scene, including the one we
+// are holding, so focus has to let go and re-attach around it. That round trip
+// is mechanical, and two things must not leak out of it:
+//
+//   - the saved pose and level have to OUTLIVE it. A plain exitFocus nulls
+//     them, so the next real exit would fly "back" to the room you were
+//     standing in rather than to the house you came from.
+//   - no focus event may fire. Every listener reads one as the user
+//     navigating, and a dozen handlers inside the room editor (each device
+//     x/y/z nudge, model swap, object add/delete) go through reloadHouse —
+//     the editor would bounce back to its room list on every one of them.
+export function suspendFocusForRebuild() {
+  rebindRoomId = focusedRoomId;
+  if (rebindRoomId === null) return null;
+  const pose = savedPose, level = savedLevel;
+  quiet = true;
+  try { exitFocus({ flyBack: false }); } finally { quiet = false; }
+  savedPose = pose;
+  savedLevel = level;
+  return rebindRoomId;
+}
+
+// Call once the new meshes are in the scene — after buildObjects, so the object
+// focus scope lands on the new instances.
+export function resumeFocusAfterRebuild() {
+  const id = rebindRoomId;
+  rebindRoomId = null;
+  if (id === null) return null;
+  const pose = savedPose, level = savedLevel;
+  quiet = true;
+  try { enterFocus(id, { frame: false }); } finally { quiet = false; }
+  if (focusedRoomId === null) {
+    // the room did not survive the rebuild (deleted, or undone out of
+    // existence) — say so once, so the UI falls back instead of pointing at
+    // a room that is no longer there
+    savedPose = null;
+    savedLevel = null;
+    document.getElementById('focus-exit').classList.add('hidden');
+    emitFocus(null);
+    return null;
+  }
+  savedPose = pose;
+  savedLevel = level;
+  return id;
+}
+
 export function initFocus() {
   // A layout change (rotation, breakpoint flip, rail switch) moves the stage
   // rect, so a focused room has to be re-fitted into the new one. framePose
@@ -262,7 +320,14 @@ export function initFocus() {
   });
 
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') exitFocus();
+    if (e.key !== 'Escape') return;
+    // The room editor's room screen is full of inputs, and Escape inside one
+    // means "revert this field", not "fly the camera out of the room".
+    // Same carve-out undo.js makes for Ctrl+Z.
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT'
+              || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    exitFocus();
   });
   document.getElementById('focus-exit').addEventListener('click', () => exitFocus());
 }

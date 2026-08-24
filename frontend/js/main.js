@@ -9,9 +9,10 @@ import { buildDevices, markers } from './devices.js';
 import { buildObjects, objects3d } from './objects.js';
 import { setAllStates, applyState, friendlyName, stateLabel, styleMarker, paintModelState } from './state.js';
 import { buildLabels, showLabel, hideLabel } from './labels.js';
-import { initFocus, enterFocus, exitFocus } from './focus.js';
+import { initFocus, enterFocus, exitFocus, suspendFocusForRebuild,
+         resumeFocusAfterRebuild } from './focus.js';
 import { connectRealtime } from './socket.js';
-import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, openObjectPanel, selectRoom, appMode } from './ui.js';
+import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, openObjectPanel, appMode } from './ui.js';
 import { initDrag, isTransforming, setSelected } from './drag.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
@@ -54,13 +55,17 @@ async function loadStates(pending) {
 
 async function reloadHouse() {
   setSelected(null); // every mesh below is about to be replaced
-  // rebuild disposes the meshes focus mode holds references to
-  exitFocus({ flyBack: false });
+  // The rebuild disposes the meshes focus mode holds references to, so it has
+  // to let go — but not as exitFocus, which every listener reads as the user
+  // navigating out. Every edit made inside the room editor lands here.
+  suspendFocusForRebuild();
   const house = await api.getHouse();
   buildHouse(house);
   buildDevices(house);
   buildObjects(house);
   setCutawayData(house); // wall meshes + furniture are new objects after a rebuild
+  // after buildObjects: the object focus scope has to land on the new instances
+  resumeFocusAfterRebuild();
   buildLabels(house);
   setEnvironmentData(house); // yard follows the (possibly moved) footprints
   setRoomLightsData({ house, structure }); // fresh slab materials — repoint glow
@@ -288,8 +293,10 @@ function setupPicking() {
       // than opening an editor panel a viewer can't use.
       else enterFocus(ud.roomId);
     } else if (ud.kind === 'room') {
-      if (isDouble) selectRoom(ud.roomId);
-      else enterFocus(ud.roomId);
+      // One gesture, both modes: focus the room. In edit mode ui.js follows the
+      // focus event and opens that room's editor screen, so a click on the mesh
+      // and "Edit" in the room list land in exactly the same place.
+      enterFocus(ud.roomId);
     }
   });
 

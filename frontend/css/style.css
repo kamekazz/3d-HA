@@ -261,6 +261,15 @@ body.app-edit {
   --stage-top: calc(var(--sa-t) + 48px);   /* the topbar */
   --stage-bottom: calc(var(--sa-b) + var(--gutter));
 }
+/* The room editor's room screen is the exception to the note above: it is a
+   MODE, not a transient selection panel. You are flown into one room and only
+   that room's controls are on screen, so the 3D has to sit beside it — and
+   focus.js re-frames off stageChanged, so moving the token is the whole fix. */
+body.app-edit.editor-room {
+  --stage-left: calc(var(--sa-l) + var(--gutter) + 330px + var(--gutter));
+}
+body.editor-room #levels { display: none; }      /* focus pins the level anyway */
+body.editor-room #focus-exit { display: none; }  /* the panel carries its own back */
 
 .status-dot {
   width: 10px; height: 10px; border-radius: 50%;
@@ -356,6 +365,60 @@ button.small::after { content: ""; position: absolute; inset: -5px 0; }
 }
 .panel .close:active { color: #fff; background: var(--surface-2); }
 #editor { right: auto; left: 14px; top: 100px; z-index: 35; }
+/* the room screen hides #levels, so the panel reclaims the space it sat below */
+body.editor-room #editor { top: 60px; }
+body.view-only.editor-room #editor { top: 14px; }
+
+/* The room editor is two screens: the room list, and one room. */
+#editor[data-view="list"] #editor-room-screen,
+#editor[data-view="room"] #editor-list-screen { display: none; }
+
+/* stays put while the room's sections scroll under it — same recipe as #rp-header */
+#editor-head {
+  position: sticky; top: -16px; z-index: 2;
+  margin: -16px -16px 12px; padding: 12px 16px 10px;
+  background: rgba(29, 29, 31, 0.98);
+  border-bottom: 1px solid var(--glass-border);
+}
+#editor-head h2 { margin-bottom: 0; }
+#editor-head .muted { font-size: 12px; letter-spacing: -0.12px; margin-top: 2px; }
+#editor-back {
+  background: transparent; color: var(--accent-link);
+  padding: 4px 0 6px; font-size: 14px; letter-spacing: -0.224px;
+}
+@media (hover: hover) {
+  #editor-back:hover { background: transparent; color: #fff; }
+}
+#editor-back:active { background: transparent; transform: scale(0.95); }
+
+/* floor headings in the room list */
+.ed-floor {
+  font-size: 12px; font-weight: 600; letter-spacing: -0.12px;
+  color: var(--text-dim); text-transform: uppercase;
+  margin: 14px 0 6px;
+}
+.ed-floor:first-child { margin-top: 8px; }
+
+/* one room's sections: collapsed accordions, so the room's own fields are the
+   only thing on screen until you go looking for a device or a lamp */
+.ed-sec { border-top: 1px solid var(--glass-border); }
+.ed-sec > summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 2px;
+  font-size: 14px; font-weight: 600; letter-spacing: -0.224px;
+  color: var(--text-faint);
+}
+.ed-sec > summary::-webkit-details-marker { display: none; }
+.ed-sec > summary::before {
+  content: "▸"; color: var(--text-dim);
+  transition: transform 0.12s ease;
+}
+.ed-sec[open] > summary::before { transform: rotate(90deg); }
+@media (hover: hover) {
+  .ed-sec > summary:hover { color: var(--text); }
+}
+.ed-count { margin-left: auto; color: var(--text-dim); font-weight: 400; }
 
 /* room focus panel — left, ~30% of the screen */
 #room-panel {

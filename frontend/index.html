@@ -265,71 +265,94 @@
   </div>
 
   <!-- Room editor panel -->
-  <aside id="editor" class="panel hidden">
+  <aside id="editor" class="panel hidden" data-view="list">
     <button class="close" data-close="editor" type="button">&times;</button>
-    <h2>Room editor</h2>
 
-    <div class="btn-row">
-      <button id="btn-generate" type="button" class="secondary"
-              title="Create rooms and device markers for HA areas that aren't in the layout yet">
-        Generate from HA
-      </button>
+    <!-- screen 1: pick a room -->
+    <div id="editor-list-screen">
+      <h2>Room editor</h2>
+
+      <div class="btn-row">
+        <button id="btn-generate" type="button" class="secondary"
+                title="Create rooms and device markers for HA areas that aren't in the layout yet">
+          Generate from HA
+        </button>
+        <button id="btn-add-room" type="button" class="small">+ Room</button>
+      </div>
+
+      <div id="room-list"></div>
     </div>
 
-    <div id="room-list"></div>
+    <!-- screen 2: one room. Opening it flies the camera into that room and
+         isolates it; the back button flies out again. -->
+    <div id="editor-room-screen">
+      <div id="editor-head">
+        <button id="editor-back" type="button">&larr; All rooms</button>
+        <h2 id="room-form-title">Add room</h2>
+        <p class="muted" id="room-form-sub"></p>
+      </div>
+      <form id="room-form">
+        <input type="hidden" id="rf-id">
+        <label>Name <input id="rf-name" required></label>
+        <label>Floor <select id="rf-floor"></select></label>
+        <label>HA area <select id="rf-area"><option value="">— none —</option></select></label>
+        <div class="row3">
+          <label>Width (ft) <input id="rf-width" type="number" step="0.5" min="1.5" value="13"></label>
+          <label>Depth (ft) <input id="rf-depth" type="number" step="0.5" min="1.5" value="10"></label>
+          <label>Height (ft) <input id="rf-height" type="number" step="0.5" min="3" value="8"></label>
+        </div>
+        <div class="row3">
+          <label>X <input id="rf-x" type="number" step="0.1" value="0"></label>
+          <label>Z <input id="rf-z" type="number" step="0.1" value="0"></label>
+          <label title="Edge outlines in 3D and the room's fill in the 2D planner">Accent <input id="rf-color" type="color" value="#8fa8bf"></label>
+        </div>
+        <div class="row3">
+          <label>Wall color <input id="rf-wall-color" type="color" value="#f2ede3"></label>
+          <label>Wall texture <select id="rf-wall-tex"></select></label>
+        </div>
+        <div class="row3">
+          <label>Floor color <input id="rf-floor-color" type="color" value="#e5decf"></label>
+          <label>Floor texture <select id="rf-floor-tex"></select></label>
+        </div>
+        <div class="btn-row">
+          <button type="submit" id="rf-save">Save room</button>
+          <button type="button" id="rf-cancel" class="secondary hidden">Cancel</button>
+        </div>
+      </form>
 
-    <h3 id="room-form-title">Add room</h3>
-    <form id="room-form">
-      <input type="hidden" id="rf-id">
-      <label>Name <input id="rf-name" required></label>
-      <label>Floor <select id="rf-floor"></select></label>
-      <label>HA area <select id="rf-area"><option value="">— none —</option></select></label>
-      <div class="row3">
-        <label>Width (ft) <input id="rf-width" type="number" step="0.5" min="1.5" value="13"></label>
-        <label>Depth (ft) <input id="rf-depth" type="number" step="0.5" min="1.5" value="10"></label>
-        <label>Height (ft) <input id="rf-height" type="number" step="0.5" min="3" value="8"></label>
-      </div>
-      <div class="row3">
-        <label>X <input id="rf-x" type="number" step="0.1" value="0"></label>
-        <label>Z <input id="rf-z" type="number" step="0.1" value="0"></label>
-        <label title="Edge outlines in 3D and the room's fill in the 2D planner">Accent <input id="rf-color" type="color" value="#8fa8bf"></label>
-      </div>
-      <div class="row3">
-        <label>Wall color <input id="rf-wall-color" type="color" value="#f2ede3"></label>
-        <label>Wall texture <select id="rf-wall-tex"></select></label>
-      </div>
-      <div class="row3">
-        <label>Floor color <input id="rf-floor-color" type="color" value="#e5decf"></label>
-        <label>Floor texture <select id="rf-floor-tex"></select></label>
-      </div>
-      <div class="btn-row">
-        <button type="submit" id="rf-save">Save room</button>
-        <button type="button" id="rf-cancel" class="secondary hidden">Cancel</button>
-      </div>
-    </form>
+      <section id="placement-section" class="hidden">
+        <details class="ed-sec">
+          <summary>Devices<span class="ed-count" id="ed-n-devices"></span></summary>
+          <div id="placed-list"></div>
+        </details>
 
-    <section id="placement-section" class="hidden">
-      <h3>Devices in <span id="placement-room-name"></span></h3>
-      <div id="placed-list"></div>
-      <h4>Entities in linked HA area</h4>
-      <div id="entity-list" class="muted">Link the room to an HA area to list its entities.</div>
-      <h4>Light fixtures</h4>
-      <p class="muted" id="fx-hint">Bind a lamp, sconce or fan to the HA entity it
-        really is: it then lights the room from where it stands, and clicking it
-        toggles that entity.</p>
-      <div id="fixture-list"></div>
-      <div class="btn-row">
-        <button id="fx-auto" type="button" class="small secondary"
-                title="Propose bindings by matching names — you confirm each one">Auto-match…</button>
-      </div>
+        <details class="ed-sec">
+          <summary>Unplaced HA entities<span class="ed-count" id="ed-n-entities"></span></summary>
+          <div id="entity-list" class="muted">Link the room to an HA area to list its entities.</div>
+        </details>
 
-      <h4>Furniture &amp; objects</h4>
-      <div id="object-list"></div>
-      <div class="btn-row">
-        <select id="obj-model-select"></select>
-        <button id="obj-add" type="button" class="small">Add to room</button>
-      </div>
-    </section>
+        <details class="ed-sec">
+          <summary>Light fixtures<span class="ed-count" id="ed-n-fixtures"></span></summary>
+          <p class="muted" id="fx-hint">Bind a lamp, sconce or fan to the HA entity it
+            really is: it then lights the room from where it stands, and clicking it
+            toggles that entity.</p>
+          <div id="fixture-list"></div>
+          <div class="btn-row">
+            <button id="fx-auto" type="button" class="small secondary"
+                    title="Propose bindings by matching names — you confirm each one">Auto-match…</button>
+          </div>
+        </details>
+
+        <details class="ed-sec">
+          <summary>Furniture &amp; objects<span class="ed-count" id="ed-n-objects"></span></summary>
+          <div id="object-list"></div>
+          <div class="btn-row">
+            <select id="obj-model-select"></select>
+            <button id="obj-add" type="button" class="small">Add to room</button>
+          </div>
+        </details>
+      </section>
+    </div>
   </aside>
 
   <!-- 2D per-floor floor-plan editor (feet) -->
