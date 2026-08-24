@@ -120,12 +120,24 @@ the weather condition through a dim/desaturate table, and eases `scene.js`'s exp
 0=N maps to scene north = −Z). Renderer uses ACESFilmic tone mapping; shadows stay off (translucent
 walls). Topbar `☀ auto` button cycles auto/day/night (persisted in `localStorage['3dha.lightMode']`);
 `window.__daylight.simulate({elevation, azimuth, condition})` fakes states for testing,
-`simulate(null)` reverts. `frontend/js/roomlights.js` turns HA lights into scene light, from **two sources feeding one pool**:
+`simulate(null)` reverts. `frontend/js/roomlights.js` turns HA lights into scene light, from **three sources feeding one pool**:
 
 - **Fixtures** — an `objects` row carrying an `entity_id` (see the root `CLAUDE.md`). The lamp's own
   GLB materials glow (`state.js paintModelState`, factored out of `applyStyle` — a fixture must
   *not* go through `applyStyle`, which also rescales and would pop the lamp 1.25× when it turns on),
   and a pool light sits at the fixture.
+- **Exteriors** — a `light.*` **placement** (a device marker, not an object) in a room whose name
+  matches `house.js OUTDOOR_RE`. The porch sconces and garage floodlights hang on the shell GLB, so
+  there is no lamp furniture to bind them to, and House mode hides the yard's room mesh along with
+  every other room — which left the two sources below unable to light the exterior *at all* in the
+  only view the exterior is ever seen from. The marker the user dragged onto the facade is where
+  that light really hangs, so the placement is the source (`EXTERIOR_BASE` 70, range 34 ft). Two
+  things do not carry over from fixtures: it is **outdoor rooms only** (a point light is occluded by
+  nothing, so an indoor placement promoted the same way would shine straight out through the shell
+  onto the lawn), and it is **not** gated on its marker being visible — markers are edit-only chrome
+  that House mode hides outright, so `exteriorLive` gates on the *room* instead (user-hidden, or
+  scoped out by a focus on some other room). Like a fixture, a lit exterior suppresses its room's
+  centre fallback.
 - **Rooms** — the old whole-room fallback, for any room with no *visible* bound fixture. The room
   record is kept for **every** room regardless: `getRoomLightIds`/`getRoomsForEntity`/
   `getAllHouseLightIds` are what `roomcards.js` counts and toggles off and what `dashboard.js`

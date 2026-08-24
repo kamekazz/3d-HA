@@ -1,17 +1,21 @@
-// Home Assistant lights -> light in the 3D scene. Two sources feed one pool:
+// Home Assistant lights -> light in the 3D scene. Three sources feed one pool:
 //
-//   FIXTURES  a furniture object bound to an HA entity (objects.entity_id) --
-//             a lamp GLB that IS light.bedside. Light comes from the fixture
-//             itself, and the fixture's own materials glow.
-//   ROOMS     the fallback for a room with no VISIBLE bound fixture: the
-//             whole-room glow, from its placed lights and its HA area's.
+//   FIXTURES   a furniture object bound to an HA entity (objects.entity_id) --
+//              a lamp GLB that IS light.bedside. Light comes from the fixture
+//              itself, and the fixture's own materials glow.
+//   EXTERIORS  a light PLACEMENT in an outdoor room -- the porch sconces and
+//              garage floodlights, which hang on the shell and have no
+//              furniture to bind to. The marker's position is the source.
+//   ROOMS      the fallback for a room with no VISIBLE bound fixture and no
+//              lit exterior: the whole-room glow, from its placed lights and
+//              its HA area's.
 //
-// Fixtures outrank rooms for a pool slot. A room keeps its record either way --
-// roomcards.js and dashboard.js read the room->lights sets through the
-// accessors below, and those must not change meaning.
+// Fixtures and exteriors outrank rooms for a pool slot. A room keeps its record
+// either way -- roomcards.js and dashboard.js read the room->lights sets through
+// the accessors below, and those must not change meaning.
 import * as THREE from 'three';
 import { scene, controls, renderer, onFrame } from './scene.js';
-import { roomMeshes, floorBaseY, getLevel } from './house.js';
+import { roomMeshes, floorBaseY, getLevel, isOutdoorRoom } from './house.js';
 import { getState, isOn, onStateApplied, paintModelState } from './state.js';
 import { getNightFactor } from './daylight.js';
 import { objects3d } from './objects.js';
@@ -55,6 +59,10 @@ const SLAB_INTENSITY = 0.45;
 const FIXTURE_BASE = 45;
 const CENTRE_BASE = 90;            // a room centre sits further from every surface
 const FIXTURE_RANGE = 22;          // ft; the light.distance cutoff
+// An exterior throws further than a table lamp and has no ceiling to bounce
+// off: a porch sconce has to read across a whole facade, a floodlight further.
+const EXTERIOR_BASE = 70;
+const EXTERIOR_RANGE = 34;         // ft
 const EMISSIVE_MAX = 1.6;          // glow on the fixture's own materials
 const SMOOTH_TAU = 0.4;
 
@@ -76,8 +84,10 @@ function spillScale() {
 
 let rooms = [];                     // [{roomId, level, center, radius, lightIds, lit, glow, fixtures}]
 let fixtures = [];                  // [{objectId, entityId, roomId, level, on, level01, color, glow}]
+let exteriors = [];                 // [{placementId, entityId, roomId, level, pos, on, level01, color, glow}]
 const byEntity = new Map();         // entity_id -> [room records]    (rooms only)
 const fixturesByEntity = new Map(); // entity_id -> [fixture records]
+const exteriorsByEntity = new Map(); // entity_id -> [exterior records]
 const pool = [];                    // [{light, owner}] owner = fixture | room | null
 let assignmentDirty = false;
 let lastLevel = null;
@@ -87,8 +97,9 @@ let lastLevel = null;
 // unbinding restores the marker with no DB write.
 export const boundEntities = new Set();
 
-// fixture records carry objectId; room records never do
+// fixture records carry objectId, exteriors carry placementId, rooms neither
 const isFixture = (owner) => owner != null && owner.objectId !== undefined;
+const isExterior = (owner) => owner != null && owner.placementId !== undefined;
 
 // Does a bound piece actually EMIT? Binding is also how a fan, a TV or a lock
 // becomes clickable in the 3D view, and a Dyson fan glowing lamp-amber when you
@@ -115,6 +126,19 @@ function fixtureShown(rec) {
   return !!root && isShown(root);
 }
 
+// An exterior is NOT gated on its marker the way a fixture is gated on its
+// model. Device markers are edit-only chrome (devices.js) and House mode hides
+// every one of them -- gating on the marker would switch the porch light off in
+// the one view the porch is ever seen from. What gates it is the room: hidden
+// by the user, or scoped out by a focus on some OTHER room (a point light is
+// occluded by nothing, so a yard light left burning during an indoor focus
+// shines straight through the wall you are looking at).
+function exteriorLive(rec) {
+  if (rec.hidden) return false;
+  const focused = getFocusedRoomId();
+  return focused === null || focused === rec.roomId;
+}
+
 export function initRoomLights() {
   POOL_SIZE = decidePoolSize();
   for (let i = 0; i < POOL_SIZE; i++) {
@@ -127,9 +151,11 @@ export function initRoomLights() {
     if (entityId === null) {
       for (const r of rooms) refreshLit(r);
       for (const f of fixtures) refreshFixture(f);
+      for (const e of exteriors) refreshFixture(e);
     } else {
       for (const r of byEntity.get(entityId) || []) refreshLit(r);
       for (const f of fixturesByEntity.get(entityId) || []) refreshFixture(f);
+      for (const e of exteriorsByEntity.get(entityId) || []) refreshFixture(e);
     }
     assignmentDirty = true;
   });
@@ -159,9 +185,18 @@ export function initRoomLights() {
       color: f.color.getHexString(),
       pooled: pool.some((p) => p.owner === f),
     })),
+    exteriors: () => exteriors.map((e) => ({
+      placementId: e.placementId, entityId: e.entityId, roomId: e.roomId,
+      level: e.level, on: e.on, glow: +e.glow.toFixed(3), live: exteriorLive(e),
+      color: e.color.getHexString(),
+      pos: [+e.pos.x.toFixed(2), +e.pos.y.toFixed(2), +e.pos.z.toFixed(2)],
+      pooled: pool.some((p) => p.owner === e),
+    })),
     slots: () => pool.map((p) => ({
       owner: p.owner
-        ? (isFixture(p.owner) ? `object ${p.owner.objectId}` : `room ${p.owner.roomId}`)
+        ? (isFixture(p.owner) ? `object ${p.owner.objectId}`
+          : isExterior(p.owner) ? `exterior ${p.owner.placementId}`
+            : `room ${p.owner.roomId}`)
         : null,
       intensity: +p.light.intensity.toFixed(2),
     })),
@@ -175,8 +210,10 @@ export function initRoomLights() {
 export function setRoomLightsData({ house, structure }) {
   rooms = [];
   fixtures = [];
+  exteriors = [];
   byEntity.clear();
   fixturesByEntity.clear();
+  exteriorsByEntity.clear();
   boundEntities.clear();
   for (const p of pool) p.owner = null;
 
@@ -219,6 +256,47 @@ export function setRoomLightsData({ house, structure }) {
         fixturesByEntity.get(o.entity_id).push(rec);
       }
 
+      // --- exteriors: a light PLACEMENT in a yard ---
+      // Outdoor rooms have no lamp furniture to bind, and House mode hides
+      // their room mesh along with every other room -- so neither source above
+      // could ever light one, and every porch sconce and floodlight in the
+      // house did nothing at all in the only view the exterior is seen from.
+      // The marker the user dragged onto the facade is where that light really
+      // hangs, so the placement itself is the source. Outdoor rooms ONLY: a
+      // point light is occluded by nothing, so an indoor placement promoted the
+      // same way would shine straight out through the shell onto the lawn.
+      const roomExteriors = [];
+      if (isOutdoorRoom(room.name)) {
+        const fpo = room.footprint;
+        const yBase = floorBaseY.get(floor.level) ?? 0;
+        for (const dev of room.devices || []) {
+          if (!dev.entity_id?.startsWith('light.')) continue;
+          const rec = {
+            placementId: dev.id,
+            entityId: dev.entity_id,
+            roomId: room.id,
+            level: floor.level,
+            hidden: dev.visible === 0,
+            cfg: {},           // refreshFixture reads it; placements carry none
+            pos: new THREE.Vector3(
+              fpo.x + dev.position.x,
+              yBase + dev.position.y,
+              fpo.z + dev.position.z),
+            on: false,
+            level01: 0,
+            color: new THREE.Color(GLOW_COLOR),
+            glow: 0,
+            wasLit: false,     // tracks the pool-candidacy threshold crossing
+          };
+          exteriors.push(rec);
+          roomExteriors.push(rec);
+          if (!exteriorsByEntity.has(dev.entity_id)) {
+            exteriorsByEntity.set(dev.entity_id, []);
+          }
+          exteriorsByEntity.get(dev.entity_id).push(rec);
+        }
+      }
+
       // --- room record: kept for EVERY room, fixtures or not ---
       const lightIds = new Set();
       for (const dev of room.devices || []) {
@@ -251,6 +329,7 @@ export function setRoomLightsData({ house, structure }) {
         // a fixture would otherwise go dark in the one view where warm windows
         // at night are the entire point.
         fixtures: roomFixtures,
+        exteriors: roomExteriors,
       };
       rooms.push(rec);
       for (const id of lightIds) {
@@ -262,6 +341,7 @@ export function setRoomLightsData({ house, structure }) {
 
   for (const r of rooms) refreshLit(r);
   for (const f of fixtures) refreshFixture(f);
+  for (const e of exteriors) refreshFixture(e);
   assignmentDirty = true;
 }
 
@@ -271,7 +351,10 @@ function refreshLit(rec) {
 
 // Does this room still need its whole-room fallback light?
 function needsCentre(rec) {
-  return !rec.fixtures.some((f) => f.emits && fixtureShown(f));
+  if (rec.fixtures.some((f) => f.emits && fixtureShown(f))) return false;
+  // a lit exterior replaces the centre wash for the same reason a fixture does:
+  // both light from where the light actually is
+  return !rec.exteriors.some((e) => e.glow > 0.01 && exteriorLive(e));
 }
 
 function paintFixture(f, root) {
@@ -410,6 +493,10 @@ function reassignPool() {
   const fixCands = fixtures
     .filter((f) => f.emits && f.glow > 0.01 && onLevel(f.level) && fixtureShown(f))
     .sort((a, b) => distToTarget(a) - distToTarget(b));
+  const extCands = exteriors
+    .filter((e) => e.glow > 0.01 && onLevel(e.level) && exteriorLive(e))
+    .sort((a, b) => a.pos.distanceToSquared(controls.target)
+      - b.pos.distanceToSquared(controls.target));
   const roomCands = rooms
     .filter((r) => r.lit && onLevel(r.level) && needsCentre(r)
       && isShown(roomMeshes.get(r.roomId) || { visible: false }))
@@ -417,7 +504,7 @@ function reassignPool() {
       a.center.distanceToSquared(controls.target) -
       b.center.distanceToSquared(controls.target));
 
-  const winners = [...fixCands, ...roomCands].slice(0, POOL_SIZE);
+  const winners = [...fixCands, ...extCands, ...roomCands].slice(0, POOL_SIZE);
 
   // keep already-assigned winners on their light so they don't blink
   for (const p of pool) if (!winners.includes(p.owner)) p.owner = null;
@@ -433,6 +520,9 @@ function reassignPool() {
     if (isFixture(p.owner)) {
       if (fixtureWorldPos(p.owner, _p)) p.light.position.copy(_p);
       p.light.distance = p.owner.cfg.range ?? FIXTURE_RANGE;
+    } else if (isExterior(p.owner)) {
+      p.light.position.copy(p.owner.pos);
+      p.light.distance = EXTERIOR_RANGE;
     } else {
       p.light.position.copy(p.owner.center);
       p.light.distance = p.owner.radius * 2.5;
@@ -453,6 +543,9 @@ function slotGoal(p, spill) {
     const root = objects3d.get(f.objectId);
     if (!root || !isShown(root)) return 0;
     return FIXTURE_BASE * (f.cfg.intensity ?? 1) * f.glow * spill;
+  }
+  if (isExterior(p.owner)) {
+    return exteriorLive(p.owner) ? EXTERIOR_BASE * p.owner.glow * spill : 0;
   }
   // Same for the whole-room fallback: room focus hides the sibling rooms, and
   // point lights are not occluded by anything, so an ungated one would spill
@@ -480,7 +573,6 @@ function paintSlab(r) {
 // the boot curtain doesn't lift onto a dozen lights visibly ramping up — the
 // spill is no longer night-gated to zero, so that ramp would always show.
 export function settleRoomLights() {
-  reassignPool();
   const spill = spillScale();
   const night = getNightFactor();
   for (const f of fixtures) {
@@ -489,6 +581,12 @@ export function settleRoomLights() {
     const root = objects3d.get(f.objectId);
     if (root && f.emits) paintFixture(f, root);
   }
+  for (const e of exteriors) { e.glow = e.level01; e.wasLit = e.glow > 0.01; }
+  // AFTER the glows above, not before: candidacy is tested on glow, so a pool
+  // handed out against the pre-settle zeros wins nothing and every light ramps
+  // in from 0 on the first frame after the curtain lifts -- the exact ramp this
+  // function exists to skip.
+  reassignPool();
   for (const r of rooms) { r.glow = roomGoal(r, night); paintSlab(r); }
   for (const p of pool) p.light.intensity = slotGoal(p, spill);
 }
@@ -542,6 +640,19 @@ function tick(dt) {
     if (root) paintFixture(f, root);
   }
 
+  // --- exteriors: the same ease, with no emissive to paint -- the sconce is
+  // part of the shell GLB, not a model this app owns ---
+  for (const e of exteriors) {
+    const goal = e.level01;
+    if (Math.abs(e.glow - goal) < 1e-3) e.glow = goal;
+    else e.glow = THREE.MathUtils.lerp(e.glow, goal, k);
+    const lit = e.glow > 0.01;
+    if (lit !== e.wasLit) {
+      e.wasLit = lit;
+      assignmentDirty = true;
+    }
+  }
+
   if (assignmentDirty) {
     assignmentDirty = false;
     reassignPool();
@@ -570,6 +681,8 @@ function tick(dt) {
     if (isFixture(p.owner)) {
       p.light.color.copy(p.owner.color);
       if (fixtureWorldPos(p.owner, _p)) p.light.position.copy(_p); // follows a drag
+    } else if (isExterior(p.owner)) {
+      p.light.color.copy(p.owner.color);
     } else if (p.owner) {
       p.light.color.setHex(GLOW_COLOR);
     }
