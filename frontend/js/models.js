@@ -21,6 +21,23 @@ gltfLoader.setDRACOLoader(dracoLoader);
 
 const cache = new Map(); // model_id -> Promise<{scene, box}>
 
+// model_id -> file mtime, from GET /api/house's `model_versions`. Appended to
+// the file URL as ?v= so the backend can serve these immutably: without it the
+// browser revalidates all ~270 model files on every page load, which measured
+// at 12.3 MB and ~10.6 s of a boot. A re-upload reuses the filename but changes
+// the mtime, so the URL changes and the cache misses. An unknown id simply
+// yields no ?v= and the backend keeps its old revalidate-every-time behaviour.
+let versions = new Map();
+
+export function setModelVersions(map) {
+  versions = new Map(Object.entries(map || {}).map(([id, v]) => [Number(id), v]));
+}
+
+function fileUrl(modelId) {
+  const v = versions.get(Number(modelId));
+  return `/api/house/model/${modelId}/file${v ? `?v=${v}` : ''}`;
+}
+
 // ------------------------------------------------------------ readiness gate
 // Nothing else in the app knows when the scene has finished assembling: every
 // caller of getInstance() below throws its promise away (objects.js:makeObject,
@@ -51,7 +68,7 @@ function releaseIfIdle() {
 function loadModel(modelId) {
   let entry = cache.get(modelId);
   if (!entry) {
-    entry = gltfLoader.loadAsync(`/api/house/model/${modelId}/file`)
+    entry = gltfLoader.loadAsync(fileUrl(modelId))
       .then((gltf) => ({
         scene: gltf.scene,
         box: new THREE.Box3().setFromObject(gltf.scene),

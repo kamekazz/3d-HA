@@ -12,26 +12,31 @@
 // socket.io and the three.js importmap from a CDN before this module is even
 // parsed, so a JS-built overlay would flash the empty chrome first.
 import * as THREE from 'three';
-import { modelsIdle } from './models.js';
+import { modelsIdle, modelsPending } from './models.js';
 
 const $ = (id) => document.getElementById(id);
 
-// Wall-clock cap on ASSEMBLY. A wedged GLB, a backgrounded tab (snapshots.js
-// parks its pump when document.hidden) or simply a slow machine must not leave
-// the user staring at a black screen forever, so at this point we reveal what
-// we have.
+// How long after startBoot the watchdog first checks in. It is NOT a reveal
+// deadline: a flat one was the bug this file was rewritten to fix. Assembly on
+// this house takes 16-20s (271 GLBs, ~640 tracked sub-loads), so a blind 15s
+// timer fired *inside* settleLoaders and lifted the curtain at 633/640 items —
+// measured, and exactly the "two or three things pop up afterwards" report.
+// Everything downstream of settleLoaders (the shell's re-frame, the shader
+// precompile, the room-card snapshots) therefore ran in full view. The curtain
+// now lifts on completion; the watchdog only breaks a genuine STALL.
 const FAILSAFE_MS = 15000;
-
-// ...but only once there is something behind the curtain to reveal. main()
-// spends its first phase awaiting three fetches, and if HA is still connecting
-// they can outlast FAILSAFE_MS - at which point buildHouse has not run and the
-// old failsafe lifted the curtain onto an empty stage. That reads as "the app
-// opened and the house doesn't render", which is exactly the bug this cap was
-// meant to avoid. So while the house is missing we keep waiting (re-checking
-// at this interval) up to HARD_CAP_MS, the point past which a blank app beats
-// a curtain that never lifts.
 const HOUSE_POLL_MS = 500;
-const HARD_CAP_MS = 60000;
+
+// Nothing has moved for this long => something is wedged, reveal what we have.
+// Must stay comfortably longer than the worst gap between two asset
+// completions, or a slow cold load reveals early again — the same bug in a new
+// dress. __boot.timeline() is how you check that.
+const STALL_MS = 8000;
+
+// Absolute backstop. Now that the watchdog is the ONLY thing that can force a
+// reveal, this is the point past which a blank app beats a curtain that never
+// lifts.
+const HARD_CAP_MS = 120000;
 
 let shown = 0;      // last painted fraction — the bar only ever moves forward
 let band = [0, 1];  // [floor, ceiling] the current stage may move within
@@ -52,6 +57,12 @@ function paint(fraction) {
   if (fill) fill.style.width = `${(clamped * 100).toFixed(1)}%`;
 }
 
+// Per-stage wall clock, so a future "it revealed too early" is one console line
+// (__boot.timeline()) instead of a re-derivation from scratch.
+const timeline = [];
+
+function stamp() { return Math.round(performance.now() - startedAt); }
+
 /** Enter a stage: label it and reserve the band the bar may move within. */
 export function bootStage(label, floor, ceiling) {
   if (done) return;
@@ -59,6 +70,10 @@ export function bootStage(label, floor, ceiling) {
   paint(floor);
   const status = $('boot-status');
   if (status) status.textContent = label;
+  const now = stamp();
+  const prev = timeline[timeline.length - 1];
+  if (prev && prev.endMs === null) prev.endMs = now;
+  timeline.push({ stage: label, startMs: now, endMs: null });
 }
 
 /** Move within the current stage. `t` is 0..1 across the band. */
@@ -80,19 +95,47 @@ export function bootProgress(t) {
 let managerIdle = true;
 let mgrLoaded = 0, mgrTotal = 0, mgrLast = '';
 
+// performance.now() of the last observed forward movement, in EITHER counter.
+// This is what separates "still assembling" from "wedged" — see armFailsafe.
+let progressAt = 0;
+let lastPending = 0;
+
+function markProgress() { progressAt = performance.now(); }
+
+// modelsPending() has no callback to hook, so movement in it is sampled. Called
+// from both the watchdog tick and the settle loop, which between them run far
+// more often than STALL_MS.
+function pollPending() {
+  const n = modelsPending();
+  if (n !== lastPending) { lastPending = n; markProgress(); }
+  return n;
+}
+
 THREE.DefaultLoadingManager.onStart = (url, loaded, total) => {
   managerIdle = false; mgrLoaded = loaded; mgrTotal = total; mgrLast = url;
+  markProgress();
 };
-THREE.DefaultLoadingManager.onLoad = () => { managerIdle = true; };
+THREE.DefaultLoadingManager.onLoad = () => { managerIdle = true; markProgress(); };
 THREE.DefaultLoadingManager.onProgress = (url, loaded, total) => {
   mgrLoaded = loaded; mgrTotal = total; mgrLast = url;
   managerIdle = total > 0 && loaded >= total;
+  markProgress();
   if (total > 0) bootProgress(loaded / total);
 };
 
 // console handle: __boot.state() during a hang says which gate is holding
 window.__boot = {
-  state: () => ({ managerIdle, mgrLoaded, mgrTotal, mgrLast, shown, band, done, houseBuilt }),
+  state: () => ({
+    managerIdle, mgrLoaded, mgrTotal, mgrLast, shown, band, done, houseBuilt,
+    pending: modelsPending(),
+    msSinceProgress: Math.round(performance.now() - progressAt),
+    elapsedMs: stamp(),
+  }),
+  timeline: () => timeline.map((t) => ({
+    stage: t.stage,
+    startMs: t.startMs,
+    ms: (t.endMs === null ? stamp() : t.endMs) - t.startMs,
+  })),
   reveal: () => finishBoot(),
 };
 
@@ -108,10 +151,6 @@ window.__boot = {
 // setTimeout fallback cost a full second per iteration and added seconds to a
 // background boot. MessageChannel is a macrotask (loader callbacks still get to
 // run) and is not throttled.
-//
-// modelsIdle() is what actually holds the loop - every getInstance is already
-// in flight before settleLoaders is called - so a fast yield cannot let it exit
-// early.
 const macrotask = () => new Promise((resolve) => {
   const ch = new MessageChannel();
   ch.port1.onmessage = () => resolve();
@@ -139,18 +178,28 @@ const nextFrame = () => {
  * between bursts; models.js's counter is authoritative for GLB instances but
  * blind to textures. Requiring both to be idle on two consecutive frames covers
  * the handoff — a model resolving can start its own texture loads.
+ *
+ * This deliberately carries NO deadline of its own any more. It used to default
+ * to Date.now() + 15s, a second independent clock racing the watchdog; giving
+ * up is the watchdog's job alone, and it now does so on a stall rather than on
+ * a guess at how long a house takes to load.
  */
-export async function settleLoaders({ deadline = Date.now() + FAILSAFE_MS } = {}) {
+export async function settleLoaders() {
   let consecutive = 0;
   while (consecutive < 2) {
-    if (Date.now() > deadline) return;
-    await modelsIdle();
+    if (done) return;   // the watchdog already revealed — stop holding the line
+    if (performance.now() - startedAt > HARD_CAP_MS) return;
+    // Race the idle signal against a short poll: a wedged GLB never drops
+    // inFlight back to 0, and a bare `await modelsIdle()` would park this loop
+    // forever, past every decision the watchdog makes.
+    await Promise.race([modelsIdle(), new Promise((r) => setTimeout(r, 250))]);
     await nextFrame();
-    consecutive = managerIdle ? consecutive + 1 : 0;
+    const pending = pollPending();
+    consecutive = (managerIdle && pending === 0) ? consecutive + 1 : 0;
   }
 }
 
-/** Race any promise against the failsafe so one hung step can't hold the app. */
+/** Race any promise against a timeout so one hung step can't hold the app. */
 export function orTimeout(promise, ms) {
   return Promise.race([promise, new Promise((r) => setTimeout(r, ms))]);
 }
@@ -161,23 +210,43 @@ let startedAt = 0;
 
 export function startBoot() {
   startedAt = performance.now();
+  progressAt = startedAt;
   armFailsafe(FAILSAFE_MS);
 }
 
+// The watchdog. It does not reveal on a clock — it reveals when the app has
+// stopped making progress, or when HARD_CAP_MS says a blank app beats a curtain
+// that never lifts.
 function armFailsafe(ms) {
   failsafe = setTimeout(() => {
     if (done) return;
     const elapsed = performance.now() - startedAt;
-    if (!houseBuilt && elapsed < HARD_CAP_MS) {
-      // Nothing to show yet. Say so instead of silently sitting on a bar that
-      // has not moved since the first stage - the wait is HA's, not ours.
-      const status = $('boot-status');
-      if (status) status.textContent = 'Waiting for Home Assistant…';
-      armFailsafe(HOUSE_POLL_MS);
-      return;
+    pollPending();
+    const sinceProgress = performance.now() - progressAt;
+
+    if (elapsed < HARD_CAP_MS) {
+      if (!houseBuilt) {
+        // Nothing to show yet. main() spends its first phase awaiting three
+        // fetches, and if HA is still connecting they can outlast any timer —
+        // revealing here would open the app onto an empty stage, which reads as
+        // "the house doesn't render". Say whose wait it is instead.
+        const status = $('boot-status');
+        if (status) status.textContent = 'Waiting for Home Assistant…';
+        armFailsafe(HOUSE_POLL_MS);
+        return;
+      }
+      if (sinceProgress < STALL_MS) {
+        // Assets are still landing. This is the whole point of the curtain:
+        // keep waiting, however long it takes.
+        armFailsafe(HOUSE_POLL_MS);
+        return;
+      }
     }
-    console.warn(`boot: ${Math.round(elapsed)}ms failsafe fired — revealing`
-      + (houseBuilt ? ' anyway' : ' WITHOUT a house (Home Assistant never answered)'));
+    console.warn(`boot: revealing after ${Math.round(elapsed)}ms — `
+      + (!houseBuilt
+        ? 'NO house (Home Assistant never answered)'
+        : `no progress for ${Math.round(sinceProgress)}ms at ${mgrLoaded}/${mgrTotal}`
+          + `, ${modelsPending()} model(s) in flight (last: ${mgrLast})`));
     finishBoot();
   }, ms);
 }
@@ -190,9 +259,12 @@ export function finishBoot() {
   // (room editor, planner) for the rest of the session
   const mgr = THREE.DefaultLoadingManager;
   mgr.onStart = mgr.onLoad = mgr.onProgress = undefined;
+  const last = timeline[timeline.length - 1];
+  if (last && last.endMs === null) last.endMs = stamp();
   // one line, on purpose: "the dashboard takes a while to come up" is otherwise
   // impossible to reason about from the outside
-  console.info(`boot: ready in ${Math.round(performance.now() - startedAt)}ms`);
+  console.info(`boot: ready in ${Math.round(performance.now() - startedAt)}ms`
+    + ` (${mgrLoaded}/${mgrTotal} loaded) — __boot.timeline() for the breakdown`);
   paint(1);
   const screen = $('boot-screen');
   if (!screen) return;

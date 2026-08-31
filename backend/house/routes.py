@@ -24,6 +24,30 @@ def _models_dir():
     return os.path.join(current_app.root_path, "uploads", "models")
 
 
+# A model file is served with a long, immutable cache lifetime, but ONLY when
+# the URL carries the matching ?v=. Uploads reuse the deterministic filename
+# (model_<id>.<ext>), so the id alone is not a version — the file's mtime is.
+# Without this the browser revalidates all ~270 model files on every single
+# page load (Werkzeug defaults to Cache-Control: no-cache), which measured at
+# 12.3 MB and ~10.6 s of the boot.
+MODEL_CACHE_MAX_AGE = 31536000  # one year; the ?v= is what actually expires it
+
+
+def _model_versions():
+    """{model_id: mtime} for every model file on disk, for cache-busting URLs."""
+    versions = {}
+    models_dir = _models_dir()
+    for model in _store().list_models():
+        filename = model.get("filename")
+        if not filename:
+            continue
+        try:
+            versions[model["id"]] = int(os.stat(os.path.join(models_dir, filename)).st_mtime)
+        except OSError:
+            continue  # row without a file on disk — frontend falls back to no ?v=
+    return versions
+
+
 def _remove_plan_files(floor_id):
     for ext in PLAN_EXTENSIONS:
         path = os.path.join(_plans_dir(), f"floor_{floor_id}{ext}")
@@ -106,7 +130,10 @@ def get_house():
             store.generate_from_ha(cache.structure())
     elif not store.has_floors():
         store.create_floor({"name": "Ground floor", "level": 1})
-    return jsonify(store.get_house())
+    payload = store.get_house()
+    # models.js appends these as ?v= so the files can be cached immutably
+    payload["model_versions"] = _model_versions()
+    return jsonify(payload)
 
 
 @bp.post("/generate")
@@ -337,8 +364,17 @@ def get_model_file(model_id):
         return jsonify({"error": "model not found"}), 404
     mimetype = ("model/gltf-binary" if model["filename"].endswith(".glb")
                 else "model/gltf+json")
-    return send_from_directory(_models_dir(), model["filename"],
-                               mimetype=mimetype)
+    # Cache hard only when the caller pinned a version: a ?v= URL names one
+    # exact file, so a re-upload (which reuses the filename) changes the mtime,
+    # changes the URL, and misses the cache. An unversioned request keeps the
+    # old revalidate-every-time behaviour and stays correct.
+    versioned = bool(request.args.get("v"))
+    response = send_from_directory(
+        _models_dir(), model["filename"], mimetype=mimetype,
+        max_age=MODEL_CACHE_MAX_AGE if versioned else None)
+    if versioned:
+        response.headers["Cache-Control"] += ", immutable"
+    return response
 
 
 @bp.patch("/model/<int:model_id>")

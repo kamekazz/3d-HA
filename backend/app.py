@@ -5,7 +5,7 @@ house geometry store, and relays HA state changes to browsers via SocketIO.
 """
 import logging
 
-from flask import Flask, send_from_directory
+from flask import Flask, request, send_from_directory
 
 import config
 from api.camera_routes import bp as camera_bp
@@ -42,6 +42,24 @@ def create_app():
     app.register_blueprint(camera_bp)
     app.register_blueprint(house_bp)
     socketio.init_app(app)
+
+    # Static subtrees whose contents are fixed for the life of a deploy: the
+    # vendored DRACO decoder (763 KB across three files, and on the critical
+    # path — the house shell is DRACO-compressed) and the generated wall/floor
+    # textures. Werkzeug otherwise sends `no-cache`, so the browser revalidates
+    # every one of them on every page load.
+    #
+    # Deliberately NOT a blanket SEND_FILE_MAX_AGE_DEFAULT: that would cache
+    # js/*.js and css/*.css too, and this is the dev server those are edited
+    # against — a cached module is a change that silently doesn't apply.
+    IMMUTABLE_STATIC = ("/vendor/", "/textures/")
+
+    @app.after_request
+    def cache_immutable_static(response):
+        if (response.status_code == 200
+                and request.path.startswith(IMMUTABLE_STATIC)):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
 
     # Same page both ways — the frontend reads the path and only shows the
     # editing chrome on /edit. "/" is the plain viewer.

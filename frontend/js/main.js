@@ -5,6 +5,7 @@ import { initScene, scene, camera, renderer, applyEnvIntensity, refitStage, wasM
 import { initStage } from './stage.js';
 import { initSideRail } from './siderail.js';
 import { buildHouse, roomMeshes, stairGroups, paintRoomEmissive, getLevel, houseShellReady } from './house.js';
+import { setModelVersions } from './models.js';
 import { buildDevices, markers } from './devices.js';
 import { buildObjects, objects3d } from './objects.js';
 import { setAllStates, applyState, friendlyName, stateLabel, styleMarker, paintModelState } from './state.js';
@@ -60,6 +61,7 @@ async function reloadHouse() {
   // navigating out. Every edit made inside the room editor lands here.
   suspendFocusForRebuild();
   const house = await api.getHouse();
+  setModelVersions(house.model_versions); // a re-written .glb on disk busts its URL
   buildHouse(house);
   buildDevices(house);
   buildObjects(house);
@@ -364,13 +366,36 @@ async function main() {
   await loadStructure(structureP);
   bootProgress(0.6);
   const house = await houseP;
+  // Before any getInstance: this is what lets the model files be cached.
+  setModelVersions(house.model_versions);
 
-  // Everything from here to the first await is synchronous, so no loader
-  // callback can fire inside it - the furniture band below is in place before
-  // DefaultLoadingManager reports its first item.
-  bootStage('Building the house…', 0.15, 0.30);
+  // The house goes up FIRST, and alone. buildHouse is synchronous for rooms /
+  // floors / stairs, then kicks off the whole-house shell GLB — and we wait for
+  // that before anything else asks the network for a byte. Three reasons:
+  //
+  //  - it is the first thing you see, so it should be the first thing loaded;
+  //  - the shell is DRACO-compressed, and its decoder (763 KB across three
+  //    files in vendor/draco/gltf/) is only requested once GLTFLoader has
+  //    parsed the shell and met the extension. Issued after buildObjects, that
+  //    request queues behind ~271 furniture fetches on a 6-connection pool;
+  //  - setEnvironmentData below then measures a shell that already exists, so
+  //    the yard is planted correctly once instead of being built and replanted
+  //    when the shell's setLevel fires levelChanged.
+  //
+  // The band is set BEFORE the await on purpose: the shell's loader callbacks
+  // must paint into the house band, not into whatever came before it.
+  bootStage('Loading the house…', 0.15, 0.45);
   buildHouse(house);
-  bootHouseBuilt();   // there is a stage to reveal now; the failsafe may fire
+  bootHouseBuilt();   // there is a stage to reveal now; the watchdog may fire
+  // Resolves when the shell is added, masked, framed and levelled — or at once
+  // when there is no shell or it failed (house.js dispatches shellLoadFailed
+  // for the banner), so a 404 shell can never hang the boot.
+  await houseShellReady();
+
+  // Everything from here to the next await is synchronous, so no loader
+  // callback can fire inside it - the furniture band is in place before
+  // DefaultLoadingManager reports the first of its items.
+  bootStage('Loading furniture…', 0.45, 0.85);
   buildDevices(house);
   buildObjects(house);
   setCutawayData(house); // wall meshes + furniture are new objects after a rebuild
@@ -389,9 +414,6 @@ async function main() {
   initRoomCards();
   setRoomCardsData(house, structure); // after setRoomLightsData — cards read its light sets
 
-  // buildHouse/buildDevices/buildObjects above each fired a pile of GLB loads
-  // and threw the promises away; this is the band their real progress lands in.
-  bootStage('Loading furniture…', 0.30, 0.85);
   await loadStates(statesP);
   updateData({ structure, house });
 
@@ -401,13 +423,11 @@ async function main() {
     onStatus: (status) => setConnStatus(status),
   });
 
-  // ---- hold the curtain until the scene has actually finished assembling
-  await settleLoaders();          // every GLB, texture and the DRACO shell
-  // ...and until the shell is in the scene AND has re-framed the camera. The
-  // loader gate alone does not cover that last step: getInstance drops its
-  // in-flight count in a `finally`, so modelsIdle() can resolve before
-  // loadHouseShell's continuation has added, masked and framed anything.
-  await orTimeout(houseShellReady(), 5000);
+  // ---- hold the curtain until the scene has actually finished assembling.
+  // No deadline of its own: boot.js's watchdog owns giving up, and it does so
+  // on a stall rather than on a guess at how long a house takes to load. The
+  // shell needs no separate await here — it landed before the furniture band.
+  await settleLoaders();          // every GLB and texture
 
   bootStage('Preparing the scene…', 0.85, 0.92);
   // Shaders for a few hundred fresh GLB materials compile on the first DRAW,
@@ -429,9 +449,14 @@ async function main() {
   // document.hidden by design, so waiting there can only ever burn the cap for
   // previews that physically cannot render. Nobody is looking; the pump picks
   // them up when the tab comes back. The cap covers the in-between case (a
-  // visible but uncomposited window) and stays well clear of the failsafe.
-  if (!document.hidden) await orTimeout(snapshotsIdle(), 5000);
-  await Promise.all([cardImagesReady(1500), calendarReady(2000)]);
+  // visible but uncomposited window). Generous now that the watchdog reveals on
+  // a stall rather than a clock: these two ARE the room cards, and cutting them
+  // short is what put the rail's thumbnails on screen after the curtain lifted.
+  if (!document.hidden) await orTimeout(snapshotsIdle(), 20000);
+  await orTimeout(cardImagesReady(8000), 10000);
+  // The calendar stays on a short leash by contrast: it is one dock tile, HA's
+  // calendar API can be slow, and it is not worth holding the whole app for.
+  await calendarReady(2000);
 
   finishBoot();
 

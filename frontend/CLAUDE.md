@@ -10,7 +10,7 @@ render bug rather than the deploy problem it usually is (see `docs/TROUBLESHOOTI
 **The boot curtain** (`frontend/js/boot.js`): the app assembles itself over seconds — ~200 furniture
 GLBs, the DRACO house shell, wall/floor textures, then the room-card thumbnails — and every one of
 those used to land on screen as its own pop-in, with the camera visibly re-framing when the shell
-arrived (`house.js` `refitStage`). `#boot-screen` covers all of it and lifts once. Five things about
+arrived (`house.js` `refitStage`). `#boot-screen` covers all of it and lifts once. Eight things about
 it are not readable from the code:
 
 - **The markup is static in `index.html`, deliberately.** `<head>` blocks on socket.io and the
@@ -24,21 +24,47 @@ it are not readable from the code:
   mirrors them from the callbacks). `modelsIdle()` counts inside `getInstance`, not `loadModel`, so
   it covers the clone/material work after the fetch — and the shell and device markers for free.
 - **Never wait on a bare `requestAnimationFrame` in the gate.** Chrome pauses rAF whenever the tab is
-  backgrounded, occluded or not being composited, so a bare rAF hangs the curtain until the failsafe
+  backgrounded, occluded or not being composited, so a bare rAF hangs the curtain until the watchdog
   — measured, not theoretical. `boot.js nextFrame()` races rAF against a 100 ms timer, and
-  `finishBoot` uses it too. Every wait is additionally bounded, and a 15 s failsafe reveals what has
-  assembled so far; `main().catch` reveals first and *then* banners, or a boot error would be an
-  unreadable black screen. `window.__boot.state()` says which gate is holding during a hang.
+  `finishBoot` uses it too. `main().catch` reveals first and *then* banners, or a boot error would be
+  an unreadable black screen. `window.__boot.state()` says which gate is holding during a hang, and
+  `window.__boot.timeline()` gives the per-stage wall clock.
+- **The watchdog reveals on a STALL, never on a clock.** It used to be a flat 15 s failsafe, and that
+  was a bug, not a safety net: assembly here takes 8-20 s, so the timer fired *inside*
+  `settleLoaders` and lifted the curtain at 633/640 items — measured. Everything downstream of that
+  await (the shell's `refitStage`, `compileAsync`, the cutaway/daylight/light settles, and the
+  room-card snapshots, which had not even started) therefore ran in full view. That is the
+  "two or three things pop up after the loading screen" report. `boot.js` now tracks `progressAt`,
+  bumped by both `DefaultLoadingManager` callbacks and a sampled `modelsPending()`, and re-arms
+  every 500 ms for as long as either the house is missing or *something moved* within `STALL_MS`
+  (8 s), up to a 120 s `HARD_CAP_MS`. `settleLoaders` correspondingly carries **no deadline of its
+  own** — a second independent clock racing the watchdog is what created the gap — and it races
+  `modelsIdle()` against a 250 ms poll so a wedged GLB cannot park it past the watchdog's decision.
 - **The failsafe will not reveal an empty stage.** `main()` spends its first phase awaiting three
-  fetches, and if HA is still connecting they can outlast 15 s — at which point `buildHouse` has not
-  run and the old unconditional failsafe lifted the curtain onto nothing, which reads as "the app
-  opened and the house doesn't render". `main()` now calls `bootHouseBuilt()` the moment geometry is
-  in the scene; until then the failsafe re-arms every 500 ms (relabelling the curtain "Waiting for
-  Home Assistant…") up to a 60 s hard cap, past which a blank app beats a curtain that never lifts.
-- **`settleLoaders()` is not sufficient for the shell.** `getInstance` drops its in-flight count in a
+  fetches, and if HA is still connecting they can outlast any timer — at which point `buildHouse` has
+  not run and an unconditional reveal lifts the curtain onto nothing, which reads as "the app opened
+  and the house doesn't render". `main()` calls `bootHouseBuilt()` the moment geometry is in the
+  scene; until then the watchdog relabels the curtain "Waiting for Home Assistant…".
+- **The house is loaded first, and alone.** `main()` awaits `houseShellReady()` immediately after
+  `buildHouse`, *before* `buildDevices`/`buildObjects` fire ~271 furniture loads. It is the first
+  thing you see so it should be the first thing loaded — but it is also the shell that pays for
+  sharing: it is DRACO-compressed, and the decoder (763 KB over three files in `vendor/draco/gltf/`)
+  is only requested once GLTFLoader has parsed the shell and met the extension, so issued after the
+  furniture it queues behind all of it on a 6-connection pool. Doing it first also means
+  `setEnvironmentData` measures a shell that already exists, so the yard is planted correctly once
+  instead of being built and replanted on the shell's `levelChanged`. `houseShellReady()` resolves
+  immediately when there is no shell or it failed, so a 404 shell cannot hang the boot.
+  (`settleLoaders` alone was never sufficient for this: `getInstance` drops its in-flight count in a
   `finally`, so `modelsIdle()` can resolve a microtask *before* `loadHouseShell`'s continuation has
-  added, masked and framed the shell. `house.js houseShellReady()` is the promise for that last step
-  (resolved when there is no shell, or when it failed), and `main()` awaits it after `settleLoaders`.
+  added, masked and framed anything.)
+- **The model files are cached, and that is most of the boot time.** Werkzeug defaults to
+  `Cache-Control: no-cache`, so every one of the ~270 GLBs was revalidated on every single page load
+  — 12.3 MB and ~10.6 s, measured. `models.js` now appends `?v=<mtime>` from the `model_versions`
+  map on `GET /api/house` (`setModelVersions`, called before any `getInstance` in both `main()` and
+  `reloadHouse`), and `house/routes.py` serves a versioned request `immutable` for a year. The id
+  alone cannot be the version — uploads reuse the `model_<id>.<ext>` filename, and the roomkit tools
+  rewrite those files in place — which is why it is keyed on mtime. An unversioned request keeps the
+  old revalidate-every-time behaviour. Warm boot: 8.5 s → 1.7 s.
 - **The bar has to arrive at 100% before the fade starts.** `#boot-fill` animates its width over
   0.3 s, so lifting the curtain one frame after `paint(1)` cut that animation off around 90% — the
   bar visibly never finished. `finishBoot` waits on `barFull()` (transitionend raced against the
