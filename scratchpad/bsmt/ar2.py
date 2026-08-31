@@ -40,9 +40,12 @@ import math
 import urllib.request
 
 from bkit import *          # noqa: F401,F403
-from a2kit import (         # noqa: F401  -- round-3 texture + sweep helpers
-    ART, ART_B, ART_D, ART_DK, ART_TEX, MQ_MATS, sweep, uvq, uvr, uvblit,
-    noise_tex)
+from a2kit import (         # noqa: F401  -- texture + sweep helpers
+    ArtSet, sweep, uvq, uvblit, noise_tex)
+import atlas4                                            # noqa: E402
+from atlas4 import EAST_SLUGS, SOUTH_SLUGS, NORTH_SLUGS   # noqa: E402
+from decks5 import (                                      # noqa: E402
+    deck_for, coin_for, front_rect, front_z, button_cap, ball_top)
 from roomkit.glb import uv_quad          # noqa: E402
 
 ROOM, W, D, H = 2, 20.7, 23.3, 8.0
@@ -68,8 +71,38 @@ COVE_Y = 7.62
 # ------------------------------------------------------------------ palette
 CABBLK = Material("a2cab", "#191a1e", roughness=0.55)
 CABDK = Material("a2cabd", "#0d0e11", roughness=0.5)
-SCRN = Material("a2scr", "#0a0c10", roughness=0.25, emissive="#12202c",
-                emissive_strength=1.1)
+# ROUND 6.  Every CRT in this room photographs DARK -- fifteen frames, day and
+# night, and not one lit attract screen among them (the report lists which
+# frame settles each machine).  So this is the material of a switched-off
+# monitor, and the whole job is to make it read as GLASS and not as a hole cut
+# in the cabinet.  Round 5's "#0a0c10" + emissive #12202c at strength 1.1 did
+# the opposite: glTF emissive is a flat untextured factor with no falloff, so
+# every screen in the room rendered as ONE UNIFORM NAVY SLAB (measured: luma
+# 18.7, sd 2.18 across a whole screen) brighter than its own bezel and
+# unaffected by the room -- a dim television, which is precisely what the
+# photographs do not show.
+#
+# MEASURED NEGATIVE RESULT, so nobody spends the afternoon on it twice: the
+# obvious fix is to let the glass mirror the room, since `scene.environment` is
+# a PMREM of three's RoomEnvironment (scene.js) and `daylight.js` runs
+# envMapIntensity to 1.15 in daylight.  It does not work on this surface.  A
+# probe material of "#ffffff", roughness 0.05, metallic 1.0 -- a PERFECT MIRROR
+# -- rendered these screens at luma 8.4 with sd 0.69, i.e. darker than round
+# 5's flat slab and with no spatial variation whatever.  Metallic 1.0 at
+# "#3a3d42" measured luma 1.10.  There is no usable environment reflection
+# here, and any plan that leans on one is dead on arrival.
+#
+# So the glass is DIFFUSE, lit by the room like everything else in it: no
+# emissive doing the work, a low roughness that still lets a direct light throw
+# a real moving glint (one lands on Marvel vs Capcom in the probe frame), and
+# the surface variation comes from `crt()` -- curvature plus a vertex-colour
+# top-to-bottom gradient and a darkened rim.  "#3f434a" is solved from a probe:
+# a flat "#303338" metered luma 22.2 on this quad, and the vertex grade's mean
+# factor puts "#3f434a" at the same place.  There is NO emissive at all now: a
+# switched-off screen emits nothing, and on the night ramp these panels are lit
+# by whatever `roomlights.js` is running exactly as the black cabinet round
+# them is, so they go dark WITH the room instead of floating out of it.
+SCRN = Material("a2scr", "#42464d", roughness=0.34, metallic=0.10)
 CPANEL = Material("a2cp", "#2c2e34", roughness=0.6)
 CHR = Material("a2chr", "#adb2b6", roughness=0.28, metallic=0.55)
 BLKF = Material("a2blkf", "#131418", roughness=0.98)        # the black lounge
@@ -343,9 +376,12 @@ def build_trim():
 #     carcase front, a raked screen face, a marquee that overhangs, a stepped
 #     or straight head.  Four profiles, and width / height / deck height /
 #     marquee depth all vary per machine, so no two read alike end-on.
-#   * every visible panel carries PRINTED ARTWORK from the shared RGB atlas
-#     (a2kit.ART_TEX) rather than a hue: both flanks, the lower front panel and
-#     the marquee title band each take their own tile.
+#   * every visible panel carries PRINTED ARTWORK rather than a hue.  ROUND 4
+#     replaced what that artwork IS: round 3 sampled a shared 16-tile atlas in
+#     which twelve tiles were one drawing in twelve hues, and its critic counted
+#     one machine repeated sixteen times.  Now each machine is drawn
+#     individually and takes its OWN `<slug>.marquee/.side/.front/.deck` out of
+#     its wall run's `a2kit.ArtSet` -- see scratchpad/arc4/atlas4.py.
 #
 # It is also five times cheaper -- ~160 verts a machine against ~850 for the
 # box stack -- which is what buys the north wall inside the payload cap.
@@ -353,6 +389,400 @@ def build_trim():
 DECK_OUT = 0.70                     # control-deck projection past the carcase
 
 STYLES = ("straight", "slope", "step", "riser")
+
+
+# ---------------------------------------------------------------------------
+# ROUND 5 -- per-machine control hardware and coin doors.
+#
+# Round 4 built ONE deck and ONE coin door for all sixteen cabinets, inline in
+# `upright()`: two chrome shafts with a red and a blue cube on top, six flat
+# square buttons cycling four shared colours, and a 0.68 x 0.62 ft grey plate
+# dead centre on every front.  Three independent critics named that as the
+# defect.  `decks5.py` merges the four art modules' own specifications (they
+# each invented a different schema; see its docstring) and everything below
+# just builds what it returns.  No layout, colour or size is chosen here.
+#
+# COST.  A button is cheap but not free, and the room has ~1 KB of headroom.
+# `button_cap` is art_g1's measured recipe -- a welded domed octagon fan, 9
+# verts / 8 tris / 310 B in a saved GLB -- against 669 B for a flat unwelded
+# 8-gon, 813 B for `cylinder(r, h, 8)` and 2350 B for `prism(octagon, h)`.
+# 129 buttons and 21 sticks across the room come in at +6.9 KB of geometry over
+# round 4's 128 flat squares and 32 cubes, which is what per-machine hardware
+# costs.
+# COST, and why the hardware is VERTEX-COLOURED rather than one material per
+# colour.  This room's 129 buttons, 21 sticks, 4 guns, 2 trackballs, a yoke and
+# a steering wheel carry about 30 distinct colours.  `Model.add` groups by
+# material INSTANCE and `save()` writes one glTF primitive per group, so a
+# material per colour cost 44 primitives on the east run alone -- and a
+# primitive is ~0.9 KB of accessors, bufferViews and JSON before a single
+# triangle is in it.  MEASURED: 44 materials 158.3 KB of geometry on east,
+# 3 materials + COLOR_0 91.7 KB, for identical geometry.  COLOR_0 is 4 bytes a
+# vertex; a primitive is a thousand.
+#
+# Triangles still matter (~78 bytes each after welding), so the caps are cheap
+# on purpose: `button_cap` is art_g1's measured recipe -- a welded domed n-gon
+# fan, no side wall -- at 6 segments, and ball tops are seg 6 / rings 2.  At
+# 0.05-0.07 ft a button is 1.2 in across and seen from 6-10 ft; a hexagon reads
+# round and an octagon costs a third more for nothing.
+HW = Material("a2hw", "#ffffff", roughness=0.42)      # vertex-coloured plastic
+HWM = Material("a2hwm", "#ffffff", roughness=0.26, metallic=0.55)   # chrome
+_MATS = {}
+
+
+def cmat(col, rough=0.40, metal=0.0, emis=None, es=0.0):
+    """A cached Material, for the FEW things that genuinely cannot be vertex
+    coloured -- glTF emissive is a flat per-material factor.  Two survive:
+    Legends Ultimate's lit white front-lip strip and Ridge Racer's two big
+    white buttons, both of which the photographs show lit."""
+    key = (col, rough, metal, emis, es)
+    m = _MATS.get(key)
+    if m is None:
+        m = Material("a2c%02d" % len(_MATS), col, roughness=rough,
+                     metallic=metal, emissive=emis, emissive_strength=es)
+        _MATS[key] = m
+    return m
+
+
+def _hexf(c):
+    c = c.lstrip("#")
+    return (int(c[0:2], 16) / 255.0, int(c[2:4], 16) / 255.0,
+            int(c[4:6], 16) / 255.0)
+
+
+def cpart(part, col):
+    """Paint every vertex of `part` one colour, in place."""
+    part.colors = [_hexf(col)] * len(part.verts)
+    return part
+
+
+def cbx(m, col, x0, x1, y0, y1, z0, z1, mat=None):
+    """`bx` in a vertex colour."""
+    if x1 - x0 <= 0 or y1 - y0 <= 0 or z1 - z0 <= 0:
+        return
+    m.add(cpart(box(x1 - x0, y1 - y0, z1 - z0), col), mat or HW,
+          at=((x0 + x1) / 2.0, y0, (z0 + z1) / 2.0))
+
+
+def cface(m, col, x0, x1, y0, y1, z, mat=None):
+    """A single forward-facing quad in a vertex colour -- 2 triangles where a
+    box is 12.  Coin slots, return cups and door bezels are RELIEF, 0.006 ft
+    proud, and every one of them is already drawn into the machine's printed
+    front artwork at the same coordinates; building them as boxes cost 30 KB
+    across the room for detail no camera can resolve as a solid."""
+    m.add(cpart(quad((x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)), col),
+          mat or HW)
+
+
+# ------------------------------------------------------- extruded profiles
+# A LIGHT GUN IS A SILHOUETTE, NOT A BLOCK.  Round 5 built each of the room's
+# four guns as a coloured box standing on a darker box on a plate; from the
+# judged south poses they read as a red slab and a blue slab, the crudest
+# objects in the room.  What a gun is at 0.6 ft is one CONCAVE side profile --
+# backstrap, receiver, a step down to the barrel, the muzzle, the frame, the
+# trigger guard's front and bottom straps, the recess behind them and the
+# raked grip -- pushed across the gun's width.  `prism()` cannot build it:
+# its caps are a triangle FAN from vertex 0, which folds over itself on any
+# concave outline, so the caps are ear-clipped here.
+#
+# COST, and why this is nearly free.  `_weld` duplicates a vertex per face on
+# a flat-shaded part (~84 bytes a triangle) and shares them on a smooth one
+# (~28 a vertex + 12 a triangle).  Splitting the extrusion into TWO smooth
+# parts gets flat shading where it belongs without paying for it: every
+# vertex of the CAP part touches only cap triangles, which all share one
+# normal, so averaging them returns that exact normal and the two big side
+# faces stay dead flat; every vertex of the BAND part touches only its two
+# neighbouring side quads, so the outline's edges round over the way moulded
+# plastic does.  MEASURED (marginal, 41 copies minus 1, in a saved GLB): the
+# 13-point gun plus its 8-point holster is 3264 bytes against the 3456 of the
+# three boxes it replaces -- 76 triangles for 36 and yet 192 bytes CHEAPER,
+# because a flat box pays for 24 unshared vertices to carry 12 triangles.
+def _in_tri(p, a, b, c):
+    d = ((b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]))
+    if abs(d) < 1e-12:
+        return False
+    u = ((b[1] - c[1]) * (p[0] - c[0]) + (c[0] - b[0]) * (p[1] - c[1])) / d
+    v = ((c[1] - a[1]) * (p[0] - c[0]) + (a[0] - c[0]) * (p[1] - c[1])) / d
+    return u >= -1e-9 and v >= -1e-9 and u + v <= 1.0 + 1e-9
+
+
+def _earclip(p):
+    """Triangulate a simple CCW polygon, concave allowed."""
+    idx, out, guard = list(range(len(p))), [], 0
+    while len(idx) > 2 and guard < 4 * len(p) * len(p):
+        guard += 1
+        m = len(idx)
+        for k in range(m):
+            a, b, c = idx[(k - 1) % m], idx[k], idx[(k + 1) % m]
+            if ((p[b][0] - p[a][0]) * (p[c][1] - p[a][1])
+                    - (p[b][1] - p[a][1]) * (p[c][0] - p[a][0])) <= 1e-10:
+                continue                                   # reflex corner
+            if any(_in_tri(p[j], p[a], p[b], p[c])
+                   for j in idx if j not in (a, b, c)):
+                continue
+            out.append((a, b, c))
+            idx.pop(k)
+            break
+        else:
+            break
+    return out
+
+
+def _extrude(prof, w, cols):
+    """A concave (a, b) profile pushed `w` feet along local +z.
+
+    Returns (caps, band) -- see the note above for why they are two parts.
+    Local axes: a -> +x, b -> +y, the extrusion centred on z.  `cols` is one
+    '#rrggbb' per profile point, so a gun can be dark at the grip and its own
+    colour at the body without a second material or a second primitive.
+    """
+    p = list(prof)
+    c = list(cols)
+    n = len(p)
+    if sum(p[i][0] * p[(i + 1) % n][1] - p[(i + 1) % n][0] * p[i][1]
+           for i in range(n)) < 0.0:                       # force CCW
+        p.reverse()
+        c.reverse()
+    h = w / 2.0
+    v = [(a, b, -h) for (a, b) in p] + [(a, b, h) for (a, b) in p]
+    fc = [_hexf(k) for k in c] * 2
+    tri = _earclip(p)
+    caps = Part(v, [(a, cc, b) for (a, b, cc) in tri]      # -z, wound back
+                + [(a + n, b + n, cc + n) for (a, b, cc) in tri],
+                smooth=True, colors=fc)
+    side = []
+    for i in range(n):
+        j = (i + 1) % n
+        side += [(i, j, i + n), (j, j + n, i + n)]
+    return caps, Part(v, side, smooth=True, colors=fc)
+
+
+# The gun's side profile, normalised to its length: a forward from the
+# backstrap, b up from the grip's heel.  Read off docs/photos-jpg/Arcade Room
+# v4 4.jpg px (60,170)-(115,210), the one frame in the room where a light
+# gun's outline actually resolves -- Time Crisis's blue gun, showing a chunky
+# receiver, a stepped barrel, a guard and a strongly raked grip.
+_GUN_PROFILE = (
+    (0.150, 0.660),   # backstrap top
+    (0.560, 0.660),   # receiver top, front
+    (0.640, 0.585),   # step down to the barrel
+    (1.000, 0.575),   # muzzle, top
+    (1.000, 0.495),   # muzzle, bottom
+    (0.610, 0.485),   # under the barrel, back to the frame
+    (0.500, 0.300),   # trigger guard, front strap
+    (0.430, 0.248),   # trigger guard, bottom front
+    (0.320, 0.285),   # trigger guard, bottom rear (open backed)
+    (0.345, 0.430),   # up into the trigger recess
+    (0.300, 0.430),   # frame underside / top of the grip front
+    (0.172, 0.052),   # grip front, bottom
+    (0.000, 0.021),   # grip heel
+)
+# indices whose vertices take the GRIP colour rather than the body's
+_GUN_GRIP = (10, 11, 12, 0)
+_GUN_PITCH = math.radians(12.0)   # nose-up, resting in the holster
+
+
+def controls(sub, slug, bw, ft, fd, dy):
+    """Build one machine's control deck from its `decks5` spec.
+
+    Round 4 built the same two chrome shafts with a red and a blue cube on top
+    and the same six flat square buttons here regardless of `slug`.  Nothing
+    below chooses a layout, a colour or a size -- every number comes from the
+    art module that read it off the owner's photographs (`decks5.why`).
+    """
+    spec = deck_for(slug, bw)
+    if not spec:
+        return
+    aw = bw - 0.12
+    zb, ze = ft + 0.04, fd - 0.06
+    y = dy + 0.014                      # the deck ART plane; parts sit ON it
+
+    def X(t):
+        return -bw / 2.0 + 0.06 + t * aw
+
+    def Z(v):
+        return zb + v * (ze - zb)
+
+    for b in spec["buttons"]:
+        dome = 0.45 if b["profile"] == "convex" else 0.10
+        v, t, sm = button_cap(b["r"], b["h"], 6, dome)
+        pt = Part(v, t, smooth=sm)
+        at = (X(b["t"]), y, Z(b["v"]))
+        if b["emis"]:
+            # the ONLY emissive buttons in the room: art_g3 flagged Ridge
+            # Racer's two big white ones as lit, and nothing else is.
+            sub.add(pt, cmat(b["col"], 0.34, 0.0, b["col"], 0.75), at=at)
+        else:
+            sub.add(cpart(pt, b["col"]), HW, at=at)
+
+    for s in spec["sticks"]:
+        x, z = X(s["t"]), Z(s["v"])
+        y0 = y
+        if s["washer_r"] > 0.001 and s["washer_col"]:
+            sub.add(cpart(cylinder(s["washer_r"], 0.014, 6), s["washer_col"]),
+                    HWM, at=(x, y0, z))
+            y0 += 0.010
+        # 4 segments: a joystick shaft is 0.055 ft across -- two thirds of an
+        # inch -- and seen from six feet.  6 segments cost 30% more for a
+        # difference no frame resolves.
+        sub.add(cpart(cylinder(s["shaft_r"], s["shaft_h"], 4), s["shaft_col"]),
+                HWM, at=(x, y0, z))
+        top = s["top"]
+        if top == "ball":
+            r = s["top_r"]
+            v, t, sm = ball_top(r, seg=6, rings=3)
+            sub.add(cpart(Part(v, t, smooth=sm), s["top_col"]), HW,
+                    at=(x, y0 + s["shaft_h"] - r * 0.4, z))
+        elif top == "bat":
+            sub.add(cpart(cylinder(s["top_r"], s["top_h"], 6,
+                                   r_top=s["top_r"] * 0.8), s["top_col"]),
+                    HW, at=(x, y0 + s["shaft_h"], z))
+
+    tb = spec["trackball"]
+    if tb:
+        x, z, r = X(tb["t"]), Z(tb["v"]), tb["r"]
+        sub.add(cpart(cylinder(r * 1.28, 0.018, 10), tb["bezel"]), HW,
+                at=(x, y, z))
+        v, t, sm = ball_top(r, seg=8, rings=3)
+        # seated so exactly the upper hemisphere stands proud of the bezel
+        sub.add(cpart(Part(v, t, smooth=sm), tb["col"]), HW,
+                at=(x, y + 0.018 - r, z))
+
+    sp = spec["spinner"]
+    if sp:
+        sub.add(cpart(cylinder(sp["r"], 0.055, 8, r_top=sp["r"] * 0.88),
+                      sp["col"]), HWM, at=(X(sp["t"]), y, Z(sp["v"])))
+
+    for g in spec["guns"]:
+        x, z, ang = X(g["t"]), Z(g["v"]), R(g["yaw"])
+        if abs(g["yaw"]) < 0.01:
+            # DECLARED INFERENCE.  art_g2 read Time Crisis's two guns as lying
+            # at +24 and -8 deg and those stand; T2's pair carries yaw 0, which
+            # is the schema's default and not a reading -- its note records
+            # only "blue LEFT and red RIGHT".  Left at 0 both guns point their
+            # muzzles straight at any camera square to the south wall, which is
+            # every judged south frame, and a gun seen end-on is a blob.  So a
+            # gun whose angle was NOT read is splayed 26 deg outward from the
+            # deck centre, which is how a two-gun deck's holsters actually sit.
+            ang = R(-26.0 if g["t"] < 0.5 else 26.0)
+        L = g["len"]
+        dx, dz = math.sin(ang), math.cos(ang)
+        yb = y
+        gw = L * 0.235                               # across the gun
+        # The deck is only 0.92 ft front to back and a gun is 0.58-0.62, so the
+        # gun is centred on its printed socket: butt 0.48 L behind it, muzzle
+        # 0.52 L in front, which fits the 0.44-0.48 ft either side.
+        bx_, bz_ = x - dx * L * 0.48, z - dz * L * 0.48
+        if g["cradle"]:
+            # The moulded holster SOCKET the butt drops into -- a U channel: a
+            # floor with a wall either side, its CROSS-SECTION extruded along
+            # the gun and only as long as the grip, so the barrel overhangs it
+            # the way a holstered gun's does.  `rot_y = ang` and not `ang - 90`
+            # because this profile's `a` runs ACROSS the gun where the gun's
+            # own runs along it.  Round 5 built this as a flat plate the full
+            # width of the deck slot, which read as a pedestal.
+            hw, ch, fl, wt = gw * 0.5 + 0.030, 0.075, 0.020, 0.026
+            cu = ((-hw, 0.0), (hw, 0.0), (hw, ch), (hw - wt, ch),
+                  (hw - wt, fl), (-hw + wt, fl), (-hw + wt, ch), (-hw, ch))
+            cc = [g["cradle_col"] or "#20202a"] * 8
+            for pt in _extrude(cu, L * 0.42, cc):
+                sub.add(pt, HW,
+                        at=(bx_ + dx * L * 0.095, yb, bz_ + dz * L * 0.095),
+                        rot_y=ang)
+            yb += fl
+        # ONE concave profile carries grip, frame, trigger guard, receiver and
+        # barrel -- see `_GUN_PROFILE`.  Round 5's three boxes could not carry
+        # a guard at all (a box has no hole and no notch) and its "gun" was a
+        # coloured bar on a dark bar.  Two light guns are all that
+        # distinguishes Time Crisis and T2 from a fighting cabinet, so the
+        # shape has to survive a 1400 px frame from eight feet.
+        cp, sp_ = math.cos(_GUN_PITCH), math.sin(_GUN_PITCH)
+        px_, pz_ = _GUN_PROFILE[12]                  # pitch about the heel
+        prof = [((a - px_) * cp - (b - pz_) * sp_ + px_,
+                 (a - px_) * sp_ + (b - pz_) * cp + pz_)
+                for (a, b) in _GUN_PROFILE]
+        drop = min(b for (_, b) in prof)
+        prof = [(a * L, (b - drop) * L) for (a, b) in prof]
+        gc = [g["grip"] if i in _GUN_GRIP else g["body"]
+              for i in range(len(prof))]
+        for pt in _extrude(prof, gw, gc):
+            sub.add(pt, HW, at=(bx_, yb, bz_), rot_y=ang - math.pi / 2.0)
+
+    yk = spec["yoke"]
+    if yk:
+        x, z = X(yk["t"]), Z(yk["v"])
+        sub.add(cpart(cylinder(yk["column_r"], yk["column_h"], 6),
+                      yk["column_col"]), HW, at=(x, y, z))
+        cy = y + yk["cy"]
+        hs, br = yk["half_span"], yk["bar_r"]
+        sub.add(cpart(box(hs * 2.0, br * 2.0, br * 2.0), yk["bar_col"]), HW,
+                at=(x, cy - br, z))
+        gb = yk["grip_buttons"]
+        for sgn in (-1.0, 1.0):
+            sub.add(cpart(cylinder(yk["grip_r"], yk["grip_h"], 6),
+                          yk["grip_col"]), HW, at=(x + sgn * hs, cy - br, z))
+            v, t, sm = button_cap(gb["d"] / 2.0, gb["h"], 6)
+            sub.add(cpart(Part(v, t, smooth=sm), gb["col"]), HW,
+                    at=(x + sgn * hs, cy - br + yk["grip_h"], z))
+
+    wh = spec["wheel"]
+    if wh:
+        x, z = X(wh["t"]), Z(wh["v"])
+        cy = y + wh["cy"]
+        rake = R(wh["rake_deg"])
+        sub.add(cpart(cylinder(wh["column_r"], wh["cy"] * 0.95, 6),
+                      wh["column_col"]), HW, at=(x, y, z))
+        sub.add(cpart(torus(wh["r"], wh["rim_r"], 12, 5), wh["rim_col"]), HW,
+                at=(x, cy, z), rot_x=rake)
+        sub.add(cpart(cylinder(wh["hub_r"], 0.05, 8), wh["hub_col"]), HW,
+                at=(x, cy, z), rot_x=rake)
+        for k in range(wh["spokes"]):
+            ang = 2.0 * math.pi * k / wh["spokes"] + math.pi / 2.0
+            sub.add(cpart(box(wh["spoke_r"] * 2.0, wh["spoke_r"] * 1.2,
+                              wh["r"]), wh["spoke_col"]), HW,
+                    at=(x, cy, z), rot_y=ang, rot_x=rake)
+
+    lp = spec["lip"]
+    if lp:
+        # art_g2: a lit white strip along Legends Ultimate's front lip, and it
+        # IS resolved in v3 4 and v4 8.  A fixture the photograph shows, at the
+        # size the photograph shows it -- which is the only emissive ROOM-BRIEF
+        # allows.
+        bx(sub, cmat(lp["col"], 0.35, 0.0, lp["emissive"], lp["strength"]),
+           -bw / 2.0 + 0.09, bw / 2.0 - 0.09, dy - 0.012, dy - 0.012 + lp["h"],
+           ze - 0.045, ze + 0.010)
+
+
+def coindoors(sub, slug, bw, dy, plinth, zf):
+    """Build this machine's coin door(s) -- 0, 1 or 2 of them, its own size,
+    its own colour, its own place on the panel.  Every rect is ALSO painted
+    into the front artwork at the same coordinates, so a machine with an empty
+    list still reads; the boxes only add relief."""
+    for d in coin_for(slug, bw, dy, plinth):
+        x0, x1, y0, y1 = d["x0"], d["x1"], d["y0"], d["y1"]
+        if x1 - x0 <= 0.01 or y1 - y0 <= 0.01:
+            continue
+        pr = max(0.010, d["proud"])
+        if d.get("boss"):                       # a bare plunger, no plate
+            sub.add(cpart(cylinder((x1 - x0) / 2.0, pr, 6), d["plate"]), HW,
+                    at=((x0 + x1) / 2.0, (y0 + y1) / 2.0, zf + pr),
+                    rot_x=R(-90))
+            continue
+        if d["trim"]:
+            cface(sub, d["trim"], x0 - 0.020, x1 + 0.020, y0 - 0.020,
+                  y1 + 0.020, zf + pr * 0.45, mat=HWM)
+        cbx(sub, d["plate"], x0, x1, y0, y1, zf, zf + pr)   # the door IS solid
+        n = d["slots"]
+        if n:
+            sw = min(0.026, (x1 - x0) / (n * 5.0))
+            for k in range(n):
+                cx = x0 + (x1 - x0) * (k + 0.5) / n
+                cface(sub, "#08080b", cx - sw, cx + sw,
+                      y1 - (y1 - y0) * 0.30, y1 - (y1 - y0) * 0.08,
+                      zf + pr + 0.004)
+        c = d.get("cup")
+        if c:
+            cface(sub, c["col"], c["x0"], c["x1"], c["y"] - 0.11,
+                  c["y"] + 0.02, zf + pr + 0.004)
 
 
 def _profile(bd, top, style, dy, mqh, seed=0):
@@ -380,32 +810,103 @@ def _profile(bd, top, style, dy, mqh, seed=0):
     return base + head, (fb, fd, ft, mq_lo, mq_hi, dy)
 
 
-def upright(m, cx, cz, rot, art_i, bw=2.20, bd=2.55, top=6.10, seed=1,
-            style="straight", dy=2.52, mqh=0.62, mq_i=0, art_f=None,
-            plinth=0.0):
-    """One arcade cabinet, authored facing +z then spun by `rot` degrees."""
+def crt(sub, mat, p, rect=None, bulge=0.060, n=2):
+    """ROUND 6.  A monitor face as a shallow cap, where round 5 had a flat quad.
+
+    `p` is the screen rectangle's four corners (bl, br, tr, tl, as `uvq` takes
+    them) and this draws that rectangle pushed out along its own normal by
+    `bulge * (1-(2u-1)^2) * (1-(2v-1)^2)` -- flush with the bezel all round the
+    rim, proud at the centre.  Two things follow that a flat quad cannot do,
+    and between them they are what makes a DARK screen read as glass rather
+    than as a rectangular hole: the environment reflection sweeps ACROSS the
+    face as the camera moves, instead of the whole panel changing value
+    together on one shared normal; and the rim, tilted away from the room,
+    falls into the soft edge shading a recessed tube has.  Both are lit by the
+    scene, so neither survives the camera standing still -- which is the test
+    ROOM-BRIEF sets for anything that looks like baked light.
+
+    `rect` is an atlas UV rect for the four south machines that carry printed
+    screen art, None for the twelve that carry none.
+    """
+    p0, p1, p2, p3 = p
+    ux, uy, uz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
+    vx, vy, vz = p3[0] - p0[0], p3[1] - p0[1], p3[2] - p0[2]
+    nx, ny, nz = uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
+    ln = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
+    nx, ny, nz = nx / ln, ny / ln, nz / ln
+    u0, v0, u1, v1 = rect if rect else (0.0, 0.0, 1.0, 1.0)
+    verts, uvs, cols = [], [], []
+    for j in range(n + 1):
+        v = j / float(n)
+        for i in range(n + 1):
+            u = i / float(n)
+            k = bulge * (1.0 - (2.0 * u - 1.0) ** 2) * (1.0 - (2.0 * v - 1.0) ** 2)
+            a = [(1 - u) * (1 - v) * p0[c] + u * (1 - v) * p1[c]
+                 + u * v * p2[c] + (1 - u) * v * p3[c] for c in range(3)]
+            verts.append((a[0] + nx * k, a[1] + ny * k, a[2] + nz * k))
+            uvs.append((u0 + (u1 - u0) * u, v1 + (v0 - v1) * v))
+            # THE GRADIENT.  A near-vertical sheet of dark glass in a room with
+            # a bright ceiling and a dark floor is brighter across its top and
+            # darker across its bottom -- read it off any of the daylight
+            # frames (v4 6 Golden Tee, v4 7 NBA Jam).  It is a GRADIENT, not a
+            # highlight: it does not name a light source, it does not stay put
+            # in the wrong place when the camera moves, and it is the one thing
+            # this renderer cannot supply on its own -- `scene.environment` is
+            # measured below as contributing nothing here (see the report's
+            # mirror probe: a perfect white mirror on this quad renders luma
+            # 8.4, sd 0.7).  `rim` darkens the whole perimeter, which is the
+            # soft edge shading a tube recessed behind a bezel has.
+            rim = 0.90 if (i in (0, n) or j in (0, n)) else 1.0
+            g = (0.66 + 0.34 * v) * rim
+            cols.append((g, g, g))
+    tris = []
+    for j in range(n):
+        for i in range(n):
+            q = j * (n + 1) + i
+            tris.append((q, q + 1, q + n + 2))
+            tris.append((q, q + n + 2, q + n + 1))
+    sub.add(Part(verts, tris, smooth=True, colors=cols,
+                 uv=(uvs if rect else None)), mat)
+
+
+def upright(m, cx, cz, rot, art, slug, bw=2.20, bd=2.55, top=6.10, seed=1,
+            style="straight", dy=2.52, mqh=0.62, plinth=0.0):
+    """One arcade cabinet, authored facing +z then spun by `rot` degrees.
+
+    `art` is the wall run's `a2kit.ArtSet` and `slug` names the machine in the
+    round-4 roster.  Round 3 passed three integer indices into a shared 12-tile
+    atlas here (`art_i` for both flanks, `art_f` for the front panel AND the
+    control deck AND the screen bezel, `mq_i` for one of four pastel marquees),
+    which is how sixteen cabinets ended up wearing four graphics between them.
+    Now every surface takes its own panel: `<slug>.side`, `<slug>.front`,
+    `<slug>.deck`, `<slug>.marquee`, and `<slug>.bezel` where the machine's art
+    module authored one.
+    """
     sub = Model()
     rnd = Rnd(seed)
     prof, (fb, fd, ft, mq_lo, mq_hi, dy) = _profile(bd, top, style, dy, mqh, seed)
     x0, x1 = -bw / 2.0, bw / 2.0
-    art_f = art_i if art_f is None else art_f
     if plinth:                                  # a raised base, some machines
         bx(sub, CABDK, x0 - 0.01, x1 + 0.01, 0.0, plinth, -bd / 2, fb)
         prof = [(z, y + plinth) for (z, y) in prof]
         mq_lo += plinth
         mq_hi += plinth
         dy += plinth
-    sweep(sub, prof, x0, x1, ART, CABBLK, uvr(art_i))
+    sweep(sub, prof, x0, x1, art.ART, art.carcase(slug),
+          art.uv(slug + ".side"))
 
     # printed lower front panel (its own tile, so the flanks and the face are
-    # not the same graphic)
-    zf = fb + 0.008
-    uvq(sub, ART, [(x0 + 0.08, plinth + 0.16, zf), (x1 - 0.08, plinth + 0.16, zf),
-                   (x1 - 0.08, dy - 0.62, zf), (x0 + 0.08, dy - 0.62, zf)],
-        uvr(art_f))
-    # a coin door, dead centre, low
-    bx(sub, CPANEL, -0.34, 0.34, plinth + 0.30, plinth + 0.92, zf, zf + 0.055)
-    bx(sub, CHR, -0.26, 0.26, plinth + 0.52, plinth + 0.60, zf + 0.055, zf + 0.07)
+    # not the same graphic).  ROUND 5: the rect is per-machine -- art_g2's four
+    # south cabinets print their artwork all the way to the floor and its
+    # FRONT_RECT says so, where round 4 stopped every panel at plinth + 0.16.
+    zf = fb + 0.008 + front_z(slug)
+    fx0, fx1, fy0, fy1 = front_rect(slug, bw, dy, plinth)
+    uvq(sub, art.ART,
+        [(fx0, fy0, zf), (fx1, fy0, zf), (fx1, fy1, zf), (fx0, fy1, zf)],
+        art.uv(slug + ".front"))
+    # ROUND 5: this machine's OWN coin door(s), or none.  Round 4's single
+    # centred grey plate is gone -- see `coindoors`.
+    coindoors(sub, slug, bw, dy, plinth, zf)
 
     # control deck: joysticks + buttons on the projecting top
     dz0, dz1 = ft + 0.18, fd - 0.14
@@ -413,21 +914,15 @@ def upright(m, cx, cz, rot, art_i, bw=2.20, bd=2.55, top=6.10, seed=1,
     # a flat #2c2e34 slab and an UP-facing face of that albedo metered ~145 in
     # this daylight render -- a pale grey shelf across every machine
     bx(sub, CABDK, x0 + 0.03, x1 - 0.03, dy - 0.03, dy + 0.010, ft + 0.02, fd - 0.04)
-    uvq(sub, ART_DK, [(x0 + 0.06, dy + 0.014, fd - 0.06),
-                      (x1 - 0.06, dy + 0.014, fd - 0.06),
-                      (x1 - 0.06, dy + 0.014, ft + 0.04),
-                      (x0 + 0.06, dy + 0.014, ft + 0.04)], uvr(art_f), flip=True)
-    for k in range(2):
-        jx = (-0.28 + 0.56 * k) * (bw / 2.20)
-        bx(sub, CHR, jx - 0.045, jx + 0.045, dy + 0.012, dy + 0.20,
-           dz0 + 0.16, dz0 + 0.25)
-        bx(sub, BUTTONS[k], jx - 0.065, jx + 0.065, dy + 0.20, dy + 0.25,
-           dz0 + 0.145, dz0 + 0.265)
-        for b in range(3):
-            bxx = jx + 0.20 + b * 0.145
-            rect_up(sub, BUTTONS[(k + b) % 4], bxx - 0.055, bxx + 0.055,
-                    dy + 0.018, dz0 + 0.10 + 0.055 * (b % 2),
-                    dz0 + 0.21 + 0.055 * (b % 2))
+    uvq(sub, art.deck(slug), [(x0 + 0.06, dy + 0.014, fd - 0.06),
+                              (x1 - 0.06, dy + 0.014, fd - 0.06),
+                              (x1 - 0.06, dy + 0.014, ft + 0.04),
+                              (x0 + 0.06, dy + 0.014, ft + 0.04)],
+        art.uv(slug + ".deck"))
+    # ROUND 5: this machine's OWN controls.  Round 4 built the same two chrome
+    # shafts with a red and a blue cube on top and the same six flat squares
+    # here regardless of `slug`, which is the sentence three critics wrote.
+    controls(sub, slug, bw, ft, fd, dy)
 
     # Screen + marquee ride the PROFILE's own front plane.  Round 3a put them
     # at a fixed ft - 0.04, which is INSIDE the body for the straight and step
@@ -438,23 +933,44 @@ def upright(m, cx, cz, rot, art_i, bw=2.20, bd=2.55, top=6.10, seed=1,
     yb0, yb1 = dy + 0.30, mq_lo - 0.10
     # printed bezel round the screen -- in the photos the monitor surround is
     # part of the machine's artwork, not a black frame
-    uvq(sub, ART_B, [(x0 + 0.05, yb0, zb0), (x1 - 0.05, yb0, zb0),
-                     (x1 - 0.05, yb1, zb1), (x0 + 0.05, yb1, zb1)], uvr(art_f))
+    bez = [(x0 + 0.05, yb0, zb0), (x1 - 0.05, yb0, zb0),
+           (x1 - 0.05, yb1, zb1), (x0 + 0.05, yb1, zb1)]
+    if art.has(slug + ".bezel"):
+        uvq(sub, art.ART, bez, art.uv(slug + ".bezel"))
+    else:
+        sub.add(quad(*bez), art.BEZEL)
     fy0, fy1 = dy + 0.46, mq_lo - 0.26
     t0 = (fy0 - yb0) / max(0.01, yb1 - yb0)
     t1 = (fy1 - yb0) / max(0.01, yb1 - yb0)
     zs0 = zb0 + (zb1 - zb0) * t0 + 0.014
     zs1 = zb0 + (zb1 - zb0) * t1 + 0.014
-    sub.add(quad((x0 + 0.17, fy0, zs0), (x1 - 0.17, fy0, zs0),
-                 (x1 - 0.17, fy1, zs1), (x0 + 0.17, fy1, zs1)), SCRN)
+    scr = [(x0 + 0.17, fy0, zs0), (x1 - 0.17, fy0, zs0),
+           (x1 - 0.17, fy1, zs1), (x0 + 0.17, fy1, zs1)]
+    if art.has(slug + ".screen"):
+        # ROUND 5.  art_g2 painted the four SOUTH monitors.  All four are dark
+        # in every frame and no attract loop is invented; what the panels carry
+        # is what is photographed -- Champion Edition's pale yellow instruction
+        # card along the bottom edge, Time Crisis's dim olive game image, room
+        # reflections on the rest.  The factor material is dark on purpose: a
+        # CRT is glass, and `art.ART` at white would render these as four lit
+        # televisions.
+        # ROUND 6 keeps every one of those panels and only curves the glass
+        # they are printed on -- see `crt`.
+        crt(sub, art.SCREEN, scr, art.uv(slug + ".screen"))
+    else:
+        # ROUND 6.  The other twelve carry no printed screen art because the
+        # photographs show nothing on them to print: all twelve are dark in
+        # every frame that sees them, in daylight and in the night set.  They
+        # get the same curved dark glass, unpainted.
+        crt(sub, SCRN, scr)
     # marquee -- a real backlit lamp in the photos, so legitimately emissive,
     # and it carries a printed title band rather than a colour field
     mz = ft + {"straight": 0.03, "slope": 0.08, "riser": 0.13,
                "step": -0.37}[style]
-    uvq(sub, MQ_MATS[mq_i % 4],
+    uvq(sub, art.marquee(slug),
         [(x0 + 0.06, mq_lo, mz), (x1 - 0.06, mq_lo, mz),
          (x1 - 0.06, mq_hi, mz), (x0 + 0.06, mq_hi, mz)],
-        uvr(12 + (mq_i + 1) % 4))
+        art.uv(slug + ".marquee"))
     # pale cap: end-on from the dollhouse quadrant an all-black run merges into
     # one mass, and this line breaks it into machines
     bx(sub, Material("a2cap", "#787c82", roughness=0.55),
@@ -472,30 +988,89 @@ def upright(m, cx, cz, rot, art_i, bw=2.20, bd=2.55, top=6.10, seed=1,
 # ---- the machines, one row per wall.  Widths, heights, deck heights, marquee
 # depths, plinths and profiles all differ; the photos' run is jagged, not a
 # comb, and that is most of what "seven of the same box" meant.
+# ROUND 4: the three integer artwork columns are replaced by the machine's
+# roster slug, and NOTHING else in these tables moved -- every z/x, width,
+# height, deck height, marquee depth, plinth and profile style is round 3's.
+# The order is the order the photographs establish, run by run: the east wall
+# reads north to south, the south wall west to east, the north wall west to
+# east.  EAST_RUN[6] is the slot the roster found EMPTY in all four frames that
+# see the whole run; the geometry is kept (this round changed artwork, not
+# layout) and it is dressed as an honest unbranded black upright with no
+# licensed graphic rather than given an invented title.
 EAST_RUN = [
-    # (z, bw, top, style, dy, mqh, art, front art, marquee, plinth)
-    (2.85, 2.34, 6.28, "slope",    2.56, 0.70, 0, 6, 0, 0.00),
-    (5.11, 2.10, 5.86, "straight", 2.44, 0.55, 1, 9, 1, 0.10),
-    (7.37, 2.42, 6.34, "riser",    2.60, 0.76, 2, 4, 2, 0.00),
-    (9.63, 2.16, 5.98, "step",     2.48, 0.58, 3, 8, 3, 0.14),
-    (11.89, 2.30, 6.22, "slope",   2.54, 0.66, 4, 1, 0, 0.00),
-    (14.15, 2.04, 5.78, "straight", 2.40, 0.52, 5, 11, 2, 0.08),
-    (16.41, 2.38, 6.16, "riser",   2.58, 0.72, 6, 3, 1, 0.00),
+    # (z, bw, top, style, dy, mqh, slug, plinth)
+    (2.85, 2.34, 6.28, "slope",    2.56, 0.70, "star-wars-atari", 0.00),
+    (5.11, 2.10, 5.86, "straight", 2.44, 0.55, "marvel-super-heroes", 0.10),
+    (7.37, 2.42, 6.34, "riser",    2.60, 0.76, "marvel-vs-capcom", 0.00),
+    (9.63, 2.16, 5.98, "step",     2.48, 0.58, "mortal-kombat", 0.14),
+    (11.89, 2.30, 6.22, "slope",   2.54, 0.66, "nba-jam", 0.00),
+    (14.15, 2.04, 5.78, "straight", 2.40, 0.52, "tmnt-turtles-in-time", 0.08),
+    (16.41, 2.38, 6.16, "riser",   2.58, 0.72, "east-7-no-machine", 0.00),
 ]
 
 SOUTH_RUN = [
-    (2.05, 2.95, 6.36, "step",     2.62, 0.80, 7, 2, 3, 0.00),
-    (4.95, 2.42, 6.02, "straight", 2.46, 0.58, 8, 5, 0, 0.00),
-    (7.55, 2.52, 6.24, "slope",    2.56, 0.68, 9, 0, 1, 0.12),
-    (10.05, 2.28, 5.92, "riser",   2.42, 0.60, 10, 7, 2, 0.00),
+    (2.05, 2.95, 6.36, "step",     2.62, 0.80, "legends-ultimate", 0.00),
+    (4.95, 2.42, 6.02, "straight", 2.46, 0.58,
+     "street-fighter-2-champion-edition", 0.00),
+    (7.55, 2.52, 6.24, "slope",    2.56, 0.68, "time-crisis", 0.12),
+    (10.05, 2.28, 5.92, "riser",   2.42, 0.60, "terminator-2", 0.00),
 ]
 
 NORTH_RUN = [
-    (6.55, 2.44, 6.20, "slope",    2.56, 0.72, 5, 9, 2, 0.00),
-    (9.00, 2.28, 6.34, "straight", 2.50, 0.64, 8, 8, 0, 0.10),
-    (11.30, 2.18, 6.02, "riser",   2.44, 0.56, 1, 3, 3, 0.00),
-    (13.55, 2.32, 6.26, "step",    2.54, 0.68, 11, 2, 1, 0.06),
+    (6.55, 2.44, 6.20, "slope",    2.56, 0.72,
+     "north-1-graffiti-multicade", 0.00),
+    (9.00, 2.28, 6.34, "straight", 2.50, 0.64, "pac-man", 0.10),
+    (11.30, 2.18, 6.02, "riser",   2.44, 0.56, "nfl-blitz", 0.00),
+    (13.55, 2.32, 6.26, "step",    2.54, 0.68, "golden-tee-3d-golf", 0.06),
 ]
+
+
+# ---------------------------------------------------------------------------
+# ROUND 5: hand atlas4 the TRUE world aspect of every quad.
+#
+# atlas4 now packs each panel isotropically -- w = S*sqrt(A), h = S/sqrt(A) --
+# so `A` decides how a panel's pixel budget is split between its two axes, and
+# for art_g1's machines it also decides the shape its `.rect` path draws at.
+# The four art modules each published an aspect table, but art_g2's is ONE
+# number per panel class for four cabinets 2.28-2.95 ft wide, and art_g3 warned
+# that round 4's single per-class table "stretched every front by ~24%".  These
+# are the real numbers, computed from the run tables and `_profile` below --
+# the only place in the project that knows them.
+def _aspects():
+    out = {}
+    for run in (EAST_RUN, SOUTH_RUN, NORTH_RUN):
+        for (_, bw, top, style, dy0, mqh, slug, pl) in run:
+            prof, (fb, fd, ft, mq_lo, mq_hi, dy) = _profile(
+                2.55, top, style, dy0, mqh)
+            if pl:
+                prof = [(z, y + pl) for (z, y) in prof]
+                mq_lo += pl
+                mq_hi += pl
+                dy += pl
+            zs = [p[0] for p in prof]
+            ys = [p[1] for p in prof]
+            fx0, fx1, fy0, fy1 = front_rect(slug, bw, dy, pl)
+            out[slug + ".side"] = (max(zs) - min(zs)) / (max(ys) - min(ys))
+            out[slug + ".front"] = (fx1 - fx0) / max(0.01, fy1 - fy0)
+            out[slug + ".deck"] = (bw - 0.12) / 0.92
+            out[slug + ".marquee"] = (bw - 0.12) / max(0.01, mq_hi - mq_lo)
+            rk = {"straight": (0.02, 0.02), "step": (0.02, 0.02),
+                  "slope": (0.02, -0.30), "riser": (0.02, -0.16)}[style]
+            zb0, zb1 = ft + rk[0], ft + rk[1]
+            yb0, yb1 = dy + 0.30, mq_lo - 0.10
+            out[slug + ".bezel"] = (bw - 0.10) / max(
+                0.01, math.hypot(yb1 - yb0, zb1 - zb0))
+            fy0s, fy1s = dy + 0.46, mq_lo - 0.26
+            t0 = (fy0s - yb0) / max(0.01, yb1 - yb0)
+            t1 = (fy1s - yb0) / max(0.01, yb1 - yb0)
+            zs0 = zb0 + (zb1 - zb0) * t0
+            zs1 = zb0 + (zb1 - zb0) * t1
+            out[slug + ".screen"] = (bw - 0.34) / max(
+                0.01, math.hypot(fy1s - fy0s, zs1 - zs0))
+    return out
+
+
+atlas4.set_aspects(_aspects())
 
 
 def build_east_cabs():
@@ -504,9 +1079,10 @@ def build_east_cabs():
     cshadow(m, W - 1.45, (EAST_RUN[0][0] + EAST_RUN[-1][0]) / 2, 1.55,
             (EAST_RUN[-1][0] - EAST_RUN[0][0]) / 2 + 1.25, feather=0.85,
             strength=1.00, room=(W, D))
-    for i, (z, bw, top, st, dy, mqh, ai, af, mi, pl) in enumerate(EAST_RUN):
-        upright(m, W - 1.32, z, 270, ai, bw=bw, bd=2.55, top=top, seed=i + 1,
-                style=st, dy=dy, mqh=mqh, mq_i=mi, art_f=af, plinth=pl)
+    art = ArtSet("east", EAST_SLUGS)
+    for i, (z, bw, top, st, dy, mqh, slug, pl) in enumerate(EAST_RUN):
+        upright(m, W - 1.32, z, 270, art, slug, bw=bw, bd=2.55, top=top,
+                seed=i + 1, style=st, dy=dy, mqh=mqh, plinth=pl)
     return save_and_place("Arcade Cabinets East", m, ROOM)
 
 
@@ -517,15 +1093,23 @@ def build_south_cabs():
     m = Model()
     cshadow(m, 5.9, D - 1.85, 5.95, 1.45, feather=0.85, strength=1.00,
             room=(W, D))
-    for (cx, bw, top, st, dy, mqh, ai, af, mi, pl) in SOUTH_RUN:
-        upright(m, cx, D - 1.32 - SD, 180, ai, bw=bw, bd=2.55, top=top,
-                seed=int(cx * 7), style=st, dy=dy, mqh=mqh, mq_i=mi,
-                art_f=af, plinth=pl)
+    art = ArtSet("south", SOUTH_SLUGS)
+    for (cx, bw, top, st, dy, mqh, slug, pl) in SOUTH_RUN:
+        upright(m, cx, D - 1.32 - SD, 180, art, slug, bw=bw, bd=2.55, top=top,
+                seed=int(cx * 7), style=st, dy=dy, mqh=mqh, plinth=pl)
     # the blue CAPCOM lower cabinet the Champion Edition stands on
+    # The blue CAPCOM base box is UNCHANGED.  art_g2 asked for its front face
+    # to move back so Champion Edition's printed base art could be seen; that
+    # would have driven it through the control deck (see decks5.FRONT_Z).  The
+    # printed quad is pushed forward onto this box's face instead.
     bx(m, Material("a2capc", "#1c4c9a", roughness=0.6),
        3.62, 6.28, 0.0, 2.55, D - 2.55 - SD, D - 0.06 - SD)
+    # the yellow trim rail, dropped from y 0.42-0.70 to 0.14-0.36: round 3 put
+    # it where the blue box was a blank field, and art_g2's printed base art
+    # now puts the red CAPCOM wordmark exactly there.  It reads as a kick rail
+    # at the new height and stops cutting the wordmark in half.
     bx(m, Material("a2capy", "#e0b21c", roughness=0.5),
-       4.30, 5.60, 0.42, 0.70, D - 2.62 - SD, D - 2.56 - SD)
+       4.30, 5.60, 0.14, 0.36, D - 2.62 - SD, D - 2.56 - SD)
     # black diagonal-rib acoustic panel between the run and the door
     sub = Model()
     bx(sub, ACOU, SA(13.20), SA(11.60), 3.20, 6.70, 0.0, 0.09)
@@ -571,12 +1155,36 @@ def build_south_cabs():
     # ---- Ridge Racer, round the corner on the west wall's south end
     cshadow(m, 1.40, 21.55, 1.45, 1.30, feather=0.80, strength=0.94,
             room=(W, D))
-    upright(m, 1.32, 21.55, 90, 10, bw=2.42, bd=2.55, top=6.06, seed=77,
-            style="step", dy=2.58, mqh=0.66, mq_i=3, art_f=1)
+    upright(m, 1.32, 21.55, 90, art, "ridge-racer", bw=2.42, bd=2.55,
+            top=6.06, seed=77, style="step", dy=2.58, mqh=0.66)
     return save_and_place("Arcade Cabinets South", m, ROOM)
 
 
 # ============================================ north wall: the frontal machines
+# The boxed collectibles in the NE glass cabinet are stand-ins: rather than
+# thirty more textures, each box face samples a WINDOW of a machine panel that
+# is already in this run's atlas, so it costs nothing.  ROUND 5 crops the
+# window.  Round 4 mapped whole panels, which was harmless while the artwork
+# was blurry -- but the round-5 panels are legible, and `nfl-blitz.side`'s
+# chrome lockup started reading as the words NFL BLITZ across six collectible
+# boxes in a row.  A 0.34 x 0.52 window of the same panel gives colour and
+# pattern with no wordmark, which is what a boxed figure reads as from eight
+# feet.  Still zero extra bytes.
+BOX_ART = ["pac-man.front", "nfl-blitz.side", "golden-tee-3d-golf.deck",
+           "north-1-graffiti-multicade.side", "nfl-blitz.deck",
+           "pac-man.side", "golden-tee-3d-golf.side",
+           "north-1-graffiti-multicade.deck"]
+BOX_WIN = [(0.10, 0.34), (0.52, 0.12), (0.28, 0.46), (0.62, 0.30),
+           (0.36, 0.08), (0.06, 0.20), (0.48, 0.40), (0.20, 0.24)]
+
+
+def subuv(rect, a0, b0, a1, b1):
+    """A sub-rectangle of a packed panel's UV rect, in 0..1 panel space."""
+    u0, v0, u1, v1 = rect
+    return (u0 + (u1 - u0) * a0, v0 + (v1 - v0) * b0,
+            u0 + (u1 - u0) * a1, v0 + (v1 - v0) * b1)
+
+
 def build_north_cabs():
     """`Arcade Room v3 1` shows FOUR frontal uprights on the north wall --
     Pac-Man and three others -- a tall glass-fronted lit Funko display cabinet
@@ -586,10 +1194,10 @@ def build_north_cabs():
     cshadow(m, (NORTH_RUN[0][0] + NORTH_RUN[-1][0]) / 2, 1.45,
             (NORTH_RUN[-1][0] - NORTH_RUN[0][0]) / 2 + 1.35, 1.55,
             feather=0.85, strength=1.00, room=(W, D))
-    for (cx, bw, top, st, dy, mqh, ai, af, mi, pl) in NORTH_RUN:
-        upright(m, cx, 1.32, 0, ai, bw=bw, bd=2.55, top=top,
-                seed=int(cx * 11), style=st, dy=dy, mqh=mqh, mq_i=mi,
-                art_f=af, plinth=pl)
+    art = ArtSet("north", NORTH_SLUGS)
+    for (cx, bw, top, st, dy, mqh, slug, pl) in NORTH_RUN:
+        upright(m, cx, 1.32, 0, art, slug, bw=bw, bd=2.55, top=top,
+                seed=int(cx * 11), style=st, dy=dy, mqh=mqh, plinth=pl)
 
     # ---- the glass-fronted lit Funko display cabinet, NE corner
     fx0, fx1, fz0, fz1, fh = 17.45, 20.00, 0.06, 1.36, 5.55
@@ -610,11 +1218,14 @@ def build_north_cabs():
         for k in range(6):
             bxx = fx0 + 0.20 + k * ((fx1 - fx0 - 0.40) / 6.0)
             bxw = (fx1 - fx0 - 0.40) / 6.0 - 0.03
-            uvq(m, ART, [(bxx, sy + 0.055, fz1 - 0.20),
+            uvq(m, art.ART, [(bxx, sy + 0.055, fz1 - 0.20),
                          (bxx + bxw, sy + 0.055, fz1 - 0.20),
                          (bxx + bxw, sy + 0.055 + 0.58, fz1 - 0.20),
                          (bxx, sy + 0.055 + 0.58, fz1 - 0.20)],
-                uvr((s * 6 + k) % 12))
+                subuv(art.uv(BOX_ART[(s * 6 + k) % len(BOX_ART)]),
+                      *(BOX_WIN[(s * 6 + k) % len(BOX_WIN)]
+                        + (BOX_WIN[(s * 6 + k) % len(BOX_WIN)][0] + 0.34,
+                           BOX_WIN[(s * 6 + k) % len(BOX_WIN)][1] + 0.52))))
     bx(m, GLASS, fx0 + 0.10, fx1 - 0.10, 0.42, fh - 0.16, fz1 - 0.09, fz1 - 0.05)
 
     # ---- the plush in a net bag, hung above and west of the case

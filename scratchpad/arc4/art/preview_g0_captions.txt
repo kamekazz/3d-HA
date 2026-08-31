@@ -1,0 +1,73 @@
+art_g0 preview -- one MACHINE per column, one ZONE per row.
+Every panel is shown at its TRUE quad aspect (the square tile as
+it lands on the cabinet), not as the square atlas tile.
+tile 256 px; 4x4 atlas of these 16 tiles = 339011 bytes
+
+index  panel                                          aspect   mean   mean|d1|
+    0  star-wars-atari.side                            0.47    94.9   10.13
+    1  star-wars-atari.marquee                         3.17    32.5    7.98
+    2  star-wars-atari.front                           1.22    39.6    7.97
+    3  star-wars-atari.deck                            2.41    77.1    7.30
+    4  nba-jam.side                                    0.47    30.2    7.23
+    5  nba-jam.marquee                                 3.30   132.5   16.48
+    6  nba-jam.front                                   1.22    60.6    9.91
+    7  nba-jam.deck                                    2.37   139.2   14.62
+    8  street-fighter-2-champion-edition.side          0.49   179.3    7.22
+    9  street-fighter-2-champion-edition.marquee       3.97    84.3   18.03
+   10  street-fighter-2-champion-edition.front         1.35   105.8    8.91
+   11  street-fighter-2-champion-edition.deck          2.50    86.1    8.26
+   12  north-1-graffiti-multicade.side                 0.48    60.8    9.30
+   13  north-1-graffiti-multicade.marquee              3.22    45.2    9.43
+   14  north-1-graffiti-multicade.front                1.28    45.7   10.96
+   15  north-1-graffiti-multicade.deck                 2.52    69.4    7.24
+
+WHAT EACH PANEL CLAIMS
+- star-wars-atari.side
+    v4 9 (150,220)-(300,480) and v4 8 (0,90)-(140,340): yellow carcase, black stepped art panel, TIEs, X-wing, Death Star curve, inset panel. The blue LED strip is a fixture the owner added and is deliberately NOT printed here.
+- star-wars-atari.marquee
+    NOT VISIBLE in any photograph -- dark and generic on purpose, no title invented.
+- star-wars-atari.front
+    NOT VISIBLE -- plain dark with yellow returns.
+- star-wars-atari.deck
+    NOT VISIBLE -- plain black with a yellow front return.
+- nba-jam.side
+    No legible graphic at any magnification -- black vinyl with maroon molding bleed, as photographed.
+- nba-jam.marquee
+    v4 7 (320,150)-(420,205) at 12x. Letterforms, roundel and rails all read directly from that crop.
+- nba-jam.front
+    v4 3 (230,180)-(300,260): flaming-ball badge over the pebble-leather riser with its white starburst.
+- nba-jam.deck
+    v4 7 (150,120)-(470,450): hardwood court, key, arcs, centre circle and the logo lying on the boards.
+- street-fighter-2-champion-edition.side
+    Not resolvable -- the machine is near head-on in every frame. Built as the pale laminate the photographs do establish, no invented art.
+- street-fighter-2-champion-edition.marquee
+    v3 4 (930,565)-(1010,600) at 16x. CHAMPION / EDITION / silver wings are read. The green-gold centre wordmark does NOT resolve letter by letter in any frame; it is reconstructed as STREET FIGHTER II from the badge, and that is a reconstruction, not a reading.
+- street-fighter-2-champion-edition.front
+    v3 4 (920,730)-(1030,810): royal-blue riser, ghosted lunging fighter, CAPCOM on a dark plate low and left.
+- street-fighter-2-champion-edition.deck
+    v3 4 / v4 8: black deck, silver leading edge, checker strip. Individual controls do not resolve so none are printed.
+- north-1-graffiti-multicade.side
+    v3 1 (520,570)-(620,830) at 7x and v4 6 (225,115)-(290,285) at 10x: pale line-work wrap, the almond ellipse, the diagonal slash, the glyph scatter. Grey-on-black per the neutral v4 6 exposure.
+- north-1-graffiti-multicade.marquee
+    v3 1 (515,555)-(625,620) at 11x: pale illegible lettering, a small maroon patch, a light angular mark at the right end. NO title resolves in any frame at any magnification, so none is printed.
+- north-1-graffiti-multicade.front
+    Same wrap, drawn to the FRONT's own structure: two panels split at mid height, the coin-plunger dot, the printed QR square.
+- north-1-graffiti-multicade.deck
+    v4 6: the deepest deck on the north wall, two clusters, no printed legend.
+
+PAYLOAD -- measured, group 0's 16 tiles only, packed 4x4 and PNG-deflated
+  tile  96  ->  82.4 KB   (5.2 KB / tile)
+  tile 128  -> 127.6 KB   (8.0 KB / tile)
+  tile 192  -> 228.4 KB  (14.3 KB / tile)
+  tile 256  -> 339.4 KB  (21.2 KB / tile)
+Extrapolating to all 64 tiles of the room, a SINGLE shared atlas at tile 256 is
+~1.4 MB and a2kit embeds it in each of Cabinets East / North / South, i.e. three
+times.  That breaks the room's 1.5 MB budget on its own.  Two levers, both the
+integrator's call:
+  * TILE 128 costs ~8 KB/tile and still resolves NBA JAM / CHAMPION EDITION
+    (the letterforms are drawn at ~0.47 of the marquee height).
+  * Split the atlas PER WALL RUN so each GLB carries only its own machines'
+    tiles (east 7, south 4+1, north 4) instead of all sixteen.  At TILE 128
+    that is roughly 224 / 160 / 128 KB across the three pieces.
+GRAIN = False saves a further 37%; the 4x4 ordered dither alone meters
+mean|d1| 7.2-18.0 at texel scale.

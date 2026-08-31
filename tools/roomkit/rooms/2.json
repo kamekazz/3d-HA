@@ -215,7 +215,7 @@
    ],
    "rot_y": 0.0,
    "scale": 1.0,
-   "kb": 147.0
+   "kb": 198.4
   },
   "Arcade Cabinets North": {
    "pos_room_local_ft": [
@@ -225,7 +225,7 @@
    ],
    "rot_y": 0.0,
    "scale": 1.0,
-   "kb": 180.3
+   "kb": 189.9
   },
   "Arcade Cabinets South": {
    "pos_room_local_ft": [
@@ -235,7 +235,7 @@
    ],
    "rot_y": 0.0,
    "scale": 1.0,
-   "kb": 193.4
+   "kb": 222.5
   },
   "Arcade Ceiling": {
    "pos_room_local_ft": [
@@ -328,7 +328,7 @@
    "kb": 7.2
   }
  },
- "_payload_kb": 1443.7,
+ "_payload_kb": 1533.8,
  "_shots": [
   "scratchpad/shots/v3_arcade/r2_a_look_s.png  + _sbs.jpg   (photo v3 4 match, --no-cutaway)",
   "scratchpad/shots/v3_arcade/r2_b_look_n.png  + _sbs.jpg   (photo v3 1 match, --no-cutaway)",
@@ -347,5 +347,399 @@
   "withdrawn_gap": "Round 2 recorded 'the ceiling is invisible in every render because cutaway.js fades any object whose name ends in ceiling'. That was WRONG and it is deleted: with --no-cutaway the ceiling, its recessed cans, its supply grille and all four near walls render in full. Every eye-level pose below was re-shot with --no-cutaway.",
   "bug_found_and_fixed": "THE ENTIRE SOUTH WALL OF ROUND 2 WAS INVISIBLE. house.js extrudes each wall OUTWARD from its own footprint line (WALL_THICKNESS 0.35, geo.translate(0,0,-t)), so on the party wall with the Movie Room the NEIGHBOUR's wall mass lands 0.35 ft inside this room. Round 2 authored the south skin at depth 0.035, the Movie Room door leaf and casing at 0-0.145, the black diagonal-rib acoustic panel at 0-0.10 and the RGB hex light bar at 0-0.07 -- every one of them behind that face. What a round-2 render shows at the south end is the Movie Room's paint, not ours. ar2.py now carries SD = 0.40: the south skin, the hexes, the acoustic panel, the RGB bar, the south skirting, the wall-hung mini cabinet and the Connect-4 console are authored at depth >= 0.40, the four south uprights moved 0.40 ft north, and the Movie Room door is rebuilt as a real 0.40 ft reveal (lining back to z = D, leaf and casing on the room side).",
   "neighbour_regression": "Movie Room opening 3 is now edge_index 0, offset 17.3, width 3.10 = world x 15.4-18.5. That is the STAIR-LANDING opening from RESUME's open-items list, not the party-wall door. It no longer registers with our opening 103 (world x 11.4-14.1), so the Movie Room's north wall is solid behind our door and our proud leaf is what makes the doorway read at all. Room 1 belongs to another agent and was not touched. Re-pair spec: Arcade 103 is edge 2, offset 4.5, width 2.7."
+ },
+ "_round4": {
+  "scope": "CABINET ARTWORK ONLY.  No room geometry, no footprints, no app code, no other room, no poses.json.  Every z/x position, width, height, deck height, marquee depth, plinth and profile style in ar2.py's three run tables is round 3's, unchanged.",
+  "the_defect": "Round 3's critic: 'the cabinet artwork is one machine repeated sixteen times in different hues, where the photograph shows four unrelated printed graphics.'  Correct. a2kit._art_atlas() painted 16 tiles of which 0-11 were the SAME motif (ground gradient + header strip + one off-centre blob) in twelve hues and 12-15 were sine-wash bands with rectangles standing in for lettering.  upright() then fed ONE of those tiles to the front panel AND the control deck AND the screen bezel.",
+  "the_fix": "16 machines identified from the owner's photographs and drawn individually by four art modules (scratchpad/arc4/art/art_g0..3.py), packed by scratchpad/arc4/atlas4.py into one atlas PER WALL RUN, and wired by slug in ar2.py.  Each machine now has its own .marquee / .side / .front / .deck, its own marquee emissive tint, and its own carcase / T-molding colour.",
+  "roster": {
+   "east_wall_north_to_south": [
+    "star-wars-atari",
+    "marvel-super-heroes",
+    "marvel-vs-capcom",
+    "mortal-kombat",
+    "nba-jam",
+    "tmnt-turtles-in-time",
+    "east-7-no-machine"
+   ],
+   "south_wall_west_to_east": [
+    "legends-ultimate",
+    "street-fighter-2-champion-edition",
+    "time-crisis",
+    "terminator-2"
+   ],
+   "sw_corner": [
+    "ridge-racer"
+   ],
+   "north_wall_west_to_east": [
+    "north-1-graffiti-multicade",
+    "pac-man",
+    "nfl-blitz",
+    "golden-tee-3d-golf"
+   ]
+  },
+  "atlas": {
+   "builder": "scratchpad/arc4/atlas4.py",
+   "why_three": "glb.py shares an image by byte identity INSIDE one file, but Cabinets East / North / South are three GLBs, so one room-wide atlas is paid for three times.",
+   "east_px": "1024x280, 28 panels, 73.8 KB",
+   "south_px": "512x384, 20 panels, 47.8 KB",
+   "north_px": "512x280, 17 panels, 41.5 KB",
+   "total_kb": 163.1,
+   "panel_px": {
+    "marquee": 120,
+    "front": 96,
+    "side": 64,
+    "side_star_wars_and_multicade": 96,
+    "deck": 48,
+    "bezel_golden_tee_only": 48
+   },
+   "supersample": "every panel painted at 2x and box-averaged down; art_g2 paints into a fixed 256 buffer and point-samples on the way out, which shreds letterforms at any smaller tile.",
+   "quantisation": "16 levels/channel after the average.  The modules quantise to 8 and lean on a fixed 4x4 Bayer pattern; box-averaging destroys both and cost 0.86 bytes/px against their own 0.13-0.47.  Re-quantising put it back: 243.2 KB at 8 levels, 174.9 at 16, for the same panel sizes.  Re-dithering at quantise time cost 40 KB and was rejected."
+  },
+  "marquee_emissive": "A marquee IS a backlit lamp in the photographs, so it stays emissive -- a fixture the photograph shows, at the size it shows it, which is the exception ROOM-BRIEF allows.  Round 3 shared four pastels across sixteen machines at strength 1.7.  Now per-machine (a2kit.MARQUEE): hue from that band, value LOW, strength ~1.  glTF emissive is a flat factor with no texture, so the first pass at the band's own light hue washed NBA Jam's crimson caps pink and bleached the Turtles marquee; the shipped tints sit at luma 60-85 for the bands the photos show LIT (Pac-Man, NBA Jam, Time Crisis, Golden Tee, Ridge Racer) and 22-30 for the ones they show dark (Star Wars, NFL Blitz, the graffiti multicade, east-7).",
+  "carcase_colour": "New this round (a2kit.CARCASE).  sweep()'s perimeter quads are the cabinet's top, back and the strip of front face either side of the printed panel -- i.e. the T-molding.  Round 3 painted all sixteen black.  Now: Star Wars and Pac-Man yellow carcases, Turtles bright grass-green molding, Time Crisis and Ridge Racer red bodies, MK / NBA Jam / T2 maroon molding, Marvel Super Heroes gold-tan.  Material colour only, no geometry.",
+  "declared": [
+   "EAST_RUN[6] is kept because this round changed artwork, not layout, and the geometry was explicitly out of scope.  The roster counted FIVE uprights on the east wall in four independent frames, not seven, so the slot is dressed as an honest unbranded black upright with a blank marquee and no licensed graphic.  It should be DELETED and the run re-spaced in a geometry round.",
+   "No riser quads were added.  art_g1 and art_g2 painted separate .riser panels for Marvel Super Heroes, Turtles and Marvel vs Capcom, but the cabinet has no riser geometry and splitting the front quad would squash those machines' front artwork ~20% vertically.  Marvel vs Capcom therefore carries its wordmark on the printed base band of its front panel rather than on a separate riser; the roster says that machine's own lower front is 'essentially no printed graphic'.",
+   "time-crisis.speaker was painted by art_g1 and is NOT packed -- the cabinet has no separate speaker quad.",
+   "Three of art_g3's four bezels are dropped (its own assessment: they 'carry no identity').  Golden Tee's is kept because its lit yellow three-panel instruction strip is a real feature.  The other fifteen bezels are a plain untextured #15151a material, per art_g0's recommendation -- round 3 reused the front tile there, which smeared NBA Jam's flaming ball round its monitor.",
+   "sweep() maps ONE side rect to both flanks, so a machine's side art is correctly anchored to the cabinet on both sides but reads mirrored on the +x flank.  Not fixed: fixing it needs a second, mirrored tile per machine, and only Star Wars and the graffiti multicade have side art with any directional content.",
+   "The display case's 30 collectible boxes (NE corner) take a rotation of the NORTH run's own panels (ar2.BOX_ART).  They are 0.35 x 0.58 ft boxes seen from across the room, so what they need is varied printed colour, not identity -- but a critic is entitled to know they are cabinet artwork re-used at box scale.",
+   "flip=True was removed from the control-deck quad.  It mirrored the tile left-right, which was harmless on an abstract motif and is not now: NBA Jam's logo lies on its boards, Golden Tee's deck legend is three words, Mortal Kombat's carries its wordmark.",
+   "The four judged poses in shoot4.py all aim DOWN and crop every machine at the screen bezel, so not one marquee was in shot.  Four level frames at marquee height were ADDED (mq_east, mq_north, mq_south, mq_south_w); the original four are unchanged so the A/B against base_*.png still holds."
+  ],
+  "payload": {
+   "room_kb": 1535.4,
+   "budget_kb": 1536,
+   "atlas_kb": 163.1,
+   "round3_atlas_kb": 29.3,
+   "note": "Round 3's whole art atlas was 29.3 KB because it was twelve hues of one drawing.  Sixteen machines' worth of real artwork at 256 px would be ~1.2 MB per copy and ~3.6 MB across the three GLBs.  Per-run atlases, per-panel-class sizes and 16-level re-quantisation land it at 163.1 KB total."
+  },
+  "shots": [
+   "scratchpad/arc4/shots/r4_a_look_s.png",
+   "scratchpad/arc4/shots/r4_b_look_n.png",
+   "scratchpad/arc4/shots/r4_cab_east.png",
+   "scratchpad/arc4/shots/r4_cab_north.png",
+   "scratchpad/arc4/shots/r4_mq_east.png",
+   "scratchpad/arc4/shots/r4_mq_north.png",
+   "scratchpad/arc4/shots/r4_mq_south.png",
+   "scratchpad/arc4/shots/r4_mq_south_w.png"
+  ],
+  "art_sheets": [
+   "scratchpad/arc4/sheet_east.png",
+   "scratchpad/arc4/sheet_south.png",
+   "scratchpad/arc4/sheet_north.png"
+  ],
+  "build": "cd scratchpad/bsmt && python ar2.py east south ncab"
+ },
+ "_round5": {
+  "date": "2026-08-31",
+  "scope": "Arcade Room cabinet artwork + control hardware. Integration of four parallel art modules (art_g0..art_g3) into the packed atlases and into ar2.upright().",
+  "why": "Three independent critics failed round 4 with the same sentence: every cabinet wore one recoloured asset - the same centred grey coin-door rectangle, the same two-joystick deck (one red top, one blue top) over the same row of flat square buttons, and a blurry floated word as the only per-title differentiation. The paint half of the fix was done by four wrap agents; the geometry half was four dicts nobody read.",
+  "changed": {
+   "scratchpad/arc4/atlas4.py": "ISOTROPIC RECTANGULAR PACKING. SIZE[cls] is now a scale, not a tile edge: a panel of world aspect A packs at S*sqrt(A) x S/sqrt(A). A 3.4:1 marquee went from 120x120 (55 px/ft across) to 188x55 (85 px/ft across) - fewer bytes AND 57% more resolution where letterforms run. art_g1's paint functions carry a native non-square .rect() and are handed the real shape; art_g0/g2/g3 keep the unchanged square contract and are area-averaged into the rectangle. Also: per-panel aspects pushed in from ar2 (the only module that knows the real geometry), art_g2.LEGACY_PANELS folded in as a fallback so east-7-no-machine keeps round 4's unbranded panels, and six EXTRA_KEYS added (marvel-super-heroes.bezel and the four south .screen panels).",
+   "scratchpad/arc4/decks5.py": "NEW. Normalises the four art modules' mutually incompatible deck and coin-door schemas into one. They disagreed on the coordinate frame (u -0.5..0.5 / -1..1 / 0..1), on radius vs diameter, on every field name, and on how 'no door' is spelled (None / [] / proud 0.0). Nothing is dropped silently; SKIPPED names the two items that are not built and why.",
+   "scratchpad/bsmt/ar2.py": "upright() now reads decks5: per-machine buttons, sticks, ball and bat tops, two trackballs, a spinner, four light guns, a Star Wars flight yoke, a Ridge Racer steering wheel, a lit front-lip strip, and 0/1/2 coin doors per machine at that machine's own size, colour and place. Front-panel rect is per-machine (art_g2's four run to the floor). Four south screens carry printed panels. All hardware is VERTEX-COLOURED on two shared materials.",
+   "scratchpad/bsmt/a2kit.py": "DECK_MAT gained six rows (all requested by the module that drew the deck - ART_DK #4c4c4c was crushing the hardwood court, the fairway, the ice-blue lightning field and the violet nebula), and a new SCREEN material for the printed south monitors."
+  },
+  "hardware_built": {
+   "buttons": 129,
+   "sticks": 21,
+   "trackballs": 2,
+   "spinners": 1,
+   "light_guns": 4,
+   "yokes": 1,
+   "steering_wheels": 1,
+   "coin_doors": 12,
+   "machines_with_no_coin_door": [
+    "tmnt-turtles-in-time",
+    "marvel-super-heroes",
+    "legends-ultimate",
+    "street-fighter-2-champion-edition",
+    "ridge-racer",
+    "east-7-no-machine"
+   ],
+   "note": "Round 4 built two joysticks and six flat squares on all sixteen machines and one identical grey coin plate. No two decks in the room now share a control count, a colour, a button size or a stick top."
+  },
+  "payload": {
+   "cap_kb": 1536,
+   "room_kb": 1533.8,
+   "cabinets_kb": 610.8,
+   "round4_room_kb": 1535.4,
+   "atlas_kb": 143.9,
+   "round4_atlas_kb": 163.1,
+   "round5_art_at_round4_square_packing_kb": 196.6,
+   "upright_geometry_kb": 266.0,
+   "round4_upright_geometry_kb": 253.3,
+   "triangles": 3614,
+   "levers_taken": [
+    "isotropic packing: -52.7 KB against the same art packed square",
+    "vertex-coloured hardware on 2 materials instead of ~44 per run: -68 KB (a glTF primitive costs ~0.9 KB of accessors and JSON before a triangle is in it; COLOR_0 costs 4 bytes a vertex)",
+    "coin-slot / return-cup / door-bezel relief as single quads instead of boxes: -36 KB, and every one of them is drawn into the printed artwork at the same coordinates anyway",
+    "QUANT 16 -> 20: -14.2 KB, no banding visible at panel scale",
+    "SIZE[side] 58 -> 42 for the occluded flanks: -3 KB"
+   ],
+   "levers_refused": [
+    "QUANT 24 (-15 KB more): round 4 measured 24 as where banding starts on a marquee, the hero surface",
+    "cutting any machine's artwork: ROOM-BRIEF forbids deleting content to hit a number, and it was not needed"
+   ],
+   "negative_result": "Per-row adaptive PNG filtering (Sub/Up/Average/Paeth by the spec's minsum heuristic) was implemented and MEASURED 14% WORSE on these atlases: 158.1 KB filter-0 vs 180.5 KB adaptive. These are synthetic flat graphics whose identical rows zlib matches wholesale; a per-row predictor destroys those matches. Recorded in atlas4.py so nobody tries it again."
+  },
+  "known_weaknesses": [
+   "legends-ultimate's deck layout is INFERRED, not read - art_g2 says neither photograph resolves a single control on that machine. Built because a bare deck reads as unbuilt; flagged in decks5.INFERRED.",
+   "art_g3's Ridge Racer marquee prints NAMCO above RIDGE RACER. RIDGE RACER is independently legible on the lower front at 16x in v3 4; NAMCO is not legible anywhere and is reconstructed from the cabinet's identity. Declared, not fixed - it is the manufacturer of that cabinet and rewriting another agent's artwork was out of scope.",
+   "art_g3's Star Wars .front is extrapolated: the roster says that panel appears in no photograph. It is built from elements that ARE photographed on the same machine's flank (starfield, Death Star limb, a TIE, an X-wing) on the carcase yellow that is photographed, with no wordmark and no Atari logo invented.",
+   "art_g0's golden-tee-3d-golf.front and .side, and art_g1's marvel-vs-capcom.front, are dark panels with structure rather than graphics - because the photographs and the roster both say those surfaces are plain black. Each module declared it.",
+   "time-crisis has no speaker quad in the geometry, so its most distinctive head feature (a maroon band over a tan panel pierced by two round holes) cannot be shown. That is missing GEOMETRY, not missing art; time-crisis.speaker is painted and not packed.",
+   "art_g2's red floor pedal for Time Crisis is specified and not built: it stands on the floor, and upright() builds a cabinet. Recorded in decks5.SKIPPED.",
+   "mq_south frames the screens and crops the lower fronts, so Champion Edition's and T2's printed lower panels are not visible in a judged frame even though they are built."
+  ],
+  "photo_derived_textures": "NONE. Every pixel on every cabinet is drawn. ROOM-BRIEF forbids photo-derived texture here because the sources are 600x450 night photographs of lit 3D cabinets at an angle, so rectifying one would bake the room's RGB lighting into a surface the renderer lights again.",
+  "shots": [
+   "scratchpad/arc4/shots/r5_mq_east.png",
+   "scratchpad/arc4/shots/r5_mq_north.png",
+   "scratchpad/arc4/shots/r5_mq_south.png"
+  ],
+  "rebuild": "cd scratchpad/bsmt && python ar2.py east south ncab   (idempotent; then scratchpad/arc4/shoot4.py r5 mq_east mq_north mq_south)",
+  "measure": "scratchpad/arc4/room2_kb.py (per piece, live DB) and scratchpad/arc4/bytes_r5.py (atlas vs geometry split); scratchpad/arc4/bytes_r4_base.py rebuilds the round-4 baseline the same way for a like-for-like comparison."
+ },
+ "_round6_guns": {
+  "date": "2026-08-31",
+  "scope": "The four LIGHT GUNS on terminator-2 and time-crisis, and the holsters they stand in. Nothing else in the room was touched.",
+  "defect": "Round 5 built each gun as three flat-shaded boxes -- a coloured body box on a darker grip box on a plate -- so from every judged south pose the pair read as a red slab and a blue slab standing on a white pedestal (scratchpad/arc4/shots/r5b_mq_south.png, r5b_full_south.png). The plate metered 212 grey against a 73 deck because the a2hw hardware material is roughness 0.42 and its up-facing top blew out on the ceiling cans, not because its authored colour was wrong (#181521).",
+  "built": {
+   "geometry": "One CONCAVE side profile per gun -- backstrap, receiver, a step down to the barrel, the muzzle, the frame, the trigger guard's front and bottom straps, the recess behind them and a raked grip -- pushed across the gun's width, plus a U-channel holster socket under the butt. `prism()` could not build the profile: its caps are a triangle fan from vertex 0, which folds over on a concave outline, so ar2 now ear-clips them (`_earclip`/`_extrude`, new).",
+   "profile": "ar2._GUN_PROFILE, 13 points normalised to gun length; ar2._GUN_PITCH 12 deg nose-up.",
+   "two_tone": "grip colour on profile points 10-12 and 0, body colour on the rest, as COLOR_0 -- no extra material, no extra primitive.",
+   "shading": "Split into two SMOOTH parts, caps and side band. Every cap vertex touches only cap triangles, which share one normal, so the two big side faces stay dead flat; every band vertex touches only its two neighbouring side quads, so the outline rounds over the way moulded plastic does. That buys flat-looking caps without paying flat shading's per-face vertex duplication."
+  },
+  "evidence": {
+   "primary": "docs/photos-jpg/Arcade Room v4 4.jpg px (60,170)-(115,210) at 22x -- scratchpad/arc4/guns/v44_tcguns.png. The ONE frame in the room where a light gun's outline resolves: Time Crisis's blue gun, showing a chunky receiver, a stepped barrel, a raked grip and the dark cable running off the deck. The profile's proportions are taken from it.",
+   "corroboration": "docs/photos-jpg/Arcade Room v3 4.jpg px (772,625)-(842,662) (T2, blue LEFT / red RIGHT) and px (833,650)-(905,692) (Time Crisis, red LEFT / blue RIGHT); docs/photos-jpg/Arcade Room v4 5.jpg px (193,162)-(216,178) (T2, both guns standing proud of the deck). Crops in scratchpad/arc4/guns/.",
+   "not_resolved": [
+    "Neither photograph resolves a trigger blade, a sight, a cable strain relief or a holster collar's shape on any of the four guns. The trigger guard is built as an OPEN-BACKED notch rather than a closed loop; no trigger blade is modelled. Declared, not invented.",
+    "Time Crisis's coiled cables are visible in v4 4 as a dark line across the deck. NOT built -- a cable is a swept tube and the room has no byte headroom for four of them.",
+    "T2's gun YAW is not read by any photograph. art_g2 carries yaw 0, which is the schema's default; ar2 now splays a gun whose yaw is exactly 0 by 26 deg outward from the deck centre, because at 0 both muzzles point at every camera square to the south wall and a gun seen end-on is a blob. Time Crisis's read angles (+24, -8) are untouched."
+   ]
+  },
+  "cost": {
+   "per_gun_bytes": -192,
+   "per_gun_triangles": 40,
+   "room_bytes": -768,
+   "room_triangles": 160,
+   "note": "MEASURED marginal (41 copies minus 1 in a saved GLB), not estimated: gun + holster 3264 B / 76 tris against the three boxes' 3456 B / 36 tris. More than twice the triangles for 192 bytes LESS, because a flat-shaded box pays for 24 unshared vertices to carry 12 triangles while a smooth part shares them. No atlas lever was needed and none was taken."
+  },
+  "files_touched": [
+   "scratchpad/bsmt/ar2.py -- `_in_tri`/`_earclip`/`_extrude`/`_GUN_PROFILE`/`_GUN_GRIP`/`_GUN_PITCH` added immediately above `controls()`, and the `for g in spec[\"guns\"]` block inside `controls()` rewritten. Nothing else in ar2.py, and no change to a2kit.py, decks5.py, art_g2.py or any deck spec."
+  ],
+  "shots": [
+   "scratchpad/arc4/shots/dbg_guns_tc.png",
+   "scratchpad/arc4/shots/dbg_guns_t2.png",
+   "scratchpad/arc4/shots/dbg_guns_full_south.png",
+   "scratchpad/arc4/shots/dbg_guns_mq_south_w.png"
+  ],
+  "shots_note": "Throwaway diagnostics only -- the judged frames are shot after every agent's edits land."
+ },
+ "_round6_screens": {
+  "scope": "ROUND 6, screens only. No geometry, no footprint, no layout, no marquee, no deck, no coin door, no front panel touched.",
+  "finding": "NOT ONE SCREEN IN THIS ROOM IS LIT. Sixteen monitors, fifteen photographs, day set and night set, and every CRT in every frame is DARK. No attract loop was invented anywhere, and none should be added later. The only genuinely emissive surfaces on these machines are the marquees (emissive since round 4) and Golden Tee's lit yellow three-panel instruction strip BELOW its screen, which art_g0 already draws into golden-tee-3d-golf.bezel.",
+  "per_machine": [
+   {
+    "slug": "star-wars-atari",
+    "state": "dark",
+    "evidence": "Screen NOT VISIBLE in any frame. The machine appears only in v4 8 and v4 9 and stands ~40 deg off the wall with its head cropped or facing away. Nothing supports a lit screen; built dark like the rest."
+   },
+   {
+    "slug": "marvel-super-heroes",
+    "state": "dark",
+    "evidence": "v3 4 px (100,530)-(230,900) night: black. v4 7 and v4 8 day: black."
+   },
+   {
+    "slug": "marvel-vs-capcom",
+    "state": "dark",
+    "evidence": "v3 4 night, v4 7, v4 8 - all dark."
+   },
+   {
+    "slug": "mortal-kombat",
+    "state": "dark",
+    "evidence": "v3 4 night, v4 7, v4 8 - all dark."
+   },
+   {
+    "slug": "nba-jam",
+    "state": "dark",
+    "evidence": "v4 7 px (342,202)-(386,250): dark glass, mean luma 104.1, sd 28.3, max 255 - a mid-grey panel carrying a ceiling-can specular, not a black hole. v3 4 night: black."
+   },
+   {
+    "slug": "tmnt-turtles-in-time",
+    "state": "dark",
+    "evidence": "v4 7 px (410,240)-(556,342): mean luma 97.8, sd 34.1, max 255, with a specular streak upper-left. The largest screen in the room and the clearest evidence of what a DARK screen looks like here. v3 4: black."
+   },
+   {
+    "slug": "east-7-no-machine",
+    "state": "n/a",
+    "evidence": "The roster's empty slot; no machine stands here."
+   },
+   {
+    "slug": "legends-ultimate",
+    "state": "dark",
+    "evidence": "v4 8 px (440,125)-(510,215) and v4 5: a large dark rectangle under the marquee. v3 4 night: black."
+   },
+   {
+    "slug": "street-fighter-2-champion-edition",
+    "state": "dark",
+    "evidence": "v4 8, v4 5: dark, with a PALE INSTRUCTION CARD along the bottom edge - art_g2 already paints it and round 6 kept it."
+   },
+   {
+    "slug": "time-crisis",
+    "state": "dark",
+    "evidence": "v4 5 and v3 4: dark, carrying a dim olive game image - art_g2 paints it and round 6 kept it. Not an attract loop; a dim, mostly unreadable image on a dark tube."
+   },
+   {
+    "slug": "terminator-2",
+    "state": "dark",
+    "evidence": "v4 5 px (196,168)-(222,196), v4 8, v3 4 - dark in all three."
+   },
+   {
+    "slug": "ridge-racer",
+    "state": "dark",
+    "evidence": "v4 8 px (495,115)-(545,225), v4 5: dark screen above the wheel deck."
+   },
+   {
+    "slug": "north-1-graffiti-multicade",
+    "state": "dark",
+    "evidence": "v4 6 px (253,161)-(268,175): mid-dark reflective glass. v3 1: black."
+   },
+   {
+    "slug": "pac-man",
+    "state": "dark",
+    "evidence": "v4 6 px (279,171)-(308,184), v3 1 - dark in both."
+   },
+   {
+    "slug": "nfl-blitz",
+    "state": "dark",
+    "evidence": "v4 6 px (326,168)-(364,193): the LIGHTEST glass on the north wall, because it mirrors the ceiling most squarely - and still unmistakably a dark screen, not a lit one. v4 7, v3 1: dark."
+   },
+   {
+    "slug": "golden-tee-3d-golf",
+    "state": "dark screen, LIT strip below it",
+    "evidence": "v4 6 px (380,172)-(412,193) and v4 7 px (98,116)-(175,200): the screen is black; the lit yellow three-panel instruction strip sits BELOW it and is already art_g0's .bezel panel. Do not confuse the two - the strip is why this machine reads as switched on."
+   }
+  ],
+  "negative_result_env_reflection": "THE OBVIOUS FIX DOES NOT WORK IN THIS RENDERER, AND IT WAS MEASURED, NOT GUESSED. A dark screen reads as glass in the photographs because it mirrors the room, so the first attempt was a low-roughness / metallic material leaning on scene.environment (a PMREM of three's RoomEnvironment, scene.js) with daylight.js running envMapIntensity to 1.15 in day. Probed on the east run, same pose and crop each time: dielectric roughness 0.06 -> luma 2.08 sd 0.94; metallic 1.0 at #3a3d42 -> luma 1.10; and a PERFECT WHITE MIRROR (#ffffff, roughness 0.05, metallic 1.0) -> luma 8.41 sd 0.69. A perfect mirror is DARKER than round 5's flat slab and carries no spatial variation at all. There is no usable environment reflection on these quads; any future plan that leans on one is dead on arrival.",
+  "what_shipped": [
+   "ar2.SCRN is no longer a self-lit navy slab. Round 5 was #0a0c10 plus emissive #12202c at strength 1.1, and glTF emissive is a flat untextured factor, so every screen in the room rendered as ONE UNIFORM NAVY RECTANGLE - measured luma 18.68, sd 2.18 (11.7% relative), RGB 8.5/20.9/34.1 - brighter than its own bezel and wholly unaffected by the room. It is now a DIFFUSE dark glass, #42464d roughness 0.34 metallic 0.10, with NO emissive at all: a switched-off screen emits nothing, and on the night ramp these panels now go dark WITH the cabinet round them instead of floating out of it.",
+   "ar2.crt() (new, sits immediately above upright) replaces the flat screen quad with a 3x3 shallow cap - the same rectangle pushed out along its own normal by bulge*(1-(2u-1)^2)*(1-(2v-1)^2), flush at the rim and 0.06 ft proud at the centre - carrying a vertex-colour grade of (0.66 + 0.34*v) times 0.90 on the rim. That grade IS the gradient: a near-vertical sheet of dark glass in a room with a bright ceiling and a dark floor is brighter across its top and darker across its bottom, which is what v4 6 and v4 7 show. It is a gradient, not a highlight - it names no light source and no specular blob is painted anywhere. The rim darkening is the soft edge shading a tube recessed behind a bezel has.",
+   "a2kit.ArtSet.SCREEN, the factor the four painted SOUTH panels print through, went from #3a3a3a plus emissive 0.55 to WHITE plus a small neutral emissive (#16181c at 0.40). Round 5's comment said a white factor would render these as four lit televisions, and that was wrong: art_g2's four panels come out of atlas4 at mean luma 13.0 / 21.6 / 25.7 / 29.4 OUT OF 255 - they are already dark glass. Multiplying them by a dark factor as well rendered Time Crisis's monitor at luma 0.71 and Champion Edition's at 5.17 - black holes - and round 5 only escaped that because its emissive was doing all the visible work, which is exactly what made those four read as switched on."
+  ],
+  "measured": {
+   "east_screen_round5_flat": "luma 18.68, sd 2.18 (11.7% rel), RGB 8.5/20.9/34.1 - strongly blue",
+   "east_screen_round6": "luma 16.90, sd 4.22 (25.0% rel), RGB neutral",
+   "photo_dark_glass_relative_sd": "v4 7 NBA Jam 28.3/104.1 = 27%; v4 7 TMNT 34.1/97.8 = 35%; v4 6 Golden Tee 13.7/42.3 = 32%. Round 6's 25% is the closest this room has been.",
+   "north_screen_round6": "luma 59.8, sd 13.2 - same material, same grade; the north wall faces the sun.",
+   "south_painted_round6_day": "Time Crisis 7.66, Champion Edition 9.77, against that machine's own black body at 26.4 (ratio 0.29-0.37; the photo's is about 0.50).",
+   "south_painted_round6_night": "Time Crisis 6.76, Champion Edition 2.78, against the same body at 6.76 - NOT brighter than the cabinet. No lit-television read on the night ramp.",
+   "honest_limit": "The one-sun-no-bounce spread ROOM-BRIEF documents for walls applies to the screens too: ONE material renders 60 on the north wall, 17 on the east and 8-10 on the south. That is not a per-machine defect and closing it would need per-wall screen albedos, which this room has no bytes for."
+  },
+  "payload": {
+   "cabinets_before_kb": 610.8,
+   "cabinets_after_kb": 612.6,
+   "delta_kb": 1.8,
+   "room_kb": 1535.6,
+   "cap_kb": 1536.0,
+   "headroom_kb": 0.4,
+   "cost": "3x3 curved screen patch plus COLOR_0 on the two screen materials: +2.5 KB across the three cabinet GLBs",
+   "levers_taken": [
+    "atlas4.SIZE['bezel'] 40 -> 32: -0.31 KB, measured on all three atlases",
+    "atlas4.SIZE['screen'] 40 -> 28: -0.40 KB, measured on all three atlases",
+    "Both are the two lowest-frequency panel classes in the room - a plain dark surround and four panels of dark glass - and neither carries a letterform at any size. No artwork was removed to reach the number."
+   ],
+   "levers_left": [
+    "SIZE['screen'] 28 -> 24 measured -0.21 KB on the south atlas alone",
+    "QUANT 20 -> 24 is worth about 15 KB and stays REFUSED: round 4 measured 24 as where banding starts on a marquee"
+   ]
+  },
+  "files_touched": {
+   "scratchpad/bsmt/ar2.py": [
+    "lines 74-105: the SCRN material and its comment block",
+    "lines 813-869: NEW function crt(), inserted immediately ABOVE def upright (line 872). Nothing else moved.",
+    "line 959: uvq(sub, art.SCREEN, scr, ...) -> crt(sub, art.SCREEN, scr, ...)",
+    "line 965: sub.add(quad(*scr), SCRN) -> crt(sub, SCRN, scr)"
+   ],
+   "scratchpad/bsmt/a2kit.py": [
+    "lines 194-210: the self.SCREEN = Material(...) line in ArtSet.__init__ and its comment"
+   ],
+   "scratchpad/arc4/atlas4.py": [
+    "lines 166-175: the VALUES of SIZE['bezel'] and SIZE['screen'] only"
+   ]
+  },
+  "diagnostic_frames": [
+   "scratchpad/arc4/shots/dbg_screens_before_east.png (round 5, for comparison)",
+   "scratchpad/arc4/shots/dbg_screens_final_east.png",
+   "scratchpad/arc4/shots/dbg_screens_final_north.png",
+   "scratchpad/arc4/shots/dbg_screens_final_south.png",
+   "scratchpad/arc4/shots/dbg_screens_final_run.png",
+   "scratchpad/arc4/shots/dbg_screens_d_night_east.png and dbg_screens_f_south_night.png (the night ramp)",
+   "scratchpad/arc4/shots/dbg_screens_probe_mirror.png (the perfect-mirror probe)"
+  ]
+ },
+ "_round6_integration": {
+  "date": "2026-08-31",
+  "scope": "reconcile the two parallel round-6 edits (guns, screens), authoritative rebuild of the three cabinet runs, judged frames",
+  "collision_check": {
+   "ar2.py": "both edits present and disjoint. guns: `# ------- extruded profiles` L476, _earclip L508, _extrude L530, _GUN_PROFILE L564, _GUN_GRIP L580, _GUN_PITCH L581, `for g in spec['guns']` L655-708. screens: SCRN material L105, crt() L813-869, crt(sub, art.SCREEN, scr, ...) L959, crt(sub, SCRN, scr) L965. Neither clobbered the other; ar2.py is 92781 B, last written 04:40:30.",
+   "a2kit.py": "ArtSet.SCREEN L208 = Material('a2scrn_'+name, '#ffffff', roughness 0.30, small neutral emissive). Untouched by the guns agent.",
+   "atlas4.py": "SIZE['bezel']=32, SIZE['screen']=28, QUANT=20. Both levers present.",
+   "imports": "py_compile clean on ar2.py and a2kit.py; a2kit and atlas4 import."
+  },
+  "rebuild": "cd scratchpad/bsmt && python ar2.py east south ncab  -- three pieces only, re-placed by name (idempotent)",
+  "glb_written": {
+   "Arcade Cabinets East  (model_224.glb)": "2026-08-31 04:54:54.394",
+   "Arcade Cabinets South (model_285.glb)": "2026-08-31 04:54:58.235",
+   "Arcade Cabinets North (model_317.glb)": "2026-08-31 04:55:00.298",
+   "every other room-2 GLB": "2026-08-23, untouched"
+  },
+  "judged_frames": {
+   "note": "FRESHNESS ASSERTED. Every PNG postdates the newest room-2 GLB (04:55:00.298). Round 5 shipped frames older than its GLBs; this is the check that catches it.",
+   "scratchpad/arc4/shots/r6_full_east.png": "04:55:31.740",
+   "scratchpad/arc4/shots/r6_full_north.png": "04:55:47.141",
+   "scratchpad/arc4/shots/r6_full_south.png": "04:56:02.476",
+   "scratchpad/arc4/shots/r6_mq_east.png": "04:56:18.604",
+   "scratchpad/arc4/shots/r6_mq_north.png": "04:56:36.587",
+   "scratchpad/arc4/shots/r6_mq_south_w.png": "04:56:54.591"
+  },
+  "black_slab_check": "No inverted normals. Every screen crop has a non-zero min and a top-to-bottom gradient: north run mean 60-66 (sd 18-31), east 16-21 (sd 5-10), south 3.5-8.6. Guns meter mean 28-43, sd 33-49, max 212-244 with the authored hue dominant (RGB 60/11/14 red, 22/26/51 blue). The pure-black pixel clusters in mq_east / full_south / mq_south_w map onto the TV Wall's flat-panel TV, the black Arcade Desk top and the unlit region beyond the room -- none of them geometry rebuilt this round.",
+  "payload_kb": {
+   "cap": 1536.0,
+   "room_total": 1535.6,
+   "headroom": -0.4,
+   "cabinets_kb": 612.6,
+   "round5_cabinets_kb": 610.8,
+   "per_piece": {
+    "Arcade Cabinets South": 222.6,
+    "Arcade Cabinets East": 199.4,
+    "Arcade Cabinets North": 190.6,
+    "Arcade East Shelf": 187.0,
+    "Arcade Desk": 163.4,
+    "Arcade Booths": 135.8,
+    "Arcade Ceiling": 103.3,
+    "Arcade North Wall": 98.2,
+    "Arcade Baseboards": 67.4,
+    "Arcade Lounge": 57.9,
+    "Arcade TV Wall": 54.7,
+    "Arcade Tables": 27.0,
+    "Arcade Floor Rug": 21.1,
+    "Arcade Wall Wash": 7.2
+   },
+   "triangles_cabinet_runs": 7168,
+   "round5_triangles": 3614,
+   "reading": "Round 6 is +1.8 KB net on round 5's 1533.8 and nearly DOUBLE the triangles, because both agents paid for geometry with byte levers rather than with artwork. Guns -0.75 KB (a smooth extrusion shares vertices where a flat box duplicates them); screens +2.5 KB against atlas SIZE bezel 40->32 (-0.31) and screen 40->28 (-0.40).",
+   "next_lever_if_needed": "atlas4.SIZE['screen'] 28 -> 24, measured -0.21 KB on the south atlas alone; then SIZE['bezel'] 32 -> 28 (~-0.15 KB, unmeasured). Both are the lowest-frequency panel classes in the room and neither carries a letterform. QUANT 20 -> 24 stays REFUSED (round 4 measured 24 as where banding starts on a marquee)."
+  },
+  "check_pick": "OK -- room 2 selectable, 22/49 floor samples (45%) resolve to the room, 14 objects placed.",
+  "not_fixed_this_round": [
+   "The shared hardware material a2hw is roughness 0.42, so every up-facing ball top, button cap and Golden Tee's trackball blows out under the ceiling cans -- the trackball reads as a bright white dome in r6_mq_north / r6_full_north. One roughness value, not a colour problem.",
+   "Screen value spread east 16-21 / north 60-66 / south 3.5-8.6 from one material, which is ROOM-BRIEF's documented one-sun-no-bounce limit.",
+   "Gun cables, trigger blades and sights are not built (no photograph resolves them); T2's gun yaw is a declared inference (splayed 26 deg because art_g2 carries the schema default 0, not a reading)."
+  ]
  }
 }

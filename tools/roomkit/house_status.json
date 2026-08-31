@@ -1,8 +1,8 @@
 {
  "_note": "Whole-house gauntlet status. Update state/round/note/render per room as critics report, then run: python -m roomkit.house_progress",
- "headline": "The outside of the house, and the four rooms nobody had judged",
- "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. This run covers the five spaces the owner photographed last: the front and back of the house, the garage, the movie room and the arcade. Round one went to the critics and none of the five survived.",
- "stamp": "v3 run · 23 Aug 2026 · second rounds landing · garage and arcade rejected again, movie room and the exterior with critics",
+ "headline": "The arcade's sixteen machines, each drawn as itself",
+ "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. This run is the Arcade Room alone, and one defect in it: round 3 shipped one cabinet graphic repeated sixteen times, where the photographs show sixteen different machines.",
+ "stamp": "v4 run - 31 Aug 2026 - arcade round 7: the control decks",
  "hero": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\dollhouse\\house_low.png",
  "hero_label": "Every room in the house furnished. 241 pieces, all 423 Home Assistant device markers intact.",
  "rooms": [
@@ -50,11 +50,11 @@
    "id": 2,
    "name": "Arcade Room",
    "state": "fail",
-   "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Arcade Room v3 4.jpg",
-   "note": "Round 3 rebuilt every cabinet as a swept side profile instead of a stack of boxes, with decks that project more than a foot further, built the missing north wall and the two gaming booths, and paid for all of it by making the geometry cheaper. It also found the wall bug in a third room: the entire south wall of the previous round was invisible, because the Movie Room's wall mass stands a third of a foot inside this one and everything had been authored behind it — what the previous round measured as its own wall was next door's paint. The critic still rejected it: the cabinet artwork is one machine repeated sixteen times in different hues, where the photograph shows four unrelated printed graphics.",
-   "round": 3,
-   "render_label": "round 3 — rejected, round 4 queued",
-   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\shots\\v3_arcade\\r2_a_look_s.png"
+   "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Arcade Room v4 7.jpg",
+   "note": "Round 6 replaced the Terminator 2 and Time Crisis light guns -- which had been red and blue rectangular slabs on pedestals -- with real pistols: a concave thirteen-point side profile carrying backstrap, receiver, barrel, trigger guard and raked grip, extruded and standing in its own holster socket. It came in at MINUS 192 bytes per gun for forty more triangles, because a smooth extrusion shares vertices where a flat-shaded box duplicates twenty-four of them to carry twelve. It also proved its frames postdated its build, timestamp by timestamp, after round 5's verdicts turned out to have been passed on renders shot nine minutes before the rebuild. Four critics still rejected it and all four named the same surface: the control deck. The buttons are painted into the deck texture rather than modelled -- 'flat 2-3px coloured lozenges with no dome, no rim shadow and no specular' -- and the per-machine layouts round 5 authored never reached the geometry, so six machines wear the same two sticks and the same 3-over-3 cluster. Round 7 rebuilds the buttons as real domed hardware and prints every deck edge to edge.",
+   "round": 7,
+   "render_label": "round 6 - rejected 0/4, round 7 rebuilding the decks",
+   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\arc4\\shots\\r6_full_east.png"
   },
   {
    "id": 14,

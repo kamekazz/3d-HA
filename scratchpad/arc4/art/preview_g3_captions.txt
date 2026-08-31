@@ -1,0 +1,27 @@
+preview_g3.png -- 4 columns, one machine each, top to bottom
+marquee / side / front / deck / bezel.  Each panel is drawn
+at the world aspect of the quad ar2.py maps it onto.
+
+col 1 row 1  mortal-kombat.marquee             AR 3.52
+col 1 row 2  mortal-kombat.side                AR 0.42
+col 1 row 3  mortal-kombat.front               AR 1.28
+col 1 row 4  mortal-kombat.deck                AR 2.22
+col 1 row 5  mortal-kombat.bezel               AR 0.88
+col 2 row 1  legends-ultimate.marquee          AR 3.54
+col 2 row 2  legends-ultimate.side             AR 0.40
+col 2 row 3  legends-ultimate.front            AR 1.52
+col 2 row 4  legends-ultimate.deck             AR 3.08
+col 2 row 5  legends-ultimate.bezel            AR 1.21
+col 3 row 1  ridge-racer.marquee               AR 3.48
+col 3 row 2  ridge-racer.side                  AR 0.42
+col 3 row 3  ridge-racer.front                 AR 1.26
+col 3 row 4  ridge-racer.deck                  AR 2.50
+col 3 row 5  ridge-racer.bezel                 AR 1.04
+col 4 row 1  golden-tee-3d-golf.marquee        AR 3.24
+col 4 row 2  golden-tee-3d-golf.side           AR 0.40
+col 4 row 3  golden-tee-3d-golf.front          AR 1.27
+col 4 row 4  golden-tee-3d-golf.deck           AR 2.39
+col 4 row 5  golden-tee-3d-golf.bezel          AR 0.90
+
+preview_g3_tiles.png -- the same 20 as raw square tiles,
+row-major in PANELS order.

@@ -1,0 +1,22 @@
+preview_g2.png -- authored square tiles, 5 across, reading order:
+  row 1 col 1  marvel-vs-capcom.marquee
+  row 1 col 2  marvel-vs-capcom.side
+  row 1 col 3  marvel-vs-capcom.front
+  row 1 col 4  marvel-vs-capcom.deck
+  row 1 col 5  marvel-vs-capcom.riser
+  row 2 col 1  terminator-2.marquee
+  row 2 col 2  terminator-2.side
+  row 2 col 3  terminator-2.front
+  row 2 col 4  terminator-2.deck
+  row 2 col 5  nfl-blitz.marquee
+  row 3 col 1  nfl-blitz.side
+  row 3 col 2  nfl-blitz.front
+  row 3 col 3  nfl-blitz.deck
+  row 3 col 4  east-7-no-machine.marquee
+  row 3 col 5  east-7-no-machine.side
+  row 4 col 1  east-7-no-machine.front
+  row 4 col 2  east-7-no-machine.deck
+
+preview_g2_onpanel.png -- the same tiles stretched to the aspect each lands on
+(marquee 3.40:1, side 0.49:1, front 1.25:1, deck 2.35:1, riser 6.20:1),
+which is how they will read on the cabinet.  Same order, wrapped by width.
