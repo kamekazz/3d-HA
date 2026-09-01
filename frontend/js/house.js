@@ -215,6 +215,16 @@ const SHELL_CUTS = [
   // environment.js already hides.
   { name: 'fence rails, rear run', min: [24.5, 0.45, -51.6], max: [48.0, 1.05, -29.5] },
   { name: 'fence rail, west strip', min: [2.8, 0.45, -54.6], max: [14.8, 1.05, -52.8] },
+  // SketchUp's scale figure — a 5.5 ft photo cut-out standing on the front lawn
+  // west of the porch, 1,017 triangles on a single plane at z 44.6, also merged
+  // into Root_Node. It used to be hidden behind environment.js's big framing
+  // shade tree; with PLANT_TREES off there is nothing in front of it any more
+  // and it reads as a man loitering on the grass. Measured on the loaded shell:
+  // x -17.1..-15.4, y 1.0..6.5, z 44.6..44.7. Floor at 0.4 to take the feet and
+  // still clear the terrain there (0.16); nothing else of the shell is in the
+  // box — a grid scan of everything outside the building footprint and above
+  // grade found this cluster and nothing else.
+  { name: 'scale figure, front lawn', min: [-18, 0.4, 43.6], max: [-14.8, 8, 45.6] },
 ];
 
 function maskShellProps(shell) {

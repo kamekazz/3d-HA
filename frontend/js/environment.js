@@ -9,6 +9,8 @@ import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene } from './scene.js';
 import { getShellRoot, isOutdoorRoom, getBuildingBox } from './house.js';
+import { getInstance } from './models.js';
+import { renderer, getEnvIntensity } from './scene.js';
 
 let root = null;     // whole environment (grass + yard)
 let yard = null;     // house-dependent part, rebuilt by setEnvironmentData
@@ -272,9 +274,31 @@ function paint(geo, color) {
   geo.setAttribute('color', new THREE.BufferAttribute(arr, 3));
 }
 
+// ---------------------------------------------------------------- owner flags
+// Asked for on 2026-09-01: NO trees anywhere on the lot, and NO neighbouring
+// houses on the horizon. Everything else in the yard — lawn, driveway, walks,
+// beds, shrubs, clipped mounds, grasses, perennials, the bin, the geese, the
+// path lights, the lamp post — stays exactly as it was.
+//
+// Flags rather than deleted call sites, for two reasons: every tree/neighbour
+// call carries a comment recording which photograph put it there, and there
+// are 14 tree call sites across three functions, so a guard at the four
+// species entry points is the only edit that cannot miss one. The merged
+// `trunks` and `masses` meshes then never get built at all (buildYard skips
+// an empty bucket), so this costs nothing at runtime.
+//
+// Consequence worth knowing before flipping either back: the back-yard
+// treeline was what closed off the horizon after house.js's SHELL_CUTS
+// removed the shell's boundary fence, and the neighbour massing was what kept
+// the skyline from reading as open field. With both off, the lot reads as
+// isolated — which is what was asked for.
+const PLANT_TREES = false;
+const BUILD_NEIGHBOURS = false;
+
 const _leaf = new THREE.Color();
 
 function addDeciduous(rng, x, z, s, trunks, leaves) {
+  if (!PLANT_TREES) return;
   const h = 6 + rng() * 5;
   const trunk = new THREE.CylinderGeometry(0.28 * s, 0.45 * s, h, 5);
   trunk.translate(x, h / 2, z);
@@ -297,6 +321,7 @@ function addDeciduous(rng, x, z, s, trunks, leaves) {
 }
 
 function addConifer(rng, x, z, s, trunks, leaves) {
+  if (!PLANT_TREES) return;
   const h = 2 + rng();
   const trunk = new THREE.CylinderGeometry(0.2 * s, 0.32 * s, h, 5);
   trunk.translate(x, h / 2, z);
@@ -649,6 +674,7 @@ function addPhotinia(rng, x, z, r, y, leaves) {
 // vertical accents in the middle of the yard and their silhouette is nothing
 // like a shade tree's.
 function addWeeper(rng, x, z, s, trunks, leaves) {
+  if (!PLANT_TREES) return;
   const h = (5.5 + rng() * 2.2) * s;
   const t = new THREE.CylinderGeometry(0.16 * s, 0.30 * s, h, 6);
   t.translate(x, h / 2, z);
@@ -692,6 +718,7 @@ function addFeeder(rng, x, z, y, props) {
 // `s` is, which caps the treeline at shrub height; the front and back photos
 // are framed by 30-45 ft canopies, so this one scales the height too.
 function addShadeTree(rng, x, z, s, trunks, leaves) {
+  if (!PLANT_TREES) return;
   const h = (13 + rng() * 7) * s;
   const trunk = new THREE.CylinderGeometry(0.5 * s, 0.95 * s, h, 6);
   trunk.translate(x, h / 2, z);
@@ -772,6 +799,7 @@ function addFlagstones(rng, pts, y, beds) {
 // Now: a 38-degree gable with a real overhang, a fascia band, window
 // openings and garage doors, pushed into its own matte bucket.
 function addNeighbour(x, z, w, d, h, ry, doors, masses, rng) {
+  if (!BUILD_NEIGHBOURS) return;
   // hsl() returns the SHARED _c instance, so anything held in a local has to
   // be cloned. Round 1's version did not, which is why its neighbour rendered
   // as one flat grey mass with no roof/wall distinction: `wall` and `roof`
@@ -907,10 +935,237 @@ function addGoose(rng, x, z, y, ry, props) {
   push(boxAt(0.22, 0.24, 0.42, bx2, y + 1.18, bz));        // head
 }
 
-// Dark SUV parked nose-in on the driveway (facing -Z, i.e. at the garage).
+// ---------------------------------------------------------- the driveway car
+// The parked SUV is a real GLB now — a black BMW X5 — looked up in the model
+// library BY NAME, so the owner can swap the car by re-uploading over that one
+// model without touching this file. Three things follow from that:
+//
+//  - the eight-box primitive below stays as the FALLBACK, for any instance
+//    whose library has no such model (a fresh clone, or the model deleted).
+//    It is built into its own Group instead of merged into `props`, because
+//    the model list arrives asynchronously and the swap has to be able to
+//    replace whatever is standing there;
+//  - `carSpot` is recorded by addFrontYard while the yard is planted, so the
+//    swap knows where the drive is without re-deriving the landmarks;
+//  - the model is bottom-seated by models.js getInstance('bottom') and scaled
+//    from metres to feet there, so `y` here is the driveway SURFACE and the
+//    .glb is expected to be authored at real size in metres with the nose
+//    down -Z (nose-in at the garage, which is what the primitive did).
+const CAR_MODEL_NAME = 'Driveway Car';
+const CAR_MODEL_RY = 0;   // extra heading on top of carSpot.ry, if the .glb
+                          // is authored facing some other way
+let carModelId = null;
+let carSpot = null;       // { x, y, z, ry } — set while the front yard is built
+let carGroup = null;      // whichever of the two is in the yard right now
+
+// main.js hands the model library over once at boot. Fire-and-forget: until it
+// lands (or if it never does) the primitive stands on the drive.
+export function setYardModels(models) {
+  const want = CAR_MODEL_NAME.toLowerCase();
+  const hit = (models || []).find((m) => (m.name || '').trim().toLowerCase() === want);
+  const id = hit ? hit.id : null;
+  if (id === carModelId) return;
+  carModelId = id;
+  syncCar();
+}
+
+// Must run BEFORE buildYard's teardown sweep, which disposes the geometry of
+// every mesh under `yard`. That is safe for everything the yard authors itself
+// and WRONG for a library model: models.js's getInstance does `scene.clone(true)`,
+// which shares BufferGeometry with the cached model — disposing it here would
+// blank out every later instance of that .glb, in the yard and anywhere else.
+// Materials it does clone per instance, so those are ours to release.
+function disposeCar() {
+  if (!carGroup) return;
+  carGroup.parent?.remove(carGroup);
+  carGroup.traverse((o) => {
+    if (!o.isMesh) return;
+    // ownGeometry is per MESH, not per group: the car group mixes geometry we
+    // authored (the primitive, the contact blob) with geometry the model cache
+    // owns, and only the former may be disposed.
+    if (o.userData.ownGeometry === true) o.geometry.dispose();
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) m.dispose();
+  });
+  carGroup = null;
+}
+
+// Soft contact-occlusion blob, the same trick the yard already uses to ground
+// the house footprint. It is not a stand-in for a real shadow that happens to
+// be missing: the sun's shadow map is tuned for the house shell — 2048 px over
+// a 280 ft square with a 1 ft normalBias, which is coarser than the whole gap
+// between a car's sill and the concrete — so a parked car gets no readable
+// ground contact from it at any sun angle, and reads as pasted onto the drive.
+// Sized to the car's own footprint with a margin, and sunk just above the
+// driveway surface. Deliberately opaque enough to read on bright concrete and
+// still soft-edged: a hard ellipse looks worse than none.
+// The car's own sky.
+//
+// scene.environment is three.js's RoomEnvironment — a small white box with
+// light panels, which is a fine neutral fill for furniture indoors and is the
+// wrong world entirely for a car standing outside. Gloss black paint is almost
+// nothing BUT reflection: with an indoor box overhead, every panel collapses to
+// the same near-black and the only thing left is one or two blown specular
+// smears. Four independent critics comparing this render against photographs of
+// a real black X5 M named that same defect first — "no sky gradient down the
+// shoulder", "parked feet from a white garage door and reflects neither",
+// "a flat silhouette, not curved sheetmetal".
+//
+// So the car gets its own envMap. Per-material `envMap` overrides
+// scene.environment in three's shader, so this is scoped to the car alone and
+// nothing else in the app changes. What it has to contain is not a pretty sky
+// but the three bands a car body actually reflects: sky above, a bright narrow
+// horizon, and ground below. The horizon band is the important one — it is what
+// draws the hard bright line along the shoulder crease and the sill that says
+// "this surface is curved", and it is exactly what was missing.
+//
+// envMapIntensity is left alone: scene.js applyEnvIntensity() sweeps the whole
+// scene with the day/night ramp, so the car dims into the evening with
+// everything else.
+let carEnv = null;   // PMREM'd, built once, on the first car that needs it
+
+function makeCarEnvironment() {
+  if (carEnv || !renderer) return carEnv;
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 256;
+  const g = c.getContext('2d');
+  // The lower hemisphere has to go DARK, and fast. A first pass ran the ground
+  // at real driveway value (#b9b7b0 falling to #4c4b48) on the reasoning that
+  // that is what is actually under the car — and it rendered the X5 in
+  // GUNMETAL with chrome wheels, because a metallic 0.62 body reflecting a
+  // uniform mid-grey hemisphere IS mid-grey, and a low-roughness rim reflecting
+  // pale concrete is a mirror. What makes a black car read black outdoors is
+  // CONTRAST, not average brightness: sky on the horizontal surfaces, one
+  // bright horizon band across the flanks at shoulder height, and near-black
+  // everywhere the panel faces down.
+  const grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0.00, '#5c7ba4');   // zenith, matched to the app's sky
+  grad.addColorStop(0.32, '#93aecb');
+  grad.addColorStop(0.44, '#dae6f1');   // horizon haze
+  grad.addColorStop(0.485, '#ffffff');  // the band that draws the shoulder line
+  grad.addColorStop(0.515, '#3c3c3a');  // ...and the cliff straight after it
+  grad.addColorStop(0.70, '#232322');
+  grad.addColorStop(1.00, '#131313');   // nadir
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 512, 256);
+
+  // The white garage door.
+  //
+  // A blind critic comparing this render against a photograph of a real black
+  // X5 put it exactly: "a huge white garage door stands directly in front of it
+  // and does not appear anywhere on the bonnet or flank, so bonnet, wing and
+  // door collapse into one flat black mass separated only by thin drawn
+  // shutlines, which is the one cue a real black car never uses." A pure
+  // vertical gradient gives the shoulder line but it cannot give that, because
+  // there is nothing in it with a horizontal extent.
+  //
+  // three's equirectUv is u = atan2(dir.z, dir.x)/2pi + 0.5, so the -Z
+  // direction — where the garage stands, the car being parked nose-out — is
+  // u 0.25, i.e. x 128. The band runs from just above the horizon up to about
+  // 40 degrees of elevation, which is roughly what a two-storey garage wall
+  // subtends from 12 ft away, and it is feathered at every edge: a hard-edged
+  // patch reads as a decal sliding over the paintwork as the camera moves.
+  const gx = 128, gw = 78, gy0 = 74, gy1 = 124;   // 124 is just above the horizon
+  const wall = g.createLinearGradient(0, gy0, 0, gy1);
+  wall.addColorStop(0, 'rgba(255,255,255,0)');
+  wall.addColorStop(0.45, 'rgba(246,247,248,0.92)');
+  wall.addColorStop(1, 'rgba(246,247,248,0.98)');
+  const fade = g.createLinearGradient(gx - gw, 0, gx + gw, 0);
+  fade.addColorStop(0.00, 'rgba(0,0,0,0)');
+  fade.addColorStop(0.22, 'rgba(0,0,0,1)');
+  fade.addColorStop(0.78, 'rgba(0,0,0,1)');
+  fade.addColorStop(1.00, 'rgba(0,0,0,0)');
+  const m = document.createElement('canvas');
+  m.width = 512; m.height = 256;
+  const mg = m.getContext('2d');
+  mg.fillStyle = wall;
+  mg.fillRect(gx - gw, gy0, gw * 2, gy1 - gy0);
+  mg.globalCompositeOperation = 'destination-in';
+  mg.fillStyle = fade;
+  mg.fillRect(gx - gw, gy0, gw * 2, gy1 - gy0);
+  g.drawImage(m, 0, 0);
+
+  const tex = new THREE.Texture(c);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  carEnv = pmrem.fromEquirectangular(tex).texture;
+  pmrem.dispose();
+  tex.dispose();
+  return carEnv;
+}
+
+function giveCarItsOwnSky(root) {
+  const env = makeCarEnvironment();
+  if (!env) return;
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!m || !('envMap' in m)) continue;
+      m.envMap = env;
+      m.envMapIntensity = getEnvIntensity();
+      m.needsUpdate = true;   // the shader gains an ENVMAP define
+    }
+  });
+}
+
+function carContactShadow(w, d) {
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(w, d),
+    new THREE.MeshBasicMaterial({
+      map: makeShadowTexture(), color: 0x000000, transparent: true,
+      opacity: 0.34, depthWrite: false }));
+  m.userData.ownGeometry = true;
+  m.rotation.x = -Math.PI / 2;
+  m.renderOrder = 1;   // after the opaque drive, so it never z-fights it away
+  return m;
+}
+
+// Idempotent: called at the end of every yard build and again whenever the
+// model id changes. The GLB load is async, so it captures the yard it was
+// started for and drops the result if a rebuild has since replaced it.
+function syncCar() {
+  disposeCar();
+  if (!carSpot || !yard) return;
+  const { x, y, z, ry } = carSpot;
+  if (carModelId == null) {
+    carGroup = buildCarPrimitive(x, y, z, ry);
+    yard.add(carGroup);
+    return;
+  }
+  const forYard = yard;
+  getInstance(carModelId, 'bottom').then((pivot) => {
+    if (forYard !== yard) return;   // a rebuild beat us to it
+    disposeCar();
+    const g = new THREE.Group();
+    g.userData.kind = 'driveway-car';   // how a screenshot harness finds it
+    g.position.set(x, y, z);
+    g.rotation.y = ry + CAR_MODEL_RY;
+    pivot.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    giveCarItsOwnSky(pivot);   // models.js already cloned every material
+    g.add(pivot);
+    // measured off the loaded model, so the blob follows whatever car is in the
+    // library rather than a hard-coded X5 footprint
+    const box = new THREE.Box3().setFromObject(pivot);
+    const size = box.getSize(new THREE.Vector3());
+    const blob = carContactShadow(size.x * 1.55, size.z * 1.22);
+    blob.position.set(box.getCenter(new THREE.Vector3()).x - x, 0.03, 0);
+    g.add(blob);
+    carGroup = g;
+    yard.add(g);
+  }).catch((err) => {
+    console.warn(`yard: car model ${carModelId} failed to load:`, err);
+    if (forYard !== yard || carGroup) return;
+    carGroup = buildCarPrimitive(x, y, z, ry);
+    yard.add(carGroup);
+  });
+}
+
+// Fallback: dark SUV parked nose-in on the driveway (facing -Z, at the garage).
 // Read from behind, which is the front-photo angle: wide body, narrower
 // greenhouse with a dark glass band, taillights, bumper, tyres proud of the sides.
-function addCar(x, z, props) {
+function buildCarPrimitive(x, y, z, ry) {
+  const props = [];
   const body = new THREE.Color(0x1b1e23);
   const dark = new THREE.Color(0x0e1014);
   const glass = new THREE.Color(0x07080b);
@@ -928,6 +1183,22 @@ function addCar(x, z, props) {
   for (const dx of [-3.05, 3.05]) {
     for (const dz of [-4.9, 4.7]) push(wheelAt(1.4, 0.95, x + dx, 1.4, z + dz), tire);
   }
+  const g = new THREE.Group();
+  g.userData.kind = 'driveway-car';   // same tag as the model path, so anything
+                                      // looking for the car finds either one
+  const mesh = new THREE.Mesh(
+    BufferGeometryUtils.mergeGeometries(
+      props.map((q) => (q.index ? q.toNonIndexed() : q)), false),
+    new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.45, metalness: 0.15, flatShading: true }));
+  mesh.userData.ownGeometry = true;
+  mesh.castShadow = true;
+  // the boxes above are authored in WORLD x/z, so the group sits at the origin
+  // and only the heading is applied — about the car, not about the world
+  g.add(mesh);
+  if (ry) { g.position.set(x, 0, z); mesh.position.set(-x, 0, -z); g.rotation.y = ry; }
+  g.position.y += y;
+  return g;
 }
 
 // 96-gal wheeled bin, blue body / black lid — parked beside the garage door
@@ -1194,7 +1465,11 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   // 7. Vehicles and hardware. The bin is BLUE with a black lid - the v3 front
   //    shots were taken at dusk and it reads black there, but "Side of the
   //    house.jpg" shows it in daylight against the garage flank.
-  addCar((L.driveL + L.driveR) / 2 - 1.4, L.houseF + 13, props);
+  // Recorded, not built: syncCar() puts either the GLB or the primitive here
+  // once the yard is complete. The drive runs x 20.8..47.1; the car sits in
+  // the west bay, as it does in the front photographs.
+  carSpot = { x: (L.driveL + L.driveR) / 2 - 1.4, y: L.lo + 0.02,
+              z: L.houseF + 13, ry: 0 };
   addBin(L.driveR - 1.4, L.houseF + 1.9, props);
   // black urns standing against the wall where the porch meets the garage
   for (const [ux, uz] of [[L.porchE + 0.9, L.houseF + 1.4], [L.driveL + 1.1, L.houseF + 1.4]]) {
@@ -1448,6 +1723,8 @@ function buildYard() {
   const bx1 = shellRect ? shellRect.x1 : maxX;
   const bz1 = shellRect ? shellRect.z1 : maxZ;
 
+  // Before the teardown sweep below, not after: see disposeCar().
+  disposeCar();
   if (yard) {
     root.remove(yard);
     yard.traverse((o) => {
@@ -1459,6 +1736,7 @@ function buildYard() {
   root.add(yard);
 
   const rng = mulberry32(1337);
+  carSpot = null;       // re-recorded by addFrontYard, if there is a shell
   const trunks = [], leaves = [], beds = [], props = [], lawns = [], masses = [];
   const onPad = (x, z, m = 3) =>
     pads.some((p) => x > p.x0 - m && x < p.x1 + m && z > p.z0 - m && z < p.z1 + m);
@@ -1634,4 +1912,6 @@ function buildYard() {
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.set((bx0 + bx1) / 2, -0.03, (bz0 + bz1) / 2);
   yard.add(shadow);
+
+  syncCar();
 }

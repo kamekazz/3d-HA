@@ -18,7 +18,7 @@ import { initDrag, isTransforming, setSelected } from './drag.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
 import { initDaylight, settleDaylight } from './daylight.js';
-import { initEnvironment, setEnvironmentData } from './environment.js';
+import { initEnvironment, setEnvironmentData, setYardModels } from './environment.js';
 import { initWeather } from './weather.js';
 import { initRoomLights, setRoomLightsData, repaintFixture, settleRoomLights } from './roomlights.js';
 import { initFloorView } from './floorview.js';
@@ -401,6 +401,12 @@ async function main() {
   setCutawayData(house); // wall meshes + furniture are new objects after a rebuild
   buildLabels(house);
   setEnvironmentData(house);
+  // The driveway car is a library model looked up by NAME (environment.js
+  // CAR_MODEL_NAME), so the yard needs the model list — which GET /api/house
+  // does not carry, only its version map. Deliberately not awaited: the yard is
+  // already planted with the primitive car by the line above, and syncCar()
+  // swaps it in place when this lands. A failure just leaves the primitive.
+  api.getModels().then(setYardModels).catch(() => {});
   initFocus();
   initDrag();
   initUI({ structure, house, onReload: reloadHouse });
