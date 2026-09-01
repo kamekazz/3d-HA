@@ -14,6 +14,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import _r7_decks as D          # noqa: E402
+import _r7_head as HD          # noqa: E402
 import _r7_spec as S           # noqa: E402
 
 # ALWAYS start from the pre-round-7 file, so re-running can never stack a
@@ -56,6 +57,10 @@ src = src[:src.index(ANCH)] + D.HELPERS.lstrip("\n") + src[src.index(ANCH):]
 a = src.index("# " + "-" * 62 + " geometry spec")
 b = src.index("# The printed front panel's own rect")
 src = src[:a] + S.SPEC.lstrip("\n") + src[b:]
+
+# 4. the round-7 section of the module docstring.
+DOC = "WHAT CHANGED FROM ROUND 4, AND WHY"
+src = src.replace(DOC, HD.HEAD + DOC, 1)
 
 open(P, "w", encoding="utf-8").write(src)
 print("spliced ->", P, len(src), "bytes")

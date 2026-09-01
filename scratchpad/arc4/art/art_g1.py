@@ -1,4 +1,68 @@
-"""Round-5 printed cabinet artwork, group 1 (four machines).
+"""Printed cabinet artwork, group 1 (four machines) -- ROUND 7.
+
+    Marvel Super Heroes (east 1) / Marvel vs Capcom (east 2) /
+    Mortal Kombat (east 3) / NFL Blitz (north 3)
+
+ROUND 7 REWRITES THE FOUR CONTROL DECKS AND THE BUTTON SPEC, AND CHANGES
+NOTHING ELSE.  The marquees, flanks, fronts, risers and coin doors are round
+5/6's and are untouched.
+
+WHY.  Round 6 was rejected 0 of 4 and all four critics named the same surface
+in almost the same words: the buttons were "flat 2-3px coloured lozenges with
+no dome, no rim shadow and no specular", the same six-dot cluster repeated on
+every machine, and "in the photo the deck is the largest continuous surface
+facing camera and it is printed edge-to-edge with game art on every machine;
+in the render every deck is an empty plane with a faint round ghost decal."
+That is accurate.  Round 5 wrote a per-machine DECKS spec and it did not reach
+the render, and round 5's deck ARTWORK was four tinted planes with a legend
+band and a socket ring on each.
+
+WHAT CHANGED, AND WHAT IT IS BASED ON.  One photograph round 5 never opened:
+docs/photos-jpg/Arcade Room v4 6.jpg stands close to the north end of the east
+run under neutral ceiling cans and looks down onto THREE of my four control
+panels at once, at a scale where the joystick balls are 7 px and the button
+caps resolve as individual coloured discs.  Upscaled crops (LANCZOS 11-20x)
+are in `scratchpad/arc4/art/ref_g1r7/`; the button counts and the field
+colours below come from a hue/saturation/value character dump of those crops,
+not from eyeballing a blur.  It shows:
+
+  machine              deck field                       what the photo settles
+  -------------------  -------------------------------  ---------------------
+  Marvel Super Heroes  the BRIGHTEST panel in the run:  round 5 drew it dark
+                       pale cyan and white energy, warm  navy.  Wrong.
+                       comic fragments, black keylines
+  Marvel vs Capcom     GRANITE TERRAZZO laminate, hard   it carries NO game
+                       black/white chips, edge to edge   art at all -- said
+                                                         out loud, not faked
+  Mortal Kombat        LIGHT steel blue with raked pale  round 5 drew it navy
+                       beams, a black character mark,    at half the value
+                       a five-line legend per station
+  NFL Blitz            violet nebula, pale wisps, a      round 5 drew YARD
+                       warm core right of centre         LINES on it.  There
+                                                         is not one straight
+                                                         line on that panel.
+
+and the BUTTONS: black ball tops on all three east machines (round 5 gave
+Marvel vs Capcom white ones), large coloured caps sitting in printed collars,
+Mortal Kombat's five-button arc, Marvel vs Capcom's red-over-green-over-blue.
+
+THE TWO DELIVERABLES ARE `_*_deck` (the printed panels) and `DECKS` (the
+geometry spec the engine agent builds from).  They are generated from ONE
+table -- `_deck_sockets` prints every collar FROM `DECKS` -- so a printed seat
+and the button standing in it cannot drift apart, and if the geometry is not
+built at all the panel still reads correctly.
+
+Self-checks: `preview_g1_r7.py` -> `deck_g1_r7.png` (each deck at SHIPPING
+resolution beside the photograph it was drawn from, plus the pixel size the
+judged frame renders it at), `levers_g1_r7.py` -> the measured payload table,
+`bytes_g1_r7.py` -> the per-deck byte delta against round 6.
+`art_g1_r6.bak.py` is the pre-round-7 module.
+
+------------------------------------------------------------------------
+Round-5 header follows, unchanged, because everything it describes still
+ships.
+
+Round-5 printed cabinet artwork, group 1 (four machines).
 
     Marvel Super Heroes (east 1) / Marvel vs Capcom (east 2) /
     Mortal Kombat (east 3) / NFL Blitz (north 3)
@@ -889,7 +953,7 @@ def _msh_side(cv):
         cv.rect(u - w * 0.5 - 0.012, v - 0.014, u + w * 0.5 + 0.012,
                 v + h + 0.014, (6, 12, 16), a=0.72)
         cv.text(s, u, v, h, c, h * 0.16, track=0.10, cond=0.78, align="c")
-    _edge(cv, 0.019, _MSH_GOLD0, _MSH_GOLD1)
+    # ROUND 8: full bleed.  The gold T-molding is real geometry now.
     cv.noise(3.5, 23)
 
 
@@ -947,13 +1011,22 @@ def _msh_front(cv):
             align="c", shadow=_hx("#5a0f16"), sh=(0.016, 0.020))
     cv.text("SUPER HEROES", A * 0.5, 0.330, 0.062, (214, 220, 234), 0.0135,
             track=0.150, align="c")
-    # ---- the blue secondary lockup (illegible in every photo: drawn as the
-    # blue lockup the panel shows, not as invented words)
+    # ---- ROUND 8.  THE TITLE IS NOT PRINTED HERE, AND ROUND 7 PRINTED IT.
+    # v3 4 px (100,690)-(215,830) at 9x (art/_r8_dump/ph_msh_front.png) shows
+    # a BLUE printed patch carrying TWO LINES of blue secondary type: an upper
+    # line that runs wide and thin and a narrower, more script-like line under
+    # it.  Neither resolves into words at any magnification, and neither has
+    # the proportions of "MARVEL" / "SUPER HEROES" -- the upper line is nearly
+    # twice as wide as the white MARVEL above it and a third of its height.
+    # Round 7 set the full title lockup here a second time, which is what made
+    # this panel read "CAPCOM / MARVEL SUPER HEROES / MARVEL SUPER HEROES /
+    # MARVEL SUPER HEROES".  Drawn now as what it is: illegible blue print.
     blu, blu2 = _hx("#3f6fd8"), _hx("#93b8ff")
-    cv.text("MARVEL", A * 0.52, 0.430, 0.082, blu2, 0.0180, track=0.05,
-            align="c", ital=0.18, outline=_hx("#16255e"), ow=0.008)
-    cv.text("SUPER HEROES", A * 0.50, 0.528, 0.055, blu, 0.0130, track=0.09,
-            align="c", ital=0.18)
+    cv.rect(A * 0.170, 0.408, A * 0.860, 0.566, _hx("#0f1c48"), a=0.62)
+    cv.grad(A * 0.170, 0.408, A * 0.860, 0.566, _hx("#16265e"),
+            _hx("#0a1132"))
+    _fine(cv, A * 0.196, A * 0.836, 0.428, 0.038, blu2, 61, words=4, a=0.92)
+    _fine(cv, A * 0.268, A * 0.762, 0.492, 0.028, blu, 62, words=4, a=0.86)
     _fine(cv, A * 0.135, A * 0.865, 0.604, 0.011, (132, 138, 152), 3, words=9)
     _fine(cv, A * 0.205, A * 0.795, 0.628, 0.011, (112, 118, 132), 4, words=7)
     # ---- flush printed coin plate, low LEFT.  No geometry: the panel is
@@ -1002,12 +1075,19 @@ def _msh_front(cv):
                  (u + 0.014, rv + 0.062), (u + 0.032, 1.0)], _hx("#0a2c3e"))
         cv.disc(u, rv + 0.048, 0.020, _hx("#0a2c3e"), ry=0.022)
     cv.rect(0, rv + 0.010, A, 0.988, (4, 14, 22), a=0.34)
-    cv.text("MARVEL", A * 0.5, rv + 0.032, 0.088, (242, 244, 250), 0.0175,
-            track=0.075, align="c", shadow=(3, 10, 16), sh=(0.010, 0.013))
-    cv.text("SUPER HEROES", A * 0.5, rv + 0.130, 0.038, (206, 226, 238),
-            0.0095, track=0.145, align="c")
-    cv.rect(0, rv, A, rv + 0.012, _MSH_GOLD0)
-    _edge(cv, 0.017, _MSH_GOLD0, _MSH_GOLD1)
+    # The riser's own wordmark -- the SECOND and LAST occurrence on this
+    # machine, and the photograph does show it there: ph_msh_front.png has
+    # "MARVEL / SUPER HEROES" white on the black panel and again, smaller and
+    # set into the blue-green collage, on the riser under it.  Round 7 had
+    # three; the real cabinet has two, at visibly different sizes.
+    cv.text("MARVEL", A * 0.5, rv + 0.042, 0.064, (238, 241, 248), 0.0125,
+            track=0.075, align="c", shadow=(3, 10, 16), sh=(0.008, 0.010))
+    cv.text("SUPER HEROES", A * 0.5, rv + 0.117, 0.029, (198, 220, 234),
+            0.0072, track=0.145, align="c")
+    # ROUND 8: no painted gold hairline.  The gold T-molding is now REAL
+    # geometry on the carcase (outer ~0.06 ft of the face), so the printed
+    # vinyl runs full-bleed to the panel edge, as it does on the machine.
+    cv.rect(0, rv, A, rv + 0.010, _hx("#05090f"))
     cv.noise(3.2, 31)
 
 
@@ -1245,9 +1325,7 @@ def _mvc_side(cv):
             align="c", a=0.70)
     cv.rect(0, 0.930, A, 1, _MVC_BLUE)                   # blue base band
     cv.grad(0, 0.930, A, 0.958, _MVC_BLUE2, _MVC_BLUE)
-    cv.rect(0, 0, A, 0.014, _hx("#101218"))
-    cv.grad(0, 0, 0.016, 1, _hx("#2a2e3a"), _hx("#101218"), horiz=True)
-    cv.grad(A - 0.016, 0, A, 1, _hx("#101218"), _hx("#2a2e3a"), horiz=True)
+    # ROUND 8: full bleed -- no painted edge returns.
     cv.noise(3.4, 27)
 
 
@@ -1283,12 +1361,19 @@ def _mvc_front(cv):
             cv.disc(u, v, r, _hx("#0c0e14"), a=0.55, ry=r)
     cv.text("VS", A * 0.5, 0.145, 0.42, _hx("#3a4254"), 0.060, track=0.05,
             align="c", a=0.62)
+    # ROUND 8.  The roster's words for this panel are "essentially no printed
+    # graphic - the emptiest lower front in the run", and ph_mvc.png agrees:
+    # a black field with a recessed coin box in it and nothing else.  Round 7's
+    # screened ghost is kept (a bare charcoal slab was the round-5 complaint)
+    # but knocked back another 30% so the panel reads black at room distance
+    # and only resolves as a screened image close up, which is what it is.
+    cv.rect(0, 0, A, 0.715, (6, 7, 11), a=0.32)
     _fine(cv, A * 0.30, A * 0.70, 0.045, 0.010, (120, 126, 140), 6, words=5)
     for j in range(4):                                   # red / blue divider
         cv.rect(A * 0.04, 0.596 + j * 0.008, A * 0.50, 0.602 + j * 0.008,
-                _hx("#8e2420"), a=0.55)
+                _hx("#8e2420"), a=0.30)
         cv.rect(A * 0.50, 0.596 + j * 0.008, A * 0.96, 0.602 + j * 0.008,
-                _hx("#1f3faa"), a=0.55)
+                _hx("#1f3faa"), a=0.30)
     # ---- the coin box: small, centred, black on black, with a return cup
     bu0, bu1, bv0, bv1 = A * 0.325, A * 0.675, 0.190, 0.450
     cv.rect(bu0 - 0.014, bv0 - 0.012, bu1 + 0.014, bv1 + 0.030,
@@ -1310,28 +1395,39 @@ def _mvc_front(cv):
     rv = 0.725
     cv.rect(0, rv, A, 1, _MVC_BLUE)
     cv.grad(0, rv, A, 1, _MVC_BLUE2, _hx("#0c1c78"))
-    _mottle(cv, 0, rv, A, 1, [_hx("#2f5ce8"), _hx("#0b1668"), _hx("#5c8bff")],
-            41, n=18, rmin=0.06, rmax=0.20, a=0.34)
-    _rays(cv, A * 0.5, rv + 0.16, 16, 0.03, 0.9, 0.020, _hx("#8fb2ff"), 0.22,
-          9)
-    cv.poly([(A * 0.06, rv + 0.055), (A * 0.94, rv + 0.030),
-             (A * 0.96, rv + 0.230), (A * 0.04, rv + 0.255)],
+    # ROUND 8: rmax 0.20 put blue blobs 0.2 ABOVE the riser line, i.e. up
+    # into the black kick panel the roster calls empty.  Kept inside.
+    _mottle(cv, 0, rv + 0.03, A, 1, [_hx("#2f5ce8"), _hx("#0b1668"),
+                                     _hx("#5c8bff")],
+            41, n=18, rmin=0.035, rmax=0.105, a=0.34)
+    # ROUND 8: these rays ran 0.9 tall from inside the riser, i.e. straight
+    # up across the whole black kick panel.  Clipped to the riser.
+    _rays(cv, A * 0.5, rv + 0.16, 16, 0.03, 0.24, 0.016, _hx("#8fb2ff"),
+          0.22, 9)
+    cv.poly([(A * 0.22, rv + 0.075), (A * 0.80, rv + 0.058),
+             (A * 0.815, rv + 0.212), (A * 0.205, rv + 0.229)],
             _hx("#0a0f3c"), a=0.55)
-    cv.text("MARVEL", A * 0.315, rv + 0.075, 0.100, (245, 246, 250), 0.0200,
-            track=0.04, align="c", ital=0.14, shadow=(4, 6, 30),
-            sh=(0.010, 0.012))
-    cv.text("CAPCOM", A * 0.715, rv + 0.085, 0.100, _hx("#e83028"), 0.0200,
-            track=0.04, align="c", ital=0.14, shadow=(4, 6, 30),
-            sh=(0.010, 0.012))
+    # ROUND 8.  SCALE, not content: the wordmark is the ONE title on this
+    # machine (its black kick panel carries none), and v3 4 px (180,620)-
+    # (275,860) at 10x -- art/_r8_dump/ph_mvc.png -- puts it at roughly 55% of
+    # the riser's width, centred, with a second smaller line under it.  Round
+    # 7 ran it edge to edge at nearly twice that, which is why "MARVEL" and
+    # "CAPCOM" collided across the VS device.
+    cv.text("MARVEL", A * 0.392, rv + 0.098, 0.050, (245, 246, 250), 0.0105,
+            track=0.03, align="c", ital=0.14, cond=0.86, shadow=(4, 6, 30),
+            sh=(0.007, 0.009))
+    cv.text("CAPCOM", A * 0.622, rv + 0.104, 0.050, _hx("#e83028"), 0.0105,
+            track=0.03, align="c", ital=0.14, cond=0.86, shadow=(4, 6, 30),
+            sh=(0.007, 0.009))
     # the little star VS device between and below the two words
-    cv.disc(A * 0.515, rv + 0.185, 0.052, (250, 250, 252), ry=0.052, a=0.92)
-    _rays(cv, A * 0.515, rv + 0.185, 8, 0.03, 0.115, 0.018, (250, 250, 252),
+    cv.disc(A * 0.512, rv + 0.170, 0.038, (250, 250, 252), ry=0.038, a=0.92)
+    _rays(cv, A * 0.512, rv + 0.170, 8, 0.03, 0.085, 0.014, (250, 250, 252),
           0.92, 1)
-    cv.text("VS", A * 0.515, rv + 0.150, 0.062, _hx("#12246e"), 0.014,
+    cv.text("VS", A * 0.512, rv + 0.146, 0.046, _hx("#12246e"), 0.011,
             track=0.03, align="c")
-    cv.text("CLASH OF SUPER HEROES", A * 0.5, rv + 0.278, 0.034,
-            (198, 214, 250), 0.0080, track=0.10, align="c")
-    _fine(cv, A * 0.22, A * 0.78, rv + 0.330, 0.009, (150, 172, 220), 7,
+    _fine(cv, A * 0.335, A * 0.685, rv + 0.238, 0.020, (198, 214, 250), 5,
+          words=4, a=0.80)
+    _fine(cv, A * 0.30, A * 0.70, rv + 0.300, 0.010, (150, 172, 220), 7,
           words=6, a=0.7)
     cv.rect(0, rv, A, rv + 0.012, _hx("#060a2c"))
     cv.rect(0, 0, A, 0.012, _hx("#0d0f14"))
@@ -1367,7 +1463,10 @@ def _mvc_deck(cv):
     _terrazzo(cv, 0, 0, A, 1, _hx("#8d8c8a"),
               (_hx("#141417"), _hx("#f2f0ea"), _hx("#5c6068"), _hx("#c6c2b9"),
                _hx("#101013"), _hx("#e4e1d8"), _hx("#74787f"), _hx("#a8a49c")),
-              37, n=380, rmin=0.024, rmax=0.062)
+              37, n=430, rmin=0.020, rmax=0.044)
+    _terrazzo(cv, 0, 0, A, 1, _hx("#8d8c8a"),
+              (_hx("#26262b"), _hx("#e4e1d8"), _hx("#6a6e76"), _hx("#b4b1a9")),
+              91, n=330, rmin=0.011, rmax=0.024)
     # the panel is a shallow wedge: the back edge catches the ceiling cans and
     # the player's edge falls away.  A print gradient, not baked lighting --
     # the laminate itself is darker at the front where it is worn.
@@ -1384,7 +1483,7 @@ def _mvc_deck(cv):
     cv.rect(0, 0.972, A, 1, _hx("#1b1c20"))
     _deck_sockets(cv, "marvel-vs-capcom", _hx("#25262b"), _hx("#0c0d10"),
                   bezel_hi=_hx("#eceef2"), bezel_lo=_hx("#42464d"))
-    cv.noise(5.0, 53)
+    cv.noise(9.0, 53)
 
 
 # ========================================================= Mortal Kombat (E3)
@@ -1463,14 +1562,23 @@ def _mk_marquee(cv):
         cv.disc(A * 0.5, 0.5, 0.70 - j * 0.09, _hx("#8a6a22"), a=0.10,
                 ry=0.52 - j * 0.07)
     _speck(cv, 0, 0, A, 1, 40, _hx("#c8a34e"), 7, r=0.008, a=0.45)
-    cv.text("MORTAL", A * 0.215, 0.240, 0.400, _MK_BONE, 0.052, track=0.05,
-            cond=0.62, align="c", outline=_hx("#3a1418"), ow=0.010)
-    cv.text("KOMBAT", A * 0.785, 0.240, 0.400, _MK_BONE, 0.052, track=0.05,
-            cond=0.62, align="c", outline=_hx("#3a1418"), ow=0.010)
+    # ROUND 8 -- MARQUEE SAFE AREA.  Round 4..7 set these two words with their
+    # outer stems ~1% of the tile width from the tile edge, so the marquee art
+    # was effectively authored full-bleed WITH THE TYPE IN THE BLEED.  In the
+    # judged frame (shots/r7_mq_east.png, crop art/_r8_dump/r7_mk_marq.png)
+    # the panel loses about 8% off its left end and the M of MORTAL is gone:
+    # the band reads "ORTAL KOMBAT".  The GROUND still bleeds edge to edge --
+    # that is what round 8 wants everywhere -- but the LETTERS now sit inside
+    # a 12% safe margin, which is more than the loss measured in the render
+    # and is how a real marquee is laid out inside its retainer anyway.
+    cv.text("MORTAL", A * 0.252, 0.268, 0.340, _MK_BONE, 0.044, track=0.03,
+            cond=0.48, align="c", outline=_hx("#3a1418"), ow=0.010)
+    cv.text("KOMBAT", A * 0.748, 0.268, 0.340, _MK_BONE, 0.044, track=0.03,
+            cond=0.48, align="c", outline=_hx("#3a1418"), ow=0.010)
     for j in range(6):                                   # smoke over the type
         cv.disc(A * (0.16 + j * 0.14), 0.55, 0.34, _hx("#0b1130"), a=0.16,
                 ry=0.30)
-    _mk_roundel(cv, A * 0.5, 0.50, 0.84, _MK_BONE, _hx("#0c1130"),
+    _mk_roundel(cv, A * 0.5, 0.50, 0.74, _MK_BONE, _hx("#0c1130"),
                 glow=_hx("#d8b45c"))
     cv.rect(0, 0, A, 0.026, _MK_MAROON)
     cv.rect(0, 0.974, A, 1, _MK_MAROON)
@@ -1515,7 +1623,7 @@ def _mk_side(cv):
             cond=0.66, track=0.06, align="c", a=0.88)
     cv.text("KOMBAT", A * 0.50, 0.740, 0.062, _hx("#c0b6a2"), 0.013,
             cond=0.66, track=0.06, align="c", a=0.88)
-    _edge(cv, 0.020, _hx("#3a1216"), _hx("#8e3038"))
+    # ROUND 8: full bleed -- the maroon T-molding is geometry, not print.
     cv.noise(3.8, 29)
 
 
@@ -1535,7 +1643,6 @@ def _mk_front(cv):
     for j in range(6):                                   # ember wash, bottom
         cv.disc(A * (0.12 + j * 0.16), 1.00, 0.26, _hx("#a8481a"), a=0.09,
                 ry=0.20)
-    cv.rect(0, 0, A, 0.030, _MK_MAROON)
     # ---- the MK wordmark and its dragon, upper third
     cv.text("MK", A * 0.415, 0.075, 0.260, _MK_BONE, 0.060, track=0.02,
             align="c", outline=_hx("#a3251f"), ow=0.019,
@@ -1552,8 +1659,14 @@ def _mk_front(cv):
              (A * 0.810, sv + 0.012), (A * 0.860, sv + 0.032),
              (A * 0.810, sv + 0.066), (A * 0.190, sv + 0.066)],
             _hx("#6b6252"))
-    cv.text("MORTAL KOMBAT", A * 0.5, sv + 0.022, 0.040, _hx("#efe8d6"),
-            0.0090, track=0.11, cond=0.85, align="c")
+    # ROUND 8.  ROUND 7 SET "MORTAL KOMBAT" HERE, under an "MK" that already
+    # names the machine -- the title twice on one panel.  v3 4 px (265,640)-
+    # (350,850) at 10x (art/_r8_dump/ph_mk.png) shows the scroll carrying a
+    # short centred run of small light print that does not resolve into words
+    # at any magnification I can get, so that is what is drawn.  The "MK"
+    # above it is the identifying mark and it stays, once.
+    _fine(cv, A * 0.300, A * 0.700, sv + 0.030, 0.020, _hx("#efe8d6"), 44,
+          words=3, a=0.92)
     # ---- three short lines of small light text
     for j in range(3):
         _fine(cv, A * (0.26 - j * 0.03), A * (0.74 + j * 0.03),
@@ -1592,7 +1705,8 @@ def _mk_front(cv):
     cv.rect(0, 0.930, A, 1, _hx("#3b201c"))
     cv.grad(0, 0.930, A, 1, _hx("#5a2f26"), _hx("#24120f"))
     _speck(cv, 0, 0.935, A, 0.998, 24, _hx("#8a4a34"), 51, r=0.008, a=0.45)
-    _edge(cv, 0.018, _hx("#3a1216"), _hx("#8e3038"))
+    # ROUND 8: full bleed, no painted maroon hairline -- the dark-red bead is
+    # real geometry on the black carcase now (outer ~0.06 ft of the face).
     cv.noise(3.4, 43)
 
 
@@ -1753,7 +1867,7 @@ def _blitz_side(cv):
     for j in range(3):                                   # yard-line hatching
         v = 0.845 + j * 0.048
         cv.seg(A * 0.10, v, A * 0.90, v, 0.008, (226, 230, 244), a=0.16)
-    _edge(cv, 0.018, _hx("#191a24"), _hx("#5f5a92"))
+    # ROUND 8: full bleed -- see _blitz_front.
     cv.noise(3.6, 67)
 
 
@@ -1816,7 +1930,9 @@ def _blitz_front(cv):
     _fine(cv, A * 0.28, A * 0.72, 0.870, 0.011, (128, 132, 152), 83, words=6)
     cv.rect(0, 0.905, A, 1, _hx("#0b0b12"))
     cv.grad(0, 0.905, A, 0.930, _hx("#3f3a66"), _hx("#0b0b12"))
-    _edge(cv, 0.016, _hx("#191a24"), _hx("#5f5a92"))
+    # ROUND 8: full bleed.  This machine's edge trim is black on black in
+    # every frame anyway (the roster refuses to call the violet glow at its
+    # east edge molding rather than the wall's RGB strip), so nothing is lost.
     cv.noise(3.2, 73)
 
 
@@ -1840,13 +1956,23 @@ def _blitz_deck(cv):
     _bz_nebula(cv, 0, 0, A, 1, 91, stars=0)
     # --- large wisps, drawn as overlapping soft arcs rather than one mottle,
     #     so the structure survives the 2x box-average atlas4 does.
-    for (u, v, r, c, al) in ((0.30, 0.34, 0.46, "#7d76b4", 0.42),
-                             (0.74, 0.72, 0.40, "#4a4270", 0.50),
-                             (1.16, 0.26, 0.44, "#9a92cc", 0.36),
-                             (1.62, 0.62, 0.46, "#5a5288", 0.46),
-                             (2.02, 0.30, 0.38, "#8880bc", 0.34),
-                             (0.52, 0.94, 0.30, "#3a3358", 0.50)):
+    for (u, v, r, c, al) in ((0.30, 0.34, 0.46, "#8a83c6", 0.56),
+                             (0.74, 0.72, 0.40, "#3d3560", 0.62),
+                             (1.16, 0.26, 0.44, "#a8a0da", 0.48),
+                             (1.62, 0.62, 0.46, "#4c4478", 0.58),
+                             (2.02, 0.30, 0.38, "#948cc8", 0.44),
+                             (0.52, 0.94, 0.30, "#2f2950", 0.60),
+                             (1.02, 0.52, 0.22, "#b6aee4", 0.34),
+                             (1.86, 0.86, 0.24, "#332c56", 0.50)):
         cv.disc(u, v, r, _hx(c), a=al, ry=r * 0.70)
+    # long filaments -- the streaming structure v4 6 shows inside the wisps
+    for (u0, v0, u1, v1, w, c, al) in (
+            (0.06, 0.22, 0.92, 0.52, 0.030, "#bdb5ea", 0.34),
+            (0.60, 0.90, 1.46, 0.58, 0.024, "#cbc4f2", 0.30),
+            (1.20, 0.16, 2.10, 0.44, 0.028, "#a49ce0", 0.32),
+            (1.44, 0.94, 2.16, 0.72, 0.020, "#d6d0f8", 0.26)):
+        cv.path([(u0, v0), ((u0 + u1) * 0.5, (v0 + v1) * 0.5 - 0.10),
+                 (u1, v1)], w, _hx(c), a=al)
     # the warm core v4 6 shows right of centre
     for (u, v, r, c, al) in ((1.42, 0.46, 0.30, "#8d4a72", 0.44),
                              (1.46, 0.44, 0.19, "#c06a72", 0.42),
@@ -1923,8 +2049,12 @@ MATERIAL_HINT = {
                                    "brightly lit'; keep a2kit's #2b2118/1.0)",
     "marvel-super-heroes.front": "ART",
     "marvel-super-heroes.side": "ART",
-    "marvel-super-heroes.deck": "ART_D  -- a dark navy deck, but ART_DK "
-                                "(#4c4c4c) kills the gold chevrons",
+    "marvel-super-heroes.deck": "ART  -- ROUND 7 CHANGES THIS.  The deck is "
+                                "no longer dark: v4 6 shows it as the "
+                                "BRIGHTEST panel in the east run, a pale "
+                                "cyan-and-white comic field.  ART_D would "
+                                "halve it and ART_DK (#4c4c4c) would grey out "
+                                "the warm accents that identify it.",
     "marvel-super-heroes.bezel": "ART.  ADD 'marvel-super-heroes.bezel' to "
                                  "atlas4.EXTRA_KEYS -- this is the only one "
                                  "of my four whose monitor surround carries "
@@ -1935,17 +2065,25 @@ MATERIAL_HINT = {
                                 "brightest of my four)",
     "marvel-vs-capcom.front": "ART",
     "marvel-vs-capcom.side": "ART",
-    "marvel-vs-capcom.deck": "ART_DM  -- THE PALE SILVER DECK.  ART_DK would "
-                             "make the room's one light control panel grey.",
+    "marvel-vs-capcom.deck": "ART_DM  -- THE GRANITE DECK, and the room's "
+                             "one light control panel.  ART_DK would grey out "
+                             "the chip contrast, which is the ONLY texture "
+                             "this panel has; the whole surface would go back "
+                             "to being the flat slab the critics named.",
     "mortal-kombat.marquee": "MQ (emissive; navy ground, bone roundel)",
     "mortal-kombat.front": "ART",
     "mortal-kombat.side": "ART",
-    "mortal-kombat.deck": "ART_D  -- NOT ART_DK: the blue is the identity",
+    "mortal-kombat.deck": "ART  -- ROUND 7 CHANGES THIS TOO.  v4 6 puts the "
+                          "field at hue 200-215 / value 0.45-0.72, about "
+                          "twice what round 5 authored, so the panel is now a "
+                          "LIGHT steel blue and must not be darkened again.",
     "nfl-blitz.marquee": "MQ (emissive but LOW -- the roster says 'Not lit'; "
                          "a2kit already has it at a dark tint)",
     "nfl-blitz.front": "ART",
     "nfl-blitz.side": "ART",
-    "nfl-blitz.deck": "ART_D  -- the nebula is mid-value already",
+    "nfl-blitz.deck": "ART_D  -- the nebula is mid-value already, and its "
+                      "pale wisps are what separate it from the black "
+                      "carcase around it",
 }
 
 # ------------------------------------------------------------------- DECKS
@@ -2057,15 +2195,23 @@ def ball_top(r, seg=8, rings=3):
     return v, t, True
 
 
+# `emissive: False` on EVERY cap is a deliberate, load-bearing request.
+# decks5._from_g1 does not read it today, so `_btn` falls through to art_g0's
+# luma-190 rule and 42 of my 58 caps come out emissive -- which is why round
+# 6's buttons render as flat discs of pure hue: an emissive surface takes no
+# highlight, so the dome the engine is about to build cannot shade.  See
+# CONTROL_FINISH["gloss_col"] for the payload half of the same argument.
 def _row(v, us, cols, r, h, du=0.0, profile="convex", role=None):
     return [{"u": u + du, "v": v, "r": r, "h": h, "shape": "round",
-             "profile": profile, "col": c, "role": role}
+             "profile": profile, "col": c, "role": role, "emissive": False,
+             "finish": "gloss_col"}
             for (u, c) in zip(us, cols)]
 
 
 def _starts(v, us, r=0.034, h=0.026, col="#e6e9ef"):
     return [{"u": u, "v": v, "r": r, "h": h, "shape": "round",
-             "profile": "convex", "col": col, "role": "start"} for u in us]
+             "profile": "convex", "col": col, "role": "start",
+             "emissive": False, "finish": "gloss_white"} for u in us]
 
 
 def _stk(u, v, base_r=0.080, top_col="#16171b", shaft_h=0.155):
@@ -2288,10 +2434,22 @@ DECKS = {
 # engine agent does not have to guess a number.  These are requests against
 # a2kit, not something this module can set.
 CONTROL_FINISH = {
-    "gloss_col": "roughness 0.28, metallic 0.0, emissive = the cap colour at "
-                 "0.35 (round 6 uses 0.75, which is why a red cap reads as a "
-                 "flat red disc with no shading at all).  For every coloured "
-                 "button cap.",
+    "gloss_col": "roughness 0.28, metallic 0.0, NO EMISSIVE, and routed "
+                 "through the SHARED vertex-coloured hardware primitive.  Two "
+                 "reasons, and the second is a payload argument.  (1) ar2 "
+                 "currently sends every coloured cap through "
+                 "`cmat(col, 0.34, 0.0, col, 0.75)`, i.e. emissive at 0.75 in "
+                 "its own colour -- which is exactly why a cap renders as a "
+                 "flat disc of pure hue with no dome shading, and no amount "
+                 "of geometry fixes that, because an emissive surface does "
+                 "not take a highlight.  (2) that is one MATERIAL PER COLOUR "
+                 "per run, and a glTF primitive costs ~0.9 KB of accessors "
+                 "and JSON before a triangle is in it -- the round-5 report "
+                 "measured exactly this and it is where 68 KB came from.  My "
+                 "six cap colours through one vertex-coloured material is one "
+                 "primitive; through cmat it is six.  The printed collar now "
+                 "carries each button's colour, so a non-emissive cap still "
+                 "reads as that colour even where the dome is one pixel.",
     "gloss_dark": "roughness 0.26, metallic 0.0, NO emissive.  For the black "
                   "ball tops.  This is the one that fixes the flagged "
                   "blowout: at a2hw's 0.42 a ball top gathers the ceiling "
@@ -2418,6 +2576,57 @@ _FN = {
 # takes the flanks down hardest, because every one of my four machines stands
 # shoulder to shoulder in its run (east gaps 0.00-0.16 ft) and its flanks are
 # almost never seen.
+# ---------------------------------------------------------------- PAYLOAD
+# ROUND 7'S BILL, MEASURED, AND HOW TO PAY IT WITHOUT DELETING ANYTHING.
+#
+# Four near-empty tinted planes became four printed panels, and that costs
+# bytes.  All three packed atlases, `levers_g1_r7.py`, shipping settings:
+#
+#     round 6 art                                       139.1 KB
+#     round 7 art, QUANT 20                             143.9 KB   (+4.8)
+#
+# Per deck, isolated by swapping ONE panel back to round 6 (`bytes_g1_r7.py`,
+# compressed panel bytes): Marvel Super Heroes +1.28, NFL Blitz +0.66, Mortal
+# Kombat +0.41, Marvel vs Capcom +0.18.  The atlas delta is larger than the
+# sum because the new panels break the runs of identical rows that zlib was
+# matching across the sheet.
+#
+# ROOM-BRIEF forbids paying for this by deleting content, so here is the
+# measured lever table instead (`levers_g1_r7.py`, all three atlases):
+#
+#     SIZE[side]    42 -> 36                            -1.36 KB
+#     SIZE[front]   92 -> 88                            -2.58 KB
+#     SIZE[marquee] 102 -> 98                           -2.08 KB
+#     SIZE[screen]  28 -> 24                            -0.17 KB
+#     SIZE[bezel]   32 -> 28                            -0.14 KB
+#     SIZE[riser]   58 -> 50                             0.00 KB  (not packed)
+#     QUANT         20 -> 22                            -6.79 KB
+#
+# THE RECOMMENDATION IS QUANT 22, ALONE.  It pays for round 7 outright and
+# leaves the room BETTER off than round 6:
+#
+#     round 7 art, QUANT 22                             137.1 KB   (-2.0)
+#
+# i.e. room 2 goes from 1535.6 KB against a 1536.0 cap to about 1533.6, and
+# the ~2.4 KB of headroom that opens up is what the engine agent's larger
+# button geometry needs.  Nothing is cut and no other agent's panel loses a
+# texel.
+#
+# WHY 22 IS SAFE, AND WHERE MY EVIDENCE STOPS.  Round 4 measured 24 as where
+# banding begins on a marquee and refused it; 22 was never tested, and "24 is
+# bad" is not a measurement of 22.  `quant22_g1_r7.py` renders three marquees
+# and all four decks at 20 and at 22 and writes them side by side with the
+# 10x-amplified difference to `_r7/quant22.png`.  The worst per-channel change
+# is 20 -- exactly one step -- and the difference image is scattered dither,
+# NOT contour bands: Mortal Kombat's marquee glow ring and NFL Blitz's chrome
+# gradient, the two smoothest gradients I own, show no ring or terrace at
+# either setting.  BUT I only tested MY OWN seven panels.  The two brightest
+# marquees in the room are art_g0's -- Pac-Man's white ground and NBA Jam's
+# cream band -- and a light flat ground is exactly where a step shows first.
+# Run the same script over those two before taking this lever.  If they band,
+# the fallback that costs no artwork is side 36 + front 88 + screen 24 +
+# bezel 28 = -4.26 KB, which covers +4.8 to within half a kilobyte.
+#
 _PANEL_S = {"marquee": 88, "front": 92, "side": 50, "deck": 44, "bezel": 42}
 
 

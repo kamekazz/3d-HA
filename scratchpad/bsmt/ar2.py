@@ -426,6 +426,27 @@ STYLES = ("straight", "slope", "step", "riser")
 # round and an octagon costs a third more for nothing.
 HW = Material("a2hw", "#ffffff", roughness=0.42)      # vertex-coloured plastic
 HWM = Material("a2hwm", "#ffffff", roughness=0.26, metallic=0.55)   # chrome
+# ROUND 7 -- THE a2hw ROUGHNESS DEFECT, AND WHY IT IS A SECOND MATERIAL AND NOT
+# A NEW NUMBER ON THE OLD ONE.
+#
+# The round-6 integrator flagged a2hw's 0.42 as blowing out every up-facing cap
+# in the room, and all four art modules asked for it to move -- but they asked
+# in two directions.  art_g0's BUTTON_MAT_REQUEST wants 0.70-0.72, art_g2's
+# HW_HINTS wants 0.55-0.62, and art_g1's CONTROL_FINISH wants 0.26-0.28 because
+# its four machines' ball tops are BLACK and it wants them glossy.  They are
+# not really disagreeing: a rough value protects a pale up-facing crown from
+# the ceiling cans, and a smooth one gives a dark crown the one small highlight
+# the photograph shows.  Both are true, and the surface they are true about is
+# the same surface.
+#
+# a2hw is NOT the button material -- it also carries coin-door plates, gun
+# bodies, holster channels, the Star Wars yoke and Ridge Racer's wheel, all of
+# which are vertical or near-vertical and which round 6 rendered acceptably at
+# 0.42.  Moving 0.42 would have changed all of those to fix the caps.  So the
+# up-facing hardware gets its own material and the value is METERED, not
+# chosen: see the round-7 report's roughness sweep.  The cost is exactly one
+# extra glTF primitive per cabinet GLB.
+BTN = Material("a2btn", "#ffffff", roughness=0.70)   # crowns + ball tops, UP
 _MATS = {}
 
 
@@ -581,6 +602,136 @@ _GUN_GRIP = (10, 11, 12, 0)
 _GUN_PITCH = math.radians(12.0)   # nose-up, resting in the holster
 
 
+# ---------------------------------------------------------------------------
+# ROUND 7 -- A BUTTON IS AN OBJECT, NOT A DECAL.
+#
+# Four critics rejected round 6 with one sentence between them: "the
+# pushbuttons are painted into the control-deck texture rather than modelled:
+# flat 2-3 px coloured lozenges with no dome, no rim shadow and no specular".
+# They were describing real geometry, and they were still right about it.
+# `art_g1.button_cap` -- which rounds 5 and 6 used for every cap in the room --
+# is a DOMED FAN AND NOTHING ELSE: an apex vertex, one ring at y = h*(1-dome),
+# and `seg` triangles between them.  It has no side wall at all, so it does not
+# touch the deck: what stands on a machine here is a shallow disc floating
+# 0.015 ft above the artwork with open air under its rim.  At NBA Jam's numbers
+# the whole cap rises 0.0126 ft across a 0.055 ft radius, i.e. 13 degrees off
+# flat, and there is no silhouette anywhere to break it.  That is a lozenge.
+#
+# `btn_geo` builds the object the photograph shows -- docs/photos-jpg/Arcade
+# Room v4 6.jpg px (460,360)-(600,440) at 10x is the closest any frame gets to
+# a button in this room and it resolves Marvel Super Heroes' seven caps
+# completely: a coloured translucent CROWN standing proud on a FLANGE that
+# flares down to the panel, each one sitting in its own dark seat ring, each
+# one carrying one small specular.  Three parts of that are geometry:
+#
+#   ring 0   y = 0,          radius r        the flange where it meets the deck
+#   ring 1   y = h - rise,   radius cap_r    the shoulder
+#   apex     y = h                           the crown
+#
+# so the wall between rings 0 and 1 is a truncated cone that faces sideways and
+# DOWN-AND-OUT, and in a room with one overhead sun it renders darker than both
+# the deck it stands on and the cap it carries.  That is the rim the critics
+# asked for and it is not painted: it moves with the camera, it is on the far
+# side at the far end of a run, and it disappears from a plan view -- the test
+# ROOM-BRIEF sets for anything that looks like baked light.
+#
+# COST, MEASURED, because the room has single-digit KB of headroom.  One part,
+# smooth, seg 6: 13 vertices / 18 triangles against `button_cap`'s 7 / 6.
+# Over the room's 152 caps that is +5.7 KB of geometry.  It is paid for twice
+# over by dropping the emissive from every cap (decks5._btn, -20.8 KB across
+# the three cabinet GLBs -- 26 fewer glTF primitives), which is the same change
+# art_g1's CONTROL_FINISH asked for on rendering grounds.  Smooth is what makes
+# it affordable: the round-6 gun agent measured a smooth multi-part extrusion
+# CHEAPER than the flat boxes it replaced (-192 bytes for +40 triangles),
+# because a flat-shaded face duplicates its vertices to carry its normal.  A
+# button gets the same treatment for the same reason -- and a moulded plastic
+# crown really does round over at the shoulder, so the smooth normal is also
+# the right one.
+def btn_geo(r, cap_r, h, rise, seg=6):
+    """One arcade pushbutton as (verts, tris, smooth).  Origin on the deck."""
+    cap_r = max(0.004, min(cap_r, r * 0.96))
+    rise = max(0.002, min(rise, h * 0.80))
+    hw = max(0.002, h - rise)
+    v = []
+    for (rr, yy) in ((r, 0.0), (cap_r, hw)):
+        for i in range(seg):
+            a = 2.0 * math.pi * (i + 0.5) / seg
+            v.append((math.cos(a) * rr, yy, math.sin(a) * rr))
+    v.append((0.0, h, 0.0))
+    ap = 2 * seg
+    t = []
+    for i in range(seg):
+        j = (i + 1) % seg
+        t.append((i, j, j + seg))
+        t.append((i, j + seg, i + seg))
+        t.append((i + seg, j + seg, ap))
+    return v, t, True
+
+
+# The one authored albedo this round moves, and it is metered, not taste.
+# A near-white sphere facing straight up is the brightest thing a control deck
+# can carry in this room: at #f2f2ec Golden Tee's trackball rendered a flat
+# clipped cap with no shading across its whole crown.  ROOM-BRIEF's rule for
+# this is explicit -- a piece and a wall do not render alike at the same
+# albedo, and an up-facing surface collects about twice what a vertical one
+# does -- so the fix is to author the ball where it RENDERS at the photograph's
+# value, not where it prints.  `_TB_CEIL` is the highest albedo that still
+# leaves the crown a gradient rather than a plateau; anything paler is only
+# darker in the file and identical in the frame.
+_TB_CEIL = 0.78
+
+# ...and the same argument at the other end of the scale.  ROUND 7, METERED.
+# docs/photos-jpg/Arcade Room v4 6.jpg px (460,360)-(600,440) at 10x resolves
+# Marvel Super Heroes' deck completely.  Metered on that crop: the pale panel
+# 185.4, a white cap 223.9, a red cap 91.7, a blue cap 110.2 -- and the BLACK
+# BALL TOP 48.8, i.e. 0.26 of its own panel.  Round 6 rendered that panel at
+# 177.2, within 5% of the photograph, and its black ball tops at 5.8 out of
+# 255.  Eight times too dark, on the largest piece of hardware any of these
+# machines carries.
+#
+# It is not a roughness problem and I measured that rather than assuming it:
+# sweeping a2btn 0.42 / 0.62 / 0.72 moves the white cap 234.3 / 234.3 / 234.3
+# and the blue 121.9 / 120.4 / 118.2 -- the coloured caps do not care at all --
+# and moves the black ball only 3.7 / 5.8 / 7.4.  There is no roughness that
+# reaches 48.8 from an authored 22/23/27.  It is the renderer: one sun, no
+# bounce, and a sphere whose whole lower half faces a floor that returns
+# nothing.  The photograph's 48.8 is mostly sheen off a curved black plastic
+# surface, and this scene has no source to put there.
+#
+# So dark HARDWARE is lifted to a metered floor, exactly the way a2kit already
+# lifts printed artwork with ART_D / ART_DK / ART_DM for the same reason, and
+# it is declared here and in rooms/2.json rather than quietly folded into an
+# art module's authored hex.  It applies ONLY to vertex-coloured parts on the
+# BTN material -- crowns, ball tops, bat tops, the trackball -- never to the
+# carcase, the T-molding, the coin doors or the guns, which meter correctly.
+# `_HW_FLOOR` is solved from the render, see the report's table.
+_HW_FLOOR = 44.0
+
+
+def _hw(c):
+    """Lift a hardware colour to the metered floor, hue preserved."""
+    if _HW_FLOOR <= 0.0:
+        return c
+    h = c.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    m = max(r, g, b)
+    if m >= _HW_FLOOR or m == 0:
+        return c
+    k = _HW_FLOOR / float(m)
+    return "#%02x%02x%02x" % (min(255, int(r * k)), min(255, int(g * k)),
+                              min(255, int(b * k)))
+
+
+def _tb_col(c):
+    h = c.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    m = max(r, g, b)
+    if m <= _TB_CEIL * 255.0:
+        return c
+    k = _TB_CEIL * 255.0 / m
+    return "#%02x%02x%02x" % (int(r * k), int(g * k), int(b * k))
+
+
 def controls(sub, slug, bw, ft, fd, dy):
     """Build one machine's control deck from its `decks5` spec.
 
@@ -603,16 +754,23 @@ def controls(sub, slug, bw, ft, fd, dy):
         return zb + v * (ze - zb)
 
     for b in spec["buttons"]:
-        dome = 0.45 if b["profile"] == "convex" else 0.10
-        v, t, sm = button_cap(b["r"], b["h"], 6, dome)
+        rise = b["rise"] if b["profile"] == "convex" else b["h"] * 0.14
+        # seg 6 on every cap.  seg 5 was measured first and saves 3.9 KB over
+        # the room's 152 buttons, but a pentagon reads as a pentagon in the
+        # dollhouse quadrant and on the two close deck frames, and the 3.9 KB
+        # is not needed -- the uint16 index change below pays for far more.
+        seg = 6
+        v, t, sm = btn_geo(b["r"], b["cap_r"], b["h"], rise, seg)
         pt = Part(v, t, smooth=sm)
         at = (X(b["t"]), y, Z(b["v"]))
         if b["emis"]:
             # the ONLY emissive buttons in the room: art_g3 flagged Ridge
-            # Racer's two big white ones as lit, and nothing else is.
+            # Racer's two big white ones as lit, and nothing else is.  Every
+            # other cap in the room lost its emissive this round -- see
+            # decks5._btn.
             sub.add(pt, cmat(b["col"], 0.34, 0.0, b["col"], 0.75), at=at)
         else:
-            sub.add(cpart(pt, b["col"]), HW, at=at)
+            sub.add(cpart(pt, _hw(b["col"])), BTN, at=at)
 
     for s in spec["sticks"]:
         x, z = X(s["t"]), Z(s["v"])
@@ -630,21 +788,32 @@ def controls(sub, slug, bw, ft, fd, dy):
         if top == "ball":
             r = s["top_r"]
             v, t, sm = ball_top(r, seg=6, rings=3)
-            sub.add(cpart(Part(v, t, smooth=sm), s["top_col"]), HW,
+            sub.add(cpart(Part(v, t, smooth=sm), _hw(s["top_col"])), BTN,
                     at=(x, y0 + s["shaft_h"] - r * 0.4, z))
         elif top == "bat":
             sub.add(cpart(cylinder(s["top_r"], s["top_h"], 6,
-                                   r_top=s["top_r"] * 0.8), s["top_col"]),
-                    HW, at=(x, y0 + s["shaft_h"], z))
+                                   r_top=s["top_r"] * 0.8), _hw(s["top_col"])),
+                    BTN, at=(x, y0 + s["shaft_h"], z))
 
     tb = spec["trackball"]
     if tb:
         x, z, r = X(tb["t"]), Z(tb["v"]), tb["r"]
         sub.add(cpart(cylinder(r * 1.28, 0.018, 10), tb["bezel"]), HW,
                 at=(x, y, z))
-        v, t, sm = ball_top(r, seg=8, rings=3)
-        # seated so exactly the upper hemisphere stands proud of the bezel
-        sub.add(cpart(Part(v, t, smooth=sm), tb["col"]), HW,
+        v, t, sm = ball_top(r, seg=8, rings=4)
+        # ROUND 7.  Seated so exactly the upper hemisphere stands proud of the
+        # bezel, as before -- what changed is the material and one ring.
+        # Golden Tee's ball is the object the round-6 integrator flagged as
+        # "a bright white dome": it is 3 in across, it faces straight up, it
+        # was authored #f2f2ec (albedo 242) and it ran through a2hw at
+        # roughness 0.42, so it returned both the sun and the ceiling cans and
+        # clipped.  It is NOT white in the photograph -- `roster/W_gt_deck_nn`
+        # shows a pale ball on a bright green fairway, lighter than the deck
+        # but well inside it.  It now runs through BTN like every other
+        # up-facing cap and its albedo is metered against the fairway rather
+        # than authored at paper white (see `_TB_CEIL`).  rings 3 -> 4 costs
+        # 8 verts and is what stops a 40 px dome faceting.
+        sub.add(cpart(Part(v, t, smooth=sm), _tb_col(tb["col"])), BTN,
                 at=(x, y + 0.018 - r, z))
 
     sp = spec["spinner"]
@@ -785,6 +954,136 @@ def coindoors(sub, slug, bw, dy, plinth, zf):
                   c["y"] + 0.02, zf + pr + 0.004)
 
 
+# ---------------------------------------------------------------------------
+# ROUND 8 -- T-MOLDING.  A cabinet's colour is a BEAD, not a paint job.
+#
+# `sweep()` gives the machine its silhouette as one swept side profile: the two
+# flanks carry the printed side art and the perimeter comes out as a band of
+# quads in the BODY material.  Rounds 4-7 handed that band the machine's accent
+# hue, so the whole carcase -- top, back, head front, apron, deck skirt, and the
+# strip of front face either side of the printed panel -- was flood-filled
+# green, maroon or gold.  Two round-7 critics named it and the photographs are
+# unambiguous (see `a2kit.TMOLD`'s note and the crop it cites): the body is
+# black and the colour is a raised plastic bead ~3/4 in wide running the seam
+# between the flank and the perimeter face.
+#
+# WHERE IT RUNS.  The seam IS the profile outline at x0 and at x1, so one strip
+# per flank gets all three runs the commission asks for at once -- the perimeter
+# of the front face, the deck's front edge and the side panel's edge -- because
+# the profile passes through all of them.  Two edges are dropped: the floor edge
+# (prof[0] -> prof[1]) and the back edge (prof[-1] -> prof[0]).  Neither is ever
+# in frame -- every machine stands against a wall -- and together they are ~20%
+# of the strip.
+#
+# COST, and why it is a SMOOTH THREE-POINT SECTION and not boxes.  Round 6
+# measured that a smooth multi-part extrusion is CHEAPER than flat-shaded boxes,
+# because `glb._weld` duplicates a vertex per face when a part is flat and
+# shares them when it is smooth (~28 B/vert + 6 B/tri smooth against ~84 B/tri
+# flat).  The section here is three points -- a landing 0.006 ft off the flank,
+# a crown 0.030 ft proud, a landing 0.006 ft off the perimeter face -- swept as
+# ONE smooth strip per flank, so 3 verts and 4 triangles per profile edge with
+# every vertex shared along the run.  Smooth is also what makes it read: the
+# crown's averaged normal turns across the section, so the bead carries a
+# specular LINE rather than two flat facets, which is exactly what the
+# photograph shows (v4 7: the Turtles bead peaks (176,222,177) against a body
+# metering 41-56).
+#
+# The bead is vertex-coloured into ONE material for the whole run, so it costs
+# no glTF primitive at all -- `a2tm` is smoother than the body (0.30 against
+# 0.55) because it is glossy plastic against painted melamine, and it is its own
+# material rather than a2hw's 0.42 for that reason.
+#
+# NEITHER LANDING IS COPLANAR WITH THE SURFACE IT SITS ON.  ROOM-BRIEF records
+# z-fighting twice as a class of bug in this project: the inner landing stands
+# 0.006 ft off the flank plane and 0.006 ft off the perimeter face, and the
+# strip is proud of both everywhere in between, so no two surfaces share a
+# depth anywhere on the machine.
+BEAD_A = (-0.006, 0.006)     # (dx outward past the flank, height off the face)
+BEAD_B = (0.016, 0.030)      # the crown
+BEAD_C = (0.056, 0.006)      # the landing on the perimeter face
+TM = Material("a2tm", "#ffffff", roughness=0.30)     # vertex-coloured plastic
+
+
+def _poly_ccw(p):
+    s = 0.0
+    for i in range(len(p)):
+        a, b = p[i], p[(i + 1) % len(p)]
+        s += a[0] * b[1] - b[0] * a[1]
+    return s > 0.0
+
+
+def tmold(sub, prof, x0, x1, col):
+    """The T-molding bead down both seams of one swept cabinet body.
+
+    `prof` is the same closed (z, y) profile `sweep()` was handed -- already
+    plinth-shifted -- so the bead lands exactly on the silhouette.
+    """
+    n = len(prof)
+    if n < 4:
+        return
+    ccw = _poly_ccw(prof)
+    en = []                                   # unit OUTWARD normal per edge
+    for i in range(n):
+        az, ay = prof[i]
+        bz, by = prof[(i + 1) % n]
+        dz, dy = bz - az, by - ay
+        L = math.hypot(dz, dy) or 1.0
+        en.append((dy / L, -dz / L) if ccw else (-dy / L, dz / L))
+    lo, hi = 1, n - 1                         # points; edges lo .. hi-1
+    ring = []
+    for k in range(lo, hi + 1):
+        e0 = en[k - 1] if k > lo else en[lo]
+        e1 = en[k] if k < hi else en[hi - 1]
+        mz, my = e0[0] + e1[0], e0[1] + e1[1]
+        L = math.hypot(mz, my) or 1.0
+        mz, my = mz / L, my / L
+        c = max(0.40, mz * e1[0] + my * e1[1])       # mitre, clamped
+        ring.append((prof[k], (mz / c, my / c)))
+    # `sgn` points INWARD along x: +1 at the x0 seam, -1 at the x1 seam.  Only
+    # BEAD_A's dx is negative, so only the outer lip of the bead stands proud of
+    # the flank and the crown and the landing sit on the machine.
+    for (xe, sgn) in ((x0, 1.0), (x1, -1.0)):
+        verts, cols = [], []
+        for ((pz, py), (nz, ny)) in ring:
+            for (dx, off) in (BEAD_A, BEAD_B, BEAD_C):
+                verts.append((xe + sgn * dx, py + ny * off, pz + nz * off))
+        tris = []
+        for j in range(len(ring) - 1):
+            a, b = j * 3, (j + 1) * 3
+            for t in (0, 1):
+                q0, q1 = a + t, b + t
+                if sgn > 0:
+                    tris.append((q0, q1, q1 + 1))
+                    tris.append((q0, q1 + 1, q0 + 1))
+                else:
+                    tris.append((q0, q1 + 1, q1))
+                    tris.append((q0, q0 + 1, q1 + 1))
+        sub.add(cpart(Part(verts, tris, smooth=True), col), TM)
+
+
+def tmold_deck(sub, x0, x1, fd, dy, col):
+    """The bead across the control deck's LEADING EDGE, x0 to x1.
+
+    `tmold()` runs the two flank seams, which gives the deck's edge its bead
+    only at the two ends.  The photographs put one across the full width as
+    well -- the roster says so for the machine it can read best ("Green
+    T-molding round the deck edge", tmnt) and `ref/v47_right.png` shows the
+    green strip running the whole leading edge of that deck.  Same three-point
+    section, swept along x instead of along the profile: 6 verts, 4 triangles,
+    ~192 bytes a machine.
+
+    C lands at (fd-0.030, dy+0.016), which clears the deck box's own top face
+    (y dy+0.010, z <= fd-0.04) and the printed deck quad (y dy+0.014, z <=
+    fd-0.06); A stands 0.006 ft proud of the deck's front face at z = fd.
+    Nothing here is coplanar with anything.
+    """
+    sec = [(fd + 0.006, dy - 0.050), (fd + 0.021, dy + 0.021),
+           (fd - 0.030, dy + 0.016)]
+    verts = [(x, y, z) for x in (x0, x1) for (z, y) in sec]
+    tris = [(0, 3, 4), (0, 4, 1), (1, 4, 5), (1, 5, 2)]
+    sub.add(cpart(Part(verts, tris, smooth=True), col), TM)
+
+
 def _profile(bd, top, style, dy, mqh, seed=0):
     """The (z, y) side profile of one machine, CCW, front at +z."""
     hd = bd / 2.0
@@ -894,6 +1193,8 @@ def upright(m, cx, cz, rot, art, slug, bw=2.20, bd=2.55, top=6.10, seed=1,
         dy += plinth
     sweep(sub, prof, x0, x1, art.ART, art.carcase(slug),
           art.uv(slug + ".side"))
+    tmold(sub, prof, x0, x1, art.bead(slug))
+    tmold_deck(sub, x0, x1, fd, dy, art.bead(slug))
 
     # printed lower front panel (its own tile, so the flanks and the face are
     # not the same graphic).  ROUND 5: the rect is per-machine -- art_g2's four
@@ -971,11 +1272,21 @@ def upright(m, cx, cz, rot, art, slug, bw=2.20, bd=2.55, top=6.10, seed=1,
         [(x0 + 0.06, mq_lo, mz), (x1 - 0.06, mq_lo, mz),
          (x1 - 0.06, mq_hi, mz), (x0 + 0.06, mq_hi, mz)],
         art.uv(slug + ".marquee"))
-    # pale cap: end-on from the dollhouse quadrant an all-black run merges into
-    # one mass, and this line breaks it into machines
-    bx(sub, Material("a2cap", "#787c82", roughness=0.55),
-       x0 - 0.012, x1 + 0.012, top + plinth - 0.07, top + plinth,
-       -bd / 2 - 0.012, ft - 0.30)
+    # ROUND 8 -- THE PALE CAP IS GONE, AND IT IS NOT A SAVING, IT IS A
+    # CORRECTION.  Round 3 ran a #787c82 strip across every machine's top
+    # because "end-on from the dollhouse quadrant an all-black run merges into
+    # one mass, and this line breaks it into machines".  Two photographs say
+    # there is no such strip: `Arcade Room v4 7.jpg` px (40,105)-(200,180) at 7x
+    # (crop shots/_ph_tops.png) shows NFL Blitz's and Golden Tee's heads as flat
+    # black to the top edge, and `Arcade Room v3 4.jpg` px (100,520)-(520,700)
+    # at 3x (crop shots/_ph_v34_tops.png) shows the whole east run as five black
+    # carcases each OUTLINED by its own bright T-molding bead -- gold on Marvel
+    # vs Capcom, maroon on MK and NBA Jam, green on the Turtles -- and nothing
+    # pale anywhere on a cabinet top.  The bead `tmold()` now runs is the real
+    # feature that does the job this strip was standing in for, and it does it
+    # from every camera in the room rather than only from above.  (It is also
+    # 14.6 KB across the three GLBs, which is most of what the bead costs; that
+    # is a consequence, not the reason -- see the round-8 report.)
 
     ca, sa = math.cos(R(rot)), math.sin(R(rot))
     for part, mm in sub._parts:

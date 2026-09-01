@@ -40,13 +40,47 @@ printed socket and the button standing in it cannot drift apart.
 
 Everything else is FEET.
 
-ONE SPEC IS PARTLY UNUSABLE AND IT IS SAID OUT LOUD RATHER THAN DROPPED:
-`art_g2.DECKS["legends-ultimate"]` carries `inferred: True` and its own note
-saying neither photograph resolves a single control on that machine, so the
-layout is the manufacturer's standard rather than a reading.  It is built --
-a bare deck reads as unbuilt, which is worse -- but `INFERRED` names it so a
-critic can see which one deck in the room is not evidence.  Nothing else is
-dropped; see `SKIPPED` for the two items that are, and why.
+ROUND 7 -- WHAT MOVED, AND WHAT IS STILL NOT READ.
+
+The three art modules re-read their machines this round and their tables grew
+new keys.  Round 6 read NONE of them, which is half of why it was rejected: a
+spec that is quietly ignored is exactly how round 5 lost a round.  Consumed
+here now, module by module, so a critic can check the wiring rather than take
+it on trust:
+
+  art_g0   `cap_r` and `dome_rise` on every button -- the MEASURED cap radius
+           at the shoulder and the crown's rise above it, solved on v4 7 at
+           14x with the T-molding as the ruler.  Round 6 threw both away and
+           drew a fan of h*(1-0.45).  Also `pad_r`, which is PRINTED and is
+           correctly still not built.
+  art_g1   `emissive` (False on all 58 caps -- see `_btn`), and `profile`.
+           `base_r` stays unbuilt, as its schema says.  `finish` and
+           CONTROL_FINISH are prose for the engine and are answered in
+           ar2.BTN, not here.
+  art_g2   already normalised in round 5 and unchanged in shape; its `r_ft` /
+           `h_ft` / `dust_*` and its `round_flat` profile all still arrive.
+           `inferred` now flows through per machine rather than from the
+           hard-coded tuple below, because round 7 moved it.
+  art_g3   `emissive` per button, which is now the ONLY route to an emissive
+           cap in this room and carries exactly the two Ridge Racer whites
+           art_g3 flagged as lit.
+
+NOTHING IS DROPPED SILENTLY.  Two specs are built but are NOT photograph
+readings, and both say so themselves:
+
+  street-fighter-2-champion-edition   `art_g2 inferred: True` -- "the controls
+      do not resolve in any frame and this layout is declared as class
+      inference".  ROUND 7 MOVED THIS: round 5's inferred machine was
+      legends-ultimate, and art_g2 promoted it to READ this round off
+      `Arcade Room v4 3.jpg` at 7-10x (red ball tops, gold button rings, a
+      dark trackball, no spinner).  `INFERRED` below is now derived from the
+      modules, not hard-coded, so it cannot go stale again.
+  marvel-super-heroes   art_g1's own self-assessment: the Capcom 2x3 is a
+      "DECLARED CHOICE, not a reading -- v4 6 resolves that deck's artwork
+      completely and its caps not at all".  Its 14 caps are built because a
+      bare deck reads as unbuilt, which is worse.
+
+See `SKIPPED` for the two items that genuinely are not built, and why.
 """
 
 import math
@@ -81,7 +115,20 @@ SKIPPED = {
         "fallback is unused.",
 }
 
-INFERRED = ("legends-ultimate",)
+def _inferred():
+    """Which machines' decks are class inference rather than a reading.
+
+    Derived from the modules every run.  Round 5 hard-coded this as
+    ("legends-ultimate",) and round 7 moved it -- art_g2 promoted Legends
+    Ultimate to READ and declared Champion Edition inferred instead.
+    """
+    out = [s for s, d in art_g2.DECKS.items() if d.get("inferred")]
+    # art_g1 does not carry the flag; its own report declares this one.
+    out.append("marvel-super-heroes")
+    return tuple(sorted(out))
+
+
+INFERRED = _inferred()
 
 
 # --------------------------------------------------------------- utilities
@@ -91,14 +138,43 @@ def _lum(c):
             + 0.114 * int(c[4:6], 16))
 
 
-def _btn(t, v, r, h, col, profile="convex", emis=None):
+def _btn(t, v, r, h, col, profile="convex", emis=None,
+         cap_r=None, rise=None):
+    """One normalised button.
+
+    ROUND 7 CHANGED TWO THINGS HERE, and both are the reason round 6 was
+    rejected 0-4 for "flat 2-3 px coloured lozenges with no dome, no rim
+    shadow and no specular".
+
+    1. `emis` NOW DEFAULTS TO FALSE.  Round 5 wrote the rule above -- emissive
+       on anything under luma 190 -- and it put 42 of art_g1's 58 caps, and
+       most of art_g0's and art_g2's, through `ar2.cmat(col, .34, 0, col, .75)`.
+       An emissive surface takes no highlight and no shading: whatever geometry
+       stands under it renders as a flat disc of one hue.  art_g1's
+       CONTROL_FINISH asks for exactly this change in writing
+       ("buttons must be emissive:False ... ar2 today sends every coloured cap
+       through cmat(col, 0.34, 0.0, col, 0.75) -- emissive at 0.75, which is
+       why a cap renders as a flat disc of pure hue no matter what geometry is
+       under it"), art_g0's BUTTON_MAT_REQUEST bans emissive on its three
+       near-white colours, and art_g2's HW_HINTS asks for a roughness change
+       that only means anything on a non-emissive surface.  Three of the four
+       modules asked; the fourth (art_g3) sets `emissive` explicitly per button
+       and its two lit Ridge Racer caps still come through True.
+    2. `cap_r` and `rise` are carried.  art_g0 measured them
+       (`cap_r` = the cap radius at the shoulder, `dome_rise` = the cap's rise
+       above it); the other three did not, so they are derived below at the
+       same ratios art_g0 measured -- cap_r/r 0.74 and rise/h 0.41 -- rather
+       than invented per module.
+    """
     if emis is None:
-        # art_g0: keep the emissive on the COLOURED buttons, but a white one
-        # must not be emissive or it blooms.  Luma 190 splits the room's
-        # palette exactly: every white/silver cap is 210+, every colour 175-.
-        emis = _lum(col) < 190.0
+        emis = False
+    if cap_r is None:
+        cap_r = r * 0.74
+    if rise is None:
+        rise = h * 0.41
     return {"t": t, "v": v, "r": r, "h": h, "col": col,
-            "profile": profile, "emis": emis}
+            "profile": profile, "emis": emis,
+            "cap_r": min(cap_r, r * 0.96), "rise": min(rise, h * 0.75)}
 
 
 def _stick(t, v, shaft_r, shaft_h, shaft_col, top, top_r, top_h, top_col,
@@ -127,7 +203,9 @@ def _from_g0(slug, d):
             s["top_color"]))
     for b in d.get("buttons", []):
         out["buttons"].append(_btn(b["u"] + 0.5, b["v"], b["r"], b["h"],
-                                   b["color"], b.get("profile", "convex")))
+                                   b["color"], b.get("profile", "convex"),
+                                   cap_r=b.get("cap_r"),
+                                   rise=b.get("dome_rise")))
     tb = d.get("trackball")
     if tb:
         out["trackball"] = {"t": tb["u"] + 0.5, "v": tb["v"], "r": tb["r"],
@@ -145,8 +223,11 @@ def _from_g1(slug, d):
             s.get("top", "ball"), s["top_r"], s.get("top_h", 0.11),
             s["top_col"]))
     for b in d.get("buttons", []):
+        # art_g1 sets `emissive` on every cap and every one of them is False;
+        # round 6 never read the key.  `profile` is new this round too.
         out["buttons"].append(_btn(b["u"] + 0.5, b["v"], b["r"], b["h"],
-                                   b["col"]))
+                                   b["col"], b.get("profile", "convex"),
+                                   emis=bool(b.get("emissive", False))))
     return out
 
 
@@ -349,7 +430,20 @@ def front_rect(slug, bw, dy, plinth):
         ins = r.get("inset_ft", 0.08)
         return (-bw / 2.0 + ins, bw / 2.0 - ins,
                 plinth + r["y0_ft"], plinth + r["y1_ft"])
-    return (-bw / 2.0 + 0.08, bw / 2.0 - 0.08, plinth + 0.16, dy - 0.62)
+    # ROUND 8 -- FULL BLEED INTO THE T-MOLDING.  Round 7's default held the
+    # printed front 0.08 ft inside each vertical edge and 0.16 ft off the floor,
+    # and both art agents deleted their own painted edge trim this round on the
+    # understanding that a real bead would take that strip.  `ar2.tmold()`
+    # occupies x0-0.006 .. x0+0.056 of the front face, so a 0.045 inset puts the
+    # last 0.011 ft of vinyl UNDER the bead -- which is what full bleed into a
+    # T-molding means -- instead of leaving a bare sliver of carcase beside it.
+    # Vertically the panel now runs from 0.05 (a kick reveal, not a margin) to
+    # 0.02 ft short of where the flat front face itself ends and the sloped
+    # apron begins, closing the widest unprinted strip on every machine.  The
+    # panel ASPECTS follow automatically -- `ar2._aspects()` computes them from
+    # this rect and hands them to atlas4 -- so every module's art re-renders to
+    # the new shape rather than stretching into it.
+    return (-bw / 2.0 + 0.045, bw / 2.0 - 0.045, plinth + 0.05, dy - 0.57)
 
 
 # ONE machine's printed front does not sit on the cabinet's own front plane.

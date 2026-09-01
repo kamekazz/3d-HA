@@ -1,0 +1,20 @@
+[
+ {
+  "name": "Arcade Cabinets East",
+  "kb": 201.78515625,
+  "tris": 2994,
+  "prims": 31
+ },
+ {
+  "name": "Arcade Cabinets South",
+  "kb": 214.85546875,
+  "tris": 3314,
+  "prims": 44
+ },
+ {
+  "name": "Arcade Cabinets North",
+  "kb": 181.265625,
+  "tris": 2882,
+  "prims": 38
+ }
+]

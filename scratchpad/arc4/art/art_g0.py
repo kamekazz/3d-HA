@@ -686,6 +686,28 @@ def _wear(cv, u0, v0, u1, v1, amp, seed, n=4, vert=True):
                         u1, c - w * 0.5 + w * (t + 0.2), col, aa)
 
 
+def _microprint(cv, u0, u1, v, h, col, seed, words=5, a=0.85):
+    """ROUND 8.  A line of ILLEGIBLE small print, drawn as ragged bars.
+
+    Added because three of this module's front panels carried words the
+    photographs do not resolve -- and in two cases carried the GAME TITLE a
+    second time, which is what round 7 was failed for.  Where the photograph
+    shows type but the type cannot be read, this is the honest mark to make:
+    it reads as printing at panel scale and claims nothing at 20x.
+    """
+    r = _Rnd(seed)
+    u = u0
+    j = 0
+    while u < u1 and j < 40:
+        w = (u1 - u0) / float(words) * (0.35 + 0.85 * r.u())
+        if u + w > u1:
+            w = u1 - u
+        if w > 0.002:
+            cv.rect(u, v, u + w, v + h, col, a)
+        u += w + (u1 - u0) * 0.035
+        j += 1
+
+
 def _burst(cv, cu, cvv, ru, spikes, col, w0=0.05, phase=0.16, ratio=0.62,
            a=1.0):
     """A spiked starburst -- NBA Jam's front and riser both carry one."""
@@ -1118,10 +1140,23 @@ def _nba_front(cv):
     cv.arc(bu + 0.084 * k, bv, 0.104, 0.096, math.pi * 0.54, math.pi * 1.46,
            0.012, "#1a1208", 0.9)
 
-    cv.text("NBA JAM", 0.500, 0.556, 0.082, _NBA_RED, 0.017, track=0.10,
-            aspect=0.70, slant=0.08, outline="#f0e6cc", ow=0.015)
-    cv.text("TOURNAMENT EDITION", 0.500, 0.626, 0.030, "#9aa0a8", 0.007,
-            track=0.30, aspect=0.60)
+    # ROUND 8 -- THE SECOND "NBA JAM" ON THIS PANEL IS DELETED.
+    # v3 4 px (325,640)-(410,860) at 10x (art/_r8_dump/ph_nba.png) is the only
+    # frame that resolves this kick panel, and what it carries, top to bottom,
+    # is: the white starburst with a small dark mark across it, the flaming-
+    # ball roundel under that, and then ONE wide line of fine pale print with
+    # a small blue device at its centre.  It does NOT carry a big red wordmark
+    # -- round 7 put one there, so the machine read "NBA JAM" twice on its own
+    # front.  The title now appears once on this machine below the marquee:
+    # on the pebble riser, where the photograph puts it.
+    _microprint(cv, 0.232, 0.452, 0.554, 0.016, "#b9bec6", 91, words=4,
+                a=0.72)
+    _microprint(cv, 0.548, 0.768, 0.554, 0.016, "#b9bec6", 93, words=4,
+                a=0.72)
+    cv.ell(0.500, 0.562, 0.030, 0.030, "#3f56a4", 0.95)
+    cv.ell(0.500, 0.562, 0.018, 0.018, "#ccd6f0", 0.95)
+    _microprint(cv, 0.300, 0.700, 0.622, 0.012, "#8e949c", 92, words=5,
+                a=0.70)
 
     _plate(cv, 0.040, 0.398, 0.290, 0.662, 0.020, "#151318", "#2e2126",
            "#08070a", 0.010)
@@ -1138,10 +1173,14 @@ def _nba_front(cv):
         cv.seg((uu, 0.714), (uu, 1.0), "#2a1c12", 0.016, 0.85)
     cv.rect(0.312, 0.720, 0.688, 1.0, "#54301c", 0.42)
     cv.seg((0.0, 0.720), (1.0, 0.720), "#d8a070", 0.006, 0.35)
-    _burst(cv, 0.500, 0.838, 0.150, 10, "#efe9de", 0.062, 0.16, 0.60, 0.95)
-    cv.ell(0.500, 0.838, 0.036, 0.036, "#8d5533")
-    cv.text("NBA JAM", 0.500, 0.955, 0.048, "#d8323e", 0.010, track=0.20,
+    # The riser: ph_nba.png puts the white starburst RIGHT of the riser's
+    # centre with the red wordmark running to its LEFT and passing behind it,
+    # not centred under it.  This is the machine's ONE title occurrence below
+    # the marquee.
+    _burst(cv, 0.610, 0.848, 0.148, 10, "#efe9de", 0.062, 0.16, 0.60, 0.95)
+    cv.text("NBA JAM", 0.470, 0.874, 0.062, "#d8323e", 0.012, track=0.14,
             aspect=0.70, slant=0.08)
+    cv.ell(0.610, 0.848, 0.034, 0.034, "#8d5533")
     _grain(cv, 8.0, 10)
 
 
@@ -1906,10 +1945,9 @@ def _pm_side(cv):
     cv.hgrad(0.0, 0.0, 1.0, 1.0, "#d9ae14", "#fbd634")       # back -> front
     cv.vgrad(0.0, 0.0, 1.0, 0.10, "#e0b418", _PM_YEL)
     _wear(cv, 0.0, 0.0, 1.0, 1.0, 11.0, 21, 3)
-    cv.rect(0.0, 0.0, 1.0, 0.020, _PM_MAR)                   # head trim
-    cv.hgrad(0.955, 0.0, 1.0, 1.0, _PM_YEL, "#8e2224", 0.85)  # front molding
-    cv.vgrad(0.0, 0.965, 1.0, 1.0, "#8e2224", "#4c1012")     # kick
-    cv.seg((0.0, 0.962), (1.0, 0.962), "#a8850e", 0.005, 0.6)
+    # ROUND 8: the maroon head trim, the front molding and the kick were
+    # painted into the tile's outer 2-4%.  They are the T-molding, and the
+    # T-molding is real geometry now, so the yellow runs full-bleed.
     # the coin box / service door the flank actually carries, low and back
     cv.rect(0.055, 0.760, 0.300, 0.930, "#d3aa16")
     cv.stroke([(0.055, 0.760), (0.300, 0.760), (0.300, 0.930), (0.055, 0.930)],
@@ -1926,13 +1964,18 @@ def _pm_front(cv):
     cv.fill(_PM_YEL)
     cv.vgrad(0.0, 0.0, 1.0, 1.0, "#f8d128", "#d8a814")
     _wear(cv, 0.0, 0.0, 1.0, 1.0, 10.0, 22, 3)
-    cv.hgrad(0.0, 0.0, 0.030, 1.0, "#7e1e20", _PM_YEL)       # molding returns
-    cv.hgrad(0.970, 0.0, 1.0, 1.0, _PM_YEL, "#7e1e20")
+    # ROUND 8: no painted molding returns.  The maroon T-molding is real
+    # geometry on the carcase now (outer ~0.06 ft of the face), so the yellow
+    # vinyl runs full-bleed into it exactly as it does on the machine.
 
-    # the small dark service plaque the photos show high and centred
-    cv.rect(0.398, 0.032, 0.602, 0.082, "#2a2118")
-    cv.text("PAC-MAN", 0.500, 0.057, 0.030, "#c9b98a", 0.006, track=0.24,
-            aspect=0.62)
+    # ROUND 8.  What sits high on this panel in v4 6 px (268,180)-(330,285) at
+    # 10x (art/_r8_dump/ph_pac6.png) is a SMALL PALE MARK printed straight on
+    # the yellow -- no dark plaque behind it, and no letters that resolve.
+    # Round 7 drew a black plaque with "PAC-MAN" reversed out of it, which is
+    # neither what the photograph shows nor a mark this cabinet needs: the
+    # marquee already names it, twice over would be the round-7 defect.
+    _microprint(cv, 0.398, 0.602, 0.046, 0.020, "#efe0a8", 121, words=3,
+                a=0.55)
 
     # ---- the coin door: TALL, NARROW, black, upper half, centred
     _plate(cv, 0.392, 0.118, 0.612, 0.560, 0.042, "#15161c", "#3a3c46",
@@ -1959,7 +2002,7 @@ def _pm_front(cv):
     _pm_elbow(cv, 0.710, 0.868, 0.945, 0.988, 0.036, _PM_BLUE, True)
     cv.rect(0.055, 0.868, 0.290, 0.904, "#3a4ce0", 0.35)
     cv.rect(0.710, 0.868, 0.945, 0.904, "#3a4ce0", 0.35)
-    cv.rect(0.0, 0.988, 1.0, 1.0, "#5d1214")
+    # ROUND 8: no painted kick line either -- full bleed to the panel edge.
     _grain(cv, 8.0, 23)
 
 
@@ -2088,9 +2131,8 @@ def _tm_side(cv):
     for uu in (0.520, 0.640, 0.760):                             # road dashes
         cv.rect(uu, 0.930, uu + 0.055, 0.946, "#6a6a62", 0.55)
     _tm_turtle(cv, 0.660, 0.500, 0.230)
-    cv.rect(0.0, 0.0, 1.0, 0.020, _TM_GRN)                       # molding
-    cv.vgrad(0.0, 0.978, 1.0, 1.0, "#2c7a28", "#17451a")
-    cv.hgrad(0.965, 0.0, 1.0, 1.0, "#1e1e22", _TM_GRN, 0.9)
+    # ROUND 8: the green T-molding that used to be painted along three edges
+    # of this tile is real geometry now, so the flank wrap is full-bleed.
     _wear(cv, 0.0, 0.0, 1.0, 1.0, 9.0, 33, 2)
     _grain(cv, 7.0, 34)
 
@@ -2103,32 +2145,38 @@ def _tm_front(cv):
     cv.fill("#121317")
     cv.vgrad(0.0, 0.0, 1.0, 0.720, "#1d1e24", "#0d0e12")
     _wear(cv, 0.0, 0.0, 1.0, 0.70, 8.0, 35, 2)
-    cv.hgrad(0.0, 0.0, 0.026, 1.0, _TM_GRN, "#121317")           # molding
-    cv.hgrad(0.974, 0.0, 1.0, 1.0, "#121317", _TM_GRN)
+    # ROUND 8: no painted green molding returns -- the bright green T-molding
+    # is real geometry on the black carcase now (outer ~0.06 ft of the face),
+    # and the printed vinyl runs full-bleed into it, which is exactly what
+    # v4 7 shows: green bead, then black print, no unprinted margin between.
 
     cv.seg((0.150, 0.072), (0.850, 0.072), "#b8bcc4", 0.010, 0.75)
     cv.text("TEENAGE MUTANT NINJA", 0.500, 0.132, 0.046, "#d8322c", 0.009,
             track=0.20, aspect=0.60)
     _tm_logo(cv, 0.500, 0.250, 0.170)
-    cv.rect(0.180, 0.372, 0.820, 0.470, "#20222a")
     cv.text("TURTLES IN TIME", 0.500, 0.421, 0.062, _TM_SIL, 0.012,
             track=0.18, aspect=0.62)
-    cv.text("KONAMI", 0.500, 0.532, 0.040, "#d4382c", 0.009, track=0.34,
-            aspect=0.60)
-    cv.seg((0.240, 0.582), (0.760, 0.582), "#8a2a24", 0.009, 0.85)
-    cv.text("4 PLAYERS", 0.500, 0.618, 0.034, "#8e929a", 0.008, track=0.30,
-            aspect=0.60)
+    # ROUND 8.  "KONAMI" and "4 PLAYERS" were invented: v3 4 px (395,660)-
+    # (485,880) at 10x (art/_r8_dump/ph_tmnt.png) shows ONE short faint reddish
+    # line under the sub-title and nothing else on the black.  The pale slab
+    # behind TURTLES IN TIME went with them -- the photograph has that line as
+    # light type straight on the black, not reversed out of a plate.
+    _microprint(cv, 0.330, 0.670, 0.528, 0.018, "#a8342c", 137, words=3,
+                a=0.85)
 
-    # ---- the riser: brick street, turtle, green plaque
+    # ---- the riser.  ILLUSTRATION FIRST.  ph_tmnt.png shows a big blue-and-
+    # white turtle figure filling the left two thirds of the riser over the
+    # brick, and the TURTLES logo SMALL on the brick at the right end -- not a
+    # green plaque taking half the band with the logo at title size in it.
+    # That plaque is why the critic counted "TURTLES" twice at equal weight.
     _bricks(cv, 0.0, 0.672, 1.0, 1.0, 6, "#7f4632", _TM_BRICK, "#33201a", 36,
             1.0, 7.0)
     cv.vgrad(0.0, 0.672, 1.0, 0.746, "#1a1418", _TM_BRICK, 0.55)
     cv.rect(0.0, 0.658, 1.0, 0.678, "#181a16")
-    _tm_turtle(cv, 0.215, 0.840, 0.178)
-    cv.rect(0.520, 0.740, 0.968, 0.948, "#1d5f22")
-    cv.rect(0.534, 0.754, 0.954, 0.934, "#2c8f2c")
-    _tm_logo(cv, 0.736, 0.844, 0.086, keyline=False)
-    cv.rect(0.0, 0.985, 1.0, 1.0, "#17451a")
+    _tm_turtle(cv, 0.330, 0.842, 0.250)
+    _tm_logo(cv, 0.818, 0.778, 0.052, keyline=False)
+    _microprint(cv, 0.700, 0.916, 0.842, 0.014, "#cfd6cc", 138, words=3,
+                a=0.55)
     _grain(cv, 8.0, 37)
 
 
@@ -2274,7 +2322,14 @@ def _gt_front(cv):
     _wear(cv, 0.0, 0.0, 1.0, 1.0, 10.0, 53, 2)
     for uu in (0.180, 0.500, 0.820):
         cv.seg((uu, 0.040), (uu, 0.960), "#4a4d55", 0.009, 0.50)
-    _gt_wordmark(cv, 0.520, 0.108, 0.068, "#d2d6dc")
+    # ROUND 8 -- SCALE.  The roster's words are "a small light-grey/silver
+    # 'Golden Tee' wordmark ... legible as a logo, not as letters", and v4 6
+    # px (370,190)-(436,290) at 10x (art/_r8_dump/ph_gt6.png) confirms it: a
+    # faint mark about a fifth of the panel width, high on the black, that
+    # does not resolve into letters at all.  Round 7 set it at title size in
+    # white caps, so the marquee's GOLDEN TEE was answered by a second one a
+    # foot below it.  Same mark, at the size the photograph gives it.
+    _gt_wordmark(cv, 0.360, 0.104, 0.032, "#7d838c")
 
     _plate(cv, 0.278, 0.330, 0.722, 0.870, 0.030, "#1a1b20", "#5a5d66",
            "#0b0c0f", 0.018)

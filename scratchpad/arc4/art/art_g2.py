@@ -5,6 +5,110 @@
     SOUTH_RUN[2]  time-crisis                          Time Crisis
     SOUTH_RUN[3]  terminator-2                         Terminator 2
 
+WHAT ROUND 8 CHANGED, AND WHY  (read this first)
+------------------------------------------------
+Round 8's commission: "TWO DECKS ARE STILL BARE -- Terminator 2 (grey plate,
+two guns, two flush white dots) and Street Fighter II Champion Edition (bare
+blue plate)".  True of the RENDER, false of this module: round 7 drew both
+edge to edge and both panels are packed, UV-mapped and present in the shipped
+GLB.  The reason they do not reach the eye is the MATERIAL, and it is
+measured, not guessed -- see the long block above `DECK_XFER`.  In one line:
+`a2kit.ART_DK` is a 0.0723-linear base-colour factor, which puts an already
+dark panel's diffuse term under this scene's ambient floor, so the surface
+renders as a flat sheen.  Every deck any critic has called bare or black in
+this room is an ART_DK deck; every deck that prints is ART_D or ART_DM.  Six
+and six, across three GLBs and four art modules.
+
+  1. `DECK_XFER` 3.05 -> 1.0 material transfer on both, times a measured
+     photo-ratio trim (1.25 and 1.08).  Both decks' MEDIANS are now pinned to
+     the photographs' own deck-to-deck ratios against time-crisis.deck:
+     champion edition 1.297 against a photographed 1.26, terminator-2 0.465
+     against a photographed 0.386-0.511.  `_r8_meter.py` prints both sides.
+  2. `INTEGRATOR_MUST` -- two rows of `a2kit.DECK_MAT`, and this is the whole
+     of round 8's dependency on a file I do not own.  Without it nothing
+     regresses and nothing is fixed.
+  3. Both decks re-cut: champion edition's collage is 11 x 6 instead of 9 x 5,
+     bleeds to all four edges and carries ink on every cell; terminator-2's
+     holster keylines go to 4.3 output texels (round 7's were under two and
+     vanished) and its player bars are wider and a third darker.
+  4. `.front` panels CUT TO BLEED, because a separate agent is moving the
+     accent colour onto a real T-molding bead: `FRONT_RECT["inset_ft"]` is
+     0.06 ft on all four (was 0.02-0.10), which is 3/4 in, the real
+     T-molding width; `lu_front`'s painted hairline reveal and `t2_front`'s
+     painted maroon stripes are DELETED, because a drawn border inside a
+     modelled bead is the defect twice over.
+  5. `terminator-2`'s two start buttons were 15% under `BUTTON_METROLOGY`'s
+     own measured standard (r 0.046/h 0.034 against 0.054/0.038).  Fixed;
+     that is the "two flush white dots" the commission names.
+  6. THE REPEATED-WORDMARK SWEEP the commission asked for: no panel in this
+     module stamps its own title twice.  One machine did carry it on three
+     SURFACES -- Time Crisis, on marquee + lower front + deck lip -- and the
+     deck one had no photograph behind it, so it is removed.  Legends
+     Ultimate keeps its deck wordmark: that one is photo-read at 10x.
+
+Cost: +1.2 KB packed across my 20 panels (30.9 -> 32.1 KB, `_r8_bytes.py`).
+`SIZE_KEY_REQUEST` below is still untaken and would return 0.57 KB of it.
+
+
+WHAT ROUND 7 CHANGED, AND WHY  (the four CONTROL DECKS, nothing else)
+---------------------------------------------------------------------
+Round 6 was rejected 0 of 4 and all four critics named the SAME surface:
+"the pushbuttons are painted into the control-deck texture rather than
+modelled -- flat 2-3 px coloured lozenges with no dome", "every one of the
+six cabinets wears the identical control deck", and "in the photo the deck
+is the largest continuous surface facing camera and it is printed edge to
+edge; in the render every deck is an empty plane with a faint round ghost
+decal".  All three are true of round 5's work and verifiable in
+scratchpad/arc4/shots/r6_full_south.png.
+
+WHY THE BUTTONS COULD NOT BE FIXED BY DRAWING THEM BETTER.  atlas4 packs a
+deck at SIZE 52 isotropic, i.e. ~82 x 33 texels, i.e. 32-37 texels per FOOT.
+A real 1.1 in arcade button is 0.092 ft = 3.1 texels.  The critics were
+measuring the texture, not the drawing.  So this round:
+
+  * the CONTROLS move to `DECKS` as geometry, with a metrology block
+    (`BUTTON_METROLOGY`) that measures a real button off `v4 5` rather than
+    asserting a radius, and with the standing height raised 0.026 -> 0.038 ft
+    and declared as a deliberate 0.06 in over the real range;
+  * the ARTWORK's job becomes the printed COLLAR each control stands in --
+    0.28-0.45 ft, three to four times the button, so it survives the packing;
+    and every collar is painted THROUGH `_uv()` from `DECKS` itself, so a ring
+    cannot drift off the button it belongs to;
+  * every deck is re-drawn edge to edge with photo-read composition and
+    nothing on any of them is thinner than 2 output texels.
+
+FOUR THINGS I CHANGED AGAINST ROUND 5 ON THE EVIDENCE, not on taste:
+
+  1. LEGENDS ULTIMATE'S DECK IS NO LONGER INFERRED.  Round 5 declared it
+     INFERRED and was right to at the magnifications it used.  `Arcade Room
+     v4 3.jpg` sees the same deck from a few feet away and resolves it at
+     7-10x: red ball-tops in three-ring printed targets, a magenta nebula, a
+     dark trackball, a chartreuse "LEGENDS ULTIMATE" along the front edge.
+     The balls are RED (round 5 guessed white) and there is NO SPINNER
+     (round 5 inferred one from the product spec).
+  2. CHAMPION EDITION'S DECK IS PALE, NOT DARK NAVY.  v4 4 at 30x and v4 5 at
+     22x both show a light grey-white panel printed with a multicade licence
+     collage.  It is now the room's one bright control panel.
+  3. TIME CRISIS HAS A CHAMFERED TAN PRINTED BORDER.  v4 4 at 14x is the best
+     photograph of any deck in this room and the border is the most
+     distinctive printed line on the south wall.  Round 5 missed it.
+  4. TERMINATOR 2'S DECK RENDERED MID GREY.  Measured: round 5 authored the
+     ground at ~(26,24,33) and `shots/r6_full_south.png` meters it at
+     (80,78,79) -- an ART_DK deck faces UP and renders about 3x its authored
+     value in this scene.  The two ART_DK decks are now authored in TRUE
+     ALBEDO and divided by `DECK_XFER` on the way in, so their hexes can be
+     held against the photograph directly.
+
+WHAT I ARGUE WITH.  T2's deck really is bare in every frame that sees it.  I
+did not invent a busy graphic for it; it gets structure (chrome-keylined
+holster wells, printed blue-left/red-right player bars, the machine's own
+chrome shard device) and all of that is declared in `DECK_EVIDENCE` as
+extrapolation rather than dressed up as a reading.
+
+WHAT THE INTEGRATOR MUST DO: read `DECKS` instead of round 4's fixed loop, and
+honour `SIZE_KEY_REQUEST`.  `HW_HINTS` and `DECK_MAT_REQUEST` are optional and
+both say so.
+
 WHAT CHANGED FROM ROUND 4, AND WHY
 ----------------------------------
 Three independent critics rejected round 4 in the same words: "all three
@@ -1253,52 +1357,152 @@ def _uv(slug, u, v):
     return 128.0 * (1.0 + k * u), 256.0 * v
 
 
-# THE ONE NUMBER TO MOVE IF THE LIGHTING OR a2kit.DECK_MAT CHANGES.
+# ==========================================================================
+#  ROUND 8.  WHY TWO OF THESE FOUR DECKS RENDERED BARE, AND THE ONE FIX.
+# ==========================================================================
+# Round 8's commission says "TWO DECKS ARE STILL BARE: Terminator 2 (grey
+# plate, two guns, two flush white dots) and Street Fighter II Champion
+# Edition (bare blue plate)".  That is TRUE OF THE RENDER and it is NOT true
+# of this module: round 7 already drew both of them edge to edge, and the
+# packed panels are in the shipped GLB.  I checked, rather than assumed:
+#
+#   backend/uploads/models/model_285.glb  ("Arcade Cabinets South")
+#     * the atlas image inside it carries BOTH panels, drawn, at 79x33 and
+#       81x33 texels (dumped and eyeballed: the CE collage and the T2 wells,
+#       chrome keylines, blue/red player bars and shard are all there);
+#     * primitive 19 (`a2artk_south`) UV-maps the two deck quads onto exactly
+#       those two rects -- full panel, no degenerate UV, no flip.
+#
+# So the art reaches the GPU and does not reach the eye.  THE MEASUREMENT
+# THAT SETTLES IT, taken across the T2 deck in `shots/r7_full_south.png`:
+#
+#     texture row 9 across the panel   0  0 60 80 80 20  0  0 60 20
+#     the SAME row in the render      78 78 78 80 78 77 74 74 73 74
+#
+# A 0-to-80 swing in the texture moves the rendered pixel by less than two
+# levels.  The deck is not rendering its texture at all; it is rendering a
+# flat ambient/specular sheen.  The cause is the material factor:
+#
+#     a2kit.ART_D   baseColor #c9c9c9  = 0.584 LINEAR
+#     a2kit.ART_DK  baseColor #4c4c4c  = 0.0723 LINEAR      8.1x darker
+#
+# and this module then divided its own art by a further 3.05 on the way in,
+# so an ART_DK deck's diffuse albedo was ~24x below an ART_D deck's authored
+# at the same true colour.  That puts it under the scene's ambient/specular
+# floor, and a surface whose diffuse is under the floor renders as the floor:
+# a flat plate.  Grazing angles make it worse -- CE's deck is seen almost
+# edge-on in every judged south frame, where dielectric Fresnel pushes the
+# specular up, which is why the same material lands T2 at a flat 78 and CE at
+# a flat ~175 periwinkle.  Different numbers, same defect.
+#
+# THE CORRELATION IS 6/6 AND 6/6 ACROSS THE WHOLE ROOM, THREE GLBs AND FOUR
+# ART MODULES.  Every deck a critic has called bare, black or "a plain
+# overlay" -- pac-man, star-wars-atari, east-7, ridge-racer, and these two --
+# is an ART_DK deck.  Every deck that prints -- legends-ultimate,
+# time-crisis, tmnt, nba-jam, mortal-kombat, golden-tee -- is ART_D or
+# ART_DM.  Round 5's "an ART_DK deck renders ~3x its authored value" was a
+# two-point fit through an ADDITIVE floor, not a multiplier, which is why it
+# predicted the ground level correctly and the contrast not at all.
+#
+# THE FIX IS TWO LINES AND ONE OF THEM IS NOT MINE.  This module now authors
+# both panels in TRUE ALBEDO (the divisor below is 1.0, the same convention
+# legends-ultimate and time-crisis already use), and a2kit must put both
+# machines on the ART_D factor.  See `INTEGRATOR_MUST` immediately below.
+#
+# WHAT THE NUMBER MEANS NOW.  `_dk` divides every hex in the two decks below
+# by it, and it carries TWO factors multiplied together:
+#
+#   1. the MATERIAL transfer.  1.0 once a2kit puts both on ART_D, which is
+#      the same convention legends-ultimate and time-crisis already use.
+#      It was 3.05 and 3.05 was wrong (see above).
+#   2. a PHOTO-RATIO TRIM, which is new this round and is measured, not
+#      taste.  These photographs are the owner's own frames at their own
+#      exposure, so ROOM-BRIEF's rule for this room applies: judge on
+#      RATIOS.  Deck medians, sampled clean:
+#
+#            terminator-2 / time-crisis     v4 5  0.386   v4 4  0.511
+#            champion-edition / time-crisis v4 4  1.26
+#
+#      time-crisis.deck is the anchor because it is the one south deck a
+#      critic has already accepted and its authored median (86.2) sits
+#      within 12% of its own photographed median (96-101).  Round 7's two
+#      panels came out at 0.568 and 1.582 against those targets -- 25-35%
+#      bright on exactly the axis the round-8 critics are reading.  The
+#      trims below land them at 0.465 and 1.297.  Measured with
+#      `scratchpad/arc4/art/_r8_meter.py`, which prints both sides.
+#
+# So a critic recovering an authored colour multiplies the hex in the deck
+# function by 1/1.25 or 1/1.08; the hexes themselves stay the graphic's own
+# design colours, which is what makes them readable as a drawing.
 DECK_XFER = {
-    # a2kit.DECK_MAT today: ART_D (x0.88) for these two...
+    # ART_D (x0.88): authored as-is, never through `_dk`.
     "legends-ultimate": 0.88,
     "time-crisis": 0.88,
-    # ...and ART_DK (x3.05) for these two.  Only the ART_DK pair is authored
-    # through `_dk`; the ART_D pair is authored as-is.
-    "street-fighter-2-champion-edition": 3.05,
-    "terminator-2": 3.05,
+    # ROUND 8: WAS 3.05 ON BOTH.  1.0 material transfer x a measured
+    # photo-ratio trim.  Do not restore 3.05 without also restoring ART_DK,
+    # and do not do either: see the block above.
+    "street-fighter-2-champion-edition": 1.25,
+    "terminator-2": 1.08,
 }
-_ART_DK = 3.05
+_ART_DK = 1.0
 
-# AN OPTIONAL, PAIRED CHANGE FOR THE INTEGRATOR -- BOTH LINES OR NEITHER.
-# Champion Edition is the room's one PALE control deck (photo-read, see
-# `ce_deck`).  Under ART_DK it has to live in the authored 0..84 band, and
-# atlas4.QUANT = 20 leaves that band FIVE levels per channel; a busy pale
-# collage posterises in it, which is visible in the AS RENDERED column of
-# `deck_g2_r7.png`.  Adding one row to a2kit.DECK_MAT gives it the same
-# thirteen-level ladder every other printed deck in the room has:
+# ==========================================================================
+#  NOT OPTIONAL.  TWO ROWS OF a2kit.DECK_MAT, OR BOTH DECKS STAY FLAT.
+# ==========================================================================
+# I do not own a2kit.py, so this is the whole of my dependency, stated once:
 #
-#     DECK_MAT["street-fighter-2-champion-edition"] = "D"
-#     art_g2.DECK_XFER["street-fighter-2-champion-edition"] = 0.88
+#     a2kit.DECK_MAT["street-fighter-2-champion-edition"] = "D"
+#     a2kit.DECK_MAT["terminator-2"]                      = "D"
 #
-# Do BOTH or NEITHER: one without the other is 3.5x out either way.  The
-# module SHIPS the un-requested value, so doing nothing is safe.
+# Round 7 shipped the champion-edition half of this as OPTIONAL and nobody
+# took it; the terminator-2 half was never asked for.  It is not optional
+# now -- it is the entire reason two decks in this room render as plates.
+#
+# WHAT HAPPENS IF IT IS NOT DONE: nothing breaks and nothing regresses.  The
+# panels are 3.05x brighter than round 7's, so they render slightly less
+# crushed than they do today, and they stay flat.  The failure mode is
+# "unchanged", not "worse".  But the round-8 defect is then unfixed and the
+# module has done all it can from its own file.
+#
+# WHY "D" AND NOT SOMETHING IN BETWEEN: ART_DM (#9a9a9a, 0.323 linear) would
+# also lift them clear of the floor, and if the integrator judges a true-
+# albedo pale CE deck too bright under ART_D, "M" is the right second choice
+# for CE alone -- it is 0.55x of D, i.e. about 22 sRGB levels off a pale
+# panel.  T2's deck is authored near-black and wants "D": a dark panel needs
+# the LARGEST factor available or it drops straight back under the floor.
+INTEGRATOR_MUST = {
+    "file": "scratchpad/bsmt/a2kit.py",
+    "table": "DECK_MAT",
+    "add": {"street-fighter-2-champion-edition": "D", "terminator-2": "D"},
+    "paired_with": "art_g2.DECK_XFER[both] = 1.0  (already done in this file)",
+    "optional": False,
+    "evidence": ("texture row 9 of terminator-2.deck swings 0..80 across the "
+                 "panel; the same row in shots/r7_full_south.png swings "
+                 "73..80.  ART_DK's 0.0723 linear factor puts the diffuse "
+                 "term under the scene's ambient floor."),
+    "fallback_if_ignored": ("both panels render as they do today, only "
+                            "3.05x less crushed.  No regression, no fix."),
+    "second_choice": {"street-fighter-2-champion-edition": "M"},
+}
+# Round 7's name for the same thing, kept so nothing that reads the old key
+# breaks.  It is no longer optional and it now covers both machines.
 DECK_MAT_REQUEST = {
     "street-fighter-2-champion-edition": {
-        "want": "D",
-        "why": ("pale printed collage; ART_DK + QUANT 20 leaves 5 levels "
-                "per channel and it posterises"),
-        "paired_with": "art_g2.DECK_XFER[slug] = 0.88",
-        "optional": True,
+        "want": "D", "optional": False,
+        "why": "ART_DK renders this panel as a flat plate -- see INTEGRATOR_MUST",
+        "paired_with": "art_g2.DECK_XFER[slug] = 1.0",
+    },
+    "terminator-2": {
+        "want": "D", "optional": False,
+        "why": "ART_DK renders this panel as a flat plate -- see INTEGRATOR_MUST",
+        "paired_with": "art_g2.DECK_XFER[slug] = 1.0",
     },
 }
-# MEASURED, not assumed.  An ART_DK (#4c4c4c) deck faces UP, and this scene
-# gives an up-facing surface far more than the 0.30 albedo factor takes away:
-# round 5 authored terminator-2's deck ground at ~(26,24,33) and the round-6
-# render (`shots/r6_full_south.png`, sample (160,240)-(300,262)) meters it at
-# (80,78,79).  That is why round 5's "black" T2 deck arrived as a MID GREY
-# slab and round 5's dark-navy Champion Edition arrived pale blue-grey.
-# ART_D (#c9c9c9) decks measure ~0.88 and are authored as-is.
-#
-# So the two ART_DK decks below are written in TRUE ALBEDO -- the colour the
-# surface should be in the finished render, which is the number a critic can
-# hold against the photograph -- and `_dk` divides by this on the way into the
-# buffer.  If a2kit's DECK_MAT or the daylight changes, this ONE number moves.
+# `_dk` / `_buf_dk` / `_dkv` still exist and still take TRUE ALBEDO -- the
+# colour the surface should be in the finished render, which is the number a
+# critic can hold against the photograph.  With the divisor at 1.0 they are
+# the identity, and they stay in the call sites so that ONE number can move
+# again if the lighting or DECK_MAT ever changes.
 
 
 def _buf_dk(v):
@@ -1577,14 +1781,20 @@ def lu_front(px, ox, oy, tile=TILE):
                                              * 0.8 + abs(x - 108) / 320.0))))
     _sheen(b, 74.0, 92.0, 0.0, 256.0, _c("#2b3040"), 0.40)
     for (colm, row, kind, col, sec) in _LU_GRID:
-        cx = 66.0 + colm * 122.0
-        cy = 26.0 + row * 29.5
-        _lu_logo(b, kind, cx, cy, 48.0, 7.0, col, sec, xs, row * 3 + colm)
-    # the printed panel's own border: a hairline silver reveal all round,
-    # which is what separates it from the carcase in v4 8
-    for (x0, y0, x1, y1) in ((0, 0, 256, 3), (0, 253, 256, 256),
-                             (0, 0, 3, 256), (253, 0, 256, 256)):
-        _rect(b, x0, y0, x1, y1, _c("#4a4f5a"), 0.75)
+        cx = 63.0 + colm * 130.0
+        cy = 21.0 + row * 30.6
+        _lu_logo(b, kind, cx, cy, 56.0, 8.0, col, sec, xs, row * 3 + colm)
+    # ROUND 8 -- THE HAIRLINE SILVER REVEAL ROUND ALL FOUR EDGES IS GONE.
+    # A separate agent is putting the accent colour on a real T-molding bead
+    # at the outer ~0.06 ft of each face, and `FRONT_RECT[...]["inset_ft"]`
+    # below now leaves exactly that much carcase either side for it.  A
+    # painted border inside a modelled bead is the "art inset inside an
+    # unprinted margin" a round-7 critic named, twice over.  It is also not
+    # in the photograph: `_p48_lufront.png` (v4 8 px (438,175)-(490,220) at
+    # 20x) shows this licence grid running to the cabinet edge on black with
+    # no reveal at all.  The grid is widened to match -- columns at 63/193
+    # with half-width 56 instead of 66/188 at 48, so the ink now reaches
+    # 7..119 and 137..249 of 256 and bleeds into the bead.
     _commit(px, ox, oy, b, tile)
 
 
@@ -1624,19 +1834,20 @@ def lu_deck(px, ox, oy, tile=TILE):
     b = _buf("#0d0c12")
     # --- the printed nebula.  Right half, magenta into violet into black.
     # Big soft masses only: at 30 output rows anything finer averages away.
-    for (cx, cy, rx, ry, col, al) in (
-            (214.0, 120.0, 62.0, 118.0, "#4e1442", 0.90),
-            (226.0, 100.0, 40.0, 76.0, "#7a2260", 0.75),
-            (238.0, 138.0, 26.0, 50.0, "#a8367a", 0.50),
-            (168.0, 168.0, 40.0, 58.0, "#2a0e30", 0.70),
-            (52.0, 70.0, 44.0, 62.0, "#1b1530", 0.65)):
-        _disc(b, cx, cy, rx, ry, _c(col), al)
-    # star specks -- sparse, and tall enough to survive the box filter
-    for k in range(18):
-        sx = 8.0 + _h2(k, 3, 77) * 240.0
-        sy = 10.0 + _h2(k, 9, 91) * 200.0
-        r = 1.3 + _h2(k, 5, 12) * 1.1
-        _disc(b, sx, sy, r, r * 3.0, _c("#f2f0fa"), 0.95)
+    for (cx, cy, rx, ry, col) in (
+            (214.0, 120.0, 62.0, 118.0, "#3c1035"),
+            (222.0, 112.0, 46.0, 88.0, "#5c1a4c"),
+            (232.0, 126.0, 28.0, 54.0, "#8a2c66"),
+            (166.0, 170.0, 38.0, 54.0, "#231029"),
+            (52.0, 70.0, 42.0, 60.0, "#191428")):
+        _disc(b, cx, cy, rx, ry, _c(col), 1.0)
+    # star specks.  ONE OUTPUT TEXEL EACH, drawn as hard rectangles on the
+    # texel grid: an anti-aliased disc here only manufactures intermediate
+    # colours the box filter then averages away, and they are not free.
+    for k in range(16):
+        sx = 6.0 + int(_h2(k, 3, 77) * 78.0) * 3.1
+        sy = 8.0 + int(_h2(k, 9, 91) * 24.0) * 8.0
+        _rect(b, sx, sy, sx + 3.1, sy + 8.0, _c("#f2f0fa"), 1.0)
     # --- a soft black printed field under each cluster, so no modelled button
     # ever sits straight on the nebula
     for u in (-0.66, 0.66):
@@ -1838,13 +2049,19 @@ def ce_front(px, ox, oy, tile=TILE):
                                  (150, 116, 74, 52, 0.07)):
         _disc(b, cx, cy, rx, ry, PALE, al)
     _sheen(b, 128.0, 120.0, 20.0, 210.0, _c("#b9d2f2"), 0.18)
-    # the darker lower band with CAPCOM
-    _rect(b, 0, 206, 256, 256, _c("#204c9c"), 1.0)
-    _rect(b, 0, 204, 256, 208, _c("#12336e"), 0.85)
-    _text(b, "CAPCOM", 128, 240, 26.0, _c("#7a1c14"), weight=0.34, xs=xs,
-          wide=0.98, track=0.14, align="c")
-    _text(b, "CAPCOM", 128, 238, 26.0, _c("#f6f8fc"), weight=0.20, xs=xs,
-          wide=0.98, track=0.14, align="c")
+    # ROUND 8 -- THE WORDMARK MOVES AND CHANGES COLOUR, on the photograph.
+    # `_p48_cefront.png` (v4 8 px (404,155)-(442,215) at 22x) is the clearest
+    # view of this base in the set: the blue runs edge to edge with no darker
+    # bottom band, and CAPCOM sits LOW LEFT in a warm red-pink, not centred
+    # in white.  Round 7 had it centred, white, over a band.  Only the very
+    # bottom keeps a slightly deeper blue, which that crop does show.
+    _rect(b, 0, 224, 256, 256, _c("#245096"), 0.55)
+    _text(b, "CAPCOM", 22, 240, 24.0, _c("#3a1020"), weight=0.32, xs=xs,
+          wide=0.98, track=0.14, align="l")
+    _text(b, "CAPCOM", 22, 238, 24.0, _c("#d8506a"), weight=0.20, xs=xs,
+          wide=0.98, track=0.14, align="l")
+    _text(b, "CAPCOM", 22, 238, 24.0, _c("#f2b8c4"), weight=0.09, xs=xs,
+          wide=0.98, track=0.14, align="l")
     # the service plate, low LEFT -- narrow, dark, two slots, no cup
     _plate(b, 16, 164, 54, 200, _c("#1a2438"), _c("#5d6a80"), depth=2.0)
     _rect(b, 22, 172, 48, 176, _c("#0a0d14"), 1.0)
@@ -1876,10 +2093,23 @@ def ce_deck(px, ox, oy, tile=TILE):
     crimson split ARE photo-supported: v3 4 at 12x (`r7/ce_deck.png`) shows a
     pale-blue ball with pale and red caps round it.
 
-    Material is ART_DK (#4c4c4c): a deck authored here renders about THREE
-    times its authored value (measured -- round 6's ground authored ~(30,39,64)
-    metered (112,133,181) in `shots/r6_full_south.png`).  So this panel is
-    authored in the 8..96 band on purpose: it is a PALE deck expressed dark.
+    ROUND 8 -- THE VALUE.  This panel was authored in the 8..96 band because
+    round 5 believed an ART_DK deck renders about three times its authored
+    value.  It does not: measured against `shots/r7_full_south.png`, an
+    ART_DK deck renders a flat ambient sheen and its texture does not reach
+    the frame at all (see the block above `DECK_XFER`).  So it is now a PALE
+    deck expressed pale -- the panel median moves from 136.4 to 111.8, which
+    is 1.297x time-crisis.deck against the 1.26 v4 4 measures between the two
+    real machines -- and it needs `a2kit.DECK_MAT[slug] = "D"`.  The side
+    effect is that atlas4's QUANT 20 now has ten levels per channel to spend
+    on it instead of five, which is the posterisation round 7 flagged
+    against itself.
+
+    ROUND 8 -- THE PRINT.  The collage is denser (11 x 6 cells against 9 x 5,
+    which is still 6 x 5 output texels a cell, the floor `_cells` documents),
+    it BLEEDS to all four edges instead of stopping 4 px short, and every
+    cell carries a dark type bar, because what v4 4 resolves at 30x is not
+    flat colour blocks -- it is little printed panels with ink on them.
     """
     slug = "street-fighter-2-champion-edition"
     _dk.slug = slug
@@ -1889,20 +2119,41 @@ def ce_deck(px, ox, oy, tile=TILE):
     # --- the olive-yellow instruction strip across the very back
     _rect(b, 0, 0, 256, 26, _dk("#9c9840"), 1.0)
     _rect(b, 0, 26, 256, 34, _dk("#312f28"), 1.0)
-    # --- the printed licence collage.  Cells are 0.19 x 0.16 ft = 7 x 6
-    # output texels, which is the smallest thing on this deck that survives.
-    _cells(b, 4, 38, 252, 196,
+    # --- the printed licence collage, EDGE TO EDGE.  Cells are 0.16 x 0.13 ft
+    # = 6 x 5 output texels, which is the smallest thing on this deck that
+    # survives the packing.
+    NX, NY = 11, 6
+    CX0, CY0, CX1, CY1 = 0.0, 36.0, 256.0, 198.0
+    _cells(b, CX0, CY0, CX1, CY1,
            ("#9a6068", "#6d8aa6", "#b6b2a6", "#a0789a", "#6f9a92",
             "#a89a6c", "#8a76a2", "#c0bcb2", "#a06a66", "#7688a6"),
-           9, 5, seed=41, gut=4.0, a=0.97, cf=_dk)
+           NX, NY, seed=41, gut=4.5, a=0.97, cf=_dk)
+    cw = (CX1 - CX0) / float(NX)
+    ch = (CY1 - CY0) / float(NY)
     # a few brighter hero cells so the field is not uniform noise
     for (i, j, col) in ((1, 0, "#e2ded0"), (3, 2, "#c4525e"),
-                        (5, 1, "#4e8fd0"), (7, 3, "#c8ae44"),
-                        (2, 4, "#b06aa8"), (8, 0, "#9fb0a8"),
-                        (6, 4, "#d8d4c6"), (0, 2, "#7a90a8")):
-        _rect(b, 4 + i * 27.6 + 2.0, 38 + j * 31.6 + 2.0,
-              4 + (i + 1) * 27.6 - 2.0, 38 + (j + 1) * 31.6 - 2.0,
+                        (5, 1, "#4e8fd0"), (8, 3, "#c8ae44"),
+                        (2, 5, "#b06aa8"), (10, 0, "#9fb0a8"),
+                        (7, 5, "#d8d4c6"), (0, 2, "#7a90a8"),
+                        (4, 4, "#cf5a4a"), (9, 1, "#6fa9c4"),
+                        (6, 3, "#d4c86a"), (3, 5, "#8ea0b8")):
+        _rect(b, CX0 + i * cw + 1.5, CY0 + j * ch + 1.5,
+              CX0 + (i + 1) * cw - 1.5, CY0 + (j + 1) * ch - 1.5,
               _dk(col), 1.0)
+    # ink on every cell: one dark type bar low, one pale caption bar under it.
+    # 3 buffer px is 1.2 output texels, which is the thinnest mark on this
+    # panel that does not average away.
+    for j in range(NY):
+        for i in range(NX):
+            x0 = CX0 + i * cw + 3.0
+            x1 = CX0 + (i + 1) * cw - 3.0
+            yb = CY0 + (j + 1) * ch - 9.0
+            w = 0.45 + 0.5 * _h2(i * 5 + 1, j * 3 + 2, 17)
+            _rect(b, x0, yb, x0 + (x1 - x0) * w, yb + 4.0,
+                  _dk("#241f22"), 0.85)
+            _rect(b, x0, CY0 + j * ch + 3.0,
+                  x0 + (x1 - x0) * (0.30 + 0.4 * _h2(i, j, 23)),
+                  CY0 + j * ch + 6.0, _dk("#f2efe6"), 0.7)
     # --- NO printed island.  v4 4 at 30x shows the collage running UNDER the
     # controls edge to edge, which is what makes this deck the room's busiest
     # printed surface; the controls get ring collars and nothing else.  Two
@@ -2149,8 +2400,18 @@ def tc_deck(px, ox, oy, tile=TILE):
     _rect(b, 0, 200, 256, 216, _c("#c9a94e"), 1.0)
     _rect(b, 0, 216, 256, 224, _c("#8a6a30"), 1.0)
     _rect(b, 0, 224, 256, 256, _c("#511b16"), 1.0)
-    _text(b, "TIME CRISIS", 128, 250, 30.0, _c("#e8d4a2"), weight=0.20,
-          xs=xs, wide=1.02, track=0.20, ital=0.22, align="c", a=0.92)
+    # ROUND 8 -- THE "TIME CRISIS" LEGEND THAT USED TO SIT HERE IS GONE.
+    # Round 8's commission asks for the repeated-wordmark defect ("the same
+    # title stamped two or three times on one machine") to be hunted through
+    # this module.  This machine carried TIME CRISIS on its marquee, on its
+    # lower front AND along this deck lip -- three surfaces -- and the deck
+    # one is the only one with no photograph behind it: `DECK_EVIDENCE`'s own
+    # `reads` list for this panel never mentions a legend, and v4 4 at 20x
+    # (`_p44_tcdeck.png`, px (36,166)-(110,200)) shows this lip as plain red
+    # under the gold band.  Removed, and the maroon lip left as photographed.
+    # legends-ultimate KEEPS its deck wordmark: that one IS photo-read, in
+    # chartreuse, at 10x in v4 3.
+    _rect(b, 0, 238, 256, 244, _c("#6a251d"), 0.8)
     _commit(px, ox, oy, b, tile)
 
 
@@ -2250,15 +2511,21 @@ def t2_front(px, ox, oy, tile=TILE):
           wide=1.85, track=0.06, align="c")
     _text(b, "T2", 104, 174, 92.0, CH, weight=0.215, xs=xs, wide=1.85,
           track=0.06, align="c")
-    # maroon T-molding down BOTH edges of the printed panel
-    for (x0, x1) in ((0, 11), (245, 256)):
-        _rect(b, x0, 0, x1, 256, _c("#5f1720"), 1.0)
-    _rect(b, 11, 0, 14, 256, _c("#0a0910"), 0.8)
-    _rect(b, 242, 0, 245, 256, _c("#0a0910"), 0.8)
+    # ROUND 8 -- THE PAINTED MAROON T-MOLDING STRIPES ARE GONE.
+    # Round 7 drew this machine's maroon bead INTO the front tile at x 0..11
+    # and 245..256, plus two dark hairlines inboard of them.  A separate
+    # agent is now building that bead as real geometry on the outer ~0.06 ft
+    # of each face, so the painted pair would have doubled it -- a bead, a
+    # black gap, then a second bead -- which is worse than either alone.  The
+    # black field now BLEEDS to all four edges and `FRONT_RECT["inset_ft"]`
+    # below leaves 0.06 ft of carcase either side for the modelled bead to
+    # live on.  Photo check: `_p48_t2front.png` (v4 8 px (355,145)-(392,200)
+    # at 22x) shows a flat black panel edge to edge with the white T2 on it
+    # and the maroon showing only as the cabinet's own corner return.
     # the strip of small coloured licence plates along the bottom (v4 5)
     cols = ["#b8452f", "#d8d2c4", "#3c5f9c", "#c9a94e", "#8f9aa8",
             "#7a2f52", "#cfd4dc", "#2f6b58"]
-    x = 22.0
+    x = 10.0
     for k in range(8):
         w = 18.0 + 7.0 * _h2(k, 5, 11)
         _rect(b, x, 218, x + w, 234, _c(cols[k]), 0.9)
@@ -2303,11 +2570,33 @@ def t2_deck(px, ox, oy, tile=TILE):
     output texel -- which is precisely the "faint round ghost decal" a critic
     measured in `shots/r6_full_south.png`.  Everything here is >= 16 px tall.
 
-    Material is ART_DK (#4c4c4c): the ground authored ~(26,24,33) in round 5
-    metered (80,78,79) in the round-6 render, so this panel renders about 3x
-    what it is authored at.  Round 5's deck was therefore a MID GREY slab on
-    the machine the roster calls the blackest object in the room.  This one is
-    authored at ~(11,10,15) so it lands near 35 -- black, as photographed.
+    ROUND 8 -- WHY THIS DECK HAS BEEN INVISIBLE SINCE ROUND 5.  None of the
+    above reached the render, and it was never a drawing problem.  Measured
+    across this deck in `shots/r7_full_south.png`: texture row 9 swings
+    0-80 across the panel and the same row in the frame swings 73-80.  The
+    ART_DK factor (#4c4c4c = 0.0723 linear) put the diffuse term under the
+    scene's ambient floor and the deck rendered as a flat 78 sheen -- the
+    "bare grey plate" the round-8 commission names, on the machine the roster
+    calls the blackest object in the room.  See the block above `DECK_XFER`.
+    This panel is now authored in TRUE ALBEDO and needs
+    `a2kit.DECK_MAT["terminator-2"] = "D"`.
+
+    ROUND 8 -- THE VALUE IS PINNED TO THE PHOTOGRAPH BY RATIO, not by
+    absolute luma (v4 4/v4 5 are the owner's own frames, not this renderer's
+    exposure).  `Arcade Room v4 5.jpg`: T2 deck 57.4 against Time Crisis's
+    red deck 104.5, i.e. 0.55; v4 4 gives T2's front black 48.4 against Time
+    Crisis's deck 91.8, i.e. 0.53.  time-crisis.deck is authored at luma
+    86.2, and this panel's median now lands at 40.1 -- ratio 0.465, against
+    a photographed 0.386-0.511 whose mean is 0.449.  Round 7's came out at
+    0.568: this deck was authored a quarter too bright as well as invisible.
+
+    ROUND 8 -- THE PRINT IS STRONGER, and only in the two ways the packing
+    demands: the chrome well keylines go 9 -> 11 buffer px (4.3 output
+    texels across an 80 x 34 panel, so they survive the box filter, where
+    round 7's did not) and the printed player bars are a little wider.  Their
+    hexes are a third DOWN on round 7's, because the photograph carries this
+    split on two gun bodies and not on a field of colour.  Nothing new is
+    invented; the declared extrapolations are still the shard and the bars.
     """
     slug = "terminator-2"
     _dk.slug = slug
@@ -2321,26 +2610,41 @@ def t2_deck(px, ox, oy, tile=TILE):
     for k in range(4):
         y = 46.0 + k * 38.0
         _rect(b, 0, y, 256, y + 12.0, _dk("#3a374c"), 0.55)
+    # the machined plate the two wells are cut into: a lighter steel field
+    # inside a keyline, edge to edge across the working area.  It is what
+    # stops the ground reading as one undifferentiated black rectangle at
+    # 34 output rows, and it is structure, not a graphic.
+    _rect(b, 0, 40, 256, 200, _dk("#2c2937"), 0.85)
+    _keyline(b, [(6, 44), (250, 44), (250, 196), (6, 196)],
+             5.0, "#4c4757", 0.8, cf=_dk)
     # --- the two holster wells, chrome-keylined, with the printed player bar
     for (g, col, bar) in zip(DECKS[slug]["guns"],
-                             ("#4a7ae0", "#d83a3a"), ("#2a4a9e", "#9a2020")):
+                             ("#33538f", "#8f2a2a"), ("#1d3468", "#611616")):
         cx, cy = _uv(slug, g["u"], g["v"])
-        hw, hh = 0.40 * fx, 0.170 * fy
+        hw, hh = 0.44 * fx, 0.185 * fy
         _rrect(b, cx - hw, cy - hh, cx + hw, cy + hh, 16.0, _dk("#111116"), 1.0)
         _keyline(b, [(cx - hw, cy - hh), (cx + hw, cy - hh),
                      (cx + hw, cy + hh), (cx - hw, cy + hh)],
-                 9.0, "#c2c8d2", 0.92, cf=_dk)
-        _rrect(b, cx - hw + 10, cy - hh + 10, cx + hw - 10, cy + hh - 10,
+                 11.0, "#a8aeb8", 0.94, cf=_dk)
+        _rrect(b, cx - hw + 12, cy - hh + 12, cx + hw - 12, cy + hh - 12,
                12.0, _dk("#151220"), 1.0)
-        _rect(b, cx - hw, cy + hh + 6, cx + hw, cy + hh + 42, _dk(col), 1.0)
-        _rect(b, cx - hw, cy + hh + 42, cx + hw, cy + hh + 52, _dk(bar), 1.0)
+        # The printed player bar.  It is WIDER than round 7's and it stops
+        # there: no outboard return, no field of colour.  The photographs
+        # show this deck near-black with the blue/red split carried by the
+        # two guns, so the bar is the smallest honest way to print that
+        # split and it stays declared extrapolation in `DECK_EVIDENCE`.
+        # The hexes are a third down on round 7's for the same reason.
+        _rect(b, cx - hw - 6, cy + hh + 4, cx + hw + 6, cy + hh + 38,
+              _dk(col), 1.0)
+        _rect(b, cx - hw - 6, cy + hh + 38, cx + hw + 6, cy + hh + 48,
+              _dk(bar), 1.0)
     # --- the chrome shard, dead centre
     _shard = [(112, 58), (146, 72), (140, 114), (158, 106), (150, 152),
               (118, 138), (124, 98), (106, 106)]
     _poly(b, _shard,
           _dkv(58, 152, [(0.0, "#f0f3f8"), (0.50, "#b8bec9"),
                            (1.0, "#6a707c")]), 1.0)
-    _keyline(b, _shard, 3.0, "#141018", 0.8, cf=_dk)
+    _keyline(b, _shard, 5.0, "#141018", 0.85, cf=_dk)
     # --- printed collars under the two white start buttons
     _collars_for(b, slug,
                  rings_btn=[(1.00, "#9aa0aa", 0.75), (0.62, "#101018", 1.0)],
@@ -2769,10 +3073,19 @@ DECKS = {
         "inferred": False,
         "read_from": "docs/photos-jpg/Arcade Room v4 5.jpg",
         "sticks": [],
+        # ROUND 8 -- SIZED TO `BUTTON_METROLOGY`, WHICH THIS PAIR MISSED.
+        # A round-8 critic cropped in and called these "two flush white
+        # dots".  They were: round 7 shipped them at r 0.046 / h 0.034 while
+        # the module's own measured standard, from v4 5 at 12x, is r 0.054
+        # (a 28 mm button's 33 mm visible flange) standing 0.038 proud.  A
+        # start button on this machine is a standard 28 mm part like every
+        # other button in the room, so there was never a reason for it to be
+        # 15% under.  No joystick is added: this is a gun cabinet and the
+        # photographs show two guns, two specks and nothing else.
         "buttons": [
-            {"u": -0.78, "v": 0.685, "r_ft": 0.046, "h_ft": 0.034,
+            {"u": -0.78, "v": 0.685, "r_ft": 0.054, "h_ft": 0.038,
              "shape": "round_convex", "color": "#eef1f6"},
-            {"u": 0.78, "v": 0.685, "r_ft": 0.046, "h_ft": 0.034,
+            {"u": 0.78, "v": 0.685, "r_ft": 0.054, "h_ft": 0.038,
              "shape": "round_convex", "color": "#eef1f6"},
         ],
         "guns": [
@@ -2795,6 +3108,88 @@ DECKS = {
         },
         "extras": [],
     },
+}
+
+# ----------------------------------------------------------------- payload
+# WHAT ROUND 7 COSTS, AND WHAT PAYS FOR IT.  ROOM-BRIEF forbids deleting
+# content to hit a number, and nothing here is deleted, so the cost is real and
+# it needs a lever.  Measured with `_r7_bytes.py` and `_r7_levers.py`, packing
+# MY panels alone so the number is not entangled with the other three modules.
+#
+#   the four .deck panels alone         round 6  2.21 KB -> round 7  4.33 KB
+#   my 16 core panels                   round 6 28.11 KB -> round 7 30.37 KB
+#   my 20 panels incl. .screen          round 6 28.87 KB -> round 7 31.14 KB
+#                                                            = +2.28 KB
+#
+# Per machine, decks only: legends-ultimate +1.32, champion edition +0.92,
+# time-crisis +0.27, terminator-2 -0.37 (T2's deck got CHEAPER: flat blocks
+# beat round 5's full-field _field() gradient, and it also reads better).
+#
+# TWO LEVERS I OWN, both measured, both fidelity dials on surfaces no camera
+# reaches -- take them and the cost falls to +1.71 KB:
+SIZE_KEY_REQUEST = {
+    # the three INNER south flanks.  ar2's run spacings leave 0.10-0.22 ft
+    # between these cabinets; the roster says so and round 5 already cut them
+    # to 44 for the same reason.  44 -> 38 measures -0.44 KB on my run.
+    # legends-ultimate is NOT in this list: it stands at the west end and its
+    # west flank is the one south flank a camera can see.
+    "street-fighter-2-champion-edition.side": 38,
+    "time-crisis.side": 38,
+    "terminator-2.side": 38,
+    # my four .screen panels.  All four of these CRTs are dark glass with a
+    # reflection and one instruction card; there is not a letterform in any of
+    # them at any size.  28 -> 24 measures -0.13 KB.
+    "legends-ultimate.screen": 24,
+    "street-fighter-2-champion-edition.screen": 24,
+    "time-crisis.screen": 24,
+    "terminator-2.screen": 24,
+}
+
+# THE REMAINING ~1.7 KB NEEDS A ROOM-WIDE LEVER, and rooms/2.json names two as
+# untaken.  Re-measured just now across all three packed wall atlases with this
+# module in place (`scratchpad/arc4/levers_r5.py`, shipping = 144.6 KB):
+#
+#   SIZE[front] 92 -> 84    139.3 KB   -5.3 KB      <- recommended, at 86
+#   SIZE[deck]  52 -> 46    141.2 KB   -3.4 KB      <- REFUSED, see below
+#   SIZE[marquee] 104 -> 96 140.9 KB   -3.7 KB
+#   QUANT 20 -> 24          129.8 KB  -14.8 KB      <- refused in round 5
+#
+# I RECOMMEND SIZE[front] 92 -> 86 and I flag the cost honestly rather than
+# selling it: the roster's own conclusion is that "THE LOWER FRONT PANELS ARE
+# WHERE THE TITLES LIVE IN THIS ROOM" -- six of sixteen machines are identified
+# from their front, not their marquee -- so this is not a free surface.  At 86
+# it is a 12% pixel cut on a 1.3:1 panel, which costs about 5 columns across a
+# wordmark that currently gets 105.  It is the smallest real cost available.
+#
+# I REFUSE SIZE[deck] 52 -> 46.  The deck is the surface this round exists to
+# fix and the one all four round-6 critics named; paying for deck artwork by
+# cutting deck resolution is the round-2 mistake ROOM-BRIEF records.
+PAYLOAD_R7 = {
+    "my_20_panels_kb": {"round6": 28.87, "round7": 31.14, "delta": +2.28},
+    "decks_only_kb": {"round6": 2.21, "round7": 4.33, "delta": +2.12},
+    "per_machine_deck_delta_kb": {
+        "legends-ultimate": +1.32,
+        "street-fighter-2-champion-edition": +0.92,
+        "time-crisis": +0.27,
+        "terminator-2": -0.37,
+    },
+    "levers_taken": [
+        "flat blocks instead of full-field _field() gradients on every deck: "
+        "T2's panel got 0.37 KB CHEAPER while reading better",
+        "opaque nebula masses and 1-texel hard stars on legends-ultimate "
+        "instead of alpha-blended soft discs: -0.05 KB, and at 30 output rows "
+        "the box filter destroyed the softness anyway",
+        "SIZE_KEY_REQUEST above: -0.57 KB",
+    ],
+    "lever_recommended_room_wide": "SIZE[front] 92 -> 86",
+    "levers_refused": [
+        "SIZE[deck] 52 -> 46 (-3.4 KB): the deck is what this round is judged "
+        "on",
+        "QUANT 20 -> 24 (-14.8 KB): round 4 measured 24 as where banding "
+        "starts on a marquee",
+        "cutting any machine's artwork: ROOM-BRIEF forbids it and it was not "
+        "needed",
+    ],
 }
 
 # Which photograph each DECK graphic was read off, at what magnification, and
@@ -2870,22 +3265,37 @@ DECK_EVIDENCE = {
 # upright()'s hard-coded `plinth + 0.16 .. dy - 0.62` inset by 0.08 either
 # side.  ROOM-BRIEF's standard for this round is a panel that runs TO THE
 # FLOOR; three of these four do in the photographs.
+#
+# ROUND 8 -- `inset_ft` IS NOW THE T-MOLDING BEAD, ON ALL FOUR.
+# `decks5.front_rect` turns this into the printed quad's half-width, so the
+# inset is exactly the strip of `sweep()` perimeter face left showing either
+# side of the print -- which is the surface a separate agent is colouring as
+# the T-molding bead this round.  Round 7 shipped 0.02-0.03 ft, i.e. a 7 mm
+# reveal: invisible at any camera in this room, which is half of why the run
+# read as "one extruded box flood-filled six ways".  Real arcade T-molding is
+# 3/4 in = 0.0625 ft, and the round-8 commission asks for "a thin T-molding
+# bead at the outer ~0.06 ft of each face".  So every one of these is 0.06,
+# and the panels themselves have had their painted borders removed (see
+# `lu_front` and `t2_front`) so the ink bleeds into the bead instead of
+# stopping short of a second, drawn one.
 FRONT_RECT = {
     # runs to the floor, full width: the licence grid is edge to edge and
     # there is no black kick under it in v3 4 or v4 8.
-    "legends-ultimate": {"y0_ft": 0.02, "y1_ft": 2.00, "inset_ft": 0.03},
+    "legends-ultimate": {"y0_ft": 0.02, "y1_ft": 2.00, "inset_ft": 0.06},
     # the blue base.  ar2 builds `a2capc` as a solid box whose front face is
     # ~0.015 ft PROUD of this quad, so the panel is invisible today.  Pull
     # the box front from `D - 0.06 - SD` to `D - 0.10 - SD` and raise this
     # quad to cover the base's height; the box then reads as the blue
     # surround the photograph shows round the printed area.
     "street-fighter-2-champion-edition": {
-        "y0_ft": 0.06, "y1_ft": 2.30, "inset_ft": 0.10,
+        "y0_ft": 0.06, "y1_ft": 2.30, "inset_ft": 0.06,
         "requires": "a2capc box front -> D - 0.10 - SD"},
     # red pillars are part of the print, so the panel must reach the
-    # cabinet's full width and down to the plinth.
-    "time-crisis": {"y0_ft": 0.02, "y1_ft": 1.86, "inset_ft": 0.02},
-    "terminator-2": {"y0_ft": 0.02, "y1_ft": 1.80, "inset_ft": 0.02},
+    # cabinet's full width and down to the plinth.  They stay: v4 4 and v4 5
+    # both show ~0.4 ft of printed red either side of the black centre on
+    # this machine, which is printed vinyl and not a 0.06 ft bead.
+    "time-crisis": {"y0_ft": 0.02, "y1_ft": 1.86, "inset_ft": 0.06},
+    "terminator-2": {"y0_ft": 0.02, "y1_ft": 1.80, "inset_ft": 0.06},
 }
 
 # Suggested atlas sizes for the four new screen panels.  48 px each; the
@@ -2929,4 +3339,151 @@ EVIDENCE = {
         "BLUE gun left / RED gun right on the deck.  Marquee and guns also "
         "at 14-16x in roster/rec/v34_south.png and v4 8.  Screen is black in "
         "all three frames and is painted as reflection only."),
+}
+
+
+# =========================================================================
+#  ROUND 8, machine-readable.  Everything here is measured; the scripts that
+#  produced each number are named so a critic can re-run them.
+# =========================================================================
+ROUND8 = {
+    "scope": ("art_g2.py only.  No other art module, no atlas4, no a2kit, "
+              "no ar2, no decks5, no room geometry, no rebuild, no shot."),
+    "root_cause": {
+        "claim": ("street-fighter-2-champion-edition.deck and "
+                  "terminator-2.deck were drawn, packed and UV-mapped "
+                  "correctly in round 7 and still rendered as flat plates.  "
+                  "The material factor, not the drawing, is the defect."),
+        "proof": [
+            "backend/uploads/models/model_285.glb: the embedded atlas "
+            "carries both panels drawn, at 79x33 and 81x33 texels, and "
+            "primitive 19 (a2artk_south) maps the two deck quads onto their "
+            "full rects with no flip and no degenerate UV.",
+            "terminator-2.deck texture row 9 swings 0-80 across the panel; "
+            "the same row of the same deck in scratchpad/arc4/shots/"
+            "r7_full_south.png swings 73-80.  The texture does not reach "
+            "the frame.",
+            "a2kit.ART_D baseColor #c9c9c9 = 0.584 linear; a2kit.ART_DK "
+            "#4c4c4c = 0.0723 linear.  8.1x, on top of this module own "
+            "3.05 pre-division: ~24x under an ART_D deck at the same true "
+            "colour, which is under the scene ambient/specular floor.",
+            "6/6 correlation room-wide: every deck called bare or black by "
+            "a critic (pac-man, star-wars-atari, east-7, ridge-racer, and "
+            "these two) is ART_DK; every deck that prints (legends-"
+            "ultimate, time-crisis, tmnt, nba-jam, mortal-kombat, "
+            "golden-tee) is ART_D or ART_DM.",
+        ],
+        "why_round_5_missed_it": (
+            "round 5 fitted 'an ART_DK deck renders ~3x its authored value' "
+            "through two ground-level samples.  The relationship is an "
+            "ADDITIVE floor, not a multiplier, so the fit predicted the "
+            "ground level correctly and the contrast not at all."),
+    },
+    "blocking_handoff": INTEGRATOR_MUST,
+    "levels": {
+        "method": ("clean deck medians, photo and panel, ratioed against "
+                   "time-crisis.deck -- the one south deck a critic has "
+                   "accepted, and whose authored median (86.2) sits within "
+                   "12% of its own photographed median (96-101).  Absolute "
+                   "luma is not comparable: these are the owner's frames at "
+                   "the owner's exposure, so ROOM-BRIEF's rule for this "
+                   "room applies and it is judged on ratios."),
+        "script": "scratchpad/arc4/art/_r8_meter.py",
+        "terminator-2": {"photo": [0.386, 0.511], "round7": 0.568,
+                         "round8": 0.465},
+        "street-fighter-2-champion-edition": {"photo": [1.26],
+                                              "round7": 1.582,
+                                              "round8": 1.297},
+    },
+    "front_bleed": {
+        "what": ("FRONT_RECT inset_ft 0.02-0.10 -> 0.06 ft on all four.  "
+                 "decks5.front_rect turns the inset into the printed quad's "
+                 "half-width, so the inset IS the strip of sweep() perimeter "
+                 "face left showing either side -- the surface the carcase "
+                 "agent is colouring as the T-molding bead.  0.06 ft is "
+                 "3/4 in, real T-molding.  Round 7's 0.02 was a 7 mm reveal "
+                 "and invisible at every camera in this room."),
+        "deleted": [
+            "lu_front's hairline silver reveal on all four edges -- v4 8 px "
+            "(438,175)-(490,220) at 20x shows the licence grid running to "
+            "the cabinet edge on black with no reveal, and the grid is "
+            "widened (columns 63/193 half-width 56, was 66/188 at 48) so "
+            "the ink now bleeds into the bead.",
+            "t2_front's painted maroon T-molding stripes at x 0-11 and "
+            "245-256 plus their two dark hairlines -- the bead is real "
+            "geometry now and a painted one beside it doubles it.  v4 8 px "
+            "(355,145)-(392,200) at 22x shows a flat black panel edge to "
+            "edge with the white T2 on it.",
+        ],
+        "kept": ("tc_front's two red pillars.  v4 4 and v4 5 both show ~0.4 "
+                 "ft of printed red either side of the black centre on that "
+                 "machine: printed vinyl, not a 0.06 ft bead."),
+        "also": ("ce_front's CAPCOM moves from CENTRED WHITE over a darker "
+                 "band to LOW LEFT in warm red on continuous blue, which is "
+                 "what v4 8 px (404,155)-(442,215) at 22x shows."),
+    },
+    "repeated_wordmark_sweep": {
+        "within_one_panel": "none found in this module's 16 panels",
+        "across_one_machine": {
+            "time-crisis": ("carried TIME CRISIS on marquee + lower front + "
+                            "deck lip.  The deck one is REMOVED: "
+                            "DECK_EVIDENCE's own reads list for that panel "
+                            "never mentioned a legend, and v4 4 px "
+                            "(36,166)-(110,200) at 20x shows the lip plain "
+                            "red under the gold band."),
+            "legends-ultimate": ("KEPT.  Its deck wordmark is photo-read in "
+                                 "chartreuse at 10x in v4 3, and the front "
+                                 "carries a licence grid, not a title."),
+        },
+    },
+    "payload": {
+        "my_20_panels_kb": {"round7": 30.92, "round8": 32.11, "delta": 1.19},
+        "per_panel_kb": {
+            "street-fighter-2-champion-edition.deck": {"r7": 1.29, "r8": 1.89},
+            "terminator-2.deck": {"r7": 0.48, "r8": 0.77},
+            "time-crisis.deck": {"r7": 1.09, "r8": 0.90},
+            "legends-ultimate.front": {"r7": 3.58, "r8": 4.01},
+            "terminator-2.front": {"r7": 1.81, "r8": 1.84},
+            "street-fighter-2-champion-edition.front": {"r7": 2.14,
+                                                        "r8": 2.18},
+        },
+        "script": "scratchpad/arc4/art/_r8_bytes.py  (and _r8_bytes.py old)",
+        "lever_available": ("SIZE_KEY_REQUEST above is still untaken and "
+                            "returns 0.57 KB of the 1.19."),
+        "note": ("the south atlas is packed once and lands in one GLB, so "
+                 "this is +1.2 KB on the room, not +3.6."),
+    },
+    "still_open": [
+        "THE FIX IS NOT COMPLETE INSIDE THIS FILE.  Until a2kit.DECK_MAT "
+        "carries both machines as 'D', both decks render exactly as they do "
+        "today, only 3.05x less crushed.",
+        "terminator-2.deck's chrome shard and its two player bars remain "
+        "DECLARED EXTRAPOLATION -- see DECK_EVIDENCE.  The photographs show "
+        "this deck near-black with the blue/red split carried by the two gun "
+        "bodies; the bars print that split and nothing else was added.",
+        "street-fighter-2-champion-edition's control LAYOUT is still class "
+        "inference: no frame in the set resolves a single control on that "
+        "machine.  Only the PANEL is photo-read.",
+        "the 0.06 ft bead assumes the carcase agent colours sweep()'s "
+        "perimeter strip either side of the printed front quad.  If the bead "
+        "is built as separate proud geometry instead, inset_ft should go "
+        "back down so the print is not held off the cabinet edge twice.",
+        "nothing here was seen in the 3D render: round 8 forbade rebuilding "
+        "or re-placing models, so this module is verified against the packed "
+        "atlas and the photographs only (r8_south-decks.png).",
+    ],
+    "sheets": [
+        "scratchpad/arc4/art/r8_south-decks.png  -- photo | round 7 packed | "
+        "round 8 packed | round 8 + DECKS geometry, for all four decks, plus "
+        "the four fronts with the bead drawn at true width",
+        "scratchpad/arc4/art/_r8_panels.png  -- all 16 panels at true aspect",
+    ],
+    "scripts": [
+        "scratchpad/arc4/art/_r8_dump.py     packed panels, new and old",
+        "scratchpad/arc4/art/_r8_preview.py  the sheet",
+        "scratchpad/arc4/art/_r8_meter.py    panel medians and photo ratios",
+        "scratchpad/arc4/art/_r8_bytes.py    my 20 panels, new and old",
+        "backup: scratchpad/arc4/art/art_g2_r7.bak.py "
+        "(and _r8old/art_g2.py, the copy the A/B scripts import)",
+    ],
 }

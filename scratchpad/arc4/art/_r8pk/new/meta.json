@@ -1,0 +1,98 @@
+{
+ "aspect": {
+  "legends-ultimate.marquee": 3.54,
+  "legends-ultimate.front": 1.52,
+  "legends-ultimate.side": 0.464,
+  "legends-ultimate.deck": 3.08,
+  "street-fighter-2-champion-edition.marquee": 3.97,
+  "street-fighter-2-champion-edition.front": 1.35,
+  "street-fighter-2-champion-edition.side": 0.49,
+  "street-fighter-2-champion-edition.deck": 2.5,
+  "time-crisis.marquee": 3.53,
+  "time-crisis.front": 1.42,
+  "time-crisis.side": 0.464,
+  "time-crisis.deck": 2.61,
+  "terminator-2.marquee": 3.6,
+  "terminator-2.front": 1.29,
+  "terminator-2.side": 0.498,
+  "terminator-2.deck": 2.35
+ },
+ "dims": {
+  "legends-ultimate.marquee": [
+   188,
+   55
+  ],
+  "legends-ultimate.front": [
+   103,
+   82
+  ],
+  "legends-ultimate.side": [
+   42,
+   86
+  ],
+  "legends-ultimate.deck": [
+   80,
+   34
+  ],
+  "street-fighter-2-champion-edition.marquee": [
+   188,
+   55
+  ],
+  "street-fighter-2-champion-edition.front": [
+   103,
+   82
+  ],
+  "street-fighter-2-champion-edition.side": [
+   31,
+   63
+  ],
+  "street-fighter-2-champion-edition.deck": [
+   80,
+   34
+  ],
+  "time-crisis.marquee": [
+   188,
+   55
+  ],
+  "time-crisis.front": [
+   103,
+   82
+  ],
+  "time-crisis.side": [
+   31,
+   63
+  ],
+  "time-crisis.deck": [
+   80,
+   34
+  ],
+  "terminator-2.marquee": [
+   188,
+   55
+  ],
+  "terminator-2.front": [
+   103,
+   82
+  ],
+  "terminator-2.side": [
+   31,
+   63
+  ],
+  "terminator-2.deck": [
+   80,
+   34
+  ]
+ },
+ "xfer": {
+  "legends-ultimate": 0.88,
+  "time-crisis": 0.88,
+  "street-fighter-2-champion-edition": 1.25,
+  "terminator-2": 1.08
+ },
+ "inset": {
+  "legends-ultimate": 0.06,
+  "street-fighter-2-champion-edition": 0.06,
+  "time-crisis": 0.06,
+  "terminator-2": 0.06
+ }
+}

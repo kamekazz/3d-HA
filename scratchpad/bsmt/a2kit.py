@@ -126,17 +126,50 @@ DECK_MAT = {
     "nfl-blitz": "D",
     "legends-ultimate": "D",
     "north-1-graffiti-multicade": "D",
+    # ROUND 8, art_g2.INTEGRATOR_MUST -- taken, with its evidence re-checked
+    # here.  Both of these decks were drawn full-bleed in round 7, packed and
+    # UV-mapped correctly, and still rendered as flat plates: ART_DK's
+    # baseColor #4c4c4c is 0.0723 linear against ART_D's 0.584, and art_g2 was
+    # dividing its own art by a further 3.05 on top of that, so the diffuse
+    # term sat under the scene's ambient floor and the panel rendered as the
+    # floor.  art_g2 has removed its 3.05 (DECK_XFER 1.0 on both) and pinned
+    # both decks' medians to the photographs' own deck-to-deck ratios against
+    # time-crisis.deck, so raising the factor here is the other half of one
+    # change, not a brightening.
+    "street-fighter-2-champion-edition": "D",
+    "terminator-2": "D",
 }
 
 
-# The carcase / T-molding colour of each machine, off the roster.  `sweep()`
-# hands this to every perimeter quad, which is the cabinet's top, back and the
-# strip of front face either side of the printed panel -- i.e. the T-molding,
-# which is what makes Turtles read from across the room and what round 3 threw
-# away by painting all sixteen cabinets one black.  Where the roster warns a
-# sample is a SHADED or RGB-washed reading (Star Wars' #969129, Pac-Man's
-# #c9c15a) the hue is kept and the value/saturation lifted, as it says to.
-CARCASE = {
+# ROUND 8 -- THE CARCASE IS BLACK.  THE COLOUR IS A BEAD ON THE EDGE.
+#
+# Rounds 4-7 handed the machine's accent hue to `sweep()`'s BODY material,
+# which paints the cabinet's whole perimeter -- top, back, head front, apron,
+# deck skirt and the strip of front face either side of the printed panel.
+# Two independent round-7 critics named the same defect and the photographs
+# agree with them: "the TMNT machine is flood-fill green across front face,
+# head box, side and deck skirt; NBA Jam is a tan/pink body, MK maroon" where
+# every one of those machines is a BLACK carcase carrying a narrow raised
+# plastic T-molding bead along its edges.  So does this room's own roster,
+# which had it right in round 4 and was read wrongly:
+#
+#   tmnt   "Black carcase with BRIGHT GRASS-GREEN T-molding"
+#   nba    "Black carcase, deep red / maroon T-molding"
+#   mk     "Black carcase, dark red / maroon T-molding"
+#   msh    "Black carcase with GOLD / TAN T-molding on every edge"
+#   t2     "Matte black (#1c161e, v4 8) with dark red-maroon T-molding"
+#
+# The evidence crop is `scratchpad/arc4/shots/_ph_tmnt_bead.png` (v4 7 px
+# 390,160-470,300 at 8x): a bright green bead about 1.2 source px wide runs the
+# whole front edge of the Turtles cabinet with a black carcase either side of
+# it, and NBA Jam's dark-red bead runs beside it.  The bead is the brightest
+# thing on that machine -- it peaks (176,222,177) where the same cabinet's
+# black body meters 41-56 luma -- because it is glossy plastic catching the
+# ceiling cans, which is why it is built proud, on a smoother material.
+#
+# NOTHING ABOUT THE HUES MOVED.  `TMOLD` below is round 7's `CARCASE` table
+# verbatim; only where the colour LIVES has changed.
+TMOLD = {
     # ---- east wall
     "star-wars-atari":            "#c9b52c",   # golden yellow carcase
     "marvel-super-heroes":        "#8a7038",   # gold/tan molding on black
@@ -157,6 +190,73 @@ CARCASE = {
     "nfl-blitz":                  "#22222a",   # the darkest machine on the wall
     "golden-tee-3d-golf":         "#2a2b2f",   # flat black
 }
+
+# Backwards name -- record.py and the round-4/5 scripts import CARCASE.
+CARCASE = TMOLD
+
+# FOUR machines really do have a coloured CARCASE, and the roster says so in
+# the same sentences that call the other twelve black.  They keep their body
+# hue and their bead takes the same colour (a painted cabinet's molding matches
+# its paint; inventing a second hue for it would be inventing evidence):
+#
+#   star-wars-atari  "Golden yellow carcase; black art panel and black bezel"
+#   pac-man          "Body yellow ... the maroon T-molding ... in deep shadow
+#                     in every frame; do not trust any hex for them"  -- so the
+#                     body is yellow and the bead is left yellow rather than
+#                     guessed maroon.
+#   time-crisis      "Cream/gold head shroud over a RED body"
+#   ridge-racer      "Red/maroon body with a yellow marquee band"
+BODY_COLOUR = {
+    "star-wars-atari": "#c9b52c",
+    "pac-man":         "#d8b81e",
+    "time-crisis":     "#7e3230",
+    "ridge-racer":     "#8e2a26",
+}
+
+# The near-black every other machine's carcase is painted.
+#
+# METERED, not chosen.  `Arcade Room v4 6.jpg` is the least colour-cast frame in
+# the set (its floor meters neutral #a4a39f), and the three black carcases it
+# shows clean meter #282737 / #313234 / #353745 -- luma 41.4 / 49.9 / 56.1
+# against that frame's floor at 196.8, i.e. a carcase/floor ratio of 0.21-0.28.
+# The roster's own independent samples agree: #1c161e (T2, v4 8), #2b2e38
+# (north-1, v4 6), #25252e (nfl-blitz), #2e2f33 (golden tee).  This room is
+# judged on ratios, not absolutes -- its photographs are an RGB-lit night set --
+# so the number that ships is the one that lands the RENDER on that ratio, and
+# it is measured off a real frame, not converted analytically.  See the round-8
+# report's carcase probe.
+#
+# AND IT IS ONE VALUE PER WALL RUN, NOT ONE FOR THE ROOM.  This scene has one
+# directional sun and no bounce, so the same albedo renders very differently
+# depending on which way a surface faces -- ROOM-BRIEF measures the piece/wall
+# response ratio at 2.08 north against 1.02 south in one room and says plainly:
+# "do not apply a single factor -- probe the specific wall you need to match, on
+# the orientation you need it on".  MEASURED HERE the same way (render the run
+# twice with ONLY the body colour changed and keep the pixels that moved, so the
+# sample is the carcase by construction and no hand-drawn box can swallow a
+# printed panel; `scratchpad/arc4/r8fit.py`), median over 90k / 111k / 37k
+# changed pixels, two-point log-linear fit per run:
+#
+#   run     #474954 renders   #808080 renders   k      authored luma for 0.215
+#   east         39.1              91.9        1.430          71.5
+#   north       112.1             187.2        0.968          20.9
+#   south        24.7              68.5        1.566          89.2
+#
+# The target is the ONE number this room can honestly be held to: `Arcade Room
+# v4 6.jpg` is the least colour-cast frame in the set and its two clean black
+# carcases (Golden Tee's lower front, NFL Blitz's body) meter median 39-48
+# against that frame's floor at median 200 -- a carcase/floor ratio of
+# 0.195-0.24.  The render floors are 173.5 / 175.5 / 167.5 in the three judged
+# frames, so 0.215 of those is what each run is solved to.  Hue is held at the
+# cool blue-grey of the roster's own photo samples (#282737, #313234, #353745,
+# #2b2e38, #1c161e) and only the value moves.
+BODY_DARK_RUN = {"east": "#454754", "south": "#545967", "north": "#141519"}
+BODY_DARK = BODY_DARK_RUN["east"]     # fallback for any other ArtSet name
+
+# One shared body material per run, not one per machine.  It is also 9 glTF
+# primitives cheaper across the three GLBs: a primitive costs ~0.8 KB of
+# accessors, bufferViews and JSON before a triangle is in it, and round 7 paid
+# for sixteen of them to say sixteen slightly different blacks.
 
 
 class ArtSet(object):
@@ -225,10 +325,20 @@ class ArtSet(object):
             DECK_MAT.get(slug), self.ART_DK)
 
     def carcase(self, slug):
-        if slug not in self._cc:
-            self._cc[slug] = Material("a2cc_" + slug, CARCASE[slug],
-                                      roughness=0.55)
-        return self._cc[slug]
+        """The cabinet BODY -- black for twelve of the sixteen machines, and
+        one shared material for all of them so they pack into one primitive."""
+        col = BODY_COLOUR.get(slug)
+        key = col or "dark"
+        if key not in self._cc:
+            self._cc[key] = Material(
+                "a2body" if col is None else "a2body_" + slug,
+                col or BODY_DARK_RUN.get(self.name, BODY_DARK),
+                roughness=0.55)
+        return self._cc[key]
+
+    def bead(self, slug):
+        """This machine's T-molding hue, for the vertex-coloured bead."""
+        return TMOLD[slug]
 
     def marquee(self, slug):
         if slug not in self._mq:

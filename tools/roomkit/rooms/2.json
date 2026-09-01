@@ -215,7 +215,7 @@
    ],
    "rot_y": 0.0,
    "scale": 1.0,
-   "kb": 198.4
+   "kb": 204.6
   },
   "Arcade Cabinets North": {
    "pos_room_local_ft": [
@@ -225,7 +225,7 @@
    ],
    "rot_y": 0.0,
    "scale": 1.0,
-   "kb": 189.9
+   "kb": 183.9
   },
   "Arcade Cabinets South": {
    "pos_room_local_ft": [
@@ -235,7 +235,7 @@
    ],
    "rot_y": 0.0,
    "scale": 1.0,
-   "kb": 222.5
+   "kb": 218.5
   },
   "Arcade Ceiling": {
    "pos_room_local_ft": [
@@ -328,7 +328,7 @@
    "kb": 7.2
   }
  },
- "_payload_kb": 1533.8,
+ "_payload_kb": 1530.1,
  "_shots": [
   "scratchpad/shots/v3_arcade/r2_a_look_s.png  + _sbs.jpg   (photo v3 4 match, --no-cutaway)",
   "scratchpad/shots/v3_arcade/r2_b_look_n.png  + _sbs.jpg   (photo v3 1 match, --no-cutaway)",
@@ -741,5 +741,186 @@
    "Screen value spread east 16-21 / north 60-66 / south 3.5-8.6 from one material, which is ROOM-BRIEF's documented one-sun-no-bounce limit.",
    "Gun cables, trigger blades and sights are not built (no photograph resolves them); T2's gun yaw is a declared inference (splayed 26 deg because art_g2 carries the schema default 0, not a reading)."
   ]
+ },
+ "_round7_controls": {
+  "date": "2026-08-31",
+  "scope": "Round 7 engine pass. Rebuilt ONLY Arcade Cabinets East / South / North. No room geometry, no footprint, no other piece, no poses.json, no frontend/js, no backend/, no Flask restart, and no art module edited.",
+  "defect_it_answers": "Round 6 was rejected 0 of 4 and all four critics named the same surface: 'the pushbuttons are painted into the control-deck texture rather than modelled: flat 2-3px coloured lozenges with no dome, no rim shadow and no specular, and the identical six-dot cluster repeats on all six machines'.",
+  "root_cause": "TWO causes, both found by reading the code rather than the render. (1) The buttons WERE geometry, and the geometry was a lozenge: art_g1.button_cap is a domed n-gon FAN and nothing else -- an apex, one ring at y = h*(1-dome), seg triangles, NO SIDE WALL. It never touches the deck, so every cap floated 0.015 ft above the artwork with open air under its rim, and rose 13 degrees off flat. (2) decks5._btn defaulted `emis` to True for any colour under luma 190, so 128 of the room's 152 caps rendered through cmat(col, 0.34, 0, col, 0.75) -- emissive at strength 0.75 in their own hue. An emissive surface takes no highlight and no shading, so whatever geometry stood under it rendered as a flat disc of pure colour. art_g1's CONTROL_FINISH asked for exactly this to be removed, in writing, and round 6 did not read the key.",
+  "built": {
+   "button": "ar2.btn_geo(r, cap_r, h, rise, seg=6) -- ring 0 at y=0 radius r (the flange where it meets the deck), ring 1 at y = h-rise radius cap_r (the shoulder), apex at y=h. One smooth part: 13 verts / 18 tris. The truncated cone between rings 0 and 1 faces sideways and down-and-out, so under this room's overhead sun it renders darker than both the deck it stands on and the cap it carries -- the rim the critics asked for, as real geometry that moves with the camera and vanishes in a plan view.",
+   "emissive": "removed from every cap in the room except art_g3's two Ridge Racer whites, which that module flags as lit. 128 -> 2.",
+   "materials": "new a2btn at roughness 0.70 carries every UP-FACING cap (button crowns, ball tops, bat tops, trackballs). a2hw stays at 0.42 for gun bodies, holster channels, coin plates, the Star Wars yoke and Ridge Racer's wheel, which meter correctly and were never flagged. Cost: exactly one extra glTF primitive per cabinet GLB.",
+   "trackball": "rings 3 -> 4, routed through a2btn, authored albedo capped at _TB_CEIL 0.78 (#f2f2ec -> #bdbdb8).",
+   "dark_hardware": "_HW_FLOOR 44 -- vertex colours on a2btn parts are lifted so their brightest channel is at least 44/255, hue preserved. DECLARED: this is the same kind of exposure correction a2kit already applies to printed artwork through ART_D / ART_DK / ART_DM, applied to hardware. It does not overwrite any art module's authored hex."
+  },
+  "specs_consumed": {
+   "art_g0": "cap_r and dome_rise now reach the render; round 6 discarded both and drew h*(1-0.45). pad_r correctly stays printed, not built.",
+   "art_g1": "`emissive` (False on all 58 caps) and `profile` now read. base_r stays printed. CONTROL_FINISH is answered by a2btn.",
+   "art_g2": "unchanged in shape; r_ft / h_ft / dust_* / round_flat all still arrive. `inferred` now flows per machine instead of decks5's stale hard-coded tuple -- art_g2 promoted legends-ultimate to READ this round and declared champion-edition inferred instead.",
+   "art_g3": "`emissive` per button; the only route to an emissive cap left.",
+   "totals": "152 buttons, 21 sticks, 2 trackballs, 4 guns, 1 yoke, 1 wheel across 16 machines. Per-machine counts: $PY scratchpad/arc4/decks5.py",
+   "declared_not_readings": [
+    "street-fighter-2-champion-edition -- art_g2 inferred: True",
+    "marvel-super-heroes -- art_g1's own 'DECLARED CHOICE, not a reading'"
+   ]
+  },
+  "proof_layouts_differ": "scratchpad/arc4/r7eng/shots/sbs_sheet.png -- four machines' decks shot at one scale (each camera 3.35 ft off its own deck centre, 1.75 ft above it, fov 38): tmnt 2 sticks / 13 buttons, nba-jam ball + BAT top / 8 buttons, mortal-kombat 2 sticks / 16 buttons, golden-tee no stick / trackball / 2 buttons. Nothing about those four frames is shared.",
+  "roughness_metered": {
+   "method": "a2btn swept 0.42 / 0.62 / 0.72, room rebuilt and re-shot at each value, sampled on scratchpad/arc4/r7eng/shots/p0*_msh.png.",
+   "white_cap": "234.3 / 234.3 / 234.3 -- roughness does not move a pale cap here at all",
+   "blue_cap": "121.9 / 120.4 / 118.2",
+   "black_ball_top": "3.7 / 5.8 / 7.4  (max 25.1 / 45.6 / 58.9)",
+   "finding": "a2hw's 0.42 was NOT the blowout the round-6 note blamed it for. The blowout was the emissive. Roughness only moves the DARK hardware, and it moves it UPWARD, so 0.70 was chosen: it matches art_g0's a2ball request, sits just above art_g2's 0.62, and costs the coloured caps nothing. art_g1's 0.26 request is refused ON MEASUREMENT -- it is the value that makes the black ball tops darkest, which is the opposite of what its note predicts.",
+   "photo_reference": "docs/photos-jpg/Arcade Room v4 6.jpg px (460,360)-(600,440) at 10x: deck 185.4, white cap 223.9, red cap 91.7, blue cap 110.2, black ball top 48.8.",
+   "render_final": "deck 177.2 (within 5% of the photo), white cap 234.3, red 139.1, blue 118.7, black ball top 12.8 (max 74.3).",
+   "unreachable": "the black ball tops. Photo 0.264 of their own deck; round 6 0.033; round 7 0.072 -- 2.2x better and still 3.7x short. The photograph's 48.8 is mostly sheen off curved black plastic and this scene has one sun and no bounce, the limit ROOM-BRIEF documents. Reaching 48.8 by albedo alone needs an authored ~#82828a, which is mid grey, not black, and would be wrong in the dollhouse view and on the night ramp.",
+   "trackball": "crown/fairway ratio -- photo 1.217, round 6 1.255, round 7 1.287. Value was never the defect: neither round clipped, and the photograph's own trackball is 93% clipped to white. What changed is that the crown now carries a dome gradient and a dark bezel ring instead of reading as a featureless white cap."
+  },
+  "payload": {
+   "room_total_kb": 1523.9,
+   "cap_kb": 1536.0,
+   "headroom_kb": 12.1,
+   "was_kb": 1535.6,
+   "pieces_kb": {
+    "Arcade Cabinets South": 213.7,
+    "Arcade Cabinets East": 205.5,
+    "Arcade Cabinets North": 181.7
+   },
+   "triangles": {
+    "Arcade Cabinets East": 2994,
+    "Arcade Cabinets South": 3314,
+    "Arcade Cabinets North": 2882,
+    "total": 9190,
+    "round6_total": 7334
+   },
+   "chain_measured_on_the_three_cabinet_glbs": [
+    "round-7 art on round-6 geometry            625.9 KB   7334 tris",
+    "  - emissive off every cap (26 prims)      605.1 KB   7334 tris  -20.8",
+    "  + btn_geo flange + dome                  644.0 KB   8819 tris  +38.9",
+    "  + uint16 glTF indices (LOSSLESS)         592.1 KB   8819 tris  -51.9",
+    "  + trackball rings 3->4, a2btn routing    592.7 KB   8851 tris   +0.6",
+    "  + seg 6 on every cap                     600.9 KB   9190 tris   +8.2",
+    "round-6 shipping, for comparison           612.6 KB   7334 tris"
+   ],
+   "marginal_button_cost_in_a_saved_glb": [
+    "round 6  domed fan, smooth            232 B/button    6 tris",
+    "round 7  flange+dome, SMOOTH          472 B/button   18 tris",
+    "round 7  flange+dome, FLAT SHADED    1620 B/button   18 tris",
+    "The round-6 gun agent's finding holds and then some: the same 18 triangles cost 3.4x more flat-shaded, because a flat face duplicates its vertices to carry its normal. 152 buttons flat would have been +211 KB. Script: scratchpad/arc4/r7eng/btncost.py"
+   ],
+   "the_lever": "tools/roomkit/glb.py now writes UNSIGNED_SHORT indices whenever a primitive fits in 65535 vertices, which is every primitive this project has ever exported. It was writing UNSIGNED_INT unconditionally and spending 6 bytes a triangle on zeros. -51.9 KB on these three GLBs for byte-identical geometry, and every room in the house gets the same on its next rebuild. Existing files are untouched, bufferView offsets are already 4-aligned so the 2-byte element alignment is satisfied, and the guard keeps the old path for anything over 65535 vertices.",
+   "levers_declined": [
+    "art_g0.SIZE_KEY_REQUEST      measured -0.4 KB -- NOT TAKEN",
+    "art_g2.SIZE_KEY_REQUEST      measured -0.8 KB -- NOT TAKEN",
+    "art_g1's QUANT 20 -> 22      measured -6.8 KB -- NOT TAKEN",
+    "art_g2's SIZE[front] 92->86  measured -3.8 KB -- NOT TAKEN",
+    "All four cut artwork resolution on surfaces this room is judged on -- marquees, lower fronts, two decks, the four south screens. The uint16 lever pays for the whole round without them, so nothing was cut. Measured with scratchpad/arc4/r7eng/levers7.py, which builds the real GLBs rather than summing atlas PNGs."
+   ]
+  },
+  "still_open_not_fixed": [
+   "pac-man's deck is a plain black overlay -- art_g0 declares this rather than inventing artwork the photographs deny. The round-6 'AC-MAN' clipping IS gone: art_g0 removed the invented legend and added _text_fit.",
+   "terminator-2's and marvel-vs-capcom's decks carry no game artwork. Both art modules declare it against the photographs.",
+   "the four south screens at 3.5-8.6 grey against the north run's 60-66 -- ROOM-BRIEF's documented one-sun-no-bounce limit, untouched.",
+   "black ball tops at 0.072 of their own deck against the photo's 0.264 -- see roughness_metered.unreachable."
+  ],
+  "files_touched": [
+   "scratchpad/bsmt/ar2.py       btn_geo, a2btn, _hw, _tb_col, controls()",
+   "scratchpad/arc4/decks5.py    _btn (emis defaults False, cap_r, rise), _from_g0, _from_g1, INFERRED derived from the modules",
+   "tools/roomkit/glb.py         uint16 indices when they fit",
+   "scratchpad/arc4/r7eng/       measure.py, levers7.py, probe.py, decks_sbs.py, btncost.py, meter.py, record.py",
+   "backups: scratchpad/bsmt/ar2_r6.bak.py, a2kit_r6.bak.py, scratchpad/arc4/decks5_r6.bak.py"
+  ],
+  "shots": [
+   "scratchpad/arc4/shots/r7_full_east.png",
+   "scratchpad/arc4/shots/r7_full_north.png",
+   "scratchpad/arc4/shots/r7_full_south.png",
+   "scratchpad/arc4/shots/r7_mq_east.png",
+   "scratchpad/arc4/shots/r7_mq_north.png",
+   "scratchpad/arc4/shots/r7_mq_south_w.png",
+   "scratchpad/arc4/r7eng/shots/sbs_sheet.png  (layouts-differ proof)"
+  ],
+  "freshness": "newest room-2 GLB 2026-08-31 06:34:09 (Arcade Cabinets North); oldest judged PNG 2026-08-31 06:34:20 (r7_full_east). Every judged frame postdates every room-2 GLB by 11.8 s or more. The previous r7_*.png were deleted before shooting.",
+  "black_slab_check": "all six judged frames looked at; no pure-black surface, so no inverted normals.",
+  "check_pick": "OK -- 22/49 floor samples resolve to room 2, 0 off-room.",
+  "rebuild": "cd tools; then in python: sys.path gets ..\\tools, ..\\scratchpad\\bsmt, ..\\scratchpad\\arc4, ..\\scratchpad\\arc4\\art; import ar2; [ar2.BUILDERS[k]() for k in ('east', 'south', 'ncab')]"
+ },
+ "_round8_tmolding": {
+  "date": "2026-08-31",
+  "scope": "Round 8 integration pass. Rebuilt and re-placed ONLY Arcade Cabinets East / South / North. No room geometry, no footprint, no other room, no frontend/js, no backend, no poses.json, no Flask restart.",
+  "headline": "THE CARCASE IS BLACK AND THE COLOUR IS A BEAD. Rounds 4-7 handed each machine's accent hue to a2kit.sweep()'s BODY material, which paints the whole perimeter -- top, back, head front, apron, deck skirt and the strip of front face either side of the printed panel -- so the Turtles cabinet was flood-fill green and NBA Jam flood-fill maroon. Two round-7 critics named it, the photographs agree, and so does this room's own roster, which said 'Black carcase with BRIGHT GRASS-GREEN T-molding' in round 4 and was read wrongly. The hues did NOT move: a2kit.CARCASE is renamed a2kit.TMOLD verbatim and is now the colour of a real bead of geometry running the seam between each flank and the perimeter face.",
+  "evidence": [
+   "docs/photos-jpg/Arcade Room v4 7.jpg px (390,160)-(470,300) at 8x LANCZOS -> scratchpad/arc4/shots/_ph_tmnt_bead.png: a bright green bead runs the whole front edge of the Turtles cabinet with black carcase either side of it, NBA Jam's dark-red bead beside it. The bead peaks (176,222,177) where the same machine's body meters 41-56 luma -- it is glossy plastic catching the ceiling cans.",
+   "docs/photos-jpg/Arcade Room v3 4.jpg px (100,520)-(520,700) at 3x -> scratchpad/arc4/shots/_ph_v34_tops.png: the whole east run is five BLACK carcases each outlined by its own bright bead -- gold, maroon, maroon, green -- and every cabinet TOP is black.",
+   "docs/photos-jpg/Arcade Room v4 7.jpg px (40,105)-(200,180) at 7x -> scratchpad/arc4/shots/_ph_tops.png: NFL Blitz and Golden Tee heads flat black to the top edge; no pale cap strip anywhere."
+  ],
+  "geometry": {
+   "what": "ar2.tmold(): a 3-point section -- a landing 0.006 ft off the flank, a crown 0.030 ft proud, a landing 0.006 ft off the perimeter face -- swept as ONE smooth strip per flank along the machine's own profile. 0.062 ft across the corner = 0.74 in, real T-molding.",
+   "where": "The seam IS the swept profile's outline at x0 and x1, so one strip per flank carries all three runs at once: the perimeter of the front face, the deck's front edge and the side panel's edge. Two profile edges are skipped -- the floor edge and the back edge -- which are never in frame and are ~20% of the strip.",
+   "material": "a2tm, ONE vertex-coloured material per run (so zero extra glTF primitives for sixteen hues) at roughness 0.30 against the body's 0.55 -- glossy plastic against painted melamine. That is what gives it the specular line the photographs show; the crown's averaged smooth normal turns across the section so it reads as a line, not two flat facets.",
+   "z_fighting": "Neither landing is coplanar with the surface it sits on: 0.006 ft off the flank plane and 0.006 ft off the perimeter face, proud of both in between. Inspected at 5x on the grazing mq_east pose (scratchpad/arc4/shots/_diag_graze1.png) -- continuous, no shimmer.",
+   "bug_found_and_fixed": "The first build ran the section OUTWARD from both flanks (sgn -1 at x0, +1 at x1), which put the whole bead outside the cabinet and left a 3-pixel carcase reveal between the printed panel and the bead. sgn now points INWARD (+1 at x0, -1 at x1) and only BEAD_A's lip stands proud of the flank.",
+   "cost": "a2tm geometry: east 13.80 KB / 402 v / 480 t, south 9.68 / 282 / 336, north 7.83 / 228 / 272 for the flank seams, plus 3.0 KB for the deck-edge run = 34.3 KB and 1152 triangles gross for the room's sixteen machines (~2.1 KB and 72 tris per cabinet). Paid for by three things, none of which is artwork: one shared black body material per run instead of sixteen per-machine carcase materials (-9 glTF primitives, ~-5.0 KB), the pale cap deletion (-14.6 KB, see below) and per-class atlas quantisation (-4.6 KB). NET on the three GLBs +9.2 KB against the same art without the bead; the room lands at 1530.1 KB, 5.9 KB under the 1536 cap.",
+   "deck_edge": "ar2.tmold_deck(): the same three-point section swept along x across the control deck's LEADING EDGE, because tmold() alone beads that edge only at its two ends and the photographs put one across the full width -- the roster says 'Green T-molding round the deck edge' for the machine it reads best, and ref/v47_right.png shows the strip running the whole leading edge. 6 verts / 4 tris / ~192 bytes a machine, +3.0 KB across the room. It clears the deck box's top face (y dy+0.010, z <= fd-0.04) and the printed deck quad (y dy+0.014, z <= fd-0.06); verified at 4x in scratchpad/arc4/shots/_diag_deckbead.png."
+  },
+  "carcase_value": {
+   "method": "PROBED, not chosen. Each run was rendered twice with ONLY the body colour changed and the pixels that moved kept, so the sample is the carcase by construction (ROOM-BRIEF's probe2 technique); two-point log-linear fit per run in scratchpad/arc4/r8fit.py.",
+   "target": "docs/photos-jpg/Arcade Room v4 6.jpg is the least colour-cast frame in the set (its floor meters neutral #a4a39f). Its two clean black carcases -- Golden Tee's lower front px (362,238)-(392,248) and (364,254)-(392,262), NFL Blitz's body -- meter median 39-48 against that frame's floor at median 200: a carcase/floor ratio of 0.195-0.24. This room is judged on ratios (its photographs are an RGB-lit night set), so 0.215 is the target.",
+   "why_per_run": "One albedo cannot serve three orientations in a scene with one directional sun and no bounce. MEASURED: #474954 renders 39.1 on east, 112.1 on north and 24.7 on south. ROOM-BRIEF says exactly this -- 'do not apply a single factor, probe the specific wall you need to match, on the orientation you need it on'.",
+   "shipped": {
+    "east": "#454754",
+    "south": "#545967",
+    "north": "#141519"
+   },
+   "result": "east carcase median 37.6 / floor 173.5 = 0.216 (n=82470 probed px); north 36.3 / 175.5 = 0.207 (n=98259); south 35.6 / 167.5 = 0.212 (n=28950). Photo band 0.195-0.24. Round 7 was 0.070 on east.",
+   "hue": "Held at the cool blue-grey of the roster's own photo samples (#282737, #313234, #353745, #2b2e38, #1c161e); only the value moves.",
+   "coloured_bodies": "FOUR machines really do have a coloured carcase and the roster says so: star-wars-atari (golden yellow), pac-man (yellow body, maroon molding 'in deep shadow in every frame; do not trust any hex'), time-crisis (cream/gold head over a RED body), ridge-racer (red). They keep their body hue and their bead takes the same colour rather than a guessed second one."
+  },
+  "pale_cap_removed": "The #787c82 strip round 3 ran across every cabinet top -- 'end-on from the dollhouse quadrant an all-black run merges into one mass, and this line breaks it into machines' -- is DELETED. It is a correction, not a saving: v4 7 and v3 4 both show black cabinet tops and no pale strip, and the T-molding bead does the job it was standing in for, correctly and from every camera rather than only from above. It was 14.6 KB across the three GLBs.",
+  "full_bleed": "decks5.front_rect's default was (-bw/2+0.08, bw/2-0.08, plinth+0.16, dy-0.62) and both art agents deleted their own painted edge trim this round expecting a real bead to take that strip. It is now (-bw/2+0.045, bw/2-0.045, plinth+0.05, dy-0.57): the bead occupies x0-0.006..x0+0.056 of the front face, so the last 0.011 ft of vinyl runs UNDER it -- full bleed into a T-molding -- and the panel now stops 0.02 ft short of where the flat front face ends instead of 0.07. Panel ASPECTS follow automatically through ar2._aspects() -> atlas4.set_aspects(), so every module's art re-renders to the new shape rather than stretching into it.",
+  "marquee_uvs": {
+   "finding": "THERE IS NO UV OVERSCAN ANYWHERE IN THE ROOM, and the round-7 'ORTAL KOMBAT' had two other causes. Checked with scratchpad/arc4/r8marq.py: every one of the sixteen marquee quads takes its own packed rect at a UV span of 99.4-99.5% of the tile -- the half-texel inset and nothing else.",
+   "cause_1": "The art was authored INTO the bleed. Rounds 4-7 set MORTAL and KOMBAT with their outer stems ~1% of the tile width from the edge. art_g1 fixed that in round 8 (12% safe margin, verified in the tile: scratchpad/arc4/shots/_diag_mkmq_r7.png vs _diag_mkmq_r8.png).",
+   "cause_2": "OCCLUSION, not clipping. Mortal Kombat is a 'step' profile whose marquee sits at ft-0.37, and its neighbour Marvel vs Capcom is a 'riser' whose marquee sits at ft+0.13 -- half a foot proud. From mq_east, which looks along the run, MvC's head covers the left ~8% of MK's marquee. That is real geometry doing what real geometry does; the fix is the safe margin, not a UV change.",
+   "verified_r8": "All five east marquees read complete in r8_mq_east (MARVEL SUPER HEROES / MORTAL KOMBAT / NBA JAM / TURTLES, plus the two art-panel marquees); all four north read complete in r8_mq_north (PAC-MAN / NFL BLITZ / GOLDEN TEE 3D GOLF!). In r8_mq_south_w, TIME CRISIS and CHAMPION STREET FIGHTER EDITION read complete; LEGENDS ULTIMATE and RIDGE RACER are each partly hidden by the other's cabinet round the SW corner -- occlusion from that camera, not a mapping defect."
+  },
+  "art_consumed": {
+   "art_g0_g1": "Consumed as delivered. Both modules import, all 34 of their panels render through atlas4, and no two modules claim the same key (atlas4 raises on that and did not). Their deleted edge trim is now real bead geometry and their full-bleed grounds reach the tile edge.",
+   "art_g2": "Consumed, including its BLOCKING hand-off: a2kit.DECK_MAT now carries street-fighter-2-champion-edition and terminator-2 as 'D'. Its diagnosis was right -- ART_DK's #4c4c4c is 0.0723 linear against ART_D's 0.584, and with art_g2's own 3.05 pre-division on top the diffuse term sat under the scene's ambient floor. Both south decks now print in r8_full_south; round 7's frame showed them as flat plates.",
+   "front_rect_inset": "art_g2's FRONT_RECT already asked for inset_ft 0.06 on its four; the other twelve now get 0.045 from the new default, which is the number that actually puts vinyl under this bead."
+  },
+  "atlas_quant": "atlas4.QUANT is now per panel class: marquee/front/riser stay at 20, everything else goes to 28 (QUANT_CLS / QUANT_REST). Round 4's 'banding begins at 24' was measured on a MARQUEE -- the one class with a large soft ground behind big letterforms. A flank at 42 px, a deck at 52, a bezel and a screen are small dense panels where a coarser step is invisible. MEASURED all three runs packed: 141.00 KB everything at 20, 126.54 everything at 24 (marquees band), 136.42 as shipped. No artwork removed to reach it.",
+  "payload": {
+   "Arcade Cabinets East": 204.6,
+   "Arcade Cabinets South": 218.5,
+   "Arcade Cabinets North": 183.9,
+   "room_total_kb": 1530.1,
+   "cap_kb": 1536.0,
+   "headroom_kb": 5.9,
+   "triangles": {
+    "east": 3418,
+    "south": 3610,
+    "north": 3122
+   },
+   "next_lever_if_more_is_needed": "atlas4.QUANT_REST 28 -> 36 is a further -2.2 KB, and art_g2.SIZE_KEY_REQUEST (its three inner south flanks 44 -> 38, its four screens 28 -> 24) is -0.6 KB. Both are fidelity dials on classes with no letterform in them; neither removes artwork."
+  },
+  "shots": [
+   "scratchpad/arc4/shots/r8_full_east.png",
+   "scratchpad/arc4/shots/r8_full_north.png",
+   "scratchpad/arc4/shots/r8_full_south.png",
+   "scratchpad/arc4/shots/r8_mq_east.png",
+   "scratchpad/arc4/shots/r8_mq_north.png",
+   "scratchpad/arc4/shots/r8_mq_south_w.png",
+   "diagnostics: _diag_graze1.png (bead at a grazing angle, 5x), _diag_bead_tmnt.png, _diag_sw_end.png, _diag_r8_marq_east.png"
+  ],
+  "still_open": [
+   "THE APRON IS NOT PRINTED. The sloped face between the printed front and the control deck (profile edge P2->P3, ~0.3 ft tall on every machine) is bare carcase. In the photographs it carries the machine's artwork -- the Turtles brick riser runs onto it. The fix is one extra quad per machine (~0.15 KB each) mapped to the top k of the front tile, and it needs each art module to declare its own riser fraction; guessing k would cut a title in half.",
+   "Legends Ultimate and Ridge Racer occlude each other's marquee from mq_south_w. Neither is fully legible in any judged frame. That is the room's real layout round the SW corner, not a mapping bug, and fixing it means moving a cabinet.",
+   "The carcase renders as flat colour (sd 13-20 across the probe mask, which is shading not texture) against photographed black melamine at sd 16-25. Painted melamine really is flat, but a critic cropping in will find no grain.",
+   "art_g0 leaves the title stamped twice on marvel-super-heroes, tmnt and nba-jam -- once on the kick panel and once on the riser -- because the photographs show two. It declared this and I did not overrule it.",
+   "mortal-kombat.side and nfl-blitz.side still carry round-5 ghost title watermarks on flanks the roster calls featureless. Invisible in every judged frame (run gaps 0.00-0.16 ft) but a critic who crops a flank can count a third occurrence."
+  ],
+  "freshness": "newest room-2 GLB 2026-08-31 08:05:51 (model_317.glb); oldest judged PNG 2026-08-31 08:06:02 (r8_full_east.png). Every judged frame postdates every room-2 GLB.",
+  "black_hole_check": "pure-black (r+g+b < 6) share of each judged frame, round 7 -> round 8: full_east 1.32 -> 1.13, full_north 0.42 -> 1.02, full_south 6.50 -> 4.68, mq_east 3.55 -> 3.52, mq_north 0.33 -> 0.40, mq_south_w 11.17 -> 5.03. No new black faces; the two big drops are art_g2's south decks now printing. The north rise is the metered north carcase going from #2b2e38/#22222a/#2a2b2f to #141519, which is intended."
  }
 }

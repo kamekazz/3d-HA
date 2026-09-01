@@ -2,7 +2,7 @@
  "_note": "Whole-house gauntlet status. Update state/round/note/render per room as critics report, then run: python -m roomkit.house_progress",
  "headline": "The arcade's sixteen machines, each drawn as itself",
  "lede": "Every room of this house is being rebuilt as procedural 3D geometry inside the live Home Assistant app, then screenshotted from the same spot the reference photo was taken. A separate critic with fresh context puts the two side by side, blind, and says which is which. If ours is obvious, it goes back to the builder. This run is the Arcade Room alone, and one defect in it: round 3 shipped one cabinet graphic repeated sixteen times, where the photographs show sixteen different machines.",
- "stamp": "v4 run - 31 Aug 2026 - arcade round 7: the control decks",
+ "stamp": "v4 run - 31 Aug 2026 - arcade round 8 shipped; eight rounds, fifteen machines",
  "hero": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\dollhouse\\house_low.png",
  "hero_label": "Every room in the house furnished. 241 pieces, all 423 Home Assistant device markers intact.",
  "rooms": [
@@ -49,12 +49,12 @@
   {
    "id": 2,
    "name": "Arcade Room",
-   "state": "fail",
+   "state": "judging",
    "ref": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\docs\\photos-jpg\\Arcade Room v4 7.jpg",
-   "note": "Round 6 replaced the Terminator 2 and Time Crisis light guns -- which had been red and blue rectangular slabs on pedestals -- with real pistols: a concave thirteen-point side profile carrying backstrap, receiver, barrel, trigger guard and raked grip, extruded and standing in its own holster socket. It came in at MINUS 192 bytes per gun for forty more triangles, because a smooth extrusion shares vertices where a flat-shaded box duplicates twenty-four of them to carry twelve. It also proved its frames postdated its build, timestamp by timestamp, after round 5's verdicts turned out to have been passed on renders shot nine minutes before the rebuild. Four critics still rejected it and all four named the same surface: the control deck. The buttons are painted into the deck texture rather than modelled -- 'flat 2-3px coloured lozenges with no dome, no rim shadow and no specular' -- and the per-machine layouts round 5 authored never reached the geometry, so six machines wear the same two sticks and the same 3-over-3 cluster. Round 7 rebuilds the buttons as real domed hardware and prints every deck edge to edge.",
-   "round": 7,
-   "render_label": "round 6 - rejected 0/4, round 7 rebuilding the decks",
-   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\arc4\\shots\\r6_full_east.png"
+   "note": "Round 8 took the accent colour off the cabinet bodies and put it where the photographs put it: the carcases are black melamine now and each machine's colour survives only as a raised T-molding bead along its edges -- gold on Marvel Super Heroes, red on Mortal Kombat, dark red on NBA Jam, bright green on the Turtles. That was the last thing making the run read as one box in six colours, and it took two critics disagreeing with two others to find it. The same round stopped the wordmark being stamped three times on one front panel -- the fix was to go back to the photograph and find that Marvel really does carry its title twice, at two different sizes, so the build now matches that rather than removing it wholesale -- and fitted the marquee that had read 'ORTAL KOMBAT' since round 4, by moving the letters inside a twelve percent safe margin while leaving the printed ground bleeding to the edge. It also introduced a small helper for the honest case where a photograph shows type too small to read: illegible microprint, rather than inventing words. Fifteen machines, each drawn as itself, in 1530 KB against a 1536 KB cap.",
+   "round": 8,
+   "render_label": "round 8 - black carcases, T-molding, MORTAL KOMBAT no longer clipped",
+   "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\arc4\\shots\\r8_mq_east.png"
   },
   {
    "id": 14,

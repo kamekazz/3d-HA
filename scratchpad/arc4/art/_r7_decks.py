@@ -266,19 +266,20 @@ LU = r'''def lu_deck(px, ox, oy, tile=TILE):
     b = _buf("#0d0c12")
     # --- the printed nebula.  Right half, magenta into violet into black.
     # Big soft masses only: at 30 output rows anything finer averages away.
-    for (cx, cy, rx, ry, col, al) in (
-            (214.0, 120.0, 62.0, 118.0, "#4e1442", 0.90),
-            (226.0, 100.0, 40.0, 76.0, "#7a2260", 0.75),
-            (238.0, 138.0, 26.0, 50.0, "#a8367a", 0.50),
-            (168.0, 168.0, 40.0, 58.0, "#2a0e30", 0.70),
-            (52.0, 70.0, 44.0, 62.0, "#1b1530", 0.65)):
-        _disc(b, cx, cy, rx, ry, _c(col), al)
-    # star specks -- sparse, and tall enough to survive the box filter
-    for k in range(18):
-        sx = 8.0 + _h2(k, 3, 77) * 240.0
-        sy = 10.0 + _h2(k, 9, 91) * 200.0
-        r = 1.3 + _h2(k, 5, 12) * 1.1
-        _disc(b, sx, sy, r, r * 3.0, _c("#f2f0fa"), 0.95)
+    for (cx, cy, rx, ry, col) in (
+            (214.0, 120.0, 62.0, 118.0, "#3c1035"),
+            (222.0, 112.0, 46.0, 88.0, "#5c1a4c"),
+            (232.0, 126.0, 28.0, 54.0, "#8a2c66"),
+            (166.0, 170.0, 38.0, 54.0, "#231029"),
+            (52.0, 70.0, 42.0, 60.0, "#191428")):
+        _disc(b, cx, cy, rx, ry, _c(col), 1.0)
+    # star specks.  ONE OUTPUT TEXEL EACH, drawn as hard rectangles on the
+    # texel grid: an anti-aliased disc here only manufactures intermediate
+    # colours the box filter then averages away, and they are not free.
+    for k in range(16):
+        sx = 6.0 + int(_h2(k, 3, 77) * 78.0) * 3.1
+        sy = 8.0 + int(_h2(k, 9, 91) * 24.0) * 8.0
+        _rect(b, sx, sy, sx + 3.1, sy + 8.0, _c("#f2f0fa"), 1.0)
     # --- a soft black printed field under each cluster, so no modelled button
     # ever sits straight on the nebula
     for u in (-0.66, 0.66):

@@ -223,6 +223,28 @@ DEFAULT_SIZE = 88
 # content one: no artwork is removed to reach the number.
 QUANT = 20
 
+# ROUND 8.  QUANT is now PER PANEL CLASS, because round 4's "banding begins at
+# 24" was measured on a MARQUEE -- the one class in this room that carries a
+# large soft ground behind big letterforms, and the only one where a 24-level
+# step shows as a contour.  A flank at 42 px, a deck at 52, a bezel and a
+# screen are small, dense, high-frequency panels; a coarser step is invisible on
+# them and it is where the bytes are.  MEASURED, all three runs packed:
+#
+#     everything at 20 (round 7)                    141.00 KB
+#     everything at 24                              126.54 KB   marquees band
+#     marquee + front at 20, the rest at 28          <- what ships
+#
+# This is the same fidelity dial round 5 used to fit four modules of new art
+# under the cap.  No artwork is removed to reach it, and the two classes a
+# critic reads first are untouched.
+QUANT_CLS = {"marquee": 20, "front": 20, "riser": 20}
+QUANT_REST = 28
+_QNOW = [QUANT]
+
+
+def _quant_for(key):
+    return QUANT_CLS.get(key.split(".")[-1], QUANT_REST)
+
 
 def scale_of(key):
     if key in SIZE_KEY:
@@ -242,7 +264,8 @@ _CACHE = {}
 
 
 def _q(v):
-    v = int(v / QUANT + 0.5) * QUANT
+    q = _QNOW[0]
+    v = int(v / q + 0.5) * q
     return 0 if v < 0 else (255 if v > 255 else v)
 
 
@@ -285,6 +308,7 @@ def render(key, w, h):
     ck = (key, w, h)
     if ck in _CACHE:
         return _CACHE[ck]
+    _QNOW[0] = _quant_for(key)
     fn = PANELS[key]
     rect = getattr(fn, "rect", None)
     if rect is not None:
