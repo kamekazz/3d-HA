@@ -1121,6 +1121,119 @@ function carContactShadow(w, d) {
   return m;
 }
 
+// ------------------------------------------------------- the licence plates
+// New Jersey plates, front and rear, reading R53-PNS (asked for on
+// 2026-09-01). The .glb is not touched: the plates are two small textured
+// boxes hung on the loaded car at runtime, so re-uploading a different car
+// over the "Driveway Car" library entry keeps the plates — and the owner's
+// number — without anyone editing a model.
+//
+// Where a plate goes is FOUND, not hard-coded. A plate sits on the bodywork,
+// and the bodywork of whatever car is in the library is not known here, so
+// each end fires a ray down the car's centreline at plate height and hangs
+// the plate on the first panel it hits, facing along that panel's normal. A
+// few heights are tried in order of preference (a real X5 carries its rear
+// plate in the tailgate recess at ~3 ft and its front plate in the bumper at
+// ~2 ft) and the first hit that is a near-vertical, opaque panel within reach
+// of the car's end wins — grille slats let a ray through into the engine bay,
+// and the tinted glass is a BLEND material, which is what the two filters are
+// for. The car is parked nose-OUT (front photographs), so the +Z end is the
+// front and the -Z end, at the garage door, is the tail.
+const PLATE_TEXT = 'R53-PNS';
+const PLATE_W = 1.0, PLATE_H = 0.5;   // 12 x 6 in, the North American plate
+let plateTex = null;                  // one canvas, shared by every instance
+
+function makePlateTexture() {
+  if (plateTex) return plateTex;
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 512;
+  const g = c.getContext('2d');
+  // NJ's straw-yellow-to-cream fade, top to bottom
+  const grad = g.createLinearGradient(0, 0, 0, 512);
+  grad.addColorStop(0.00, '#f0cb45');
+  grad.addColorStop(0.55, '#f7e6ad');
+  grad.addColorStop(1.00, '#fbf5e4');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 1024, 512);
+  // rolled edge, read as a thin dark rim
+  g.strokeStyle = 'rgba(0,0,0,0.22)';
+  g.lineWidth = 12;
+  g.strokeRect(6, 6, 1012, 500);
+  g.fillStyle = '#141414';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = 'italic 600 78px Georgia, "Times New Roman", serif';
+  g.fillText('New Jersey', 512, 76);
+  g.font = 'italic 600 64px Georgia, "Times New Roman", serif';
+  g.fillText('Garden State', 512, 444);
+  g.font = '700 236px "Arial Narrow", "Helvetica Neue", Arial, sans-serif';
+  if ('letterSpacing' in g) g.letterSpacing = '14px';
+  g.fillText(PLATE_TEXT, 512, 258);
+  // the four mounting bolts
+  g.fillStyle = '#3a3a3a';
+  for (const [bx, by] of [[110, 60], [914, 60], [110, 452], [914, 452]]) {
+    g.beginPath(); g.arc(bx, by, 13, 0, Math.PI * 2); g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  if (renderer) tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  plateTex = tex;
+  return tex;
+}
+
+// Hangs one plate on the `sign` end of the car (+1 = +Z, -1 = -Z). `g` must
+// already be in the scene with its matrices current: the ray is cast in world
+// space and the hit is mapped back into g's frame, so this is independent of
+// however the car group happens to be placed or turned.
+function mountPlate(g, pivot, sign, heights, lbox) {
+  const ray = new THREE.Raycaster();
+  const cx = (lbox.min.x + lbox.max.x) / 2;
+  const zEnd = sign > 0 ? lbox.max.z : lbox.min.z;
+  const inv = new THREE.Matrix4().copy(g.matrixWorld).invert();
+  const qInv = g.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const dir = new THREE.Vector3(0, 0, -sign);
+  for (const h of heights) {
+    const origin = g.localToWorld(new THREE.Vector3(cx, h, zEnd + sign * 3));
+    ray.set(origin, dir.clone().transformDirection(g.matrixWorld));
+    const hits = ray.intersectObject(pivot, true);
+    for (const hit of hits) {
+      if (!hit.object.isMesh || !hit.face) continue;
+      const mats = Array.isArray(hit.object.material) ? hit.object.material : [hit.object.material];
+      if (mats.some((m) => m && m.transparent)) continue;         // glass
+      const p = hit.point.clone().applyMatrix4(inv);
+      if (Math.abs(p.z - zEnd) > 1.6) continue;                    // through a grille
+      const n = hit.face.normal.clone()
+        .transformDirection(hit.object.matrixWorld).applyQuaternion(qInv);
+      if (n.z * sign < 0.7) continue;                              // not a facing panel
+      const geo = new THREE.BoxGeometry(PLATE_W, PLATE_H, 0.02);
+      const rim = new THREE.MeshStandardMaterial({ color: 0xe9dfb8, roughness: 0.6, metalness: 0.2 });
+      const face = new THREE.MeshStandardMaterial({
+        map: makePlateTexture(), roughness: 0.55, metalness: 0.15 });
+      // BoxGeometry material order: +x -x +y -y +z -z — the text is on +z
+      const plate = new THREE.Mesh(geo, [rim, rim, rim, rim, face, rim.clone()]);
+      plate.userData.ownGeometry = true;
+      plate.castShadow = true;
+      plate.position.copy(p).addScaledVector(n, 0.015);
+      const m = new THREE.Matrix4().lookAt(
+        p.clone().add(n), p, new THREE.Vector3(0, 1, 0));   // +z of the box = n
+      plate.quaternion.setFromRotationMatrix(m);
+      g.add(plate);
+      giveCarItsOwnSky(plate);
+      return true;
+    }
+  }
+  console.warn(`yard: no panel found for the ${sign > 0 ? 'front' : 'rear'} plate`);
+  return false;
+}
+
+function addLicensePlates(g, pivot) {
+  g.updateWorldMatrix(true, true);
+  const lbox = new THREE.Box3().setFromObject(pivot)
+    .applyMatrix4(new THREE.Matrix4().copy(g.matrixWorld).invert());
+  mountPlate(g, pivot, -1, [3.1, 2.9, 2.7, 3.3, 2.5, 2.3], lbox);   // rear, tailgate
+  mountPlate(g, pivot, +1, [2.0, 1.8, 2.2, 1.6, 2.4, 1.4], lbox);   // front, bumper
+}
+
 // Idempotent: called at the end of every yard build and again whenever the
 // model id changes. The GLB load is async, so it captures the yard it was
 // started for and drops the result if a rebuild has since replaced it.
@@ -1153,6 +1266,7 @@ function syncCar() {
     g.add(blob);
     carGroup = g;
     yard.add(g);
+    addLicensePlates(g, pivot);   // after add: the mount rays need world matrices
   }).catch((err) => {
     console.warn(`yard: car model ${carModelId} failed to load:`, err);
     if (forYard !== yard || carGroup) return;
