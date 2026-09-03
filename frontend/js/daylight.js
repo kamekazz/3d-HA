@@ -23,8 +23,13 @@ import { getState, findEntities, onStateApplied } from './state.js';
 // night mode and the room-glow still work. Verified with `roomkit.meter`.
 const ELEVATION_RAMP = [
   //  el   sun color  sunInt  hemi sky  hemi gnd  hemiInt  bg+fog
-  [-18, 0xff8844, 0.00, 0x223052, 0x0b0e14, 0.30, 0x070b12], // night
-  [ -8, 0xff8844, 0.00, 0x2c3a5e, 0x151220, 0.40, 0x0d1220], // astro dusk
+  // Night is BLACK, not navy: the bar is an iPhone night shot of the house
+  // (demo/exterior_night.jpg) -- sky and surroundings pure black, and the
+  // only light on the house is its own (eavelights.js / roomlights.js). The
+  // hemisphere is kept just high enough that unlit siding still reads as a
+  // silhouette rather than vanishing.
+  [-18, 0xff8844, 0.00, 0x1e2028, 0x07080c, 0.12, 0x010203], // night
+  [ -8, 0xff8844, 0.00, 0x2c3a5e, 0x151220, 0.36, 0x080c18], // astro dusk
   [ -3, 0xff7733, 0.35, 0x51557e, 0x241c26, 0.55, 0x1d2135], // civil dusk
   [  0, 0xff9a4d, 0.65, 0x7c86ab, 0x3f3336, 0.70, 0x2c3049], // sunrise/set
   [  8, 0xffc487, 1.10, 0xa9bedd, 0x5c5c58, 0.85, 0x3d4c68], // golden hour
@@ -190,7 +195,7 @@ function recomputeTarget() {
   // light, and must NOT be fought with per-room emissive panels — that is what
   // produced the glowing trim and hard-edged wall washes critics rejected.
   target.envIntensity =
-    THREE.MathUtils.lerp(1.15, 0.05, target.nightFactor) * w.hemiX;
+    THREE.MathUtils.lerp(1.15, 0.02, target.nightFactor) * w.hemiX;
 
   lastDaylight = {
     elevation,

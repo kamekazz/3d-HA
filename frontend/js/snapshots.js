@@ -17,6 +17,7 @@ import { getEnvironmentRoot } from './environment.js';
 import { getWeatherRoot } from './weather.js';
 import { getFocusedRoomId } from './focus.js';
 import { suspendRoomLights } from './roomlights.js';
+import { suspendEaveLights } from './eavelights.js';
 import { GIZMO_NAME } from './drag.js';
 
 const SNAP_W = 384, SNAP_H = 240;      // card image (1.6 aspect)
@@ -172,6 +173,7 @@ function captureRoom(roomId) {
   // not night-gated — shoot the room unlit and let roomcards.js signal lit-ness
   // with its own `.lit` class instead.
   const restoreLights = suspendRoomLights();
+  const restoreEaves = suspendEaveLights(); // same reason: the porch lights at night
   // depthTest:false + renderOrder Infinity: the gizmo would paint straight over
   // the card if anything happened to be selected when a sweep fired
   setVis(scene.getObjectByName(GIZMO_NAME), false);
@@ -185,6 +187,7 @@ function captureRoom(roomId) {
   // ---- restore, then repaint the real view so no snapshot frame ever shows
   restoreCutaway();
   restoreLights();
+  restoreEaves();
   for (const [o, v] of saved) o.visible = v;
   scene.background = savedBg;
   scene.fog = savedFog;

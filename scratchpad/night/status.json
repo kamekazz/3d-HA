@@ -1,0 +1,223 @@
+{
+ "updated": "2026-09-03 05:30",
+ "headline": "Round 4 judged: photo still wins, but the lights critic is at 70% and the whole-frame critic at 85% (from 99%). A fourth piece added: camera optics.",
+ "current_render": "scratchpad/night/round4.png",
+ "current_label": "round 4 \u00b7 all pieces combined",
+ "pieces": [
+  {
+   "name": "Eave lights & night exposure",
+   "state": "building",
+   "round": 5,
+   "now": "Halos 3\u20135x the bulb with gaussian tails that stack into apex hot-spots, tighter wash decay, sky grain and a faint roofline bleed, the garage-eave sunburst hunted down, neutral drive spot with shadow casting.",
+   "history": [
+    {
+     "round": 1,
+     "verdict": "Photo wins (95%)",
+     "win": false,
+     "gap": "Siding overexposed ~2 stops: gables floodlit like a white card, the real lights barely lift the walls above mid-grey. Lesser: dots identical and bloomless, sky too clean, drive lit too evenly."
+    },
+    {
+     "round": 2,
+     "verdict": "Photo wins (95%)",
+     "win": false,
+     "gap": "Falloff: the gable is a uniform fill and the dots are pinheads riding on it; the photo is a tight bright band under the fascia decaying to grey, bulbs brightest of all."
+    },
+    {
+     "round": 3,
+     "verdict": "Photo wins (85%)",
+     "win": false,
+     "gap": "Wash still a flat sheet: the real gable is bright in a ~1 ft band under the bulbs then drops to dim warm grey with clapboard shadows. Lesser: dots too large, neutral white, garage run reads as a strip; window glass glows cyan."
+    },
+    {
+     "round": 4,
+     "verdict": "Photo wins (70%)",
+     "win": false,
+     "gap": "Bulb bloom: bare pin-points are the instant tell. Lesser: wash still too linear and wide, sky noiseless with a knife-edge roofline, a sourceless sunburst on the garage eave."
+    }
+   ]
+  },
+  {
+   "name": "Car",
+   "state": "building",
+   "round": 5,
+   "now": "Real shadow casting from the drive spot onto the slab under the car, retro-reflective white plate, bulb string reflected in the rear glass, flat tyre sidewalls, softer paint streak.",
+   "history": [
+    {
+     "round": 1,
+     "verdict": "Photo wins (99%)",
+     "win": false,
+     "gap": "Car ~4 ft too far left and ~5 ft too close relative to the house. Root cause was the camera pose (house rendered ~10% large, shifted right), now fixed. Lesser: plate self-luminous yellow, no specular streaks from the eave lights, no contact shadow."
+    },
+    {
+     "round": 2,
+     "verdict": "Photo wins (95%)",
+     "win": false,
+     "gap": "The body reflects nothing: a cut-out silhouette under a string of bulbs. Lesser: plate still the brightest thing on the car, floats on black, no lens glints."
+    },
+    {
+     "round": 3,
+     "verdict": "Photo wins (97%)",
+     "win": false,
+     "gap": "Ground contact: the tyres hang above the slab over a faint reflection. Lesser: white speckle on the paint instead of a blurred streak, bright exhaust tips and plate, grey tread."
+    },
+    {
+     "round": 4,
+     "verdict": "Photo wins (90%)",
+     "win": false,
+     "gap": "Still floats: the lit slab under and behind the car is as bright as the open drive. Lesser: plate should be a blown white retro-reflective slab, rear glass shows no lights, ribbed sidewalls."
+    }
+   ]
+  },
+  {
+   "name": "Driveway, walk & beds",
+   "state": "building",
+   "round": 5,
+   "now": "Rock strip re-cut as an unmistakable 3 ft diagonal band with defined edges, litter thinned to drifts, dry grass tufts in the bed, dark shrub masses hiding the horizon, joints and tyre lanes and blotch on the drive.",
+   "history": [
+    {
+     "round": 1,
+     "verdict": "Photo wins (98%)",
+     "win": false,
+     "gap": "Rock strip is basketball-sized faceted boulders on a 30 ft diagonal; the real one is a flat 2 ft band of river rock at grade with two flagstone steppers. Lesser: no warm pools on the ground, lawn is #000, shrubs are identical spheres."
+    },
+    {
+     "round": 2,
+     "verdict": "Photo wins (99%)",
+     "win": false,
+     "gap": "Driveway went black while the lawn became a lit green slab, inverted from reality. Two builders were fighting over the ground; ground brightness now belongs to the lighting builder alone."
+    },
+    {
+     "round": 3,
+     "verdict": "Photo wins (97%)",
+     "win": false,
+     "gap": "The rock strip and steppers exist but are invisible at night; the walk is a narrow ribbon; plants float on bare lawn with no mulch."
+    },
+    {
+     "round": 4,
+     "verdict": "Photo wins (97%)",
+     "win": false,
+     "gap": "The rock strip reads as a pebble disc at the foot of the steps, not a diagonal band with steppers. Lesser: litter reads as a brown plane with a hard edge, mums still orbs, drive sepia and jointless."
+    }
+   ]
+  },
+  {
+   "name": "Camera optics",
+   "state": "building",
+   "round": 1,
+   "now": "New builder adding a night-only post-process pass in scene.js: bloom on emitters, veiling haze, film grain with chroma noise, vignette, lifted noisy blacks. Day frame must be untouched.",
+   "history": []
+  },
+  {
+   "name": "Whole frame",
+   "state": "critic",
+   "round": 4,
+   "now": "Ranked: gables, roofline lights, sky, porch, garage, walk and beds, car, driveway, lawn and edges.",
+   "history": [
+    {
+     "round": 2,
+     "verdict": "Photo wins (97%)",
+     "win": false,
+     "gap": "The lawn: a flat evenly lit green plane ending in a ruler line. Lesser: bulbs too uniform, no trees against the sky, siding lit flat, driveway a texture not a surface."
+    },
+    {
+     "round": 3,
+     "verdict": "Photo wins (99%)",
+     "win": false,
+     "gap": "Roofline bulbs do not light the house they sit on: the fascia and soffit under each bulb should be warm and 30\u201340% brighter with a soft bloom. Lesser: 6500K white vs 3000K, no ground contact under the car, no ambient at the frame edges, flat siding."
+    },
+    {
+     "round": 4,
+     "verdict": "Photo wins (85%)",
+     "win": false,
+     "gap": "No camera optics: bloom and glare around emitters, veiling haze, film grain, smeared shadows. Lesser: hard horizon, uniform drive speckle, razor car edges, flat silhouette tree."
+    }
+   ]
+  }
+ ],
+ "log": [
+  {
+   "t": "22:05",
+   "what": "Photo converted (HEIC \u2192 demo/exterior_night.jpg)."
+  },
+  {
+   "t": "22:20",
+   "what": "shot.py fixed: stage view-offset was magnifying exterior shots 2x, orbit clamp pushed low cameras up. Added --night."
+  },
+  {
+   "t": "22:35",
+   "what": "Pose night_front registered (pos 26,4,84 \u00b7 target 12,14,30 \u00b7 fov 92). Round 0 baseline shot."
+  },
+  {
+   "t": "22:40",
+   "what": "Builders launched: lights, car, yard."
+  },
+  {
+   "t": "22:48",
+   "what": "Car builder reported: GLB nose was +Z, half-turned; parked at x 26 z 60; silhouette within ~5 px of the photo."
+  },
+  {
+   "t": "22:55",
+   "what": "Car critic: photo. Overlay showed the pose itself was off; night_front revised to pos 27,4,90 \u00b7 target 14,14,30. All builders notified."
+  },
+  {
+   "t": "23:08",
+   "what": "Car round 3: body span 334..484 px vs photo 332..485; roofline exact. Critic held until the lights land."
+  },
+  {
+   "t": "23:20",
+   "what": "Yard builder round 3 and lights builder round 5 reported. Shot tool orbit limits frozen (late refit was re-clamping distance)."
+  },
+  {
+   "t": "23:35",
+   "what": "Blind critics on yard and lights: photo both times. Gable-swap claim from the lights builder checked against a photo zoom and rejected: shell matches (left gable low and forward)."
+  },
+  {
+   "t": "23:45",
+   "what": "Round-2 instructions sent to lights and yard builders."
+  },
+  {
+   "t": "00:30",
+   "what": "Round-2 frame shot; four blind critics run (lights, yard, car, whole frame). Photo wins all."
+  },
+  {
+   "t": "00:45",
+   "what": "Round-3 instructions sent. Session hit the usage limit; two builders killed mid-round."
+  },
+  {
+   "t": "03:05",
+   "what": "Limit reset. All three builders resumed; files verified to parse."
+  },
+  {
+   "t": "03:40",
+   "what": "All three round-3 builds reported; a dropped import from concurrent edits was fixed by the car builder."
+  },
+  {
+   "t": "03:50",
+   "what": "Round-3 frame shot; lights, yard, car and whole-frame critics launched."
+  },
+  {
+   "t": "04:05",
+   "what": "Round-3 critics back: lights 85%, yard 97%, car 97%, whole frame 99% for the photo."
+  },
+  {
+   "t": "04:10",
+   "what": "Round-4 instructions sent to all three builders."
+  },
+  {
+   "t": "04:55",
+   "what": "All three round-4 builds reported."
+  },
+  {
+   "t": "05:00",
+   "what": "Round-4 frame shot; four critics launched."
+  },
+  {
+   "t": "05:20",
+   "what": "Round-4 critics back: lights 70%, car 90%, yard 97%, whole frame 85%."
+  },
+  {
+   "t": "05:30",
+   "what": "Round-5 instructions sent; optics builder launched."
+  }
+ ]
+}

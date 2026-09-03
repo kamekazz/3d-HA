@@ -49,6 +49,13 @@ async ({ pose, level, light, markers, cutaway }) => {
 
   if (light) window.__daylight?.simulate(light);
 
+  // scene.js applyStage() frames the house into the chrome-free "stage" rect
+  // with a view offset that INFLATES fov and magnifies the canvas. The chrome
+  // is hidden below, so the pose must own the projection outright: clear the
+  // offset and set the real aspect, or every exterior shot comes out ~2x too
+  // close and nothing in pose.fov means what it says.
+  camera.clearViewOffset();
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.fov = pose.fov || 70;
   camera.near = 0.05;
   camera.updateProjectionMatrix();
@@ -59,6 +66,21 @@ async ({ pose, level, light, markers, cutaway }) => {
   const unclamp = () => {
     controls.minDistance = 0.05;
     controls.maxDistance = 1e6;
+    // maxPolarAngle (PI/2.05) forbids looking UP at the target, so a low
+    // photo-matched exterior pose (eye at 5 ft, aiming at the eaves) was being
+    // pushed up to the target's height the moment the flight handed the camera
+    // back to OrbitControls.
+    controls.minPolarAngle = 0;
+    controls.maxPolarAngle = Math.PI;
+    // ...and keep them that way. scene.js applyHouseZoomCap()/setMaxZoom()
+    // re-clamp controls.maxDistance to the house-fit distance on any late
+    // refitStage (a rebuild landing after the flight), which silently pulled
+    // exterior shots in toward the target. Freeze the limits for this page.
+    for (const [k, v] of [['minDistance', 0.05], ['maxDistance', 1e6],
+                          ['minPolarAngle', 0], ['maxPolarAngle', Math.PI]]) {
+      try { Object.defineProperty(controls, k, { get: () => v, set() {}, configurable: true }); }
+      catch (e) {}
+    }
     controls.enableDamping = false;
     controls.enablePan = false;
     controls.enableRotate = false;
@@ -107,6 +129,11 @@ async ({ pose, level, light, markers, cutaway }) => {
   // bar is a photo taken standing in the room. Opt out with --no-cutaway.
   window.__cutaway?.setEnabled(cutaway);
   window.__cutaway?.settle();
+  // re-assert the projection: a layout tick may have re-run applyStage
+  camera.clearViewOffset();
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.fov = pose.fov || 70;
+  camera.updateProjectionMatrix();
   renderer.render(scene, camera);
   const p = camera.position;
   return { rooms: house.roomMeshes.size, level,
@@ -178,6 +205,9 @@ def main():
     p.add_argument("--level", default=str(DEFAULT_LEVEL),
                    help="floor level, or 'all' for the exterior shell view")
     p.add_argument("--day", action="store_true", help="force bright daylight")
+    p.add_argument("--night", action="store_true",
+                   help="force the app's night preset (clear-night, sun at -18), the same "
+                        "thing the topbar night mode uses -- for photo-matched night exteriors")
     # The sun. --day's default azimuth 155 is the FRONT of this house, which is
     # right for every interior and for the front elevation, and unfairly dark
     # for the rear: one directional sun and no bounce light means a wall the sun
@@ -206,6 +236,8 @@ def main():
     level = a.level if a.level == "all" else int(a.level)
     light = ({"elevation": a.sun_elevation, "azimuth": a.sun_azimuth,
               "condition": "sunny"} if a.day else None)
+    if a.night:
+        light = {"elevation": -18, "azimuth": 0, "condition": "clear-night"}
     print(json.dumps(take(pose, a.out, level, light, a.settle, a.markers, a.cutaway)))
 
 

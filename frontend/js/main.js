@@ -21,6 +21,7 @@ import { initDaylight, settleDaylight } from './daylight.js';
 import { initEnvironment, setEnvironmentData, setYardModels } from './environment.js';
 import { initWeather } from './weather.js';
 import { initRoomLights, setRoomLightsData, repaintFixture, settleRoomLights } from './roomlights.js';
+import { initEaveLights } from './eavelights.js';
 import { initFloorView } from './floorview.js';
 import { initCutaway, setCutawayData } from './cutaway.js';
 import { initUndo } from './undo.js';
@@ -418,6 +419,7 @@ async function main() {
   initPlanner({ getStructure: () => structure, onClose: reloadHouse });
   initUndo({ defaultRefresh: reloadHouse });
   initRoomLights();
+  initEaveLights(); // its lights must exist before compileAsync too (fixed count)
   setRoomLightsData({ house, structure });
   initDashboard();
   initCameras();

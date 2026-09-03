@@ -63,6 +63,9 @@ const FIXTURE_RANGE = 22;          // ft; the light.distance cutoff
 // off: a porch sconce has to read across a whole facade, a floodlight further.
 const EXTERIOR_BASE = 70;
 const EXTERIOR_RANGE = 34;         // ft
+// The coach lamps and floods on the facade are ~3000K in every photograph; a
+// white bulb reports rgb 255,255,255 to HA, which lit them 6500K here.
+const EXTERIOR_WARM = new THREE.Color(0xffb46b);
 const EMISSIVE_MAX = 1.6;          // glow on the fixture's own materials
 const SMOOTH_TAU = 0.4;
 
@@ -682,7 +685,7 @@ function tick(dt) {
       p.light.color.copy(p.owner.color);
       if (fixtureWorldPos(p.owner, _p)) p.light.position.copy(_p); // follows a drag
     } else if (isExterior(p.owner)) {
-      p.light.color.copy(p.owner.color);
+      p.light.color.copy(p.owner.color).lerp(EXTERIOR_WARM, 0.75);
     } else if (p.owner) {
       p.light.color.setHex(GLOW_COLOR);
     }

@@ -309,6 +309,9 @@ async function loadHouseShell(cfg) {
   // world feet, and until the shell is placed its matrixWorld is the identity
   maskShellProps(shell);
   houseShell = shell;
+  // eavelights.js hangs the roofline LEDs / lit window off the placed, masked
+  // shell (an event, not an import: it imports this module)
+  window.dispatchEvent(new CustomEvent('houseShellLoaded', { detail: { shell } }));
   // The shell resolves AFTER the first framing pass and is the thing you
   // actually see in House mode, so re-measure now that its mass exists.
   // Re-frame only if the user has not taken the camera yet — environment.js
