@@ -173,6 +173,11 @@ automatically whenever you work under `frontend/`.
   each independent and registered in `app.py`'s `create_app()`.
 - `config.py` is the only place that reads `.env`; the HA token only ever lives in `config.py` and
   `ha/client.py`/`ha/ws_client.py` — never send it to the frontend.
+- **All HTTP to HA goes through `HAClient`** (`ha/client.py`), never a bare `requests` call. Nabu
+  Casa's remote proxy drops any new connection whose TLS ClientHello arrives more than ~50 ms after
+  the TCP connect, and stock `requests` parses the CA bundle *between* the two, so every verified
+  request 502s (`SSLEOFError`). `HAClient` mounts an adapter with a pre-built `SSLContext` and gates
+  concurrent HA connections; the comment at the top of `ha/client.py` has the measurements.
 - Windows dev environment (PowerShell). Default port is 5000; if that's in use, an alternate
   `3d-ha-5001` launch config exists (see `.claude/launch.json`).
 - UI-chrome design language: **Apple.com, dark surfaces only**. The full token set lives at
