@@ -30,6 +30,7 @@ import { initRoomCards, setRoomCardsData, cardImagesReady } from './roomcards.js
 import { requestSnapshots, snapshotsIdle } from './snapshots.js';
 import { startBoot, bootStage, bootProgress, settleLoaders, orTimeout, finishBoot,
   bootHouseBuilt } from './boot.js';
+import { initAppShell } from './appshell.js';
 
 let structure = null;
 
@@ -343,6 +344,9 @@ async function main() {
   const statesP = api.getStates();
   for (const p of [structureP, houseP, statesP]) p.catch(() => {});
 
+  // App-shell behaviours (context menu, drag ghosts, wake lock) go on first:
+  // they are document-level listeners with no dependencies.
+  initAppShell();
   // First: the stage probe is what scene.js frames the house into, and
   // initScene reads it during setup.
   initStage();

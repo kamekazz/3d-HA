@@ -148,9 +148,33 @@ html, body { overscroll-behavior: none; }
 button, .cam-tile, .room-card, .bb-tile.tappable, .tswitch .knob,
 .tile.tappable, .chip { touch-action: manipulation; }
 button, .cam-tile, .room-card, .bb-tile { -webkit-tap-highlight-color: transparent; }
-#side-rail, #bottom-bar, #home-btn, #rooms-all, #cam-all {
+
+/* ── App shell, not page ─────────────────────────────────────────────────
+   Nothing in the chrome is prose: no text selection or I-beam anywhere (an
+   accidental long-press used to blue-highlight a room name), no long-press
+   callout, images never lift off as drag ghosts, and iOS must not inflate
+   text on rotate. Fields opt back in — that is where selection, the I-beam
+   and paste belong — and so do the device panel's readouts, since an entity
+   id is the one thing in here worth copying. js/appshell.js owns the
+   matching behaviours (context menu, dragstart, wake lock, haptics) and
+   index.html's <head> the install half (manifest, icons, standalone). */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  cursor: default;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
+input, textarea, select, [contenteditable="true"] {
+  -webkit-user-select: text; user-select: text; cursor: auto;
+}
+#dp-entity, .attrs { -webkit-user-select: text; user-select: text; }
+img { -webkit-user-drag: none; }
+/* scrolling panels stop at their own edge, like a native scroll view */
+.panel, #cal-popover { overscroll-behavior: contain; }
+
+/* Overlay-style scrollbars: thin, translucent, no track — a native scroll
+   view's, not a document's gutter. Both properties inherit, so the root is
+   the one place to set them (#topbar/#bottom-bar keep their own `none`). */
+html { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.22) transparent; }
 
 #scene-container { position: fixed; inset: 0; }
 
@@ -1266,3 +1290,115 @@ input[type="file"]::file-selector-button {
 .fixture-row .name { flex: 0 0 40%; cursor: pointer; }
 .fixture-row select { flex: 1; min-width: 0; }
 #fx-hint { margin: 4px 0 8px; }
+
+/* ── Motion: chrome arrives, it doesn't pop ─────────────────────────────
+   Every panel and overlay is toggled with .hidden (display:none), and the
+   view chrome with body.app-edit / body.room-focused. display can't tween,
+   so this rides on transition-behavior:allow-discrete + @starting-style
+   (Chrome 117, Safari 17.5, Firefox 129): display flips to none only when the
+   fade ends, and an element coming back from none starts from its
+   @starting-style pose. On anything older the whole block is inert and the
+   chrome pops exactly as before — nothing here is load-bearing.
+
+   Opacity and transform only, so layout never moves: roomcards.js /
+   cameras.js capacity math measures the same boxes, and the stage tokens
+   still re-frame the 3D the instant the body class flips. pointer-events:
+   none on the way out keeps a fading panel from eating the tap that
+   dismissed it. Every resting state is transform:none — never a live
+   transform, which would blur text in Safari and become the containing
+   block for the panels' fixed children. The three elements that already
+   carry a centring translate (#banner, #gizmo-bar, #focus-exit) restate it
+   here, same rule as their :active. */
+@media (prefers-reduced-motion: no-preference) {
+  .panel, #cal-popover, #banner, #gizmo-bar, #focus-exit, #levels,
+  #cam-overlay, #cam-all, #rooms-all, #models-modal, #planner,
+  #side-rail, #home-btn, #bottom-bar {
+    transition: opacity 0.2s ease, transform 0.26s cubic-bezier(0.2, 0.7, 0.2, 1),
+                display 0.26s allow-discrete;
+  }
+  #mm-box { transition: transform 0.26s cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+  /* on the way out */
+  .panel.hidden, #cal-popover.hidden, #banner.hidden, #gizmo-bar.hidden,
+  #focus-exit.hidden, #levels.hidden, #cam-overlay.hidden, #cam-all.hidden,
+  #rooms-all.hidden, #models-modal.hidden, #planner.hidden,
+  body.app-edit .view-chrome,
+  body.room-focused #home-btn, body.room-focused #side-rail, body.room-focused #bottom-bar {
+    opacity: 0; pointer-events: none;
+  }
+  .panel.hidden { transform: translateX(24px); }               /* right-edge panels */
+  #editor.hidden, #room-panel.hidden, #levels.hidden { transform: translateX(-16px); }
+  #banner.hidden { transform: translate(-50%, -10px); }
+  #gizmo-bar.hidden, #focus-exit.hidden { transform: translate(-50%, 10px); }
+  #cal-popover.hidden { transform: translateY(6px); }
+  #models-modal.hidden #mm-box { transform: scale(0.96); }
+  body.app-edit #side-rail, body.room-focused #side-rail { transform: translateX(16px); }
+
+  /* on the way in: the same pose, so open/close are mirror images */
+  @starting-style {
+    .panel, #cal-popover, #banner, #gizmo-bar, #focus-exit, #levels,
+    #cam-overlay, #cam-all, #rooms-all, #models-modal, #planner,
+    #side-rail, #home-btn, #bottom-bar { opacity: 0; }
+    .panel { transform: translateX(24px); }
+    #editor, #room-panel, #levels { transform: translateX(-16px); }
+    #banner { transform: translate(-50%, -10px); }
+    #gizmo-bar, #focus-exit { transform: translate(-50%, 10px); }
+    #cal-popover { transform: translateY(6px); }
+    #mm-box { transform: scale(0.96); }
+    #side-rail { transform: translateX(16px); }
+  }
+
+  /* the segmented control's selected pill fades across, it doesn't jump */
+  #sr-tabs button { transition: background 0.15s ease, color 0.15s ease; }
+}
+
+/* ── In-app alert sheet (js/dialog.js) ──────────────────────────────────
+   A <dialog> in the top layer: above the planner (60) and the model library
+   (70) with no z-index. One centred glass card, title / message / actions,
+   in place of the browser's own alert() and confirm() — which carry the
+   origin in their title bar and are the loudest "web page" tell there is.
+   The message keeps its newlines (pre-line) because the bind/delete confirms
+   list what they are about to touch. */
+#app-dialog {
+  /* the global `* { margin: 0 }` reset kills the UA's `margin: auto`, which
+     is the whole of how a modal dialog centres itself — restate it */
+  position: fixed; inset: 0; margin: auto;
+  width: min(360px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 2 * var(--gutter));
+  padding: var(--sp-lg) var(--sp-lg) var(--sp-md);
+  background: var(--glass-bg-strong); color: var(--text);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+  text-align: center;
+  /* closed pose; [open] is the resting one. overlay/display allow-discrete
+     is what lets the close animate before the top layer lets go. */
+  opacity: 0; transform: translateY(10px) scale(0.97);
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1),
+              overlay 0.22s allow-discrete, display 0.22s allow-discrete;
+}
+#app-dialog[open] { opacity: 1; transform: none; }
+#app-dialog::backdrop {
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.22s ease, overlay 0.22s allow-discrete, display 0.22s allow-discrete;
+}
+#app-dialog[open]::backdrop { background: rgba(0, 0, 0, 0.55); }
+@starting-style {
+  #app-dialog[open] { opacity: 0; transform: translateY(10px) scale(0.97); }
+  #app-dialog[open]::backdrop { background: rgba(0, 0, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #app-dialog, #app-dialog::backdrop { transition: none; }
+}
+#app-dialog h2 {
+  font-size: 17px; font-weight: 600; letter-spacing: -0.374px; line-height: 1.29;
+  margin-bottom: 4px; overflow-wrap: anywhere;
+}
+#app-dialog h2:empty { display: none; }
+#app-dialog p {
+  font-size: 14px; letter-spacing: -0.224px; line-height: 1.43;
+  color: var(--text-faint); white-space: pre-line; overflow-wrap: anywhere;
+  max-height: 50dvh; overflow-y: auto;
+  -webkit-user-select: text; user-select: text;   /* an error is worth copying */
+}
+#app-dialog .ad-actions { display: flex; gap: 8px; margin-top: var(--sp-md); }
+#app-dialog .ad-actions button { flex: 1; min-width: 0; }

@@ -6,6 +6,7 @@ import { api } from './api.js';
 import { getLevel } from './house.js';
 import { fillTextureSelect } from './textures.js';
 import { setUndoHandler } from './undo.js';
+import { showConfirm } from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -1112,7 +1113,8 @@ async function deleteSelectedStair() {
 async function deleteSelectedRoom() {
   const room = selectedRoom();
   if (!room) return;
-  if (!confirm(`Delete room "${room.name}"? Its device placements go with it.`)) return;
+  if (!await showConfirm('Its device placements and furniture go with it.',
+        { title: `Delete "${room.name}"?`, okLabel: 'Delete', danger: true })) return;
   try {
     if (room.id) await api.deleteRoom(room.id);
     const floor = activeFloor();

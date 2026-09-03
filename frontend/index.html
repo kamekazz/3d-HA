@@ -6,6 +6,21 @@
        zoom would fight the 3D orbit and card taps -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Olan House</title>
+  <!-- Installable app shell. "Add to Home Screen" on an iPad/Android/desktop
+       opens this full-screen with no browser chrome, its own icon and a black
+       status bar; the theme-color keeps the surrounding OS chrome black too.
+       There is deliberately NO service worker: js/css are edited live against
+       this server, and a cached module is a change that silently doesn't apply. -->
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Olan House">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
   <script type="importmap">

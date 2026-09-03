@@ -10,7 +10,7 @@
     {
       "name": "3d-ha-5001",
       "runtimeExecutable": "backend/.venv/Scripts/python.exe",
-      "runtimeArgs": ["C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\aacf3642-6bfb-42ba-9d6e-1a5e60c1560d\\scratchpad\\run_5001.py"],
+      "runtimeArgs": ["C:\\Users\\Manuel\\AppData\\Local\\Temp\\claude\\C--Users-Manuel-Desktop-Pro-3d-HA\\4aa10a30-6f6f-412c-b8c3-0a3a43a02df5\\scratchpad\\run_5001.py"],
       "port": 5001
     }
   ]

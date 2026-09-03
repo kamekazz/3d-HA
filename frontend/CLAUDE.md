@@ -316,3 +316,40 @@ their roots on the same event. Selecting House ('all') restores the daylight sky
 cap, and the pose you left from (focus-mode exits then override with their own saved pose — both
 were captured at the same moment). Same-level re-fires (rebuilds) only re-center the orbit target
 — buildHouse's `focusOn` points it at the whole-house center otherwise — without moving the camera.
+
+**App shell, not web page** — the things that make this read as an installed app rather than a
+site in a tab, and the rules that keep it that way:
+
+- **Never call `window.alert` / `confirm` / `prompt`.** They are the browser's dialogs, styled by the
+  OS and titled with the origin ("127.0.0.1:5000 says"), the loudest web-page tell there is.
+  `js/dialog.js` `showAlert(msg, {title})` / `showConfirm(msg, {title, okLabel, danger})` are the
+  replacements: one `<dialog>` in the top layer (so no z-index against the planner at 60 or the
+  model library at 70), awaited where the natives were (`if (!await showConfirm(...)) return;`),
+  queued so a loop of failures shows them in turn. Esc, the backdrop and Cancel resolve `false`; a
+  `danger` confirm focuses Cancel. The global `* { margin: 0 }` reset kills the UA's `margin: auto`,
+  which is the whole of how a modal dialog centres — `#app-dialog` restates it.
+- **Chrome slides, it doesn't pop.** `.hidden` is still `display:none`, but `style.css` "Motion"
+  rides `transition-behavior: allow-discrete` + `@starting-style` so display flips only when the
+  fade ends and an element returning from `none` starts from its exit pose. Opacity/transform only,
+  so nothing that measures layout (`roomcards.js`/`cameras.js` capacity, the stage tokens) sees any
+  difference; `pointer-events:none` on the way out so a fading panel can't eat the tap that
+  dismissed it; every resting state is `transform:none`. `#banner`/`#gizmo-bar`/`#focus-exit` carry
+  a centring translate and restate it in their exit pose, same rule as their `:active`. On browsers
+  without `allow-discrete` the block is inert and everything pops as before — it is never
+  load-bearing. One consequence for tests: `dash.offsetWidth` / `getComputedStyle(el).display` read
+  "shown" for ~260 ms after the class flips, and the Browser pane throttles transitions while it is
+  hidden, so a check right after a toggle can catch the in-flight state.
+- **Nothing in the chrome is prose.** `body` is `user-select:none; cursor:default`; fields, the
+  device panel's `#dp-entity`/`.attrs` readouts and the dialog message opt back in. Images are
+  `-webkit-user-drag:none`, scrollbars are thin/translucent (`scrollbar-*` inherits from `html`),
+  `js/appshell.js` suppresses the context menu outside fields and image `dragstart`, ticks
+  `navigator.vibrate` under touch taps (Android only), and holds a **screen wake lock in view mode
+  only** — re-requested on every `visibilitychange`, dropped on `appModeChanged` to edit, silent if
+  unsupported or refused.
+- **Installable**: `manifest.webmanifest` + `icons/` (PNG sizes rendered by the same geometry as
+  `icon.svg`; the maskable one is full-bleed with the glyph in the 80% safe zone, and the
+  apple-touch-icon is square because iOS rounds it itself) + the standalone/theme-color metas in
+  `index.html`. `app.py` registers the `.webmanifest` MIME type, since Windows has no registry entry
+  for it and an `octet-stream` manifest is silently ignored. **Deliberately no service worker**:
+  js/css are edited live against this server, and a cached module is a change that silently
+  doesn't apply.

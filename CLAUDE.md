@@ -205,6 +205,11 @@ automatically whenever you work under `frontend/`.
   (`planner.js` `ctx.fillStyle`, ~29 literals) and `floorview.js`'s blue studio backdrop —
   `snapshots.js`'s twin backdrop *was* reneutralised because it is deliberately matched to
   `.room-card`. The 3D scene is lit from HA state, not CSS, and this spec never governed it.
+- **It is an app, not a web page** — installable (`frontend/manifest.webmanifest` + `icons/`,
+  standalone metas in `index.html`, deliberately no service worker), chrome that slides rather
+  than pops, no selectable chrome text, and **never `window.alert`/`confirm`/`prompt`**: use
+  `showAlert`/`showConfirm` from `frontend/js/dialog.js`. Details and the rules that keep it that
+  way are under "App shell, not web page" in `frontend/CLAUDE.md`.
 - Not yet implemented (see `3d-home-assistant-house-spec.md` phases 8-9): drag-to-position for
   *devices* in the 2D planner (rooms drag there already; devices drag in the 3D view once their
   panel is open, or via numeric inputs), app-level login (needed before hosting this anywhere

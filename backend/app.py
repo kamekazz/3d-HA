@@ -4,8 +4,14 @@ Serves the frontend, proxies HA data (token stays server-side), owns the
 house geometry store, and relays HA state changes to browsers via SocketIO.
 """
 import logging
+import mimetypes
 
 from flask import Flask, request, send_from_directory
+
+# Werkzeug types static files off the OS registry, and Windows has no entry
+# for the PWA manifest; served as octet-stream the browser ignores it and the
+# app is not installable.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 import config
 from api.camera_routes import bp as camera_bp

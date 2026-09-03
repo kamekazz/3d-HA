@@ -13,6 +13,7 @@ import { buildLabels } from './labels.js';
 import { invalidateModel } from './models.js';
 import { fillTextureSelect } from './textures.js';
 import { canEdit } from './route.js';
+import { showAlert, showConfirm } from './dialog.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -173,10 +174,11 @@ export function initUI({ structure: s, house: h, onReload }) {
       if (res.rooms_added) parts.push(`${res.rooms_added} room(s) added`);
       if (res.devices_added) parts.push(`${res.devices_added} device(s) added`);
       if (res.floors_removed) parts.push(`${res.floors_removed} empty floor(s) removed`);
-      alert(parts.length ? `Synced with HA: ${parts.join(', ')}.`
-                         : 'Already in sync with Home Assistant.');
+      showAlert(parts.length ? `${parts.join(', ')}.`
+                             : 'Already in sync with Home Assistant.',
+                { title: 'Synced with HA' });
     } catch (e) {
-      alert(`Sync failed: ${e.message}`);
+      showAlert(e.message, { title: 'Sync failed' });
     }
     btn.disabled = false;
     btn.textContent = label;
@@ -187,11 +189,12 @@ export function initUI({ structure: s, house: h, onReload }) {
     try {
       const res = await api.generateHouse();
       await reloadHouse();
-      alert(res.rooms || res.devices
+      showAlert(res.rooms || res.devices
         ? `Added ${res.rooms} room(s) and ${res.devices} device(s) from HA.`
-        : 'Nothing new — every HA area is already in the layout.');
+        : 'Nothing new — every HA area is already in the layout.',
+        { title: 'Generate from HA' });
     } catch (e) {
-      alert(`Generate failed: ${e.message}`);
+      showAlert(e.message, { title: 'Generate failed' });
     }
     btn.disabled = false;
   };
@@ -533,7 +536,8 @@ function renderRoomList() {
       rm.className = 'small danger';
       rm.textContent = '✕';
       rm.onclick = async () => {
-        if (!confirm(`Delete room "${room.name}"?`)) return;
+        if (!await showConfirm('Its device placements and furniture go with it.',
+              { title: `Delete "${room.name}"?`, okLabel: 'Delete', danger: true })) return;
         await api.deleteRoom(room.id);
         if (selectedRoomId === room.id) { selectedRoomId = null; resetRoomForm(); }
         reloadHouse();
@@ -634,7 +638,7 @@ async function onRoomFormSubmit(e) {
     await reloadHouse();
     if (selectedRoomId) selectRoom(selectedRoomId);
   } catch (err) {
-    alert(`Save failed: ${err.message}`);
+    showAlert(err.message, { title: 'Save failed' });
   }
 }
 
@@ -722,7 +726,7 @@ function renderFixtureSection(room) {
         if (panelObjectId === o.id) openObjectPanel(o.id);
         renderPlacementSection();
       } catch (e) {
-        alert(`Bind failed: ${e.message}`);
+        showAlert(e.message, { title: 'Bind failed' });
       }
     };
     row.appendChild(sel);
@@ -745,20 +749,21 @@ function renderFixtureSection(room) {
       if (best && best.s > 0) proposals.push({ obj: o, entity: best.e });
     }
     if (!proposals.length) {
-      alert('No confident name matches. Bind them with the dropdowns instead.');
+      showAlert('No confident name matches. Bind them with the dropdowns instead.',
+                { title: 'Auto-match' });
       return;
     }
     const lines = proposals
-      .map((p) => `  ${p.obj.name || p.obj.model_name}  →  ${p.entity.entity_id}`)
+      .map((p) => `${p.obj.name || p.obj.model_name}  →  ${p.entity.entity_id}`)
       .join('\n');
-    const msg = `Bind these ${proposals.length} fixture(s)?\n\n${lines}`;
-    if (!confirm(msg)) return;
+    if (!await showConfirm(lines, { title: `Bind ${proposals.length} fixture(s)?`,
+                                    okLabel: 'Bind' })) return;
     for (const p of proposals) {
       try {
         await api.updateObject(p.obj.id, { entity_id: p.entity.entity_id });
         applyObjectLocally(p.obj.id, { entity_id: p.entity.entity_id });
       } catch (e) {
-        alert(`Bind failed for ${p.obj.name}: ${e.message}`);
+        showAlert(`${p.obj.name}: ${e.message}`, { title: 'Bind failed' });
       }
     }
     renderPlacementSection();
@@ -990,7 +995,7 @@ async function onAddObject() {
     await reloadHouse();
     openObjectPanel(res.id); // selected right away, ready to drag into place
   } catch (e) {
-    alert(`Could not add object: ${e.message}`);
+    showAlert(e.message, { title: 'Could not add object' });
   }
 }
 
@@ -1161,7 +1166,7 @@ function wireObjectPanel() {
       if (repaint) openObjectPanel(keep);
       if (selectedRoomId === findObjectById(keep)?.room.id) renderPlacementSection();
     } catch (e) {
-      alert(`Update failed: ${e.message}`);
+      showAlert(e.message, { title: 'Update failed' });
     }
   };
   const lightCfg = () => {
@@ -1361,8 +1366,9 @@ function renderModelsList() {
       const warn = [];
       if (m.placement_count) warn.push(`${m.placement_count} device marker(s) revert to defaults`);
       if (m.object_count) warn.push(`${m.object_count} placed object(s) will be removed`);
-      if (!confirm(`Delete model "${m.name}"?` +
-                   (warn.length ? `\n\n${warn.join('\n')}` : ''))) return;
+      // models are file-lifecycle, outside undo/redo — say so
+      if (!await showConfirm(warn.length ? warn.join('\n') : 'This cannot be undone.',
+            { title: `Delete "${m.name}"?`, okLabel: 'Delete', danger: true })) return;
       await api.deleteModel(m.id);
       invalidateModel(m.id);
       await refreshModels();
@@ -1389,7 +1395,7 @@ async function onModelUpload(e) {
     $('mm-upload-form').reset();
     await refreshModels();
   } catch (err) {
-    alert(`Upload failed: ${err.message}`);
+    showAlert(err.message, { title: 'Upload failed' });
   }
   btn.disabled = false;
   btn.textContent = 'Upload';
