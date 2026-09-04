@@ -233,8 +233,13 @@ boot build sees is not the rect a frame later, and the whole yard hangs off it; 
 outside" in the root CLAUDE.md). The yard also carries per-piece identity so the **Outside editor**
 (`yard.js`) can move, scale, erase and duplicate individual trees, beds, slabs and props — the
 generated yard is never stored, only the deltas against it, and it is drawn per-item only while that
-editor is open, and `yardkit.js` adds new ones from a bottom tray whose catalogue and thumbnails are
-both read straight off those per-item groups. Read the "EDITABLE YARD" banner comment in
+editor is open, and `yardkit.js` adds new ones from a bottom tray — the yard's own pieces, whose
+catalogue and thumbnails are both read straight off those per-item groups, and the whole .glb library,
+which `addYardModels` instances into the yard in BOTH draw modes (a model cannot be merged into the six
+bucket meshes). Two consequences of library geometry living in the yard: the rebuild teardown disposes
+geometry only where `userData.ownGeometry` is set, because `getInstance` shares BufferGeometry with the
+model cache; and the editor's per-item loop skips model items, or each gets a second, empty group under
+the same key that `getYardPickables` hands to a selection first. Read the "EDITABLE YARD" banner comment in
 `environment.js` before touching any `add*` factory: the item boundaries are the factory calls
 themselves, so adding, renaming or reordering one moves the keys that every saved edit is filed
 under — and the tray's tiles are grouped by the factory `label`, so renaming one splits its pile in
@@ -250,6 +255,13 @@ rescue it, because the row track is sized before the fluid `1fr` column width is
 `#gizmo-bar` and `#yard-bar` add `--kit-lift` to their own offsets, set only by `body.kit-open`. Their
 `bottom` transition must restate the shared opacity/transform/display declaration rather than append
 to it — a bare `transition: bottom` replaces it and costs `#gizmo-bar` its fade.
+
+Two more, from putting ~320 tiles in that grid: **`IntersectionObserver` is suspended in a
+backgrounded or occluded tab**, exactly as rAF is, so lazy thumbnails need the first screenful queued
+outright or a tray opened and left unlooked-at comes back to a grid of blanks. And a thumbnail render
+must go render → read back → `renderView()` with **no await in between**: the live canvas is showing
+the thumbnail until that restore, so yielding in there lets the browser composite a frame of it (the
+awaiting — a .glb load — happens before the shoot, never inside it).
 
 `frontend/js/weather.js` renders the HA weather condition: rain streaks (LineSegments) + snow
 (Points) from fixed max-size pools throttled with `setDrawRange`, ~9 drifting cloud meshes,

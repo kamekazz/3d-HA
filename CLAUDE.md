@@ -196,15 +196,47 @@ adding five bushes picks five different ones out of the 54 shrub mounds rather t
 five times. And adding is the **existing clone**: a `yard_edits` row with `src` naming a piece already
 in the yard, so there is no new storage and undo/redo covers it for free (verified: three adds undo
 and redo one at a time). `lawn`, `street` and the unscoped `piece` runs are left out of the tray, for
-reasons in `SKIP_KINDS`. Tiles carry a **real render of the piece** — no name separates "Shrub" from
-"Shrub mound" from "Bush" — shot with the app's own renderer into a private scene and cropped off the
-live canvas, the pattern `snapshots.js` uses for room cards (~11 ms each, once, cached for the module's
-life). A tile drops its piece on the ground under the middle of the view, pushed clear of the building
-box if the view ray lands inside the house (`clearOfHouse` in `yard.js`), scattered a few feet and —
-for kinds with no canonical facing — randomly turned, then selects it with the gizmo on. `placeClone`
-is now the single path for both the tray and the panel's Duplicate; it passes the **whole** delta to
-`applyYardEdit`, which Duplicate did not — anything not given falls back to `IDENTITY_EDIT`, so a
-duplicate used to be drawn exactly on top of its source until the next page load.
+reasons in `SKIP_KINDS`.
+
+The tray's **second catalogue is the whole model library**, so a bench, a grill, a lamp or a TV can
+stand outside like any other yard piece. That is one nullable column — `yard_edits.model_id`
+(`ON DELETE CASCADE`, since a row with no `src` and no model is a delta against nothing) — and one
+route, `POST /api/house/yard/model` → `HouseStore.add_yard_model`, keyed `model:<row id>` exactly as a
+clone is keyed `clone:<id>`. The row shape is otherwise identical, which is the point: erase, the
+gizmo, the panel and undo/redo all treat it as one more yard piece without knowing the difference.
+The one semantic difference is that **dx/dy/dz are a world position, not an offset** — there is no
+generated piece underneath to be offset from — so its item's pivot is the origin and `drag.js` needs
+no special case. `restore_snapshot` drops a yard row whose model has since been deleted (the guard has
+to test `model_id is not None` first, unlike `objects`, because a procedural delta carries none).
+In 3D these are the one yard piece that is its own object in **both** draw modes — a .glb cannot be
+merged into the six bucket meshes — built by `addYardModels` in `environment.js`, whose async load
+fires `yardRebuilt` a second time so `yard.js` can select a piece that did not exist when the build
+finished (`desiredKey`). Two things fell out of putting library geometry in the yard: the build's
+teardown had to stop disposing geometry unconditionally (`getInstance` SHARES BufferGeometry with the
+model cache, so disposing it would blank that .glb everywhere — the `ownGeometry` rule `disposeCar`
+already spelled out, now applied to the whole yard), and the editor's per-item loop has to skip model
+items or each one also gets an empty second group under the same key.
+
+Tiles carry a **real render of the piece** — no name separates "Shrub" from "Shrub mound" from "Bush",
+and none tells you what "Rios Pouf Teal" looks like — shot with the app's own renderer into a private
+scene and cropped off the live canvas, the pattern `snapshots.js` uses for room cards. The yard's ~28
+are shot on open; the ~290 library models are shot **lazily** as tiles scroll in (an
+`IntersectionObserver`, plus the first screenful queued outright because that observer is suspended in
+a backgrounded tab exactly as rAF is), four per turn, cached for the module's life. With ~320 tiles the
+name **search** is the primary way through and the chips are the coarse cut; library chips come from a
+name classifier (`modelKind`) that reads the library's `<Room> <Thing>` convention — strip trailing
+variant words, then a name *ending* in an architectural noun is a room shell, which is what separates
+"Printers Ceiling" from "Ceiling Fan" and "Dining Floor" from "Living Floor Rug".
+
+A tile drops its piece on the ground under the middle of the view, pushed clear of the building
+box if the view ray lands inside the house (`clearOfHouse` in `yard.js`); a yard piece is scattered a
+few feet and — for kinds with no canonical facing — randomly turned, while a library model is placed
+square and unturned, because a bench has a front. Then it is selected with the gizmo on. `placeClone`
+and `placeModel` are the two paths, and the panel's Duplicate picks between them by `item.isModel`
+(a clone row is drawn from its source's *bucket* geometry, which a model owns none of). `placeClone`
+passes the **whole** delta to `applyYardEdit`, which Duplicate did not — anything not given falls back
+to `IDENTITY_EDIT`, so a duplicate used to be drawn exactly on top of its source until the next page
+load.
 
 Undo/redo needed nothing new beyond adding `yard_edits` to `HISTORY_TABLES` — `export_snapshot`/
 `restore_snapshot` are column-agnostic, and restoring original row ids is what makes an undone

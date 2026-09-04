@@ -118,7 +118,7 @@
      LIFTS them by exactly its own height rather than sliding under them: both
      bars add --kit-lift to their offset, and body.kit-open is the only thing
      that sets it. One number, and the whole bottom stack stays honest. */
-  --kit-h: 260px;
+  --kit-h: 300px;
   --kit-lift: 0px;
   --kit-tile-h: 124px;   /* one palette tile: a thumbnail and its name */
 
@@ -1496,13 +1496,26 @@ body.kit-open { --kit-lift: calc(var(--kit-h) - 52px); }
   display: flex; flex-direction: column; gap: var(--sp-xs);
   padding: var(--sp-sm) var(--sp-sm) var(--sp-xs);
 }
-.yk-head { display: flex; align-items: center; gap: var(--sp-sm); min-height: 30px; }
+.yk-head { display: flex; align-items: center; gap: var(--sp-sm); min-height: 32px; }
 .yk-title {
   font-size: 15px; font-weight: 600; letter-spacing: -0.24px; white-space: nowrap;
 }
-#yard-kit .close { position: static; margin-left: auto; flex: none; }
+#yard-kit .close { position: static; flex: none; }
 
-/* kind filter: 28 tiles is a lot to sweep, and "Props" is one tap */
+/* The catalogue is the yard's ~28 pieces plus the whole model library, so a
+   name search is the primary way through it and the chips are the coarse cut. */
+#yk-search {
+  flex: 1; min-width: 0; max-width: 320px; margin-left: auto;
+  padding: 6px 12px; border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-border); background: var(--surface-1);
+  color: var(--text); font-size: 13px; font-weight: 400;
+  -webkit-user-select: text; user-select: text;
+}
+#yk-search:focus { outline: none; border-color: var(--accent-hover); }
+#yk-search::placeholder { color: var(--text-dim); }
+
+/* kind filter, on its own row: with the library in the tray there are twenty
+   chips, and they would leave the title and the search field nothing */
 .yk-chips {
   display: flex; gap: var(--sp-xxs); overflow-x: auto; min-width: 0;
   scrollbar-width: none;
@@ -1551,7 +1564,12 @@ body.kit-open { --kit-lift: calc(var(--kit-h) - 52px); }
   object-fit: contain;
   border-radius: var(--radius-sm); background: var(--surface-1);
 }
-.yk-thumb-blank { background: var(--surface-3); }
+/* what a tile shows until its thumbnail has been shot: the library's are
+   rendered only as they scroll into view */
+.yk-shot {
+  display: block; flex: 1; min-height: 0; width: 100%;
+  border-radius: var(--radius-sm); background: var(--surface-3);
+}
 .yk-name {
   font-size: 12px; font-weight: 400; letter-spacing: -0.08px; line-height: 1.25;
   color: var(--text-faint); text-align: center; overflow-wrap: anywhere;
@@ -1559,7 +1577,7 @@ body.kit-open { --kit-lift: calc(var(--kit-h) - 52px); }
 #yk-empty { margin: auto; font-size: 14px; }
 
 /* a short screen cannot spare 260px of the view to a palette */
-@media (max-height: 720px) { :root { --kit-h: 196px; } }
+@media (max-height: 760px) { :root { --kit-h: 236px; } }
 
 /* A phone cannot fit Outside / Erased / Add / Reset all / Done on one line --
    it was already tight before the tray's button joined them, and the overflow
@@ -1572,9 +1590,7 @@ body.kit-open { --kit-lift: calc(var(--kit-h) - 52px); }
     width: calc(100vw - 2 * var(--gutter) - var(--sa-l) - var(--sa-r));
   }
   #yard-bar .yb-hint { display: none; }
-  /* Eight kind chips beside a title and a close button leave about two and a
-     half of them on a phone. Their own full-width row costs one tile row's
-     peek and shows five. */
-  .yk-head { flex-wrap: wrap; row-gap: var(--sp-xs); }
-  .yk-chips { order: 3; flex-basis: 100%; }
+  /* the title alone is enough of a header once the field has to be tappable */
+  #yard-kit .yk-title { display: none; }
+  #yk-search { max-width: none; margin-left: 0; }
 }

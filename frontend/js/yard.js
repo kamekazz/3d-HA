@@ -28,6 +28,11 @@ const $ = (id) => document.getElementById(id);
 
 let open = false;
 let selectedKey = null;
+// What we WANT selected, which is not always something that exists yet: a
+// library model's .glb lands after the rebuild that created its item, so the
+// piece you just added has no group to select until then. Cleared the moment
+// the group turns up.
+let desiredKey = null;
 let onDoneEditing = null;   // main.js hands us the reload it wants on close
 
 export function isYardEditorOpen() {
@@ -122,6 +127,7 @@ export function closeYardEditor() {
 
 export function selectYardPiece(group) {
   selectedKey = group?.userData?.yardKey ?? null;
+  desiredKey = selectedKey;
   setSelected(group || null);
   if (!group) {
     $('yard-panel').classList.add('hidden');
@@ -141,8 +147,11 @@ function paintPanel(item) {
   if (!item || !g) return;
   $('yp-name').textContent = item.label + (item.isClone ? ' (copy)' : '');
   const [px, , pz] = item.pivot;
-  $('yp-where').textContent =
-    `${item.kind} · generated at ${px.toFixed(1)}, ${pz.toFixed(1)} ft`;
+  // A library model has no generated position to report — it never came from
+  // the builder, so there is nothing to have been nudged away from.
+  $('yp-where').textContent = item.isModel
+    ? 'library model · placed by hand'
+    : `${item.kind} · generated at ${px.toFixed(1)}, ${pz.toFixed(1)} ft`;
   $('yp-x').value = +g.position.x.toFixed(2);
   $('yp-y').value = +g.position.y.toFixed(2);
   $('yp-z').value = +g.position.z.toFixed(2);
@@ -237,20 +246,45 @@ async function placeClone(item, delta, banner) {
   }
 }
 
-// A duplicate is a second copy of the same generated piece, offset a few feet
-// so it isn't hiding inside the original.
+// A duplicate is a second copy of the same piece, offset a few feet so it isn't
+// hiding inside the original. A library model has to take the other route: a
+// clone row is drawn from its source's BUCKET geometry, and a model owns none,
+// so cloning one would put an empty item in the yard.
 async function duplicateSelected() {
   const g = selectedGroup();
   const item = getYardItem(selectedKey);
   if (!g || !item) return;
   const [px, py, pz] = item.pivot;
-  await placeClone(item, {
+  const delta = {
     dx: +(g.position.x - px + 6).toFixed(2),
     dy: +(g.position.y - py).toFixed(2),
     dz: +(g.position.z - pz).toFixed(2),
     rot_y: +g.rotation.y.toFixed(4),
     scale: +g.scale.x.toFixed(3),
-  });
+  };
+  if (item.isModel) await placeModel(item.modelId, item.label, delta);
+  else await placeClone(item, delta);
+}
+
+// A library .glb standing in the yard as its own piece. Its row carries
+// `model_id` instead of `src`, and dx/dy/dz are simply where it stands.
+async function placeModel(modelId, label, delta, banner) {
+  try {
+    const { key } = await api.addYardModel(modelId, {
+      kind: 'model', label, ...delta });
+    applyYardEdit(key, { model_id: modelId, kind: 'model', label, ...delta });
+    rebuildYard();
+    // The .glb load is async, so there is nothing to select yet: selectByKey
+    // records the wish and the second `yardRebuilt` environment.js fires when
+    // the instance lands makes good on it.
+    selectByKey(key);
+    paintErasedList();
+    if (banner) showBanner(banner, 3000);
+    return key;
+  } catch (err) {
+    showAlert(`Could not add that: ${err.message}`);
+    return null;
+  }
 }
 
 // Kinds a random spin flatters. A tree, a shrub, a clump of grass and a wheelie
@@ -307,6 +341,16 @@ function clearOfHouse(x, z) {
 // carrying that label, and pickSource takes one at random -- 17 bare trees and
 // 54 shrub mounds means adding several gives several different ones.
 async function addFromKit(entry) {
+  const { x, z } = dropPoint();
+  if (entry.source === 'model') {
+    // dy 0 and no spin: models.js bottom-seats a library model, so 0 is on the
+    // grass, and unlike a shrub a bench or a TV has a front that should face
+    // the way it was authored until the user turns it.
+    await placeModel(entry.modelId, entry.label,
+      { dx: +x.toFixed(2), dy: 0, dz: +z.toFixed(2), rot_y: 0, scale: 1 },
+      `Added ${entry.label} — drag it where you want it.`);
+    return;
+  }
   const srcKey = pickSource(entry);
   const item = srcKey && getYardItem(srcKey);
   if (!item) {
@@ -314,7 +358,6 @@ async function addFromKit(entry) {
     return;
   }
   const [px, , pz] = item.pivot;
-  const { x, z } = dropPoint();
   await placeClone(item, {
     dx: +(x - px).toFixed(2),
     // dy 0: the piece keeps the height the builder drew it at, which for
@@ -332,11 +375,13 @@ async function addFromKit(entry) {
 async function resetSelected() {
   const item = getYardItem(selectedKey);
   if (!item?.edit) return;
-  const wasClone = !!item.isClone;
+  // A clone and a library model ARE their row: dropping it is not a revert to
+  // how the builder drew them, it is the piece ceasing to exist.
+  const goesAway = !!(item.isClone || item.isModel);
   try {
     await api.resetYardPiece(item.key);
     dropYardEdit(item.key);
-    if (wasClone) {
+    if (goesAway) {
       selectYardPiece(null);
       rebuildYard();
     } else {
@@ -372,8 +417,9 @@ async function resetEverything() {
 }
 
 function selectByKey(key) {
+  desiredKey = key;
   const g = getYardPickables().find((o) => o.userData.yardKey === key);
-  if (g) selectYardPiece(g);
+  if (g) selectYardPiece(g);   // a miss keeps desiredKey for the next rebuild
 }
 
 // ---- the erased list -------------------------------------------------------
@@ -415,7 +461,7 @@ function paintErasedList() {
 function yardRebuilt() {
   if (!open) return;
   if (!isYardEditing()) return;
-  const key = selectedKey;
+  const key = desiredKey;
   selectYardPiece(null);
   if (key) selectByKey(key);   // gone (erased, or reset away) => nothing selected
   paintErasedList();

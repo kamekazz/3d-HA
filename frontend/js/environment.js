@@ -3288,8 +3288,17 @@ function buildYard() {
   disposeCar();
   if (yard) {
     root.remove(yard);
+    // ownGeometry per MESH, the same rule disposeCar uses and for the same
+    // reason: the yard now mixes geometry it authored itself (the buckets, the
+    // contact blob) with library models, whose getInstance does
+    // `scene.clone(true)` and SHARES BufferGeometry with the model cache.
+    // Disposing that would blank out every later instance of the .glb -- in the
+    // yard, in the rooms, everywhere. Materials are cloned per instance, so
+    // those are always ours to release.
     yard.traverse((o) => {
-      if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); }
+      if (!o.isMesh) return;
+      if (o.userData.ownGeometry === true) o.geometry.dispose();
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) m.dispose();
     });
     yardGrassMats.length = 0; // those materials were just disposed with the yard
   }
@@ -3445,6 +3454,26 @@ function buildYard() {
     itemsByKey.set(row.key, clone);
   }
 
+  // Library models standing in the yard: a bench, a grill, a lamp -- anything
+  // in the model library, placed outside as its own piece. They own no bucket
+  // geometry, so they are items purely for IDENTITY: the editor panel, the
+  // erased list, drag and undo all reach a piece through getYardItem, and this
+  // is what puts one there. Their pivot is the origin, so the dx/dy/dz stored
+  // against them is simply where they stand -- there is no generated piece
+  // underneath to be an offset from. The geometry arrives later, in
+  // addYardModels, because a .glb load is async.
+  const modelItems = [];
+  for (const row of yardEdits) {
+    if (!row.model_id) continue;
+    const item = {
+      kind: 'model', label: row.label || 'Model', geos: [], key: row.key,
+      pivot: [0, 0, 0], edit: row, isModel: true, modelId: row.model_id,
+    };
+    items.push(item);
+    itemsByKey.set(row.key, item);
+    modelItems.push(item);
+  }
+
   // World-space surface detail, derived per geometry rather than per merged
   // mesh so it survives being split into per-item meshes. Same maths as before:
   // the lawn re-derives its UVs the way the 1200 ft grass disc does and carries
@@ -3522,6 +3551,7 @@ function buildYard() {
       BufferGeometryUtils.mergeGeometries(flat(geos), false), MATS[name]);
     m.castShadow = !!CASTS[name];
     m.receiveShadow = !!RECEIVES[name];
+    m.userData.ownGeometry = true;   // merged here, so ours to dispose
     return m;
   }
 
@@ -3530,6 +3560,11 @@ function buildYard() {
     // re-centred there, so TransformControls can move/turn/scale it directly
     // and the gesture reads straight back out as the delta to save.
     for (const item of items) {
+      // A library model owns no bucket geometry -- addYardModels below builds
+      // its group from the .glb instead. Without this it also gets an EMPTY
+      // group here, under the same yardKey, and that phantom is what
+      // getYardPickables hands back to a selection first.
+      if (item.isModel) continue;
       const byBucket = new Map();
       for (const { bucket, i } of item.geos) {
         if (!byBucket.has(bucket)) byBucket.set(bucket, []);
@@ -3540,7 +3575,7 @@ function buildYard() {
       for (const [name, geos] of byBucket) {
         for (const g of geos) g.translate(-px, -py, -pz);
         const mesh = bucketMesh(name, geos);
-        if (mesh) { mesh.userData.ownGeometry = true; group.add(mesh); }
+        if (mesh) group.add(mesh);
       }
       const e = item.edit;
       group.position.set(px + (e?.dx || 0), py + (e?.dy || 0), pz + (e?.dz || 0));
@@ -3589,13 +3624,63 @@ function buildYard() {
     new THREE.MeshBasicMaterial({
       map: makeShadowTexture(), color: 0x000000,
       transparent: true, opacity: 0.15, depthWrite: false }));
+  shadow.userData.ownGeometry = true;
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.set((bx0 + bx1) / 2, -0.03, (bz0 + bz1) / 2);
   yard.add(shadow);
 
   syncCar();
+  addYardModels(modelItems);
 
   // yard.js holds references into the groups this build just replaced, and
   // undo/redo and a house reload both land here without going through it.
   window.dispatchEvent(new CustomEvent('yardRebuilt'));
+}
+
+// One group per library model in the yard, in BOTH draw modes -- a .glb cannot
+// be merged into the six bucket meshes, so unlike every other yard piece it is
+// its own object even in the viewer. Shaped like a per-item editor group
+// (kind 'yard', a key, a pivot) so picking, the gizmo and the panel need no
+// special case; drag.js subtracts the pivot, which here is the origin.
+//
+// The load is async, so each captures the yard it was started for and drops the
+// result if a rebuild has already replaced it -- the same guard syncCar uses.
+// When the last one lands, `yardRebuilt` fires a second time: yard.js is
+// holding group references and its selection has to find one that did not exist
+// when the build finished.
+function addYardModels(list) {
+  if (!list.length) return;
+  const forYard = yard;
+  let pending = list.length;
+  let landed = 0;
+  const done = () => {
+    if (forYard !== yard || --pending > 0 || !landed) return;
+    window.dispatchEvent(new CustomEvent('yardRebuilt'));
+  };
+  for (const item of list) {
+    const e = item.edit || {};
+    getInstance(item.modelId, 'bottom').then((pivot) => {
+      if (forYard !== yard) return;
+      const g = new THREE.Group();
+      g.position.set(e.dx || 0, e.dy || 0, e.dz || 0);
+      g.rotation.y = e.rot_y || 0;
+      g.scale.setScalar(e.scale ?? 1);
+      // built and hidden, never skipped: un-erasing is a visibility flip and
+      // the editor's Erased list has something to name. Same as every other
+      // yard piece.
+      g.visible = !e.deleted;
+      g.userData = {
+        kind: 'yard', yardKey: item.key, name: item.label, yardKind: 'model',
+        pivot: item.pivot, isModel: true, userScale: e.scale ?? 1,
+      };
+      pivot.traverse((o) => {
+        if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+      });
+      g.add(pivot);
+      yard.add(g);
+      landed += 1;
+    }).catch((err) => {
+      console.warn('yard model %s failed to load:', item.modelId, err);
+    }).then(done, done);
+  }
 }

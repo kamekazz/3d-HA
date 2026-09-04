@@ -73,7 +73,7 @@
     <button id="btn-models" class="edit-only hidden" type="button" title="Upload and manage 3D models (.glb) for devices and furniture">Models</button>
     <button id="btn-align" class="edit-only hidden" type="button" title="Position, rotate and scale the whole-house model">Align house</button>
     <button id="btn-editor" class="edit-only hidden" type="button">Room editor</button>
-    <button id="btn-yard" class="edit-only hidden" type="button" title="Move, scale, erase or duplicate the trees, beds, paving and props outside">Outside</button>
+    <button id="btn-yard" class="edit-only hidden" type="button" title="Move, scale, erase, duplicate or ADD trees, beds, paving, props and library models outside">Outside</button>
     <button id="btn-sync" class="edit-only hidden" type="button" title="Re-read HA and update the layout: move rooms to match their HA floor, add new areas, drop empty floors deleted in HA">Sync with HA</button>
     <button id="btn-refresh" class="edit-only hidden" type="button" title="Re-read floors/areas/devices from HA">Refresh HA</button>
   </header>
@@ -104,20 +104,22 @@
     <button id="yard-close" type="button">Done</button>
   </div>
 
-  <!-- The add tray (yardkit.js): a bottom sheet of everything the exterior is
-       built out of. The tiles are not a hand-written list — they are read
-       back off the yard that is actually standing, and their pictures are shot
-       from that same geometry, so the tray cannot offer a piece environment.js
-       does not draw. Opening it lifts #yard-bar and #gizmo-bar clear via the
-       --kit-lift token on body.kit-open. -->
+  <!-- The add tray (yardkit.js): a bottom sheet of everything you can put in
+       the yard — the exterior's own vocabulary (read back off the yard that is
+       actually standing, so it cannot offer a piece environment.js does not
+       draw) and the whole .glb library, so a bench or a lamp can stand outside
+       too. Every tile's picture is shot from the real geometry. Opening it
+       lifts #yard-bar and #gizmo-bar clear via --kit-lift on body.kit-open. -->
   <div id="yard-kit" class="glass hidden">
     <div class="yk-head">
       <span class="yk-title">Add to the yard</span>
-      <div id="yk-chips" class="yk-chips"></div>
+      <input id="yk-search" type="search" autocomplete="off"
+             placeholder="Search pieces…">
       <button id="yk-close" class="close" type="button">&times;</button>
     </div>
+    <div id="yk-chips" class="yk-chips"></div>
     <div id="yk-grid" class="yk-grid"></div>
-    <p id="yk-empty" class="muted hidden">Nothing of that kind in this yard.</p>
+    <p id="yk-empty" class="muted hidden">Nothing matches that.</p>
   </div>
 
   <aside id="yard-panel" class="panel hidden">

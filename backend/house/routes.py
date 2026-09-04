@@ -536,6 +536,20 @@ def clone_yard_piece():
     return jsonify({"key": _store().add_yard_clone(src, data)}), 201
 
 
+@bp.post("/yard/model")
+@undoable
+def add_yard_model():
+    """Stand a library model in the yard. Body: {model_id, ...transform}."""
+    data = request.get_json(force=True)
+    try:
+        model_id = int(data.get("model_id"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "model_id is required"}), 400
+    if not _store().get_model(model_id):
+        return jsonify({"error": "no such model"}), 404
+    return jsonify({"key": _store().add_yard_model(model_id, data)}), 201
+
+
 @bp.delete("/yard/<path:key>")
 @undoable
 def delete_yard_edit(key):

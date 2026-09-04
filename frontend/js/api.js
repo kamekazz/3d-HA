@@ -109,6 +109,9 @@ export const api = {
   getYard: () => get('/api/house/yard'),
   updateYard: (key, data) => patch('/api/house/yard', { key, ...data }),
   cloneYard: (src, data) => post('/api/house/yard/clone', { src, ...data }),
+  // a library .glb standing in the yard as its own piece
+  addYardModel: (model_id, data) =>
+    post('/api/house/yard/model', { model_id, ...data }),
   resetYardPiece: (key) => del(`/api/house/yard/${encodeURIComponent(key)}`),
   resetYard: () => post('/api/house/yard/reset'),
 

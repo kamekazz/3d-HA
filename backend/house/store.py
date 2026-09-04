@@ -110,7 +110,12 @@ CREATE TABLE IF NOT EXISTS openings (
 -- builder's stable identity for a piece (kind + its original position, see
 -- environment.js itemKey), so a row keeps pointing at the same tree even when
 -- the yard is rebuilt around it. `src` non-NULL means this row is not a delta
--- but a CLONE of the piece named by `src`, drawn as an extra copy.
+-- but a CLONE of the piece named by `src`, drawn as an extra copy, and
+-- `model_id` non-NULL means it is neither: a library .glb standing in the yard
+-- as its own thing (a bench, a grill, a lamp), in which case dx/dy/dz are its
+-- WORLD position rather than an offset, since there is no generated piece
+-- underneath it to be offset from. CASCADE, not SET NULL: a yard row with no
+-- src and no model is a delta against nothing.
 CREATE TABLE IF NOT EXISTS yard_edits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL UNIQUE,
@@ -122,7 +127,8 @@ CREATE TABLE IF NOT EXISTS yard_edits (
     rot_y REAL NOT NULL DEFAULT 0,
     scale REAL NOT NULL DEFAULT 1.0,
     deleted INTEGER NOT NULL DEFAULT 0,
-    src TEXT
+    src TEXT,
+    model_id INTEGER REFERENCES models(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS house_shell (
     id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -153,7 +159,8 @@ MODEL_FIELDS = ("name",)
 SHELL_FIELDS = ("model_id", "x", "y", "z", "rot_y", "scale")
 # A yard piece's override. Everything is optional -- a PATCH that carries
 # only `deleted` erases a tree without disturbing a nudge already saved on it.
-YARD_FIELDS = ("kind", "label", "dx", "dy", "dz", "rot_y", "scale", "deleted", "src")
+YARD_FIELDS = ("kind", "label", "dx", "dy", "dz", "rot_y", "scale", "deleted",
+               "src", "model_id")
 # stairs.floor_id is the LOWER of the two floors they connect; they rise that
 # floor's full floor_height. direction = which way they ascend on the plan.
 STAIR_FIELDS = ("name", "x", "z", "width", "depth", "direction", "floor_id")
@@ -297,6 +304,8 @@ class HouseStore:
             "ALTER TABLE objects ADD COLUMN entity_id TEXT",
             "ALTER TABLE objects ADD COLUMN visible INTEGER NOT NULL DEFAULT 1",
             "ALTER TABLE objects ADD COLUMN light_cfg TEXT",
+            "ALTER TABLE yard_edits ADD COLUMN model_id INTEGER"
+            " REFERENCES models(id) ON DELETE CASCADE",
         ):
             try:
                 self._db.execute(ddl)
@@ -427,6 +436,11 @@ class HouseStore:
                                 and mid not in valid_models:
                             row["model_id"] = None
                         if t == "objects" and mid not in valid_models:
+                            continue
+                        # yard_edits.model_id is nullable -- a procedural delta
+                        # or a clone carries none -- so only a row that names a
+                        # model that is gone is dropped (ON DELETE CASCADE).
+                        if t == "yard_edits" and mid is not None                                 and mid not in valid_models:
                             continue
                         cols = ", ".join(row)
                         ph = ", ".join("?" for _ in row)
@@ -1015,6 +1029,32 @@ class HouseStore:
                              (f"clone:{row_id}", row_id))
             self._db.commit()
         return f"clone:{row_id}"
+
+    def add_yard_model(self, model_id, data):
+        """Stand a library model in the yard as its own piece.
+
+        Same row shape and the same id-derived key as a clone, so everything
+        downstream -- the editor panel, drag, erase, undo -- treats it as one
+        more yard piece. The difference is only what it is drawn from: a clone
+        copies a generated piece's geometry, this one instances a .glb, and
+        dx/dy/dz are its world position because there is no generated pivot to
+        offset from.
+        """
+        allowed = {k: data[k] for k in YARD_FIELDS
+                   if k in data and k not in ("src", "model_id")}
+        allowed.pop("deleted", None)
+        cols = "".join(f", {k}" for k in allowed)
+        ph = "".join(", ?" for _ in allowed)
+        with self._lock:
+            cur = self._db.execute(
+                f"INSERT INTO yard_edits (key, model_id{cols})"
+                f" VALUES ('', ?{ph})",
+                (model_id, *allowed.values()))
+            row_id = cur.lastrowid
+            self._db.execute("UPDATE yard_edits SET key=? WHERE id=?",
+                             (f"model:{row_id}", row_id))
+            self._db.commit()
+        return f"model:{row_id}"
 
     def delete_yard_edit(self, key):
         """Drop the override entirely: a procedural piece reverts to how the
