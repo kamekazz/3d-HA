@@ -233,9 +233,24 @@ boot build sees is not the rect a frame later, and the whole yard hangs off it; 
 outside" in the root CLAUDE.md). The yard also carries per-piece identity so the **Outside editor**
 (`yard.js`) can move, scale, erase and duplicate individual trees, beds, slabs and props — the
 generated yard is never stored, only the deltas against it, and it is drawn per-item only while that
-editor is open. Read the "EDITABLE YARD" banner comment in `environment.js` before touching any
-`add*` factory: the item boundaries are the factory calls themselves, so adding, renaming or
-reordering one moves the keys that every saved edit is filed under.
+editor is open, and `yardkit.js` adds new ones from a bottom tray whose catalogue and thumbnails are
+both read straight off those per-item groups. Read the "EDITABLE YARD" banner comment in
+`environment.js` before touching any `add*` factory: the item boundaries are the factory calls
+themselves, so adding, renaming or reordering one moves the keys that every saved edit is filed
+under — and the tray's tiles are grouped by the factory `label`, so renaming one splits its pile in
+two until the yard is rebuilt.
+
+Two layout traps the add tray walked into, both worth knowing before building another tile grid:
+**a `<button>` grid item stops contributing its children's height once it has a definite
+`min-height`** — which the base `button` rule gives every button under `(pointer: coarse)` — so
+`auto` rows collapsed to 48 px on a phone and each row of tiles painted over the labels of the row
+above, while the identical markup measured 120 px on the desktop. `aspect-ratio` on the tile does not
+rescue it, because the row track is sized before the fluid `1fr` column width is definite; a fixed
+`grid-auto-rows` does. And **a bottom sheet has to move the chrome already sitting at the bottom**:
+`#gizmo-bar` and `#yard-bar` add `--kit-lift` to their own offsets, set only by `body.kit-open`. Their
+`bottom` transition must restate the shared opacity/transform/display declaration rather than append
+to it — a bare `transition: bottom` replaces it and costs `#gizmo-bar` its fade.
+
 `frontend/js/weather.js` renders the HA weather condition: rain streaks (LineSegments) + snow
 (Points) from fixed max-size pools throttled with `setDrawRange`, ~9 drifting cloud meshes,
 lightning as `renderer.toneMappingExposure` flashes (never add/remove lights — shader recompile),

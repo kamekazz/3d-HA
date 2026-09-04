@@ -8,6 +8,7 @@
 // geometry under an item key — read "EDITABLE YARD" there first, it explains
 // why a tree has an identity at all. What gets stored is the DELTA against that
 // generated yard, never the yard itself.
+import * as THREE from 'three';
 import { api } from './api.js';
 import { showAlert, showConfirm } from './dialog.js';
 import { setSelected, getSelected, onDragMoved, setGizmoMode } from './drag.js';
@@ -15,9 +16,13 @@ import {
   setYardEditing, isYardEditing, getYardItems, getYardItem, getYardPickables,
   getYardClickTargets, rebuildYard, applyYardEdit, dropYardEdit,
 } from './environment.js';
-import { setLevel } from './house.js';
+import { setLevel, getBuildingBox } from './house.js';
 import { exitFocus } from './focus.js';
+import { camera, controls } from './scene.js';
 import { appMode, showBanner, setActiveLevelBtn } from './ui.js';
+import {
+  initYardKit, closeYardKit, refreshYardKit, isYardKitOpen, pickSource,
+} from './yardkit.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -41,6 +46,10 @@ export function initYardEditor({ onClose } = {}) {
   $('yard-close').onclick = closeYardEditor;
   $('yp-close').onclick = () => selectYardPiece(null);
 
+  // The add tray owns its own button and its own tiles; it hands us back the
+  // catalogue entry that was tapped and we decide where the piece lands.
+  initYardKit({ onAdd: addFromKit });
+
   $('yp-erase').onclick = eraseSelected;
   $('yp-duplicate').onclick = duplicateSelected;
   $('yp-reset').onclick = resetSelected;
@@ -54,8 +63,13 @@ export function initYardEditor({ onClose } = {}) {
   // planner. Skipped while typing, or the panel's own number fields would eat
   // a backspace as an erase.
   window.addEventListener('keydown', (e) => {
-    if (!open || !selectedKey) return;
+    if (!open) return;
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName)) return;
+    // Escape unwinds one layer at a time: the selection first, then the tray.
+    if (!selectedKey) {
+      if (e.key === 'Escape' && isYardKitOpen()) closeYardKit();
+      return;
+    }
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       eraseSelected();
@@ -88,13 +102,15 @@ export function openYardEditor() {
   $('btn-yard').classList.add('active');
   $('yard-bar').classList.remove('hidden');
   paintErasedList();
-  showBanner('Outside: click a tree, shrub, slab or prop to move, scale or erase it.', 4000);
+  showBanner('Outside: click a tree, shrub, slab or prop to move, scale or erase it '
+             + '— or hit Add to drop a new one in.', 4500);
 }
 
 export function closeYardEditor() {
   if (!open) return;
   open = false;
   selectYardPiece(null);
+  closeYardKit();
   setYardEditing(false);      // back to the six merged meshes
   $('btn-yard').classList.remove('active');
   $('yard-bar').classList.add('hidden');
@@ -193,33 +209,122 @@ async function eraseSelected() {
   }
 }
 
+// ---- adding a piece --------------------------------------------------------
+//
+// Both ways of getting a NEW piece into the yard -- the panel's Duplicate and
+// the add tray's tiles -- are the same clone row: `src` naming a piece that
+// already exists, plus a delta measured from that piece's generated pivot.
+// This is also the one kind of edit that has to rebuild, because environment.js
+// draws a clone off its source's geometry and the copy does not exist until it
+// has.
+async function placeClone(item, delta, banner) {
+  try {
+    const { key } = await api.cloneYard(item.key, {
+      kind: item.kind, label: item.label, ...delta });
+    // The whole delta, not just src/kind/label. applyYardEdit fills anything
+    // it is not given from IDENTITY_EDIT, so leaving dx/dz out of the local
+    // copy drew the new piece exactly on top of the one it was copied from --
+    // it only jumped to where it had been saved on the next page load.
+    applyYardEdit(key, { src: item.key, kind: item.kind, label: item.label, ...delta });
+    rebuildYard();
+    selectByKey(key);
+    paintErasedList();
+    if (banner) showBanner(banner, 3000);
+    return key;
+  } catch (err) {
+    showAlert(`Could not add that: ${err.message}`);
+    return null;
+  }
+}
+
 // A duplicate is a second copy of the same generated piece, offset a few feet
-// so it isn't hiding inside the original. It needs the item SET to change, so
-// this is the one edit that rebuilds.
+// so it isn't hiding inside the original.
 async function duplicateSelected() {
   const g = selectedGroup();
   const item = getYardItem(selectedKey);
   if (!g || !item) return;
   const [px, py, pz] = item.pivot;
-  try {
-    const { key } = await api.cloneYard(item.key, {
-      kind: item.kind,
-      label: item.label,
-      dx: +(g.position.x - px + 6).toFixed(2),
-      dy: +(g.position.y - py).toFixed(2),
-      dz: +(g.position.z - pz).toFixed(2),
-      rot_y: +g.rotation.y.toFixed(4),
-      scale: +g.scale.x.toFixed(3),
-    });
-    // clone rows carry `src`; environment.js draws them off the source's
-    // geometry, so it has to rebuild before the copy exists to select
-    applyYardEdit(key, { src: item.key, kind: item.kind, label: item.label });
-    rebuildYard();
-    selectByKey(key);
-    paintErasedList();
-  } catch (err) {
-    showAlert(`Could not duplicate that: ${err.message}`);
+  await placeClone(item, {
+    dx: +(g.position.x - px + 6).toFixed(2),
+    dy: +(g.position.y - py).toFixed(2),
+    dz: +(g.position.z - pz).toFixed(2),
+    rot_y: +g.rotation.y.toFixed(4),
+    scale: +g.scale.x.toFixed(3),
+  });
+}
+
+// Kinds a random spin flatters. A tree, a shrub, a clump of grass and a wheelie
+// bin all have no canonical facing, so turning each copy stops five of them
+// reading as one thing stamped out five times. Beds, paving and edging are laid
+// to the house and the drive -- turning those is only ever wrong.
+const SPIN_KINDS = new Set(['tree', 'shrub', 'plant', 'prop']);
+
+const _dir = new THREE.Vector3();
+const DROP_NEAR = 8, DROP_FAR = 140;   // ft along the view ray
+
+// Where a tile drops its piece: the ground under the middle of what you are
+// looking at. Straight down the camera's own ray to y=0 rather than the orbit
+// target, because the target is usually up inside the house while the yard is
+// at grade. Looking level or up (no ground ahead) falls back to the target.
+function dropPoint() {
+  camera.getWorldDirection(_dir);
+  let x, z;
+  if (_dir.y < -0.02 && camera.position.y > 0) {
+    const t = Math.min(DROP_FAR, Math.max(DROP_NEAR, -camera.position.y / _dir.y));
+    x = camera.position.x + _dir.x * t;
+    z = camera.position.z + _dir.z * t;
+  } else {
+    x = controls?.target.x ?? 0;
+    z = controls?.target.z ?? 0;
   }
+  // Scattered, so tapping one tile five times gives five bushes rather than a
+  // stack of five you cannot tell apart or pull off each other.
+  return clearOfHouse(x + (Math.random() - 0.5) * 5, z + (Math.random() - 0.5) * 5);
+}
+
+const HOUSE_CLEAR = 6;   // ft of daylight between a new piece and the walls
+
+// The ray under the middle of the view lands on the ground THROUGH whatever is
+// in the way, and what is usually in the way is the house -- look at the place
+// you are working on and the drop point is inside its footprint, where the new
+// piece is swallowed by the shell and you cannot even see what you added. So a
+// point inside the building leaves by its nearest wall. It is still the yard,
+// which is the only place a yard piece can go.
+function clearOfHouse(x, z) {
+  const box = getBuildingBox();
+  if (!box) return { x, z };
+  const x0 = box.min.x - HOUSE_CLEAR, x1 = box.max.x + HOUSE_CLEAR;
+  const z0 = box.min.z - HOUSE_CLEAR, z1 = box.max.z + HOUSE_CLEAR;
+  if (x < x0 || x > x1 || z < z0 || z > z1) return { x, z };
+  const out = [
+    { d: x - x0, x: x0, z }, { d: x1 - x, x: x1, z },
+    { d: z - z0, x, z: z0 }, { d: z1 - z, x, z: z1 },
+  ].sort((a, b) => a.d - b.d)[0];
+  return { x: out.x, z: out.z };
+}
+
+// A tile in the add tray was tapped. The entry names every generated piece
+// carrying that label, and pickSource takes one at random -- 17 bare trees and
+// 54 shrub mounds means adding several gives several different ones.
+async function addFromKit(entry) {
+  const srcKey = pickSource(entry);
+  const item = srcKey && getYardItem(srcKey);
+  if (!item) {
+    showAlert(`There is no ${entry.label.toLowerCase()} in this yard to copy.`);
+    return;
+  }
+  const [px, , pz] = item.pivot;
+  const { x, z } = dropPoint();
+  await placeClone(item, {
+    dx: +(x - px).toFixed(2),
+    // dy 0: the piece keeps the height the builder drew it at, which for
+    // everything out here means sitting on the ground.
+    dy: 0,
+    dz: +(z - pz).toFixed(2),
+    rot_y: SPIN_KINDS.has(item.kind)
+      ? +(Math.random() * Math.PI * 2).toFixed(4) : 0,
+    scale: 1,
+  }, `Added a ${entry.label.toLowerCase()} — drag it where you want it.`);
 }
 
 // Back to however the builder drew it — and for a duplicate, that means the
@@ -314,5 +419,6 @@ function yardRebuilt() {
   selectYardPiece(null);
   if (key) selectByKey(key);   // gone (erased, or reset away) => nothing selected
   paintErasedList();
+  refreshYardKit();            // the tiles' source keys came from the old build
 }
 window.addEventListener('yardRebuilt', yardRebuilt);

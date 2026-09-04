@@ -113,6 +113,15 @@
 
   --hit-min: 44px;       /* minimum comfortable touch target */
 
+  /* The Outside editor's add tray (#yard-kit). It occupies the bottom of the
+     screen, which is where #gizmo-bar and #yard-bar already live, so opening it
+     LIFTS them by exactly its own height rather than sliding under them: both
+     bars add --kit-lift to their offset, and body.kit-open is the only thing
+     that sets it. One number, and the whole bottom stack stays honest. */
+  --kit-h: 260px;
+  --kit-lift: 0px;
+  --kit-tile-h: 124px;   /* one palette tile: a thumbnail and its name */
+
   /* native chrome (scrollbars, file input, date/colour pickers) follows */
   color-scheme: dark;
 }
@@ -1246,7 +1255,7 @@ input[type="file"]::file-selector-button {
    translate has to be restated in :active, or the press-scale drops it back to
    the left edge. */
 #gizmo-bar {
-  position: fixed; bottom: calc(var(--sa-b) + 78px); left: 50%;
+  position: fixed; bottom: calc(var(--sa-b) + 78px + var(--kit-lift)); left: 50%;
   transform: translateX(-50%);
   z-index: 25; display: flex; gap: 4px; padding: 4px;
   background: var(--glass-bg); border: 1px solid var(--glass-border);
@@ -1312,8 +1321,18 @@ input[type="file"]::file-selector-button {
 @media (prefers-reduced-motion: no-preference) {
   .panel, #cal-popover, #banner, #gizmo-bar, #focus-exit, #levels,
   #cam-overlay, #cam-all, #rooms-all, #models-modal, #planner,
-  #side-rail, #home-btn, #bottom-bar {
+  #side-rail, #home-btn, #bottom-bar, #yard-kit {
     transition: opacity 0.2s ease, transform 0.26s cubic-bezier(0.2, 0.7, 0.2, 1),
+                display 0.26s allow-discrete;
+  }
+  /* The two bars the add tray lifts. `bottom` rather than a transform because
+     the lift is a LAYOUT change (--kit-lift), and because both already spend
+     their transform on a centring translate. Restated in full rather than
+     appended: a bare `transition: bottom` here would REPLACE the shared
+     declaration above and cost #gizmo-bar its fade. */
+  #gizmo-bar, #yard-bar {
+    transition: opacity 0.2s ease, transform 0.26s cubic-bezier(0.2, 0.7, 0.2, 1),
+                bottom 0.26s cubic-bezier(0.2, 0.7, 0.2, 1),
                 display 0.26s allow-discrete;
   }
   #mm-box { transition: transform 0.26s cubic-bezier(0.2, 0.7, 0.2, 1); }
@@ -1321,7 +1340,7 @@ input[type="file"]::file-selector-button {
   /* on the way out */
   .panel.hidden, #cal-popover.hidden, #banner.hidden, #gizmo-bar.hidden,
   #focus-exit.hidden, #levels.hidden, #cam-overlay.hidden, #cam-all.hidden,
-  #rooms-all.hidden, #models-modal.hidden, #planner.hidden,
+  #rooms-all.hidden, #models-modal.hidden, #planner.hidden, #yard-kit.hidden,
   body.app-edit .view-chrome,
   body.room-focused #home-btn, body.room-focused #side-rail, body.room-focused #bottom-bar {
     opacity: 0; pointer-events: none;
@@ -1331,6 +1350,8 @@ input[type="file"]::file-selector-button {
   #banner.hidden { transform: translate(-50%, -10px); }
   #gizmo-bar.hidden, #focus-exit.hidden { transform: translate(-50%, 10px); }
   #cal-popover.hidden { transform: translateY(6px); }
+  /* a bottom sheet leaves the way it came: down and out */
+  #yard-kit.hidden { transform: translateY(calc(100% + var(--sa-b) + 16px)); }
   #models-modal.hidden #mm-box { transform: scale(0.96); }
   body.app-edit #side-rail, body.room-focused #side-rail { transform: translateX(16px); }
 
@@ -1344,6 +1365,7 @@ input[type="file"]::file-selector-button {
     #banner { transform: translate(-50%, -10px); }
     #gizmo-bar, #focus-exit { transform: translate(-50%, 10px); }
     #cal-popover { transform: translateY(6px); }
+    #yard-kit { transform: translateY(calc(100% + var(--sa-b) + 16px)); }
     #mm-box { transform: scale(0.96); }
     #side-rail { transform: translateX(16px); }
   }
@@ -1408,7 +1430,7 @@ input[type="file"]::file-selector-button {
    selected. No shadow, elevation from the glass + hairline, and the centring
    translate is restated in :active on every button that carries one. */
 #yard-bar {
-  position: fixed; bottom: calc(var(--sa-b) + 138px); left: 50%;
+  position: fixed; bottom: calc(var(--sa-b) + 138px + var(--kit-lift)); left: 50%;
   transform: translateX(-50%);
   z-index: 26; display: flex; align-items: center; gap: 10px;
   padding: 8px 10px 8px 16px;
@@ -1452,3 +1474,107 @@ input[type="file"]::file-selector-button {
 .yard-erased-row:active { background: var(--surface-2); transform: scale(0.95); }
 
 #topbar #btn-yard.active { background: var(--accent); color: var(--text); }
+#yard-bar #yard-add.active { background: var(--accent); color: var(--text); }
+
+/* ---- the add tray (yardkit.js) ------------------------------------------
+   A bottom sheet of everything the exterior is built out of. It lands on the
+   bottom of the screen, which #gizmo-bar and #yard-bar already own, so opening
+   it lifts both by --kit-lift instead of sliding under them.
+
+   The 52px: the gizmo bar sits 78px up, the tray's own inset is 16px, and 10px
+   between them reads as a gap rather than a seam -- 78 - 16 - 10. Lifting by
+   that puts the gizmo bar exactly 10px above the tray, and #yard-bar keeps its
+   own 60px clearance above the gizmo bar for free. */
+body.kit-open { --kit-lift: calc(var(--kit-h) - 52px); }
+
+#yard-kit {
+  position: fixed; z-index: 26;
+  bottom: calc(var(--sa-b) + 16px);
+  left: calc(var(--sa-l) + var(--gutter));
+  right: calc(var(--sa-r) + var(--gutter));
+  margin: 0 auto; max-width: 1100px; height: var(--kit-h);
+  display: flex; flex-direction: column; gap: var(--sp-xs);
+  padding: var(--sp-sm) var(--sp-sm) var(--sp-xs);
+}
+.yk-head { display: flex; align-items: center; gap: var(--sp-sm); min-height: 30px; }
+.yk-title {
+  font-size: 15px; font-weight: 600; letter-spacing: -0.24px; white-space: nowrap;
+}
+#yard-kit .close { position: static; margin-left: auto; flex: none; }
+
+/* kind filter: 28 tiles is a lot to sweep, and "Props" is one tap */
+.yk-chips {
+  display: flex; gap: var(--sp-xxs); overflow-x: auto; min-width: 0;
+  scrollbar-width: none;
+}
+.yk-chips::-webkit-scrollbar { display: none; }
+.yk-chip {
+  flex: none; padding: 6px 14px; border: 0; border-radius: var(--radius-pill);
+  background: var(--surface-1); color: var(--text-dim);
+  font-size: 13px; font-weight: 400; letter-spacing: -0.08px; white-space: nowrap;
+}
+.yk-chip.active { background: var(--accent); color: var(--text); }
+@media (hover: hover) {
+  .yk-chip:not(.active):hover { background: var(--surface-2); color: var(--text); }
+}
+.yk-chip:active { transform: scale(0.95); }
+
+/* Rows are a fixed height, never content-sized. Letting them size to content
+   looks like it works and does not: under (pointer: coarse) the base `button`
+   rule adds `min-height: var(--hit-min)`, and a button with a definite
+   min-height stops contributing its children's height to the track -- every row
+   collapsed to 48px on a phone, so each row of tiles was drawn over the labels
+   of the row above, while the identical markup measured 120px on the desktop.
+   `aspect-ratio` on the tile does not rescue it either, because the row track is
+   sized before the fluid `1fr` column width is definite. A fixed row also gives
+   the palette an even grid, which is what it wants anyway. */
+.yk-grid {
+  flex: 1; min-height: 0; overflow-y: auto; padding-right: 2px;
+  display: grid; gap: var(--gap);
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  grid-auto-rows: var(--kit-tile-h);
+  align-content: start;
+}
+.yk-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 6px 6px 8px; border: 0; border-radius: var(--radius-sm);
+  background: var(--surface-1); color: var(--text);
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+@media (hover: hover) { .yk-tile:hover { background: var(--surface-2); } }
+.yk-tile:active { transform: scale(0.95); }
+.yk-tile.adding { opacity: 0.5; pointer-events: none; }
+/* the render is shot on --surface-1, so it seats into the tile with no seam.
+   It takes whatever height the label leaves and stays square inside it. */
+.yk-thumb {
+  display: block; flex: 1; min-height: 0; width: 100%; height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-sm); background: var(--surface-1);
+}
+.yk-thumb-blank { background: var(--surface-3); }
+.yk-name {
+  font-size: 12px; font-weight: 400; letter-spacing: -0.08px; line-height: 1.25;
+  color: var(--text-faint); text-align: center; overflow-wrap: anywhere;
+}
+#yk-empty { margin: auto; font-size: 14px; }
+
+/* a short screen cannot spare 260px of the view to a palette */
+@media (max-height: 720px) { :root { --kit-h: 196px; } }
+
+/* A phone cannot fit Outside / Erased / Add / Reset all / Done on one line --
+   it was already tight before the tray's button joined them, and the overflow
+   pushed Done off the right edge. Two centred rows instead; the bar is bottom
+   anchored so it grows upward, away from everything. The hint goes: it is the
+   one thing there the opening banner has already said. */
+@media (max-width: 560px) {
+  #yard-bar {
+    flex-wrap: wrap; justify-content: center; row-gap: 6px;
+    width: calc(100vw - 2 * var(--gutter) - var(--sa-l) - var(--sa-r));
+  }
+  #yard-bar .yb-hint { display: none; }
+  /* Eight kind chips beside a title and a close button leave about two and a
+     half of them on a phone. Their own full-width row costs one tile row's
+     peek and shows five. */
+  .yk-head { flex-wrap: wrap; row-gap: var(--sp-xs); }
+  .yk-chips { order: 3; flex-basis: 100%; }
+}

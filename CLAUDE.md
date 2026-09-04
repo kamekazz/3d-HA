@@ -187,6 +187,25 @@ wrapped by **reassigning their function declarations** (`installItemScopes`), so
   back is a visibility flip, and the bar's *Erased* list is the only handle on something you can no
   longer see. Only a duplicate (which changes the item *set*) rebuilds.
 
+**Adding to the yard** ("Add…" in the Outside editor's bar, `frontend/js/yardkit.js`) — a bottom
+tray of everything the exterior is built out of, because the editor could only ever take things away.
+Two things make it cheap. The catalogue is **read back off the yard that is standing**, grouped by
+`label`, so it can never offer a piece `environment.js` does not draw and never goes stale when a
+factory is added or renamed — and each entry keeps *every* generated piece carrying that label, so
+adding five bushes picks five different ones out of the 54 shrub mounds rather than stamping one out
+five times. And adding is the **existing clone**: a `yard_edits` row with `src` naming a piece already
+in the yard, so there is no new storage and undo/redo covers it for free (verified: three adds undo
+and redo one at a time). `lawn`, `street` and the unscoped `piece` runs are left out of the tray, for
+reasons in `SKIP_KINDS`. Tiles carry a **real render of the piece** — no name separates "Shrub" from
+"Shrub mound" from "Bush" — shot with the app's own renderer into a private scene and cropped off the
+live canvas, the pattern `snapshots.js` uses for room cards (~11 ms each, once, cached for the module's
+life). A tile drops its piece on the ground under the middle of the view, pushed clear of the building
+box if the view ray lands inside the house (`clearOfHouse` in `yard.js`), scattered a few feet and —
+for kinds with no canonical facing — randomly turned, then selects it with the gizmo on. `placeClone`
+is now the single path for both the tray and the panel's Duplicate; it passes the **whole** delta to
+`applyYardEdit`, which Duplicate did not — anything not given falls back to `IDENTITY_EDIT`, so a
+duplicate used to be drawn exactly on top of its source until the next page load.
+
 Undo/redo needed nothing new beyond adding `yard_edits` to `HISTORY_TABLES` — `export_snapshot`/
 `restore_snapshot` are column-agnostic, and restoring original row ids is what makes an undone
 duplicate come back as the same `clone:<id>`. Endpoints: `GET /api/house/yard`, `PATCH /api/house/yard`

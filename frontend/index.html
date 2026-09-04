@@ -99,8 +99,25 @@
         <div id="yard-erased"></div>
       </details>
     </div>
+    <button id="yard-add" type="button" class="secondary">Add…</button>
     <button id="yard-reset-all" type="button" class="secondary">Reset all</button>
     <button id="yard-close" type="button">Done</button>
+  </div>
+
+  <!-- The add tray (yardkit.js): a bottom sheet of everything the exterior is
+       built out of. The tiles are not a hand-written list — they are read
+       back off the yard that is actually standing, and their pictures are shot
+       from that same geometry, so the tray cannot offer a piece environment.js
+       does not draw. Opening it lifts #yard-bar and #gizmo-bar clear via the
+       --kit-lift token on body.kit-open. -->
+  <div id="yard-kit" class="glass hidden">
+    <div class="yk-head">
+      <span class="yk-title">Add to the yard</span>
+      <div id="yk-chips" class="yk-chips"></div>
+      <button id="yk-close" class="close" type="button">&times;</button>
+    </div>
+    <div id="yk-grid" class="yk-grid"></div>
+    <p id="yk-empty" class="muted hidden">Nothing of that kind in this yard.</p>
   </div>
 
   <aside id="yard-panel" class="panel hidden">
