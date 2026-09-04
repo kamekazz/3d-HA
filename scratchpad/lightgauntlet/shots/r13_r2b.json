@@ -1,0 +1,141 @@
+{
+  "room": 13,
+  "level": 2,
+  "entities": [
+    "light.guest_room"
+  ],
+  "fixtures": [
+    {
+      "objectId": 235,
+      "entityId": "light.guest_room",
+      "roomId": 13,
+      "level": 2,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffb877",
+      "pooled": false
+    },
+    {
+      "objectId": 369,
+      "entityId": "light.guest_room",
+      "roomId": 13,
+      "level": 2,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffc48f",
+      "pooled": false
+    }
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/r13_R2b_on.png",
+    "meter": {
+      "mean": 73.4,
+      "centre": 64.4,
+      "p95": 205
+    },
+    "slots": [
+      {
+        "owner": "object 369",
+        "intensity": 75.67,
+        "decay": 2,
+        "distance": 9.5
+      },
+      {
+        "owner": "object 235",
+        "intensity": 75.67,
+        "decay": 2,
+        "distance": 4.5
+      },
+      {
+        "owner": "room 13 fill",
+        "intensity": 1.7,
+        "decay": 0.45,
+        "distance": 14.8
+      }
+    ],
+    "fixtures": [
+      {
+        "objectId": 235,
+        "entityId": "light.guest_room",
+        "roomId": 13,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": true
+      },
+      {
+        "objectId": 369,
+        "entityId": "light.guest_room",
+        "roomId": 13,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": true
+      }
+    ],
+    "night": 1,
+    "at": [
+      4.3,
+      22.77,
+      17.93
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/r13_R2b_off.png",
+    "meter": {
+      "mean": 5.0,
+      "centre": 4.0,
+      "p95": 17
+    },
+    "slots": [],
+    "fixtures": [
+      {
+        "objectId": 235,
+        "entityId": "light.guest_room",
+        "roomId": 13,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": false
+      },
+      {
+        "objectId": 369,
+        "entityId": "light.guest_room",
+        "roomId": 13,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": false
+      }
+    ],
+    "night": 1,
+    "at": [
+      4.3,
+      22.77,
+      17.93
+    ]
+  },
+  "delta": 60.4
+}

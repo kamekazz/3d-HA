@@ -1,0 +1,164 @@
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:240: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  full = list(im.getdata())
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:242: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  bd = list(box.getdata())
+{
+  "room": 1,
+  "level": 0,
+  "entities": [
+    "light.basement_basement_light",
+    "light.basement_stairs",
+    "light.movie_room_lamp",
+    "light.movie_room_lamp_2",
+    "light.movie_room_lamp_segment_1",
+    "light.movie_room_lamp_segment_1_2",
+    "light.movie_room_lamp_segment_2",
+    "light.movie_room_lamp_segment_2_2",
+    "light.movie_room_lamp_segment_3",
+    "light.movie_room_lamp_segment_3_2",
+    "light.movie_room_lamp_segment_4",
+    "light.movie_room_lamp_segment_4_2",
+    "light.movie_room_lamp_segment_5",
+    "light.movie_room_lamp_segment_5_2",
+    "light.movie_room_lamp_segment_6",
+    "light.movie_room_lamp_segment_6_2",
+    "light.movie_room_lamp_segment_7",
+    "light.movie_room_lamp_segment_7_2",
+    "light.movie_room_lamp_segment_8",
+    "light.movie_room_lamp_segment_8_2"
+  ],
+  "fixtures": [
+    {
+      "objectId": 361,
+      "entityId": "light.movie_room_lamp",
+      "roomId": 1,
+      "level": 0,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffa855",
+      "pooled": false
+    },
+    {
+      "objectId": 363,
+      "entityId": "light.movie_room_lamp",
+      "roomId": 1,
+      "level": 0,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffa855",
+      "pooled": false
+    }
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/r1_r2v1_on.png",
+    "meter": {
+      "mean": 29.8,
+      "centre": 29.0,
+      "p95": 63
+    },
+    "slots": [
+      {
+        "owner": "object 361",
+        "intensity": 41,
+        "decay": 2,
+        "distance": 11
+      },
+      {
+        "owner": "object 363",
+        "intensity": 92.93,
+        "decay": 2,
+        "distance": 12
+      },
+      {
+        "owner": "room 1 fill",
+        "intensity": 0.52,
+        "decay": 0.45,
+        "distance": 28
+      }
+    ],
+    "fixtures": [
+      {
+        "objectId": 361,
+        "entityId": "light.movie_room_lamp",
+        "roomId": 1,
+        "level": 0,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffa855",
+        "pooled": true
+      },
+      {
+        "objectId": 363,
+        "entityId": "light.movie_room_lamp",
+        "roomId": 1,
+        "level": 0,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffa855",
+        "pooled": true
+      }
+    ],
+    "night": 1,
+    "at": [
+      8.3,
+      4.77,
+      34.28
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/r1_r2v1_off.png",
+    "meter": {
+      "mean": 10.0,
+      "centre": 5.4,
+      "p95": 45
+    },
+    "slots": [],
+    "fixtures": [
+      {
+        "objectId": 361,
+        "entityId": "light.movie_room_lamp",
+        "roomId": 1,
+        "level": 0,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffa855",
+        "pooled": false
+      },
+      {
+        "objectId": 363,
+        "entityId": "light.movie_room_lamp",
+        "roomId": 1,
+        "level": 0,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffa855",
+        "pooled": false
+      }
+    ],
+    "night": 1,
+    "at": [
+      8.3,
+      4.77,
+      34.28
+    ]
+  },
+  "delta": 23.6
+}

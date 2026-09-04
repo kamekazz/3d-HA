@@ -1,0 +1,77 @@
+{
+  "pose": {
+    "pos": [
+      4.3,
+      21.6,
+      16.6
+    ],
+    "target": [
+      4.3,
+      25.0,
+      12.0
+    ],
+    "fov": 74
+  },
+  "entities": [
+    "light.guest_room"
+  ],
+  "on": {
+    "file": "shots/crit2_r13_on.png",
+    "meter": {
+      "mean": 73.3,
+      "centre": 71.4,
+      "p95": 203
+    },
+    "at": [
+      4.3,
+      21.6,
+      16.6
+    ],
+    "fixtures": [
+      {
+        "id": 235,
+        "on": true,
+        "glow": 1,
+        "emits": true,
+        "shown": true
+      },
+      {
+        "id": 369,
+        "on": true,
+        "glow": 1,
+        "emits": true,
+        "shown": true
+      }
+    ]
+  },
+  "off": {
+    "file": "shots/crit2_r13_off.png",
+    "meter": {
+      "mean": 30.0,
+      "centre": 42.9,
+      "p95": 62
+    },
+    "at": [
+      4.3,
+      21.6,
+      16.6
+    ],
+    "fixtures": [
+      {
+        "id": 235,
+        "on": false,
+        "glow": 0,
+        "emits": true,
+        "shown": true
+      },
+      {
+        "id": 369,
+        "on": false,
+        "glow": 0,
+        "emits": true,
+        "shown": true
+      }
+    ]
+  },
+  "delta": 28.5
+}

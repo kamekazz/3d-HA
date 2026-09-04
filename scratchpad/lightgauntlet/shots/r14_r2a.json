@@ -1,0 +1,178 @@
+{
+  "room": 14,
+  "level": 2,
+  "entities": [
+    "light.2nd_floor_master_bedroom_light",
+    "light.edwin_bedside_light",
+    "light.humidifier_bed_room_humidifier_ambient_light",
+    "light.rosemary_bedside_light",
+    "light.rosemarys_closet"
+  ],
+  "fixtures": [
+    {
+      "objectId": 13,
+      "entityId": "light.2nd_floor_master_bedroom_light",
+      "roomId": 14,
+      "level": 2,
+      "on": true,
+      "emits": true,
+      "level01": 1,
+      "glow": 1,
+      "shown": false,
+      "color": "ffb466",
+      "pooled": false
+    },
+    {
+      "objectId": 14,
+      "entityId": "light.edwin_bedside_light",
+      "roomId": 14,
+      "level": 2,
+      "on": true,
+      "emits": true,
+      "level01": 1,
+      "glow": 1,
+      "shown": false,
+      "color": "ffb877",
+      "pooled": false
+    },
+    {
+      "objectId": 356,
+      "entityId": "light.rosemary_bedside_light",
+      "roomId": 14,
+      "level": 2,
+      "on": true,
+      "emits": true,
+      "level01": 1,
+      "glow": 1,
+      "shown": false,
+      "color": "ffb877",
+      "pooled": false
+    }
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/r14_r2a_on.png",
+    "meter": {
+      "mean": 35.7,
+      "centre": 65.4,
+      "p95": 146
+    },
+    "slots": [
+      {
+        "owner": "object 14",
+        "intensity": 61.24
+      },
+      {
+        "owner": "object 13",
+        "intensity": 65.61
+      },
+      {
+        "owner": "object 356",
+        "intensity": 61.24
+      }
+    ],
+    "fixtures": [
+      {
+        "objectId": 13,
+        "entityId": "light.2nd_floor_master_bedroom_light",
+        "roomId": 14,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffb466",
+        "pooled": true
+      },
+      {
+        "objectId": 14,
+        "entityId": "light.edwin_bedside_light",
+        "roomId": 14,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": true
+      },
+      {
+        "objectId": 356,
+        "entityId": "light.rosemary_bedside_light",
+        "roomId": 14,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": true
+      }
+    ],
+    "night": 1,
+    "at": [
+      8.37,
+      22.77,
+      6.72
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/r14_r2a_off.png",
+    "meter": {
+      "mean": 11.0,
+      "centre": 10.8,
+      "p95": 38
+    },
+    "slots": [],
+    "fixtures": [
+      {
+        "objectId": 13,
+        "entityId": "light.2nd_floor_master_bedroom_light",
+        "roomId": 14,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffb466",
+        "pooled": false
+      },
+      {
+        "objectId": 14,
+        "entityId": "light.edwin_bedside_light",
+        "roomId": 14,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": false
+      },
+      {
+        "objectId": 356,
+        "entityId": "light.rosemary_bedside_light",
+        "roomId": 14,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": false
+      }
+    ],
+    "night": 1,
+    "at": [
+      8.37,
+      22.77,
+      6.72
+    ]
+  },
+  "delta": 54.6
+}

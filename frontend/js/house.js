@@ -636,7 +636,12 @@ function buildRoom(room, floor) {
     // HA's junk "error" floor is excluded from the framing box (framingBox);
     // roomcards.js filters the same ha_floor_id out of the rail.
     errorFloor: floor.ha_floor_id === 'error',
+    // Two independent writers of the wall emissive, composed by
+    // applyWallEmissive: `accentEmissive` is the level currently painted for
+    // hover/selection (`baseEmissive` is the level to restore TO once a hover
+    // drops), `fillEmissive`/`fillColor` are roomlights.js's night wall fill.
     baseOpacity: 1.0, baseEmissive: 0, accent,
+    accentEmissive: 0, fillEmissive: 0, fillColor: new THREE.Color(0x000000),
     // cutaway.js walks these every frame, so they are cached rather than
     // re-filtered out of children; wallByEdge is keyed by edge index, which
     // skips any degenerate edge the loop above dropped.
@@ -790,14 +795,55 @@ export function setRoomOpacity(mesh, value) {
   for (const wall of wallParts(mesh)) applyWallOpacity(wall, value);
 }
 
+// Single writer for a wall's emissive, for the same reason applyWallOpacity is
+// the single writer for its opacity: two independent things now tint a wall and
+// a material has exactly ONE emissive colour and ONE intensity, so whichever
+// wrote last used to win outright. They ADD here, premultiplied into the colour
+// with emissiveIntensity pinned at 1:
+//   accentEmissive  the hover/selection glow, in the room's accent colour
+//   fillEmissive    roomlights.js's night wall fill, in its own warm colour
+// Pinning the intensity is exact, not an approximation: three's shader adds
+// `emissive * emissiveIntensity`, so accent x a at intensity 1 is the same
+// radiance the old `emissive = accent; emissiveIntensity = a` produced.
+const _em = new THREE.Color();
+
+function applyWallEmissive(mesh) {
+  const ud = mesh.userData;
+  const a = ud.accentEmissive || 0;
+  const f = ud.fillEmissive || 0;
+  _em.copy(ud.accent).multiplyScalar(a);
+  if (f > 0) {
+    // written straight into the components, not through setRGB: both colours
+    // are already in the working (linear) space and setRGB would re-apply the
+    // working-space conversion to numbers that have had it once already.
+    const c = ud.fillColor;
+    _em.r += c.r * f;
+    _em.g += c.g * f;
+    _em.b += c.b * f;
+  }
+  for (const wall of wallParts(mesh)) {
+    wall.material.emissive.copy(_em);
+    wall.material.emissiveIntensity = 1;
+  }
+}
+
 // Paint the accent glow onto a room's walls WITHOUT disturbing the stored
 // level. Hover uses this: it needs to add a transient boost and then put the
 // selection glow back, which it can't do if writing also rewrites the baseline.
 export function paintRoomEmissive(mesh, intensity) {
-  for (const wall of wallParts(mesh)) {
-    wall.material.emissive.copy(mesh.userData.accent);
-    wall.material.emissiveIntensity = intensity;
-  }
+  mesh.userData.accentEmissive = intensity;
+  applyWallEmissive(mesh);
+}
+
+// roomlights.js's night wall fill — the vertical counterpart of the slab glow.
+// Goes through the composer above so a hovered or selected room keeps its
+// accent, and so the accent's own writer cannot wipe the fill out (it converges
+// and then stops writing, so a hover would otherwise erase it until the room's
+// lights next moved).
+export function setRoomWallFill(mesh, color, intensity) {
+  mesh.userData.fillColor.copy(color);
+  mesh.userData.fillEmissive = intensity;
+  applyWallEmissive(mesh);
 }
 
 // Single writer for the accent-tinted glow that marks hover/selection now

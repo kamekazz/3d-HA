@@ -18,6 +18,7 @@ import { getWeatherRoot } from './weather.js';
 import { getFocusedRoomId } from './focus.js';
 import { suspendRoomLights } from './roomlights.js';
 import { suspendEaveLights } from './eavelights.js';
+import { suspendWindowLight } from './windowlight.js';
 import { GIZMO_NAME } from './drag.js';
 
 const SNAP_W = 384, SNAP_H = 240;      // card image (1.6 aspect)
@@ -174,6 +175,9 @@ function captureRoom(roomId) {
   // with its own `.lit` class instead.
   const restoreLights = suspendRoomLights();
   const restoreEaves = suspendEaveLights(); // same reason: the porch lights at night
+  // and the same again for the windows: the card is lit like noon (hemi/sun
+  // above), so its windows have to be the noon ones windowlight.js dims away
+  const restoreWindows = suspendWindowLight();
   // depthTest:false + renderOrder Infinity: the gizmo would paint straight over
   // the card if anything happened to be selected when a sweep fired
   setVis(scene.getObjectByName(GIZMO_NAME), false);
@@ -188,6 +192,7 @@ function captureRoom(roomId) {
   restoreCutaway();
   restoreLights();
   restoreEaves();
+  restoreWindows();
   for (const [o, v] of saved) o.visible = v;
   scene.background = savedBg;
   scene.fog = savedFog;

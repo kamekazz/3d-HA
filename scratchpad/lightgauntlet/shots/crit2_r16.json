@@ -1,0 +1,63 @@
+{
+  "pose": {
+    "pos": [
+      25.4,
+      21.6,
+      3.2
+    ],
+    "target": [
+      25.4,
+      23.6,
+      11.8
+    ],
+    "fov": 74
+  },
+  "entities": [
+    "light.2nd_floor_master_bathroom_light"
+  ],
+  "on": {
+    "file": "shots/crit2_r16_on.png",
+    "meter": {
+      "mean": 63.5,
+      "centre": 111.0,
+      "p95": 208
+    },
+    "at": [
+      25.4,
+      21.6,
+      3.2
+    ],
+    "fixtures": [
+      {
+        "id": 155,
+        "on": true,
+        "glow": 1,
+        "emits": true,
+        "shown": true
+      }
+    ]
+  },
+  "off": {
+    "file": "shots/crit2_r16_off.png",
+    "meter": {
+      "mean": 9.0,
+      "centre": 11.4,
+      "p95": 37
+    },
+    "at": [
+      25.4,
+      21.6,
+      3.2
+    ],
+    "fixtures": [
+      {
+        "id": 155,
+        "on": false,
+        "glow": 0,
+        "emits": true,
+        "shown": true
+      }
+    ]
+  },
+  "delta": 99.6
+}

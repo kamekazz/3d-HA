@@ -1,0 +1,194 @@
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:240: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  full = list(im.getdata())
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:242: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  bd = list(box.getdata())
+{
+  "room": 14,
+  "level": 2,
+  "entities": [
+    "light.2nd_floor_master_bedroom_light",
+    "light.edwin_bedside_light",
+    "light.humidifier_bed_room_humidifier_ambient_light",
+    "light.rosemary_bedside_light",
+    "light.rosemarys_closet"
+  ],
+  "fixtures": [
+    {
+      "objectId": 13,
+      "entityId": "light.2nd_floor_master_bedroom_light",
+      "roomId": 14,
+      "level": 2,
+      "on": true,
+      "emits": true,
+      "level01": 1,
+      "glow": 1,
+      "shown": false,
+      "color": "ffb466",
+      "pooled": false
+    },
+    {
+      "objectId": 14,
+      "entityId": "light.edwin_bedside_light",
+      "roomId": 14,
+      "level": 2,
+      "on": true,
+      "emits": true,
+      "level01": 1,
+      "glow": 1,
+      "shown": false,
+      "color": "ffb877",
+      "pooled": false
+    },
+    {
+      "objectId": 356,
+      "entityId": "light.rosemary_bedside_light",
+      "roomId": 14,
+      "level": 2,
+      "on": true,
+      "emits": true,
+      "level01": 1,
+      "glow": 1,
+      "shown": false,
+      "color": "ffb877",
+      "pooled": false
+    }
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/after/prop_master_night_on.png",
+    "meter": {
+      "mean": 37.7,
+      "centre": 64.2,
+      "p95": 125
+    },
+    "slots": [
+      {
+        "owner": "object 14",
+        "intensity": 38.16,
+        "decay": 2,
+        "distance": 7
+      },
+      {
+        "owner": "object 13",
+        "intensity": 40.88,
+        "decay": 2,
+        "distance": 13
+      },
+      {
+        "owner": "object 356",
+        "intensity": 38.16,
+        "decay": 2,
+        "distance": 7
+      },
+      {
+        "owner": "room 14 fill",
+        "intensity": 0.57,
+        "decay": 0.45,
+        "distance": 25
+      }
+    ],
+    "fixtures": [
+      {
+        "objectId": 13,
+        "entityId": "light.2nd_floor_master_bedroom_light",
+        "roomId": 14,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffb466",
+        "pooled": true
+      },
+      {
+        "objectId": 14,
+        "entityId": "light.edwin_bedside_light",
+        "roomId": 14,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": true
+      },
+      {
+        "objectId": 356,
+        "entityId": "light.rosemary_bedside_light",
+        "roomId": 14,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": true
+      }
+    ],
+    "night": 1,
+    "at": [
+      8.37,
+      22.77,
+      6.72
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/after/prop_master_night_off.png",
+    "meter": {
+      "mean": 11.0,
+      "centre": 10.8,
+      "p95": 38
+    },
+    "slots": [],
+    "fixtures": [
+      {
+        "objectId": 13,
+        "entityId": "light.2nd_floor_master_bedroom_light",
+        "roomId": 14,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffb466",
+        "pooled": false
+      },
+      {
+        "objectId": 14,
+        "entityId": "light.edwin_bedside_light",
+        "roomId": 14,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": false
+      },
+      {
+        "objectId": 356,
+        "entityId": "light.rosemary_bedside_light",
+        "roomId": 14,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffb877",
+        "pooled": false
+      }
+    ],
+    "night": 1,
+    "at": [
+      8.37,
+      22.77,
+      6.72
+    ]
+  },
+  "delta": 53.4
+}

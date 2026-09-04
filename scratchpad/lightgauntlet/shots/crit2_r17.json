@@ -1,0 +1,178 @@
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:230: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  full = list(im.getdata())
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:232: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  bd = list(box.getdata())
+{
+  "room": 17,
+  "level": 2,
+  "entities": [
+    "light.2nd_floor_2nd_floor_hallway"
+  ],
+  "fixtures": [
+    {
+      "objectId": 370,
+      "entityId": "light.2nd_floor_2nd_floor_hallway",
+      "roomId": 17,
+      "level": 2,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffc48f",
+      "pooled": false
+    },
+    {
+      "objectId": 371,
+      "entityId": "light.2nd_floor_2nd_floor_hallway",
+      "roomId": 17,
+      "level": 2,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffc48f",
+      "pooled": false
+    },
+    {
+      "objectId": 392,
+      "entityId": "light.2nd_floor_2nd_floor_hallway",
+      "roomId": 17,
+      "level": 2,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffc48f",
+      "pooled": false
+    }
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/crit2_r17_on.png",
+    "meter": {
+      "mean": 87.2,
+      "centre": 104.8,
+      "p95": 187
+    },
+    "slots": [
+      {
+        "owner": "object 370",
+        "intensity": 51.08
+      },
+      {
+        "owner": "object 392",
+        "intensity": 51.08
+      },
+      {
+        "owner": "object 371",
+        "intensity": 51.08
+      }
+    ],
+    "fixtures": [
+      {
+        "objectId": 370,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": true
+      },
+      {
+        "objectId": 371,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": true
+      },
+      {
+        "objectId": 392,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": true
+      }
+    ],
+    "night": 1,
+    "at": [
+      12.66,
+      22.77,
+      23.09
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/crit2_r17_off.png",
+    "meter": {
+      "mean": 4.7,
+      "centre": 3.1,
+      "p95": 23
+    },
+    "slots": [],
+    "fixtures": [
+      {
+        "objectId": 370,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": false
+      },
+      {
+        "objectId": 371,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": false
+      },
+      {
+        "objectId": 392,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": false
+      }
+    ],
+    "night": 1,
+    "at": [
+      20.75,
+      22.77,
+      14.99
+    ]
+  },
+  "delta": 101.7
+}

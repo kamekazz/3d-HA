@@ -1,0 +1,26 @@
+{
+ "room": 4,
+ "night": true,
+ "nocut": true,
+ "at": [
+  2.1,
+  13.5,
+  44
+ ],
+ "before": {
+  "file": "shots/ab_r4_bay_nocut_before.png",
+  "meter": {
+   "mean": 143.2,
+   "centre": 161.3,
+   "p95": 242
+  }
+ },
+ "after": {
+  "file": "shots/ab_r4_bay_nocut_after.png",
+  "meter": {
+   "mean": 35.4,
+   "centre": 38.2,
+   "p95": 64
+  }
+ }
+}

@@ -1,0 +1,26 @@
+{
+ "room": 4,
+ "night": true,
+ "nocut": true,
+ "at": [
+  10.18,
+  13.39,
+  28.26
+ ],
+ "before": {
+  "file": "shots/ab_r4_night_nocut_before.png",
+  "meter": {
+   "mean": 13.9,
+   "centre": 5.8,
+   "p95": 45
+  }
+ },
+ "after": {
+  "file": "shots/ab_r4_night_nocut_after.png",
+  "meter": {
+   "mean": 13.9,
+   "centre": 5.8,
+   "p95": 45
+  }
+ }
+}

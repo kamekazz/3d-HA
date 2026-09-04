@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { floorGroups, isOutdoorRoom } from './house.js';
 import { getInstance } from './models.js';
+import { noteWindowObject, resetWindowLight } from './windowlight.js';
 
 export const objects3d = new Map(); // object_id -> root Group
 
@@ -100,6 +101,7 @@ function makePlaceholder() {
 export function buildObjects(house) {
   for (const obj of objects3d.values()) obj.parent?.remove(obj);
   objects3d.clear();
+  resetWindowLight(); // its roots are these, and they are on their way out
 
   for (const floor of house.floors || []) {
     const group = floorGroups.get(floor.level);
@@ -135,8 +137,10 @@ function makeObject(o, room, floor) {
   const root = new THREE.Group();
   getInstance(o.model_id, 'bottom')
     // models load async: a piece that resolves after its wall has already
-    // faded has to be dimmed on arrival or it pops in over the cutaway
-    .then((inst) => { root.add(inst); applyObjectFade(root); })
+    // faded has to be dimmed on arrival or it pops in over the cutaway — and
+    // for the same reason a window arriving after dark has to be night-dimmed
+    // on arrival, or it pops in as a lit rectangle
+    .then((inst) => { root.add(inst); applyObjectFade(root); noteWindowObject(root); })
     .catch((err) => {
       console.warn(`model ${o.model_id} failed for object ${o.id}:`, err);
       root.add(makePlaceholder());

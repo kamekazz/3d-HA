@@ -1,0 +1,87 @@
+  full = list(im.getdata())
+  bd = list(box.getdata())
+  d = list(c.getdata())
+{
+  "room": 5,
+  "pos": [
+    8.35,
+    12.0,
+    -8.0
+  ],
+  "target": [
+    8.35,
+    12.0,
+    4.6
+  ],
+  "entities": [
+    "light.living_room_fireplace_lights",
+    "light.living_room_livingroom",
+    "fan.living_room_fan"
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/w5_v3_on.png",
+    "meter": {
+      "mean": 70.8,
+      "centre": 105.2,
+      "p95": 191
+    },
+    "band": [
+      55,
+      49,
+      168,
+      163,
+      63,
+      46,
+      33
+    ],
+    "at": [
+      8.35,
+      12,
+      -8
+    ],
+    "night": 1,
+    "slots": [
+      [
+        "object 376",
+        73.09
+      ],
+      [
+        "object 373",
+        58.94
+      ],
+      [
+        "object 97",
+        12.97
+      ],
+      [
+        "room 5 fill",
+        1.87
+      ]
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/w5_v3_off.png",
+    "meter": {
+      "mean": 13.3,
+      "centre": 14.7,
+      "p95": 51
+    },
+    "band": [
+      19,
+      45,
+      0,
+      0,
+      58,
+      46,
+      33
+    ],
+    "at": [
+      8.35,
+      12,
+      -8
+    ],
+    "night": 1,
+    "slots": []
+  },
+  "delta": 90.5
+}

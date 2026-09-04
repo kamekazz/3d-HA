@@ -164,15 +164,62 @@ walls). Topbar `☀ auto` button cycles auto/day/night (persisted in `localStora
   that House mode hides outright, so `exteriorLive` gates on the *room* instead (user-hidden, or
   scoped out by a focus on some other room). Like a fixture, a lit exterior suppresses its room's
   centre fallback.
-- **Rooms** — the old whole-room fallback, for any room with no *visible* bound fixture. The room
-  record is kept for **every** room regardless: `getRoomLightIds`/`getRoomsForEntity`/
+- **Rooms** — two whole-room lights, never both, chosen by `roomLightMode`. **Centre** is the old
+  fallback, for a room with no *visible* bound fixture and no lit exterior; it is then the room's
+  only light. **Fill** is the warm indirect term a room gets *while its own fixtures are lit*, and
+  it is the answer to the failure both critics converged on: with only point lights at decay 2,
+  brightness is nothing but a function of distance to the bulb, so a big room got a hot patch and a
+  black remainder (the guest room's floor measured **2** with the lamp on and 108 at noon) and a
+  small one saturated flat. Half of `FIXTURE_BASE` (45 → **24**) was handed to the fill instead. The
+  room record is kept for **every** room regardless: `getRoomLightIds`/`getRoomsForEntity`/
   `getAllHouseLightIds` are what `roomcards.js` counts and toggles off and what `dashboard.js`
   scopes its tile to, so a fixture must never become a second `rooms[]` entry — `Array.find` would
   return a 1-light set for a 5-light room and "all off" would turn one light off. Fixtures live in
   their own array, and `getAllHouseLightIds` stays `light.*`-only because a fixture may be bound to
-  a `switch.*` (`roomcards.js toggleRoomLights` hardcodes `domain: 'light'`).
+  a `switch.*` (`roomcards.js toggleRoomLights` hardcodes `domain: 'light'`). One consequence of
+  that `light.*`-only rule: a room whose only lighting is a `switch.*` fixture has an **empty**
+  `lightIds`, so the record used to be skipped outright and the fill had nothing to hang on — five
+  rooms here (Dining, Kitchen, Laundry, Pantry, Office closet). The record is now also kept when the
+  room has an emitting fixture, and `lightIds` still stays exactly as it was, so nothing the
+  accessors return changes. `rec.lit` gates the **centre** (those entities *are* what it stands in
+  for); the fill is gated on the fixtures' own eased glows instead.
 
-Four things are load-bearing and not guessable:
+The fill is worth four notes of its own:
+
+- **Its decay is flattened, and it is the only pool light that ever carries a decay other than 2.**
+  `decay` is a per-light *uniform* in three (`struct PointLight { … float decay; }`), not a program
+  define like the pool's length or `castShadow`, so varying it per slot is free — but every other
+  owner must set it back to 2, which `reassignPool` does on every branch. `FILL_DECAY` 0.45 holds
+  ~1.4:1 across a 16 ft room, which is what makes it read as a plateau instead of a second hot spot
+  at the ceiling. Exactly 0 is avoided because `getDistanceAttenuation` evaluates
+  `pow(lightDistance, decay)` and `pow(0.0, 0.0)` is undefined in GLSL, and this light sits in
+  mid-air where a headboard may pass through it. Its cutoff is `radius × FILL_RANGE`, and
+  `FILL_BASE` (2.0) is **not** on the same scale as `FIXTURE_BASE`: with the 1/d² divisor gone it is
+  very nearly the irradiance it lands.
+- **The floor half is an emissive on the room's own slab, not the point light.** A floor's normal
+  points at the ceiling while the fill hangs at eye height, so it takes the fill at a grazing angle
+  and stays black. The reference's floor is a *plateau* anyway — 66 under a torchiere, 38 across the
+  rest, no bright disc — and a plateau is exactly what an emissive is. `SLAB_FILL` (0.05) rides the
+  existing `roomGoal`/`paintSlab` path beside `SLAB_INTENSITY`, night-gated the same way, so at noon
+  it is exactly 0 and the day frame is unchanged. A room whose slab is covered by a GLB floor piece
+  (`Movie Floor Planks`) gets nothing from it and leans on the point fill.
+- **`fillFactor` saturates**: `1 - e^(-Σ glow)` over the room's shown, emitting fixtures — 1 lamp
+  0.63, 2 → 0.86, 3 → 0.95, because bounce is not additive the way emitters are. Being built from
+  the *eased* glows, it fades with the lamp instead of popping and is exactly 0 when the room is off
+  (verified: an off room holds **no pool slot at all**).
+- **Fixtures outrank fills for a slot, but not without limit.** The bands are fixtures → exteriors →
+  centres (a room whose only light it is) → fills, each sorted by distance to `controls.target`. On
+  this house's second floor with every light on, 12 lit fixtures took all 12 slots and no room got
+  its fill; `reassignPool` therefore reserves `POOL_SIZE / 4` slots for the **nearest** fills and
+  pays for them out of the **furthest** direct owners. In room focus there are only ever a handful
+  of direct owners, so this changes nothing in the view a room is judged in.
+
+`window.__roomlights.tune({fixture, fill, slab})` writes those three budgets live (which is why they
+are `let`) and `scratchpad/lightgauntlet/sweep.py` drives it: one browser session per room instead of
+one per value, and — since the rooms' `light_cfg` is edited between rounds — the only way to get a
+before/after pair from the *same* scene.
+
+Four more things are load-bearing and not guessable:
 
 - **The pool is fixed-size and its lights are never added, removed *or hidden*.** `lights.point.length`
   is baked into three's program cache key, so changing it — `light.visible = false` included —
@@ -183,7 +230,7 @@ Four things are load-bearing and not guessable:
 - **Intensities are candela under r160's physically-correct falloff** (`useLegacyLights` is gone),
   with decay 2 and the world unit = 1 **foot**, so illuminance is `intensity / d²` — a 25× divisor
   at 5 ft. The old `POOL_INTENSITY = 2.2` put ~0.06 on a surface, which is why lights read as doing
-  nothing at all; `FIXTURE_BASE` is 45 and `CENTRE_BASE` 90. Colour must go through
+  nothing at all; `FIXTURE_BASE` is 24 (was 45, see the fill above) and `CENTRE_BASE` 90. Colour must go through
   `setRGB(..., THREE.SRGBColorSpace)`: `Color.setRGB` defaults to the **linear** working space
   (only `setHex` defaults to sRGB), and HA's `rgb_color` bytes are sRGB.
 - **Spill is no longer night-gated to zero** — `DAY_FLOOR + (1 - DAY_FLOOR) * getNightFactor()`, so
@@ -204,6 +251,51 @@ Four things are load-bearing and not guessable:
 
 `setRoomLightsData({house, structure})` must be re-called after every house rebuild
 (`main.js reloadHouse`) because slabs and object roots get fresh materials.
+
+**Windows follow the sun too** (`frontend/js/windowlight.js`). Every window GLB fakes "bright
+daylight outside" with emissive — `win_glass` is emissiveFactor 0.98 at `KHR_materials_emissive_strength`
+3.4, and "Dining Windows" (model 122) paints a whole emissive outdoor scene across
+skyhi/skymid/wtrees/wrail/wlawn. Right at noon, backwards after dark: room 14 unlit at 22:00 metered
+a centre luminance of 12.7 while its blinds clipped to white. So the authored values are the **day
+end of a ramp** — at `getNightFactor()` 0 not one material is written, so a daytime frame is
+byte-identical (verified: the lightshot day meters match to the byte) — and at 1 the window's
+*brightest* emissive material lands on `NIGHT_LUM` (0.04 linear, ≈ the Sims-4 reference's moonlit
+(43,51,93)) with every other material keeping its authored ratio to it, tinted toward `MOON`. Four
+things are worth knowing:
+
+- **Two detectors, and they dim different amounts of the object.** `WINDOW_RE` matches the placed
+  object's NAME like `objects.js SURFACE_RE`, and dims every emissive material in it. That misses
+  the windows that are not called windows: five `* Baseboards` runs here are a trim piece with a
+  glazed unit inside them (`Guest`/`Master Bath`/`Bath2F` at `pane` ×2.6, `Office` at ×2.2, `Movie`
+  at `m2pane` ×1.5), and the Office one alone was 10% of a night frame clipped to sRGB 191. So
+  `VIEW_MATS` is a second detector: a **closed, exact-name Set** of the materials that paint the
+  view OUT — `pane`, `m2pane`, `skyhi`, `skymid`, `wtrees`, `leafout`, `wlawn`, `wrail`,
+  `win_glass`. It dims **only the materials that matched**, so the baseboard keeps its authored
+  look and only the pane in it follows the sun. Never loosen it to a substring test: `shade`,
+  `lens`, a bare `glass`, `bulb` and `ember` are a lamp, a recessed can and "Ceiling Fan"'s
+  `fan_glass`, all emissive on purpose — `roomlights.js light_cfg.glow_part` matches
+  `shade|lens|glass` for exactly that reason, and `win_glass` is safe only for its `win_` prefix.
+  An object **bound to an entity** is skipped before either detector runs: it is a fixture, and
+  `roomlights.js` repaints a fixture's emissive on every frame its glow moves. Material names are
+  read off the LIVE material (`__orig` records colour and intensity only); `Material.clone()`
+  carries `name` through both the models.js instance clone and splitMerged's.
+- **`cutaway.js splitMerged` is what made the first version do nothing in the Dining room.** It
+  rebuilds a sub-mesh that skins several walls as one child mesh per wall with its own material
+  clone and empties the parent's geometry — so the mesh carrying `__orig` is the one that stopped
+  drawing. `origFor()` falls back to the parent's record. Anything else reading `__orig` (state.js
+  `paintModelState`, so `roomlights.js` too) has the same blind spot on a split fixture.
+- **The tint and the intensity have to be solved together.** Lerping the emissive colour toward
+  `MOON` drops its own luminance from 0.98 to 0.037, so a plain multiply on `emissiveIntensity`
+  lands ~27× under target. Aim the emitted luminance and divide the tint back out.
+- **`snapshots.js` brackets its capture with `suspendWindowLight()`**, beside the room-light and
+  eave-light suspends: cards are lit like noon whatever the hour and persisted by geometry hash, so
+  a card captured after dark would bake black windows into a daylit room forever.
+
+`window.__windowlight.setEnabled(false)` is the before/after switch — the only way to A/B this from
+one identical pose (`scratchpad/lightgauntlet/abshot.py`). Note the Dining bay is not visible from
+inside its own focused room at all: its units are mounted on the outer face of walls that are either
+opaque (far wall) or faded away with their windows (near wall), which is why room 4's night meter is
+unchanged before and after. That is a cutaway property, not this module's.
 
 **The transform gizmo** (`frontend/js/drag.js`) is three's `TransformControls`. In r160 it *is* an
 `Object3D` — `scene.add(tc)`, there is no `getHelper()`. Four non-obvious things:

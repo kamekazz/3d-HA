@@ -1,0 +1,155 @@
+  full = list(im.getdata())
+  bd = list(box.getdata())
+  d = list(c.getdata())
+{
+  "room": 7,
+  "pos": [
+    29.1,
+    12.0,
+    22.5
+  ],
+  "target": [
+    29.1,
+    12.0,
+    34.7
+  ],
+  "entities": [
+    "light.gaming_pc_office",
+    "light.garage",
+    "light.garage_floor",
+    "light.garage_left_2",
+    "light.garage_right_2",
+    "light.garage_floor_segment_001",
+    "light.gaming_pc_office_segment_001",
+    "light.garage_segment_001",
+    "light.garage_floor_segment_002",
+    "light.gaming_pc_office_segment_002",
+    "light.garage_segment_002",
+    "light.garage_floor_segment_003",
+    "light.gaming_pc_office_segment_003",
+    "light.garage_segment_003",
+    "light.garage_floor_segment_004",
+    "light.gaming_pc_office_segment_004",
+    "light.garage_segment_004",
+    "light.garage_floor_segment_005",
+    "light.gaming_pc_office_segment_005",
+    "light.garage_segment_005",
+    "light.garage_floor_segment_006",
+    "light.gaming_pc_office_segment_006",
+    "light.garage_segment_006",
+    "light.garage_floor_segment_007",
+    "light.gaming_pc_office_segment_007",
+    "light.garage_segment_007",
+    "light.garage_floor_segment_008",
+    "light.gaming_pc_office_segment_008",
+    "light.garage_segment_008",
+    "light.garage_floor_segment_009",
+    "light.gaming_pc_office_segment_009",
+    "light.garage_segment_009",
+    "light.garage_floor_segment_010",
+    "light.gaming_pc_office_segment_010",
+    "light.garage_segment_010",
+    "light.garage_floor_segment_011",
+    "light.gaming_pc_office_segment_011",
+    "light.garage_segment_011",
+    "light.garage_floor_segment_012",
+    "light.gaming_pc_office_segment_012",
+    "light.garage_segment_012",
+    "light.garage_floor_segment_013",
+    "light.gaming_pc_office_segment_013",
+    "light.garage_segment_013",
+    "light.garage_floor_segment_014",
+    "light.gaming_pc_office_segment_014",
+    "light.garage_segment_014",
+    "light.garage_floor_segment_015",
+    "light.gaming_pc_office_segment_015",
+    "light.garage_segment_015",
+    "light.garage_floor_segment_016",
+    "light.garage_floor_segment_017",
+    "light.garage_floor_segment_018",
+    "light.garage_floor_segment_019",
+    "light.garage_floor_segment_020",
+    "light.garage_floor_segment_021",
+    "light.garage_floor_segment_022",
+    "light.garage_floor_segment_023",
+    "light.garage_floor_segment_024",
+    "light.garage_floor_segment_025",
+    "light.garage_floor_segment_026",
+    "light.garage_floor_segment_027",
+    "light.garage_floor_segment_028",
+    "light.garage_floor_segment_029",
+    "light.garage_floor_segment_030",
+    "light.garage_floor_segment_031",
+    "light.garage_floor_segment_032",
+    "light.garage_floor_segment_033",
+    "light.garage_floor_segment_034",
+    "light.garage_floor_segment_035",
+    "light.garage_floor_segment_036",
+    "light.garage_floor_segment_037",
+    "light.garage_floor_segment_038",
+    "light.garage_floor_segment_039",
+    "light.garage_floor_segment_040"
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/w7_v2_on.png",
+    "meter": {
+      "mean": 133.9,
+      "centre": 191.3,
+      "p95": 227
+    },
+    "band": [
+      167,
+      185,
+      219,
+      231,
+      220,
+      186,
+      167
+    ],
+    "at": [
+      29.1,
+      12,
+      22.5
+    ],
+    "night": 1,
+    "slots": [
+      [
+        "object 381",
+        104.8
+      ],
+      [
+        "object 384",
+        104.8
+      ],
+      [
+        "room 7 fill",
+        0.51
+      ]
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/w7_v2_off.png",
+    "meter": {
+      "mean": 82.4,
+      "centre": 127.9,
+      "p95": 152
+    },
+    "band": [
+      139,
+      133,
+      150,
+      135,
+      151,
+      134,
+      140
+    ],
+    "at": [
+      29.1,
+      12,
+      22.5
+    ],
+    "night": 1,
+    "slots": []
+  },
+  "delta": 63.4
+}

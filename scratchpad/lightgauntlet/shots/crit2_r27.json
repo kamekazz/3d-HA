@@ -1,0 +1,63 @@
+{
+  "pose": {
+    "pos": [
+      25.4,
+      21.4,
+      20.0
+    ],
+    "target": [
+      25.4,
+      25.0,
+      14.7
+    ],
+    "fov": 74
+  },
+  "entities": [
+    "light.rosemarys_closet"
+  ],
+  "on": {
+    "file": "shots/crit2_r27_on.png",
+    "meter": {
+      "mean": 61.6,
+      "centre": 84.9,
+      "p95": 162
+    },
+    "at": [
+      25.4,
+      21.4,
+      20
+    ],
+    "fixtures": [
+      {
+        "id": 390,
+        "on": true,
+        "glow": 1,
+        "emits": true,
+        "shown": true
+      }
+    ]
+  },
+  "off": {
+    "file": "shots/crit2_r27_off.png",
+    "meter": {
+      "mean": 25.5,
+      "centre": 34.2,
+      "p95": 62
+    },
+    "at": [
+      25.4,
+      21.4,
+      20
+    ],
+    "fixtures": [
+      {
+        "id": 390,
+        "on": false,
+        "glow": 0,
+        "emits": true,
+        "shown": true
+      }
+    ]
+  },
+  "delta": 50.7
+}

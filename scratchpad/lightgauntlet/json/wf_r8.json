@@ -1,0 +1,463 @@
+{
+  "room": 8,
+  "aimed": true,
+  "day": false,
+  "frames": [
+    {
+      "wall": 0.0,
+      "state": "on",
+      "file": "shots/wf_r8_w0_on.png",
+      "meter": {
+        "mean": 58.4,
+        "centre": 54.4,
+        "p95": 164
+      },
+      "at": [
+        35.8,
+        13.6,
+        6.1
+      ],
+      "surfaces": [
+        {
+          "roomId": 8,
+          "mode": "fill",
+          "slab": 0.0316,
+          "wall": 0
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 7,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 8,
+          "mode": "fill",
+          "slab": 0.0316,
+          "wall": 0
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        }
+      ]
+    },
+    {
+      "wall": 0.03,
+      "state": "on",
+      "file": "shots/wf_r8_w0.03_on.png",
+      "meter": {
+        "mean": 61.1,
+        "centre": 57.7,
+        "p95": 166
+      },
+      "at": [
+        35.8,
+        13.6,
+        6.1
+      ],
+      "surfaces": [
+        {
+          "roomId": 8,
+          "mode": "fill",
+          "slab": 0.0316,
+          "wall": 0.019
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 7,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 8,
+          "mode": "fill",
+          "slab": 0.0316,
+          "wall": 0.019
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        }
+      ]
+    },
+    {
+      "wall": 0.04,
+      "state": "on",
+      "file": "shots/wf_r8_w0.04_on.png",
+      "meter": {
+        "mean": 61.9,
+        "centre": 58.8,
+        "p95": 167
+      },
+      "at": [
+        35.8,
+        13.6,
+        6.1
+      ],
+      "surfaces": [
+        {
+          "roomId": 8,
+          "mode": "fill",
+          "slab": 0.0316,
+          "wall": 0.0253
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 7,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 8,
+          "mode": "fill",
+          "slab": 0.0316,
+          "wall": 0.0253
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        }
+      ]
+    },
+    {
+      "wall": 0.0,
+      "state": "off",
+      "file": "shots/wf_r8_w0_off.png",
+      "meter": {
+        "mean": 6.1,
+        "centre": 4.7,
+        "p95": 31
+      },
+      "at": [
+        35.8,
+        13.6,
+        6.1
+      ],
+      "surfaces": [
+        {
+          "roomId": 8,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 7,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        }
+      ]
+    },
+    {
+      "wall": 0.03,
+      "state": "off",
+      "file": "shots/wf_r8_w0.03_off.png",
+      "meter": {
+        "mean": 6.1,
+        "centre": 4.7,
+        "p95": 31
+      },
+      "at": [
+        35.8,
+        13.6,
+        6.1
+      ],
+      "surfaces": [
+        {
+          "roomId": 8,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 7,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        }
+      ]
+    },
+    {
+      "wall": 0.04,
+      "state": "off",
+      "file": "shots/wf_r8_w0.04_off.png",
+      "meter": {
+        "mean": 6.1,
+        "centre": 4.7,
+        "p95": 31
+      },
+      "at": [
+        35.8,
+        13.6,
+        6.1
+      ],
+      "surfaces": [
+        {
+          "roomId": 8,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 7,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.4498,
+          "wall": 0
+        }
+      ]
+    }
+  ]
+}

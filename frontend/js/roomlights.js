@@ -6,16 +6,19 @@
 //   EXTERIORS  a light PLACEMENT in an outdoor room -- the porch sconces and
 //              garage floodlights, which hang on the shell and have no
 //              furniture to bind to. The marker's position is the source.
-//   ROOMS      the fallback for a room with no VISIBLE bound fixture and no
-//              lit exterior: the whole-room glow, from its placed lights and
-//              its HA area's.
+//   ROOMS      two different whole-room lights, never both (roomLightMode):
+//              CENTRE, the fallback for a room with no VISIBLE bound fixture
+//              and no lit exterior -- the whole-room glow, from its placed
+//              lights and its HA area's; and FILL, the warm indirect term a
+//              room gets *while its own fixtures are lit*.
 //
-// Fixtures and exteriors outrank rooms for a pool slot. A room keeps its record
-// either way -- roomcards.js and dashboard.js read the room->lights sets through
-// the accessors below, and those must not change meaning.
+// Fixtures and exteriors outrank rooms for a pool slot, and a centre (a room's
+// only light) outranks a fill (a room that is already lit). A room keeps its
+// record either way -- roomcards.js and dashboard.js read the room->lights sets
+// through the accessors below, and those must not change meaning.
 import * as THREE from 'three';
 import { scene, controls, renderer, onFrame } from './scene.js';
-import { roomMeshes, floorBaseY, getLevel, isOutdoorRoom } from './house.js';
+import { roomMeshes, floorBaseY, getLevel, isOutdoorRoom, setRoomWallFill } from './house.js';
 import { getState, isOn, onStateApplied, paintModelState } from './state.js';
 import { getNightFactor } from './daylight.js';
 import { objects3d } from './objects.js';
@@ -56,9 +59,123 @@ const SLAB_INTENSITY = 0.45;
 // correct falloff (useLegacyLights is gone), so illuminance is intensity / d^2
 // -- at 5 ft that is a 25x divisor. The old value of 2.2 put ~0.06 on a surface
 // from a room centre, which is why lights read as doing nothing at all.
-const FIXTURE_BASE = 45;
+// 45 used to be this number, back when a fixture was the ONLY light in its room
+// and so had to fill the whole room single-handed. Everything past a few feet of
+// the bulb then came out of the 1/d^2 divisor, which gave a big room a hot patch
+// and a black remainder and a small one a flat wash: measured in the guest room,
+// wall 194 behind the lamp -> 45 at the far end, and a floor reading 0-7 with the
+// light ON. Nearly half that budget now goes to the fill below, which is what
+// buys the direct term the headroom to fall off steeply and still leave a room
+// standing behind it.
+// FIXTURE_BASE / FILL_BASE / SLAB_FILL are `let` only because
+// window.__roomlights.tune() writes them -- see the note on tune(). Nothing in
+// the module itself assigns them.
+let FIXTURE_BASE = 24;
 const CENTRE_BASE = 90;            // a room centre sits further from every surface
 const FIXTURE_RANGE = 22;          // ft; the light.distance cutoff
+
+// --- the room fill -------------------------------------------------------
+// A point light with decay 2 makes brightness nothing but a function of the
+// distance to the bulb. Real rooms do not look like that, because most of what
+// you can see is bounced light, which arrives from every direction at once --
+// the Sims reference's floor sits on a 38-66 plateau under a lamp whose wall
+// wash spans 242 -> 25 over the same span. This is that second term: one warm
+// light at the room centre, alive only while the room's OWN fixtures are lit,
+// with its DECAY FLATTENED so it reads as a plateau and not as a second hot
+// spot at the ceiling. It is the only pool light that ever carries a decay
+// other than 2.
+//
+// decay is a per-light UNIFORM in three (`struct PointLight { ... float decay; }`),
+// not a program define like the pool's length or castShadow, so varying it per
+// slot is free -- but every OTHER owner must set it back to 2, which
+// reassignPool does. 0.45 holds ~1.4:1 across a 16 ft room. Exactly 0 is
+// avoided on purpose: getDistanceAttenuation evaluates pow(lightDistance, decay)
+// and pow(0.0, 0.0) is undefined in GLSL, and this light sits in mid-air where
+// a headboard or a shelf may pass straight through it.
+//
+// FILL_BASE is NOT on the same scale as FIXTURE_BASE and must not be compared
+// with it: with the 1/d^2 divisor gone this number is very nearly the
+// irradiance it lands, not a candela at one foot.
+// 2.0 was measured before the per-room ranges were tightened, and it turned out
+// to spend almost exactly the contrast that tightening them bought: same room
+// configs, far-wall modulation was 7.10 with the fill off and 1.96 with it at
+// 2.0 (master bath), 29.25 -> 4.35 (master closet). Swept against the
+// reference's own wall profile (242 -> 180 -> 99 -> 25, about 9.7:1) with
+// everything else fixed:
+//
+//   fill  far-wall band                       ratio
+//   0     247 210 126 108 47 16 17 21         15.4   dark end below the reference
+//   0.4   247 211 129 114 56 25 28 33          9.9   <- the reference, near exactly
+//   0.7   247 211 132 119 63 31 35 41          8.0
+//   1.3   247 213 136 127 76 42 47 55          5.9
+//   2.0   247 215 142 136 88 54 59 68          4.6   dark end 2.5x the reference
+//
+// The sweep also corrected the assumption this was built on: the guest room's
+// floor reads 28-32 with the point fill at ZERO. SLAB_FILL below is what lifts
+// a floor (it is the surface a point fill reaches worst, which is why the slab
+// term exists) -- the point fill's real job is only the shadow side of
+// furniture, and it does not need to be loud to do it. 0.5 sits just above the
+// exact reference match to cover that.
+let FILL_BASE = 0.5;
+const FILL_DECAY = 0.45;
+const FILL_RANGE = 1.8;            // x the room's own radius; the cutoff
+// Bounce is warm whatever the bulb is -- it is the room's own walls and floor
+// doing the bouncing, and the reference's night ambient measures a desaturated
+// warm brown (28,24,18) even under a near-white torchiere. Deliberately not the
+// fixture's HA colour: a lamp set to blue must not wash the whole room blue.
+const FILL_COLOR = new THREE.Color(0xffb277);
+// The floor is the surface a point fill reaches worst: its normal points at the
+// ceiling while the fill hangs at eye height, so a plank two steps away takes
+// the fill at a grazing angle and stays black. Measured in the guest room: the
+// floor renders 108 at noon and 2 at night with the lamp ON. The reference's
+// answer is not a brighter lamp -- under a torchiere its floor peaks at 66 and
+// then PLATEAUS at 38 across the rest of the room, with no bright disc
+// anywhere. A flat plateau is exactly what an emissive is, so the room's own
+// slab carries the floor half of the indirect term and the point light carries
+// the rest. Night-gated like the centre wash it sits beside: at noon the sun
+// is already doing this.
+let SLAB_FILL = 0.05;
+// ...and the far WALL is the same argument one axis over. A point fill sits at
+// the room centre, so illuminance on a vertical surface falls off with the
+// distance to it AND with the cosine of the angle it is struck at -- the wall
+// behind the lamp takes both penalties at once, which is why the shadow end of
+// a lit room measured 4-16 while its bright end sat at 78-106. Every lit floor
+// in the house metered below the Sims reference's UNLIT floor of 28, and its
+// far corner is 25 against a peak of 242: the reference keeps every surface
+// readable and gets its contrast out of the near end being hot, not the far end
+// being black. Raising the direct term or widening a range is what produced the
+// plateau the round before this one removed, so this lifts ONLY the surfaces
+// the direct light does not reach, and by a flat amount, which is what an
+// emissive is. Night-gated and fillFactor-gated exactly like SLAB_FILL: at noon
+// the sun already does this (the day frame is byte-identical), and a room whose
+// own fixtures are off gets exactly the nothing it got before.
+//
+// Composed with the accent hover/selection glow by house.js applyWallEmissive,
+// because a material has one emissive and the two writers would otherwise
+// clobber each other -- roomlights stops writing once its ease converges, so a
+// hover would have erased the fill until the room's lights next moved.
+// Sized against the reference's dark end: alone, an emissive of 0.055 in this
+// colour tone-maps to about L 30 through ACESFilmic, and fillFactor takes ~0.63
+// of that off a single-lamp room.
+let WALL_FILL = 0.075;
+const WALL_GLOW = new THREE.Color(0xffb277);   // the same bounce warm as FILL_COLOR
+// ...but the generated wall shell is NOT what you are looking at in a furnished
+// room. Every finished room here is skinned: `<Room> Wall Wash` is a run of
+// full-height, edge-to-edge GLB planes, one per wall, sitting a hair inside the
+// shell so each wall can carry its own albedo (see tools/roomkit/ROOM-BRIEF.md,
+// "give each wall its own albedo"). They hide the shell completely -- measured
+// by casting a 99-ray fan from the garage's own shot camera: `Garage Wall Wash`
+// 15 hits, the room's wall mesh ZERO -- so an emissive on the shell alone
+// rendered frames that were byte-identical to the ones before it. The fill
+// therefore goes on the room's vertical room-scale surfaces, shell AND skin.
+// SLAB_FILL has exactly this hole one axis over (its own comment notes a room
+// floored with a `<Room> Floor` GLB gets nothing from it), and that is why every
+// lit floor in this house meters below the Sims reference's UNLIT floor of 28.
+// Deliberately only `wall wash`, the documented full-wall skin, and not every
+// object with "wall" in its name: `Arcade TV Wall` and `Movie Screen Wall` are
+// furniture that happens to stand against one, and painting a TV screen with the
+// room's bounce is not what an indirect term is.
+const WALL_SKIN_RE = /\bwall wash\b/i;
 // An exterior throws further than a table lamp and has no ceiling to bounce
 // off: a porch sconce has to read across a whole facade, a floodlight further.
 // 70 cd blew the siding round every sconce to white and, once scene.js's
@@ -69,7 +186,15 @@ const EXTERIOR_RANGE = 30;         // ft
 // The coach lamps and floods on the facade are ~3000K in every photograph; a
 // white bulb reports rgb 255,255,255 to HA, which lit them 6500K here.
 const EXTERIOR_WARM = new THREE.Color(0xffb46b);
-const EMISSIVE_MAX = 1.6;          // glow on the fixture's own materials
+// Glow on the fixture's own materials. 1.6 left a dome lens measuring L=174
+// against the wall beside it at 138-147 -- a margin of 1.2x, so you had to hunt
+// the frame to find where the light was coming from. In every Sims 4 night
+// reference the source is blown out (p99 ~246) against surfaces at 20-100, a
+// margin of 2.5x to 10x: a lamp reads as ON because the lamp is the brightest
+// thing in the room, not because the room got brighter. Under ACESFilmic a warm
+// lens needs to be pushed well past 1.0 to clip, and the warm light_cfg.color
+// costs blue channel on the way, so this sits high.
+const EMISSIVE_MAX = 3.4;
 const SMOOTH_TAU = 0.4;
 
 // Interior light is no longer gated to darkness. It reads at DAY_FLOOR of full
@@ -211,11 +336,36 @@ export function initRoomLights() {
       owner: p.owner
         ? (isFixture(p.owner) ? `object ${p.owner.objectId}`
           : isExterior(p.owner) ? `exterior ${p.owner.placementId}`
-            : `room ${p.owner.roomId}`)
+            : `room ${p.owner.roomId} ${roomLightMode(p.owner)}`)
         : null,
       intensity: +p.light.intensity.toFixed(2),
+      decay: p.light.decay,
+      distance: +p.light.distance.toFixed(1),
+    })),
+    fills: () => rooms.filter((r) => fillFactor(r) > 0.001).map((r) => ({
+      roomId: r.roomId, lit: r.lit, factor: +fillFactor(r).toFixed(3),
+      pooled: pool.some((p) => p.owner === r),
+      slab: +r.glow.toFixed(4), wall: +r.wallGlow.toFixed(4),
+    })),
+    // every room's two emissive terms, off rooms included — the off-state
+    // check is "is this list all zeros", which `fills` above cannot answer
+    // because it filters the off rooms out.
+    surfaces: () => rooms.map((r) => ({
+      roomId: r.roomId, mode: roomLightMode(r),
+      slab: +r.glow.toFixed(4), wall: +r.wallGlow.toFixed(4),
     })),
     bound: () => [...boundEntities],
+    // Sweep the three lighting budgets without a page reload. One shot per
+    // value costs a browser boot and ~40 s of model loading, and the numbers
+    // only mean anything compared against each other from the SAME scene --
+    // the room's light_cfg is edited between rounds, so a shot taken an hour
+    // ago is not a baseline. scratchpad/lightgauntlet/sweep.py drives this and
+    // calls settleRoomLights() after each change.
+    tune: (o) => { if (o.fixture !== undefined) FIXTURE_BASE = o.fixture;
+                   if (o.fill !== undefined) FILL_BASE = o.fill;
+                   if (o.slab !== undefined) SLAB_FILL = o.slab;
+                   if (o.wall !== undefined) WALL_FILL = o.wall;
+                   return { FIXTURE_BASE, FILL_BASE, SLAB_FILL, WALL_FILL }; },
   };
 }
 
@@ -249,7 +399,12 @@ export function setRoomLightsData({ house, structure }) {
     for (const room of floor.rooms || []) {
       // --- fixtures: furniture carrying an entity ---
       const roomFixtures = [];
+      const roomWallSkins = [];
       for (const o of room.objects || []) {
+        // ...and, in the same pass, the wall skins the fill has to reach. An
+        // entity-bound piece is a fixture and never a surface, so this tests
+        // the name only for the ones that fall through.
+        if (!o.entity_id && WALL_SKIN_RE.test(o.name || '')) roomWallSkins.push(o.id);
         if (!o.entity_id) continue;
         boundEntities.add(o.entity_id);
         const rec = {
@@ -323,7 +478,14 @@ export function setRoomLightsData({ house, structure }) {
       for (const f of roomFixtures) {
         if (f.entityId.startsWith('light.')) lightIds.add(f.entityId);
       }
-      if (!lightIds.size) continue;
+      // A room with no light.* of its own still needs a record if it has an
+      // emitting fixture, or the fill below has nothing to hang on: a
+      // switch-controlled lamp (switch.dining_room driving the dining
+      // chandelier -- five rooms here) is never in lightIds, because
+      // roomcards.js toggles that set with light.turn_off and must not be
+      // handed a switch. lightIds stays exactly as it was, so the record is
+      // invisible to the accessors and to byEntity.
+      if (!lightIds.size && !roomFixtures.some((f) => f.emits)) continue;
 
       const fp = room.footprint;
       const baseY = floorBaseY.get(floor.level) ?? 0;
@@ -337,7 +499,8 @@ export function setRoomLightsData({ house, structure }) {
         radius: Math.hypot(fp.width, fp.depth) / 2,
         lightIds,
         lit: false,
-        glow: 0, // eased slab emissive intensity
+        glow: 0,     // eased slab emissive intensity
+        wallGlow: 0, // eased wall-shell emissive intensity (the vertical half)
         // The room-centre fallback yields to a fixture only while that fixture
         // is actually ON SCREEN — tested per frame, not decided here. House
         // mode hides all indoor furniture, and a room whose only candidate was
@@ -345,6 +508,7 @@ export function setRoomLightsData({ house, structure }) {
         // at night are the entire point.
         fixtures: roomFixtures,
         exteriors: roomExteriors,
+        wallSkins: roomWallSkins,
       };
       rooms.push(rec);
       for (const id of lightIds) {
@@ -364,12 +528,83 @@ function refreshLit(rec) {
   rec.lit = [...rec.lightIds].some((id) => getState(id) && isOn(id));
 }
 
-// Does this room still need its whole-room fallback light?
-function needsCentre(rec) {
-  if (rec.fixtures.some((f) => f.emits && fixtureShown(f))) return false;
-  // a lit exterior replaces the centre wash for the same reason a fixture does:
-  // both light from where the light actually is
-  return !rec.exteriors.some((e) => e.glow > 0.01 && exteriorLive(e));
+// How much of the room's own lighting is actually burning, as a sum of eased
+// glows -- so it moves with the lamp's fade instead of popping, and is exactly
+// 0 when every fixture in the room is off.
+function litFixtureLoad(rec) {
+  let sum = 0;
+  for (const f of rec.fixtures) if (f.emits && fixtureShown(f)) sum += f.glow;
+  return sum;
+}
+
+// Saturating, because bounce is not additive the way emitters are: a room with
+// three lamps is not three times as bounced as a room with one. 1 lamp -> 0.63,
+// 2 -> 0.86, 3 -> 0.95.
+function fillFactor(rec) {
+  const load = litFixtureLoad(rec);
+  return load > 0 ? 1 - Math.exp(-load) : 0;
+}
+
+// Which whole-room light does this room want? Never both.
+//   'centre'  no visible emitting fixture and no lit exterior -- the old
+//             fallback wash, which is then the room's ONLY light.
+//   'fill'    the room has a visible emitting fixture: the warm indirect term.
+//             fillFactor decides whether it is actually burning, so a room
+//             whose lamp is off but whose (unplaced) area light is on gets the
+//             same nothing it always got.
+//   null      a lit exterior is lighting the room from where the light really
+//             is, same reason a fixture used to suppress the centre outright.
+function roomLightMode(rec) {
+  if (rec.fixtures.some((f) => f.emits && fixtureShown(f))) return 'fill';
+  if (rec.exteriors.some((e) => e.glow > 0.01 && exteriorLive(e))) return null;
+  return 'centre';
+}
+
+// light_cfg.glow_part narrows the emissive to the fixture's own lens. Without
+// it the whole GLB glows, which is right for a lamp (it IS a shade on a stick)
+// and badly wrong for anything where the bulb is one part of a larger piece --
+// a bathroom vanity bound to its light bar is a 9 ft cabinet, mirror, basin and
+// counter, and painting all of it lamp-amber turns the wall into a white slab.
+// The pattern is matched case-insensitively against each mesh's MATERIAL name
+// first (glb.py groups primitives by material, so a material is a part here)
+// and then its own name. Compiled per fixture and cached: paintFixture runs on
+// every frame the glow moves.
+function glowFilter(f, root) {
+  const pat = f.cfg.glow_part;
+  if (!pat) return undefined;
+  if (f.__glowRe?.src !== pat) {
+    let re = null;
+    try { re = new RegExp(pat, 'i'); } catch { /* bad pattern -> glow it all */ }
+    f.__glowRe = { src: pat, re };
+    f.__glowRoot = null;
+  }
+  const { re } = f.__glowRe;
+  if (!re) return undefined;
+  const test = (mesh) => {
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    return mats.some((m) => m?.name && re.test(m.name)) || re.test(mesh.name || '');
+  };
+  // A pattern that matches NOTHING would leave the filter rejecting every mesh,
+  // and paintModelState restores whatever it rejects -- so one typo in
+  // glow_part reads as a lamp that switches on and does not glow, with nothing
+  // logged anywhere. Verify once per root (a rebuild hands over a new one) and
+  // fall back to glowing the whole model, which is the pre-glow_part behaviour.
+  // Re-tested while the answer is still "nothing matches", NOT once per root:
+  // the GLB loads into an object root that already exists, and settleRoomLights
+  // paints at boot -- so a check cached on the first paint measures an EMPTY
+  // root, decides the pattern matches nothing, and falls back to glowing the
+  // whole model for the life of the page. That is exactly what a bound vanity
+  // looked like: a 9 ft white slab. A positive answer is cached; a negative one
+  // costs a traverse of a few dozen meshes, and only on the frames the glow is
+  // actually moving.
+  if (f.__glowRoot !== root || !f.__glowAny) {
+    f.__glowRoot = root;
+    f.__glowAny = false;
+    root.traverse((c) => {
+      if (!f.__glowAny && c.isMesh && c.userData.__orig && test(c)) f.__glowAny = true;
+    });
+  }
+  return f.__glowAny ? test : undefined;
 }
 
 function paintFixture(f, root) {
@@ -380,6 +615,7 @@ function paintFixture(f, root) {
     emissiveHex: f.color.getHex(),
     emissiveIntensity: EMISSIVE_MAX * f.glow,
     grey: false,
+    partFilter: glowFilter(f, root),
   });
 }
 
@@ -502,9 +738,19 @@ function distToTarget(f) {
   return fixtureWorldPos(f, _p) ? _p.distanceToSquared(controls.target) : Infinity;
 }
 
-// Give the pool to the best-ranked owners: fixtures first (they light from the
-// right place), then whole-room fallbacks, both restricted to visible levels
-// and ordered by distance to what the camera is looking at.
+// Give the pool to the best-ranked owners, in four bands, each ordered by
+// distance to what the camera is looking at (so the room you are looking at
+// outranks one you are not):
+//   1 fixtures   they light from the right place
+//   2 exteriors  same, for the facade
+//   3 centres    a room whose ONLY light this is; losing the slot blacks it out
+//   4 fills      a room that is already lit by its own fixtures, so the worst a
+//                lost slot costs is the indirect term
+// With ~41 bound fixtures against a pool of 12 the fills only ever get a slot
+// once the fixtures on screen have taken theirs -- which is the whole-house
+// view, seen from outside, where nobody is looking at a floor anyway. In room
+// focus and on a single floor, where the fill is what the room is judged on,
+// there is always room.
 function reassignPool() {
   const level = getLevel();
   const onLevel = (l) => level === 'all' || l === level;
@@ -516,14 +762,41 @@ function reassignPool() {
     .filter((e) => e.glow > 0.01 && onLevel(e.level) && exteriorLive(e))
     .sort((a, b) => a.pos.distanceToSquared(controls.target)
       - b.pos.distanceToSquared(controls.target));
-  const roomCands = rooms
-    .filter((r) => r.lit && onLevel(r.level) && needsCentre(r)
-      && isShown(roomMeshes.get(r.roomId) || { visible: false }))
-    .sort((a, b) =>
-      a.center.distanceToSquared(controls.target) -
-      b.center.distanceToSquared(controls.target));
+  const centreCands = [];
+  const fillCands = [];
+  for (const r of rooms) {
+    if (!onLevel(r.level)) continue;
+    if (!isShown(roomMeshes.get(r.roomId) || { visible: false })) continue;
+    const mode = roomLightMode(r);
+    // `lit` is the right test for the centre wash -- those ARE the entities it
+    // stands in for -- and the wrong one for the fill, which follows the
+    // fixtures themselves so a switch-bound lamp still bounces.
+    if (mode === 'centre') { if (r.lit) centreCands.push(r); }
+    else if (mode === 'fill' && fillFactor(r) > 0.01) fillCands.push(r);
+  }
+  const byTarget = (a, b) =>
+    a.center.distanceToSquared(controls.target) -
+    b.center.distanceToSquared(controls.target);
+  centreCands.sort(byTarget);
+  fillCands.sort(byTarget);
 
-  const winners = [...fixCands, ...extCands, ...roomCands].slice(0, POOL_SIZE);
+  // ...except that fixtures do not outrank fills WITHOUT LIMIT. Measured on
+  // this house's second floor with every light forced on: 12 lit fixtures took
+  // all 12 slots and not one room got its fill, so a whole floor went back to
+  // black floors the moment the sixth lamp came on. Reserve a quarter of the
+  // pool for the NEAREST fills, and pay for it out of the FURTHEST direct
+  // owners -- the ones least likely to be what the camera is looking at. In
+  // room focus there are only ever a handful of direct owners, so this changes
+  // nothing in the view a room is judged in.
+  const direct = [...fixCands, ...extCands, ...centreCands];
+  const reserved = Math.min(Math.max(1, Math.round(POOL_SIZE / 4)), fillCands.length);
+  const keep = Math.max(0, POOL_SIZE - reserved);
+  const winners = [
+    ...direct.slice(0, keep),
+    ...fillCands.slice(0, reserved),
+    ...direct.slice(keep),        // if the direct list was short, take it back
+    ...fillCands.slice(reserved),
+  ].slice(0, POOL_SIZE);
 
   // keep already-assigned winners on their light so they don't blink
   for (const p of pool) if (!winners.includes(p.owner)) p.owner = null;
@@ -533,18 +806,28 @@ function reassignPool() {
     if (!slot) break;
     slot.owner = owner;
   }
-  // position every slot now that ownership has settled
+  // position every slot now that ownership has settled. decay is set on every
+  // branch, not only the fill's: a slot that held a fill last frame carries
+  // FILL_DECAY, and handing it to a lamp without putting it back would give
+  // that lamp no falloff at all.
   for (const p of pool) {
     if (!p.owner) continue;
     if (isFixture(p.owner)) {
       if (fixtureWorldPos(p.owner, _p)) p.light.position.copy(_p);
       p.light.distance = p.owner.cfg.range ?? FIXTURE_RANGE;
+      p.light.decay = 2;
     } else if (isExterior(p.owner)) {
       p.light.position.copy(p.owner.pos);
       p.light.distance = EXTERIOR_RANGE;
+      p.light.decay = 2;
+    } else if (roomLightMode(p.owner) === 'fill') {
+      p.light.position.copy(p.owner.center);
+      p.light.distance = p.owner.radius * FILL_RANGE;
+      p.light.decay = FILL_DECAY;
     } else {
       p.light.position.copy(p.owner.center);
       p.light.distance = p.owner.radius * 2.5;
+      p.light.decay = 2;
     }
   }
 }
@@ -566,18 +849,34 @@ function slotGoal(p, spill) {
   if (isExterior(p.owner)) {
     return exteriorLive(p.owner) ? EXTERIOR_BASE * p.owner.glow * spill : 0;
   }
-  // Same for the whole-room fallback: room focus hides the sibling rooms, and
+  // Same for either whole-room light: room focus hides the sibling rooms, and
   // point lights are not occluded by anything, so an ungated one would spill
   // straight through the wall into the room you are looking at.
   if (p.owner) {
-    return p.owner.lit && isShown(roomMeshes.get(p.owner.roomId) || { visible: false })
-      ? CENTRE_BASE * spill : 0;
+    const r = p.owner;
+    if (!isShown(roomMeshes.get(r.roomId) || { visible: false })) return 0;
+    const mode = roomLightMode(r);
+    if (mode === 'centre') return r.lit ? CENTRE_BASE * spill : 0;
+    if (mode === 'fill') return FILL_BASE * fillFactor(r) * spill;
+    return 0;
   }
   return 0;
 }
 
 function roomGoal(r, night) {
-  return r.lit && needsCentre(r) ? SLAB_INTENSITY * night : 0;
+  const mode = roomLightMode(r);
+  if (mode === 'centre') return r.lit ? SLAB_INTENSITY * night : 0;
+  if (mode === 'fill') return SLAB_FILL * fillFactor(r) * night;
+  return 0;
+}
+
+// Deliberately NOT folded into roomGoal: the centre wash has no wall term. A
+// centre-lit room is one whose only light is the whole-room point light itself,
+// which already sits in the middle of the room throwing at every wall equally;
+// there is no shadow side for a fill to rescue, and adding one there would lift
+// every room in the house that has no fixture at all.
+function wallFillGoal(r, night) {
+  return roomLightMode(r) === 'fill' ? WALL_FILL * fillFactor(r) * night : 0;
 }
 
 function paintSlab(r) {
@@ -586,6 +885,51 @@ function paintSlab(r) {
   if (!slab) return;
   slab.material.emissive.copy(SLAB_GLOW);
   slab.material.emissiveIntensity = r.glow;
+}
+
+// The authored-material record for one mesh, or null. Same fallback
+// windowlight.js needs and for the same reason: cutaway.js splitMerged rebuilds
+// a run that skins several walls as one child mesh PER WALL with its own
+// material clone and empties the parent's geometry, so the mesh carrying
+// `__orig` is the one that stopped drawing -- and `<Room> Wall Wash` is exactly
+// that shape (one GLB, four walls) AND matches cutaway's WALL_ARCH_RE, so it is
+// always split. The split children are single-material by construction, so the
+// parent's index 0 is theirs.
+function origFor(child) {
+  if (child.userData.__orig) return child.userData.__orig;
+  const p = child.parent;
+  return p?.isMesh && p.userData.__orig ? p.userData.__orig : null;
+}
+
+// Paint the fill onto a wall skin. Only materials the GLB authored as NON
+// emissive are touched, which does three jobs at once: it needs no restore
+// bookkeeping (intensity 0 writes black, which IS the authored value), it keeps
+// this off anything that is a light source rather than a surface, and it settles
+// the one collision this could have had -- windowlight.js writes the same
+// property on glazing materials wherever they turn up, and a pane is authored
+// emissive.
+function paintSkin(root, intensity) {
+  root.traverse((child) => {
+    if (!child.isMesh) return;
+    const origs = origFor(child);
+    if (!origs) return;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    mats.forEach((m, i) => {
+      const orig = origs[i] ?? origs[0];
+      if (!m.emissive || !orig || orig.emissive) return;
+      m.emissive.copy(WALL_GLOW).multiplyScalar(intensity);
+      m.emissiveIntensity = 1;
+    });
+  });
+}
+
+function paintWalls(r) {
+  const mesh = roomMeshes.get(r.roomId);
+  if (mesh) setRoomWallFill(mesh, WALL_GLOW, r.wallGlow);
+  for (const id of r.wallSkins) {
+    const root = objects3d.get(id);
+    if (root) paintSkin(root, r.wallGlow);
+  }
 }
 
 // Jump every ease to its target. main.js calls this beside settleDaylight() so
@@ -606,7 +950,12 @@ export function settleRoomLights() {
   // in from 0 on the first frame after the curtain lifts -- the exact ramp this
   // function exists to skip.
   reassignPool();
-  for (const r of rooms) { r.glow = roomGoal(r, night); paintSlab(r); }
+  for (const r of rooms) {
+    r.glow = roomGoal(r, night);
+    paintSlab(r);
+    r.wallGlow = wallFillGoal(r, night);
+    paintWalls(r);
+  }
   for (const p of pool) p.light.intensity = slotGoal(p, spill);
 }
 
@@ -621,6 +970,21 @@ export function settleRoomLights() {
 export function suspendRoomLights() {
   const saved = pool.map((p) => p.light.intensity);
   for (const p of pool) p.light.intensity = 0;
+  // The slab wash is not a pool light and was never covered here, so a card
+  // captured after dark baked the room's warm floor glow in forever. The fill
+  // added a second, quieter writer of it (SLAB_FILL), so close it now. Material
+  // `emissiveIntensity` is a plain uniform, not a program define -- writing it
+  // costs no recompile, unlike the light.visible the note above forbids.
+  // The wall shell is the same hole one axis over, and it is a bigger one: a
+  // room card frames a room's walls, not its floor. Same reasoning, same fix.
+  const slabs = rooms.map((r) => r.glow);
+  const wallGlows = rooms.map((r) => r.wallGlow);
+  for (const r of rooms) {
+    r.glow = 0;
+    paintSlab(r);
+    r.wallGlow = 0;
+    paintWalls(r);
+  }
   const painted = fixtures.map((f) => f.painted);
   for (const f of fixtures) {
     const root = objects3d.get(f.objectId);
@@ -629,6 +993,12 @@ export function suspendRoomLights() {
   }
   return () => {
     pool.forEach((p, i) => { p.light.intensity = saved[i]; });
+    rooms.forEach((r, i) => {
+      r.glow = slabs[i];
+      paintSlab(r);
+      r.wallGlow = wallGlows[i];
+      paintWalls(r);
+    });
     fixtures.forEach((f, i) => {
       f.painted = painted[i];
       const root = objects3d.get(f.objectId);
@@ -694,6 +1064,31 @@ function tick(dt) {
     paintSlab(r);
   }
 
+  // --- rooms: the wall shell's half of the same indirect term ---
+  // Its own loop, not a second write inside the one above: the two eases share
+  // a goal shape but not a value, and they do not stop on the same frame.
+  //
+  // The converge-and-stop the slab uses does NOT carry over here, and this is
+  // the one place where holding a settled value costs a per-frame write. A lit
+  // room keeps repainting because the materials it is painting can arrive AFTER
+  // it settled: a wall-skin GLB resolves async (an object root exists from
+  // buildObjects, empty, long before its meshes do), and cutaway.js splitMerged
+  // then rebuilds that run as one FRESH material clone per wall the first time
+  // the room is scored. Either event hands over a material with the authored
+  // black emissive, and a room that had stopped writing would leave it there for
+  // the life of the page. A settled DARK room still stops dead — that is the
+  // common case, and it is the one the off-state guarantee rests on.
+  for (const r of rooms) {
+    const goal = wallFillGoal(r, night);
+    if (Math.abs(r.wallGlow - goal) < 1e-4) {
+      if (r.wallGlow === goal && goal === 0) continue;
+      r.wallGlow = goal;
+    } else {
+      r.wallGlow = THREE.MathUtils.lerp(r.wallGlow, goal, k);
+    }
+    paintWalls(r);
+  }
+
   // --- the pool ---
   for (const p of pool) {
     const goal = slotGoal(p, spill);
@@ -703,7 +1098,8 @@ function tick(dt) {
     } else if (isExterior(p.owner)) {
       p.light.color.copy(p.owner.color).lerp(EXTERIOR_WARM, 0.75);
     } else if (p.owner) {
-      p.light.color.setHex(GLOW_COLOR);
+      if (roomLightMode(p.owner) === 'fill') p.light.color.copy(FILL_COLOR);
+      else p.light.color.setHex(GLOW_COLOR);
     }
     p.light.intensity = THREE.MathUtils.lerp(p.light.intensity, goal, k);
     if (p.light.intensity < 1e-3 && goal === 0) p.light.intensity = 0;

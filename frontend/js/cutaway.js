@@ -65,6 +65,18 @@ const WALL_ARCH_RE = /\b(walls?|wainscots?|baseboards?|crowns?|mou?ldings?|trims
 // bottom-seated at y~0 and stays put when that wall goes, exactly as it does in
 // the Sims. Art, windows, curtains, sconces and wall cabinets all sit higher.
 const MOUNT_MIN_Y = 1.2;
+// Does this object row light the room? Kept in step with roomlights.js
+// EMITTING_DOMAINS deliberately by hand rather than imported: cutaway.js runs
+// off the house JSON before any light record exists, and importing roomlights
+// here would make the two modules circular through objects.js.
+const EMITTING_DOMAINS = new Set(['light', 'switch']);
+
+function emitsLight(o) {
+  const emit = o.light_cfg?.emit;
+  if (emit !== undefined && emit !== null) return !!emit;
+  if (!o.entity_id) return false;
+  return EMITTING_DOMAINS.has(o.entity_id.split('.')[0]);
+}
 // ...and within arm's reach of the wall line, in feet.
 const MOUNT_MAX_DIST = 2.0;
 // Wall skins sit ON the wall plane, so this can be much tighter than the
@@ -145,6 +157,16 @@ export function setCutawayData(house) {
           continue;
         }
         if ((o.position?.y ?? 0) < MOUNT_MIN_Y) continue;
+        // A fixture that IS a light never mounts to a wall. The radius below
+        // assumes a light hangs somewhere in the middle of a room, and in a
+        // corridor 3.75 ft wide every point is within 2 ft of a wall — so the
+        // hallway's ceiling domes bound to a wall and dissolved with it. That
+        // is worse than a cosmetic fade: objects.js hides the piece outright
+        // once the fade bottoms out, roomlights.js gates emission on the piece
+        // being shown, and the room therefore goes dark because a wall the
+        // camera stood behind was dissolved. Same reasoning roomlights.js
+        // already applies in not scaling a fixture's spill by wallFade.
+        if (emitsLight(o)) continue;
         // object anchors are room-relative, same frame as wall.position
         const best = nearestWall(walls, o.position.x, o.position.z, MOUNT_MAX_DIST);
         // Nothing close enough: a pendant light, a rug, a piece in the middle

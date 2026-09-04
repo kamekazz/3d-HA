@@ -1,0 +1,96 @@
+  full = list(im.getdata())
+  bd = list(box.getdata())
+  d = list(c.getdata())
+{
+  "room": 1,
+  "pos": [
+    8.3,
+    4.2,
+    22.0
+  ],
+  "target": [
+    8.3,
+    4.2,
+    34.9
+  ],
+  "entities": [
+    "light.basement_basement_light",
+    "light.basement_stairs",
+    "light.movie_room_lamp",
+    "light.movie_room_lamp_2",
+    "light.movie_room_lamp_segment_1",
+    "light.movie_room_lamp_segment_1_2",
+    "light.movie_room_lamp_segment_2",
+    "light.movie_room_lamp_segment_2_2",
+    "light.movie_room_lamp_segment_3",
+    "light.movie_room_lamp_segment_3_2",
+    "light.movie_room_lamp_segment_4",
+    "light.movie_room_lamp_segment_4_2",
+    "light.movie_room_lamp_segment_5",
+    "light.movie_room_lamp_segment_5_2",
+    "light.movie_room_lamp_segment_6",
+    "light.movie_room_lamp_segment_6_2",
+    "light.movie_room_lamp_segment_7",
+    "light.movie_room_lamp_segment_7_2",
+    "light.movie_room_lamp_segment_8",
+    "light.movie_room_lamp_segment_8_2"
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/w1_v1_on.png",
+    "meter": {
+      "mean": 55.9,
+      "centre": 96.0,
+      "p95": 163
+    },
+    "band": [
+      33,
+      94,
+      151,
+      170,
+      152,
+      97,
+      32
+    ],
+    "at": [
+      8.3,
+      4.2,
+      22
+    ],
+    "night": 1,
+    "slots": [
+      [
+        "object 361",
+        64.63
+      ],
+      [
+        "object 363",
+        146.49
+      ]
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/w1_v1_off.png",
+    "meter": {
+      "mean": 7.2,
+      "centre": 1.5,
+      "p95": 40
+    },
+    "band": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "at": [
+      8.3,
+      4.2,
+      22
+    ],
+    "night": 1,
+    "slots": []
+  },
+  "delta": 94.5
+}

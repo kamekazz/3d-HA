@@ -1,0 +1,88 @@
+{
+  "room": 27,
+  "level": 2,
+  "entities": [
+    "light.rosemarys_closet"
+  ],
+  "fixtures": [
+    {
+      "objectId": 390,
+      "entityId": "light.rosemarys_closet",
+      "roomId": 27,
+      "level": 2,
+      "on": true,
+      "emits": true,
+      "level01": 1,
+      "glow": 1,
+      "shown": false,
+      "color": "ffc48f",
+      "pooled": false
+    }
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/r27_r2a_on.png",
+    "meter": {
+      "mean": 54.9,
+      "centre": 42.4,
+      "p95": 218
+    },
+    "slots": [
+      {
+        "owner": "object 390",
+        "intensity": 96.14
+      }
+    ],
+    "fixtures": [
+      {
+        "objectId": 390,
+        "entityId": "light.rosemarys_closet",
+        "roomId": 27,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": true
+      }
+    ],
+    "night": 1,
+    "at": [
+      25.4,
+      22.77,
+      23.18
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/r27_r2a_off.png",
+    "meter": {
+      "mean": 8.4,
+      "centre": 8.0,
+      "p95": 22
+    },
+    "slots": [],
+    "fixtures": [
+      {
+        "objectId": 390,
+        "entityId": "light.rosemarys_closet",
+        "roomId": 27,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": false
+      }
+    ],
+    "night": 1,
+    "at": [
+      25.4,
+      22.77,
+      23.18
+    ]
+  },
+  "delta": 34.4
+}

@@ -1,0 +1,219 @@
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:240: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  full = list(im.getdata())
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:242: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  bd = list(box.getdata())
+{
+  "room": 7,
+  "level": 1,
+  "entities": [
+    "light.gaming_pc_office",
+    "light.garage",
+    "light.garage_floor",
+    "light.garage_left_2",
+    "light.garage_right_2",
+    "light.garage_floor_segment_001",
+    "light.gaming_pc_office_segment_001",
+    "light.garage_segment_001",
+    "light.garage_floor_segment_002",
+    "light.gaming_pc_office_segment_002",
+    "light.garage_segment_002",
+    "light.garage_floor_segment_003",
+    "light.gaming_pc_office_segment_003",
+    "light.garage_segment_003",
+    "light.garage_floor_segment_004",
+    "light.gaming_pc_office_segment_004",
+    "light.garage_segment_004",
+    "light.garage_floor_segment_005",
+    "light.gaming_pc_office_segment_005",
+    "light.garage_segment_005",
+    "light.garage_floor_segment_006",
+    "light.gaming_pc_office_segment_006",
+    "light.garage_segment_006",
+    "light.garage_floor_segment_007",
+    "light.gaming_pc_office_segment_007",
+    "light.garage_segment_007",
+    "light.garage_floor_segment_008",
+    "light.gaming_pc_office_segment_008",
+    "light.garage_segment_008",
+    "light.garage_floor_segment_009",
+    "light.gaming_pc_office_segment_009",
+    "light.garage_segment_009",
+    "light.garage_floor_segment_010",
+    "light.gaming_pc_office_segment_010",
+    "light.garage_segment_010",
+    "light.garage_floor_segment_011",
+    "light.gaming_pc_office_segment_011",
+    "light.garage_segment_011",
+    "light.garage_floor_segment_012",
+    "light.gaming_pc_office_segment_012",
+    "light.garage_segment_012",
+    "light.garage_floor_segment_013",
+    "light.gaming_pc_office_segment_013",
+    "light.garage_segment_013",
+    "light.garage_floor_segment_014",
+    "light.gaming_pc_office_segment_014",
+    "light.garage_segment_014",
+    "light.garage_floor_segment_015",
+    "light.gaming_pc_office_segment_015",
+    "light.garage_segment_015",
+    "light.garage_floor_segment_016",
+    "light.garage_floor_segment_017",
+    "light.garage_floor_segment_018",
+    "light.garage_floor_segment_019",
+    "light.garage_floor_segment_020",
+    "light.garage_floor_segment_021",
+    "light.garage_floor_segment_022",
+    "light.garage_floor_segment_023",
+    "light.garage_floor_segment_024",
+    "light.garage_floor_segment_025",
+    "light.garage_floor_segment_026",
+    "light.garage_floor_segment_027",
+    "light.garage_floor_segment_028",
+    "light.garage_floor_segment_029",
+    "light.garage_floor_segment_030",
+    "light.garage_floor_segment_031",
+    "light.garage_floor_segment_032",
+    "light.garage_floor_segment_033",
+    "light.garage_floor_segment_034",
+    "light.garage_floor_segment_035",
+    "light.garage_floor_segment_036",
+    "light.garage_floor_segment_037",
+    "light.garage_floor_segment_038",
+    "light.garage_floor_segment_039",
+    "light.garage_floor_segment_040"
+  ],
+  "fixtures": [
+    {
+      "objectId": 381,
+      "entityId": "light.garage",
+      "roomId": 7,
+      "level": 1,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffd9a8",
+      "pooled": false
+    },
+    {
+      "objectId": 384,
+      "entityId": "light.garage",
+      "roomId": 7,
+      "level": 1,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffd9a8",
+      "pooled": false
+    }
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/emx/after_d_r7_on.png",
+    "meter": {
+      "mean": 72.9,
+      "centre": 95.6,
+      "p95": 219
+    },
+    "slots": [
+      {
+        "owner": "object 381",
+        "intensity": 32.46,
+        "decay": 2,
+        "distance": 12
+      },
+      {
+        "owner": "object 384",
+        "intensity": 32.46,
+        "decay": 2,
+        "distance": 12
+      },
+      {
+        "owner": "room 7 fill",
+        "intensity": 0.15,
+        "decay": 0.45,
+        "distance": 26.8
+      }
+    ],
+    "fixtures": [
+      {
+        "objectId": 381,
+        "entityId": "light.garage",
+        "roomId": 7,
+        "level": 1,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffd9a8",
+        "pooled": true
+      },
+      {
+        "objectId": 384,
+        "entityId": "light.garage",
+        "roomId": 7,
+        "level": 1,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffd9a8",
+        "pooled": true
+      }
+    ],
+    "night": 0,
+    "at": [
+      29.1,
+      13.39,
+      34.15
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/emx/after_d_r7_off.png",
+    "meter": {
+      "mean": 70.9,
+      "centre": 94.4,
+      "p95": 209
+    },
+    "slots": [],
+    "fixtures": [
+      {
+        "objectId": 381,
+        "entityId": "light.garage",
+        "roomId": 7,
+        "level": 1,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffd9a8",
+        "pooled": false
+      },
+      {
+        "objectId": 384,
+        "entityId": "light.garage",
+        "roomId": 7,
+        "level": 1,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffd9a8",
+        "pooled": false
+      }
+    ],
+    "night": 0,
+    "at": [
+      29.1,
+      13.39,
+      34.15
+    ]
+  },
+  "delta": 1.2
+}

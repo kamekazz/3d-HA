@@ -1,0 +1,137 @@
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:230: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  full = list(im.getdata())
+C:\Users\Manuel\Desktop\Pro\3d HA\tools\roomkit\lightshot.py:232: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+  bd = list(box.getdata())
+{
+  "room": 8,
+  "level": 1,
+  "entities": [
+    "light.edwin_desk_light_2",
+    "light.rosemary_desk_light_2",
+    "light.work_office_desk"
+  ],
+  "fixtures": [
+    {
+      "objectId": 385,
+      "entityId": "light.work_office_desk",
+      "roomId": 8,
+      "level": 1,
+      "on": true,
+      "emits": true,
+      "level01": 0.353,
+      "glow": 0.353,
+      "shown": false,
+      "color": "ffc48f",
+      "pooled": false
+    },
+    {
+      "objectId": 386,
+      "entityId": "light.work_office_desk",
+      "roomId": 8,
+      "level": 1,
+      "on": true,
+      "emits": true,
+      "level01": 0.353,
+      "glow": 0.353,
+      "shown": false,
+      "color": "ffc48f",
+      "pooled": false
+    }
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/r8_r2base_on.png",
+    "meter": {
+      "mean": 36.0,
+      "centre": 22.4,
+      "p95": 124
+    },
+    "slots": [
+      {
+        "owner": "object 386",
+        "intensity": 39.22
+      },
+      {
+        "owner": "object 385",
+        "intensity": 39.22
+      }
+    ],
+    "fixtures": [
+      {
+        "objectId": 385,
+        "entityId": "light.work_office_desk",
+        "roomId": 8,
+        "level": 1,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": true
+      },
+      {
+        "objectId": 386,
+        "entityId": "light.work_office_desk",
+        "roomId": 8,
+        "level": 1,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": true
+      }
+    ],
+    "night": 1,
+    "at": [
+      34.1,
+      13.39,
+      6.96
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/r8_r2base_off.png",
+    "meter": {
+      "mean": 5.0,
+      "centre": 4.1,
+      "p95": 30
+    },
+    "slots": [],
+    "fixtures": [
+      {
+        "objectId": 385,
+        "entityId": "light.work_office_desk",
+        "roomId": 8,
+        "level": 1,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": false
+      },
+      {
+        "objectId": 386,
+        "entityId": "light.work_office_desk",
+        "roomId": 8,
+        "level": 1,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": false
+      }
+    ],
+    "night": 1,
+    "at": [
+      30.1,
+      13.39,
+      5.3
+    ]
+  },
+  "delta": 18.3
+}

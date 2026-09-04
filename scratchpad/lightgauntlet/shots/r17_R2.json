@@ -1,0 +1,141 @@
+{
+  "room": 17,
+  "level": 2,
+  "entities": [
+    "light.2nd_floor_2nd_floor_hallway"
+  ],
+  "fixtures": [
+    {
+      "objectId": 370,
+      "entityId": "light.2nd_floor_2nd_floor_hallway",
+      "roomId": 17,
+      "level": 2,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffc48f",
+      "pooled": false
+    },
+    {
+      "objectId": 371,
+      "entityId": "light.2nd_floor_2nd_floor_hallway",
+      "roomId": 17,
+      "level": 2,
+      "on": false,
+      "emits": true,
+      "level01": 0,
+      "glow": 0,
+      "shown": false,
+      "color": "ffc48f",
+      "pooled": false
+    }
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/r17_R2_on.png",
+    "meter": {
+      "mean": 86.1,
+      "centre": 103.0,
+      "p95": 194
+    },
+    "slots": [
+      {
+        "owner": "object 370",
+        "intensity": 66.57,
+        "decay": 2,
+        "distance": 10
+      },
+      {
+        "owner": "object 371",
+        "intensity": 66.57,
+        "decay": 2,
+        "distance": 10
+      },
+      {
+        "owner": "room 17 fill",
+        "intensity": 1.71,
+        "decay": 0.45,
+        "distance": 18.6
+      }
+    ],
+    "fixtures": [
+      {
+        "objectId": 370,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": true
+      },
+      {
+        "objectId": 371,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": true,
+        "emits": true,
+        "level01": 1,
+        "glow": 1,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": true
+      }
+    ],
+    "night": 1,
+    "at": [
+      12.66,
+      22.77,
+      23.09
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/r17_R2_off.png",
+    "meter": {
+      "mean": 14.9,
+      "centre": 12.8,
+      "p95": 40
+    },
+    "slots": [],
+    "fixtures": [
+      {
+        "objectId": 370,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": false
+      },
+      {
+        "objectId": 371,
+        "entityId": "light.2nd_floor_2nd_floor_hallway",
+        "roomId": 17,
+        "level": 2,
+        "on": false,
+        "emits": true,
+        "level01": 0,
+        "glow": 0,
+        "shown": true,
+        "color": "ffc48f",
+        "pooled": false
+      }
+    ],
+    "night": 1,
+    "at": [
+      12.66,
+      22.77,
+      23.09
+    ]
+  },
+  "delta": 90.2
+}

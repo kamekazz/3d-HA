@@ -1,0 +1,75 @@
+  full = list(im.getdata())
+  bd = list(box.getdata())
+  d = list(c.getdata())
+{
+  "room": 8,
+  "pos": [
+    30.5,
+    12.0,
+    1.3
+  ],
+  "target": [
+    39.4,
+    12.0,
+    1.3
+  ],
+  "entities": [
+    "light.edwin_desk_light_2",
+    "light.rosemary_desk_light_2",
+    "light.work_office_desk"
+  ],
+  "on": {
+    "file": "../scratchpad/lightgauntlet/shots/w8_v1_on.png",
+    "meter": {
+      "mean": 71.2,
+      "centre": 88.7,
+      "p95": 192
+    },
+    "band": [
+      46,
+      75,
+      143,
+      163,
+      138,
+      73,
+      24
+    ],
+    "at": [
+      30.5,
+      12,
+      1.3
+    ],
+    "night": 1,
+    "slots": [
+      [
+        "object 385",
+        85.88
+      ]
+    ]
+  },
+  "off": {
+    "file": "../scratchpad/lightgauntlet/shots/w8_v1_off.png",
+    "meter": {
+      "mean": 6.5,
+      "centre": 8.6,
+      "p95": 29
+    },
+    "band": [
+      11,
+      25,
+      7,
+      2,
+      10,
+      25,
+      3
+    ],
+    "at": [
+      30.5,
+      12,
+      1.3
+    ],
+    "night": 1,
+    "slots": []
+  },
+  "delta": 80.1
+}

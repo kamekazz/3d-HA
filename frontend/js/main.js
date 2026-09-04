@@ -24,6 +24,7 @@ import { initEnvironment, setEnvironmentData, setYardModels } from './environmen
 import { initWeather } from './weather.js';
 import { initRoomLights, setRoomLightsData, repaintFixture, settleRoomLights } from './roomlights.js';
 import { initEaveLights } from './eavelights.js';
+import { initWindowLight } from './windowlight.js';
 import { initFloorView } from './floorview.js';
 import { initCutaway, setCutawayData } from './cutaway.js';
 import { initUndo } from './undo.js';
@@ -436,6 +437,9 @@ async function main() {
   initUndo({ defaultRefresh: reloadHouse });
   initRoomLights();
   initEaveLights(); // its lights must exist before compileAsync too (fixed count)
+  // Order-free: buildObjects above already registered every window through
+  // objects.js, and this only hangs the per-frame follow on scene.js.
+  initWindowLight();
   setRoomLightsData({ house, structure });
   initDashboard();
   initCameras();
