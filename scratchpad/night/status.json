@@ -1,14 +1,14 @@
 {
- "updated": "2026-09-03 05:30",
- "headline": "Round 4 judged: photo still wins, but the lights critic is at 70% and the whole-frame critic at 85% (from 99%). A fourth piece added: camera optics.",
- "current_render": "scratchpad/night/round4.png",
- "current_label": "round 4 \u00b7 all pieces combined",
+ "updated": "2026-09-03 15:20",
+ "headline": "Round 7 judged: the even ground wash regressed every piece (lights 92%, yard 97%, car 95%, whole frame 95%). Round 8 dispatched with metered targets from the photo.",
+ "current_render": "scratchpad/night/round7.png",
+ "current_label": "round 7 \u00b7 exteriors forced on",
  "pieces": [
   {
    "name": "Eave lights & night exposure",
    "state": "building",
-   "round": 5,
-   "now": "Halos 3\u20135x the bulb with gaussian tails that stack into apex hot-spots, tighter wash decay, sky grain and a faint roofline bleed, the garage-eave sunburst hunted down, neutral drive spot with shadow casting.",
+   "round": 8,
+   "now": "Inverse-square falloff from the sconces with a patch table to hit: drive 45 \u2192 20 beside the car \u2192 6 mid-frame \u2192 2 at the edge; walk 104 \u2192 25; lawn \u2264 6; nothing on the car's rear; door 150; blue onto the wall and shrub mass.",
    "history": [
     {
      "round": 1,
@@ -33,14 +33,32 @@
      "verdict": "Photo wins (70%)",
      "win": false,
      "gap": "Bulb bloom: bare pin-points are the instant tell. Lesser: wash still too linear and wide, sky noiseless with a knife-edge roofline, a sourceless sunburst on the garage eave."
+    },
+    {
+     "round": 5,
+     "verdict": "Photo wins (85%)",
+     "win": false,
+     "gap": "The garage floodlight blooms into a nova that fogs the upper frame; bulbs 2x too large and uniform; the drive spot shows a hard-edged wedge."
+    },
+    {
+     "round": 6,
+     "verdict": "Photo wins (90%)",
+     "win": false,
+     "gap": "Gable faces a flat fill without clapboard shadows; blue wash two smudges instead of flooding the west wall; window should be cool white."
+    },
+    {
+     "round": 7,
+     "verdict": "Photo wins (92%)",
+     "win": false,
+     "gap": "Everything is lit: a global fill with the drive mid-grey to the frame edge and siding as bright at the foundation as at the eave."
     }
    ]
   },
   {
    "name": "Car",
    "state": "building",
-   "round": 5,
-   "now": "Real shadow casting from the drive spot onto the slab under the car, retro-reflective white plate, bulb string reflected in the rear glass, flat tyre sidewalls, softer paint streak.",
+   "round": 8,
+   "now": "No plate emissive at all, neutral grey face; tyres and undercarriage checked for stray lit materials; env intensity to ~2; dark multiplicative contact blobs.",
    "history": [
     {
      "round": 1,
@@ -65,14 +83,32 @@
      "verdict": "Photo wins (90%)",
      "win": false,
      "gap": "Still floats: the lit slab under and behind the car is as bright as the open drive. Lesser: plate should be a blown white retro-reflective slab, rear glass shows no lights, ribbed sidewalls."
+    },
+    {
+     "round": 5,
+     "verdict": "Photo wins (97%)",
+     "win": false,
+     "gap": "The retro-reflective plate overshot into a text-less white card; rear glass opaque; shadow still not visible."
+    },
+    {
+     "round": 6,
+     "verdict": "Photo wins (95%)",
+     "win": false,
+     "gap": "Car over-lit 2\u20133 stops relative to the house: lightbox plate, hard specular streaks, gleaming exhaust tips; garage door behind it black because the HA lamps are off."
+    },
+    {
+     "round": 7,
+     "verdict": "Photo wins (95%)",
+     "win": false,
+     "gap": "Rear face, plate, tips and tyres lit by the new wash from a source that does not exist in the photo."
     }
    ]
   },
   {
    "name": "Driveway, walk & beds",
    "state": "building",
-   "round": 5,
-   "now": "Rock strip re-cut as an unmistakable 3 ft diagonal band with defined edges, litter thinned to drifts, dry grass tufts in the bed, dark shrub masses hiding the horizon, joints and tyre lanes and blotch on the drive.",
+   "round": 8,
+   "now": "Near-black bark and a dark undergrowth mass under the west trees; the walk merging diagonally into the drive at grade with one seam joint; treads lighter with two risers.",
    "history": [
     {
      "round": 1,
@@ -97,21 +133,58 @@
      "verdict": "Photo wins (97%)",
      "win": false,
      "gap": "The rock strip reads as a pebble disc at the foot of the steps, not a diagonal band with steppers. Lesser: litter reads as a brown plane with a hard edge, mums still orbs, drive sepia and jointless."
+    },
+    {
+     "round": 5,
+     "verdict": "Photo wins (85%)",
+     "win": false,
+     "gap": "The walk barely exists at night (a lighting fix); a circular rock ring with three identical lanterns around the mums; joints unreadable."
+    },
+    {
+     "round": 6,
+     "verdict": "Photo wins (95%)",
+     "win": false,
+     "gap": "Ground light: a 6 ft circular pool in a black void; the photo's concrete is an even mid-grey from the soffit lamps. Rock band reads as a pile, mums as red points."
+    },
+    {
+     "round": 7,
+     "verdict": "Photo wins (97%)",
+     "win": false,
+     "gap": "Drive holds ~50% grey to the bottom of frame; the photo decays from ~35% at the apron to ~8% by the bottom third."
     }
    ]
   },
   {
    "name": "Camera optics",
    "state": "building",
-   "round": 1,
-   "now": "New builder adding a night-only post-process pass in scene.js: bloom on emitters, veiling haze, film grain with chroma noise, vignette, lifted noisy blacks. Day frame must be untouched.",
-   "history": []
+   "round": 4,
+   "now": "Vignette 0.4, chroma-heavy grain in the darks, a touch of highlight softness.",
+   "history": [
+    {
+     "round": 1,
+     "verdict": "Photo wins (72%, whole frame)",
+     "win": false,
+     "gap": "Closest yet. Camera look still the top gap: grain should live in the darks, a faint horizon gradient, bloom as a hot core not a disc."
+    },
+    {
+     "round": 2,
+     "verdict": "Photo wins (93%, whole frame)",
+     "win": false,
+     "gap": "Sky a flat black void: needs a faint warm light-pollution gradient at the horizon with tree-line silhouettes and grain everywhere."
+    },
+    {
+     "round": 3,
+     "verdict": "Photo wins (95%, whole frame)",
+     "win": false,
+     "gap": "Foreground exposure again; camera notes: vignette, chroma-heavy shadow noise, lens softness."
+    }
+   ]
   },
   {
    "name": "Whole frame",
    "state": "critic",
-   "round": 4,
-   "now": "Ranked: gables, roofline lights, sky, porch, garage, walk and beds, car, driveway, lawn and edges.",
+   "round": 7,
+   "now": "Ranked: sky, roofline lights, porch, gables, garage, walk and beds, lawn, car, camera look, driveway.",
    "history": [
     {
      "round": 2,
@@ -130,6 +203,24 @@
      "verdict": "Photo wins (85%)",
      "win": false,
      "gap": "No camera optics: bloom and glare around emitters, veiling haze, film grain, smeared shadows. Lesser: hard horizon, uniform drive speckle, razor car edges, flat silhouette tree."
+    },
+    {
+     "round": 5,
+     "verdict": "Photo wins (72%)",
+     "win": false,
+     "gap": "Noise floor and black point: the photo's darks are textured, the render's are clean zero. Lesser: drive needs joints and sheen, bulbs read as a tube, car too smooth, window a flat fill."
+    },
+    {
+     "round": 6,
+     "verdict": "Photo wins (93%)",
+     "win": false,
+     "gap": "The sky: a gradient-free black void. Lesser: LEDs a beaded strip, drive lit from nowhere, garage door featureless, plate and under-car halo emissive."
+    },
+    {
+     "round": 7,
+     "verdict": "Photo wins (95%)",
+     "win": false,
+     "gap": "Driveway exposure: a flat bright plane to the bottom edge. Lesser: car on a light halo, LEDs metronomic, no vignette, west trees are white sticks lit blue."
     }
    ]
   }
@@ -218,6 +309,62 @@
   {
    "t": "05:30",
    "what": "Round-5 instructions sent; optics builder launched."
+  },
+  {
+   "t": "08:00",
+   "what": "Second usage-limit pause killed all four builders mid-round; limit reset, all four resumed, files verified to parse."
+  },
+  {
+   "t": "08:40",
+   "what": "All four round-5 builds reported; optics pass live in scene.js."
+  },
+  {
+   "t": "08:45",
+   "what": "Round-5 frame shot; four critics launched."
+  },
+  {
+   "t": "09:15",
+   "what": "Round-5 critics back: whole frame 72%, lights 85%, yard 85%, car 97%."
+  },
+  {
+   "t": "09:30",
+   "what": "Round-6 instructions sent to lights, optics, car and yard builders."
+  },
+  {
+   "t": "10:30",
+   "what": "All four round-6 builds reported."
+  },
+  {
+   "t": "10:40",
+   "what": "Round-6 frame shot; four critics launched."
+  },
+  {
+   "t": "11:30",
+   "what": "Round-6 critics back: lights 90%, yard 95%, car 95%, whole frame 93%. Garage carriage lamps found to be HA lights currently off."
+  },
+  {
+   "t": "12:00",
+   "what": "Round-7 sent to lights and optics; third usage-limit pause killed both."
+  },
+  {
+   "t": "13:10",
+   "what": "Limit reset: lights and optics resumed, car and yard dispatched."
+  },
+  {
+   "t": "14:20",
+   "what": "All four round-7 builds reported; shot.py gained --exteriors-on."
+  },
+  {
+   "t": "14:30",
+   "what": "Round-7 frame shot; four critics launched."
+  },
+  {
+   "t": "15:00",
+   "what": "Round-7 critics back: lights 92%, yard 97%, car 95%, whole frame 95%. The ground wash regressed round 6's gains."
+  },
+  {
+   "t": "15:20",
+   "what": "Round-8 sent to all four builders with a per-patch luminance table from the photo."
   }
  ]
 }

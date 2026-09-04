@@ -39,7 +39,7 @@ def load_poses():
 # and only then unclamp OrbitControls so an interior pose is not pushed back
 # out to the dollhouse framing.
 SETUP_JS = """
-async ({ pose, level, light, markers, cutaway }) => {
+async ({ pose, level, light, markers, cutaway, exteriorsOn }) => {
   const house = await import('/js/house.js');
   const sceneMod = await import('/js/scene.js');
   const { camera, controls, renderer, scene } = window.__scene3d;
@@ -48,6 +48,10 @@ async ({ pose, level, light, markers, cutaway }) => {
   await new Promise(r => setTimeout(r, 900));   // let floorview issue its fly-to
 
   if (light) window.__daylight?.simulate(light);
+  // --exteriors-on: the porch sconces and garage floods are HA lights that are
+  // usually off when a shot is taken; the night photo has them lit. Night-gated
+  // inside roomlights.js, so it is a no-op on a day shot.
+  if (exteriorsOn) window.__roomlights?.forceExteriors(true);
 
   // scene.js applyStage() frames the house into the chrome-free "stage" rect
   // with a view offset that INFLATES fov and magnifies the canvas. The chrome
@@ -153,7 +157,7 @@ async () => {
 
 
 def take(pose, out, level=DEFAULT_LEVEL, light=None, settle=1200, markers=False,
-         cutaway=True):
+         cutaway=True, exteriors_on=False):
     os.makedirs(os.path.dirname(os.path.abspath(out)) or ".", exist_ok=True)
     w, h = pose.get("size", [900, 1200])
     with sync_playwright() as p:
@@ -169,7 +173,8 @@ def take(pose, out, level=DEFAULT_LEVEL, light=None, settle=1200, markers=False,
         page.wait_for_timeout(2500)  # first house fetch + buildHouse
 
         info = page.evaluate(SETUP_JS, {"pose": pose, "level": level, "light": light,
-                                        "markers": markers, "cutaway": cutaway})
+                                        "markers": markers, "cutaway": cutaway,
+                                        "exteriorsOn": exteriors_on})
 
         for _ in range(40):
             st = page.evaluate(READY_JS)
@@ -181,7 +186,8 @@ def take(pose, out, level=DEFAULT_LEVEL, light=None, settle=1200, markers=False,
         # re-assert the pose: async model loads can trigger a rebuild that
         # re-runs setLevel and its camera work
         page.evaluate(SETUP_JS, {"pose": pose, "level": level, "light": light,
-                                        "markers": markers, "cutaway": cutaway})
+                                        "markers": markers, "cutaway": cutaway,
+                                        "exteriorsOn": exteriors_on})
         page.wait_for_timeout(300)
 
         page.screenshot(path=out)
@@ -224,6 +230,9 @@ def main():
     p.add_argument("--no-cutaway", dest="cutaway", action="store_false",
                    help="keep ceilings and all four walls (photo-matched interior poses)")
     p.add_argument("--settle", type=int, default=1200)
+    p.add_argument("--exteriors-on", dest="exteriors_on", action="store_true",
+                   help="render every exterior HA light (porch sconces, garage floods) as ON "
+                        "regardless of HA state -- night shots only; the reference photo has them lit")
     a = p.parse_args()
 
     if a.pose_json:
@@ -238,7 +247,8 @@ def main():
               "condition": "sunny"} if a.day else None)
     if a.night:
         light = {"elevation": -18, "azimuth": 0, "condition": "clear-night"}
-    print(json.dumps(take(pose, a.out, level, light, a.settle, a.markers, a.cutaway)))
+    print(json.dumps(take(pose, a.out, level, light, a.settle, a.markers, a.cutaway,
+                          a.exteriors_on)))
 
 
 if __name__ == "__main__":

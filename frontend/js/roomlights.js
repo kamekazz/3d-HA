@@ -61,8 +61,11 @@ const CENTRE_BASE = 90;            // a room centre sits further from every surf
 const FIXTURE_RANGE = 22;          // ft; the light.distance cutoff
 // An exterior throws further than a table lamp and has no ceiling to bounce
 // off: a porch sconce has to read across a whole facade, a floodlight further.
-const EXTERIOR_BASE = 70;
-const EXTERIOR_RANGE = 34;         // ft
+// 70 cd blew the siding round every sconce to white and, once scene.js's
+// night bloom landed, fogged the whole upper frame off the garage floods.
+// 18 cd puts ~150/255 on the wall a foot under the lamp, like the photograph.
+const EXTERIOR_BASE = 80;
+const EXTERIOR_RANGE = 30;         // ft
 // The coach lamps and floods on the facade are ~3000K in every photograph; a
 // white bulb reports rgb 255,255,255 to HA, which lit them 6500K here.
 const EXTERIOR_WARM = new THREE.Color(0xffb46b);
@@ -93,6 +96,10 @@ const fixturesByEntity = new Map(); // entity_id -> [fixture records]
 const exteriorsByEntity = new Map(); // entity_id -> [exterior records]
 const pool = [];                    // [{light, owner}] owner = fixture | room | null
 let assignmentDirty = false;
+// Shot/debug override: every exterior renders as ON, night only, off by
+// default. The night photograph the exterior is judged against has every
+// sconce and flood lit; HA usually has them off at the hour a shot is taken.
+let forceExt = false;
 let lastLevel = null;
 
 // entity_ids a fixture now represents. devices.js uses this to suppress the
@@ -181,6 +188,11 @@ export function initRoomLights() {
   }
   window.__roomlights = {
     poolSize: () => POOL_SIZE,
+    forceExteriors: (v) => {
+      forceExt = !!v;
+      for (const e of exteriors) refreshFixture(e);
+      assignmentDirty = true;
+    },
     fixtures: () => fixtures.map((f) => ({
       objectId: f.objectId, entityId: f.entityId, roomId: f.roomId,
       level: f.level, on: f.on, emits: f.emits, level01: +f.level01.toFixed(3),
@@ -423,6 +435,10 @@ function refreshFixture(rec) {
   rec.level01 = rec.on
     ? (b === null || b === undefined ? 1 : 0.15 + 0.85 * (b / 255))
     : 0;
+  if (forceExt && isExterior(rec) && getNightFactor() > 0.5) {
+    rec.on = true;
+    rec.level01 = 1;
+  }
 
   if (rec.cfg.color) {
     rec.color.set(rec.cfg.color);

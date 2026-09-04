@@ -43,8 +43,9 @@ const LED_DROP = 0.3;         // LEDs hang this far below the roof edge
 const LED_OUT = 0.25;         // and this far proud of the fascia face
 const LED_COLOR = new THREE.Color(0xffc58f);   // ~2700K amber-white, like the photo's bulbs
 const AMBER = new THREE.Color(0xffa040);
-const HALO_SIZE = 0.7;        // ft; screen size clamped in the shader
-const AMBER_HALO = 0.3;       // the bed fixtures are smaller lamps
+const HALO_SIZE = 0.8;        // ft; the SPRITE -- the hot core is ~1/5 of it
+const BLEED_SIZE = 7.0;       // ft; the faint atmospheric bleed round every bulb
+const AMBER_HALO = 1.0;       // the bed fixtures are smaller lamps
 const WASH_COLOR = [1.0, 0.56, 0.30];          // linear rgb of the siding wash (~3000K)
 const CLAPBOARD = 5 / 12;                      // ft; the siding course spacing
 const GLASS_NIGHT = new THREE.Color(0x0c0c0e);  // unlit window glass after dark
@@ -72,9 +73,10 @@ const RUNS = [
   { pts: [[-7.615, 16.302, 29.55], [-7.615, 12.959, 41.359], [20.928, 12.959, 41.359]],
     out: [0, -LED_DROP, LED_OUT], outFirst: [-LED_OUT, -LED_DROP, 0] },
   // garage: front eave, up and over the east gable end, back eave
-  { pts: [[20.602, 13.046, 30.66], [48.016, 13.046, 30.66]], out: [0, -LED_DROP, LED_OUT] },
-  { pts: [[48.016, 13.046, 30.66], [48.016, 23.324, 9.288], [48.016, 13.046, -12.086]],
-    out: [LED_OUT, -LED_DROP, 0] },
+  // (no string on the garage's east gable rakes: seen end-on from the street
+  // they merged into one sourceless flare at the corner)
+  { pts: [[20.602, 13.046, 30.66], [48.016, 13.046, 30.66]], out: [0, -LED_DROP, LED_OUT],
+    spacing: 1.5, gain: 1.25 },
   { pts: [[48.016, 13.046, -12.086], [20.602, 13.046, -12.086]], out: [0, -LED_DROP, -LED_OUT] },
 ];
 
@@ -90,16 +92,18 @@ const WASHES = [
   // then a cubic decay, scalloped into a pool under each bulb and cut by the
   // clapboard shadow lines (the shader does all of that -- see makeWashMaterial).
   // front gable rakes (field z 29.6, rake trim z 30.53)
-  { a: [-8.2, 26.32, 30.62], b: [1.74, 36.43, 30.62], down: [R2, -R2, 0], width: 5.5, alpha: 0.68, clampY: 24.2, clap: true },
-  { a: [1.74, 36.43, 30.62], b: [11.67, 26.32, 30.62], down: [-R2, -R2, 0], width: 5.5, alpha: 0.68, clampY: 24.2, clap: true },
+  { a: [-8.2, 26.32, 30.62], b: [1.74, 36.43, 30.62], down: [R2, -R2, 0], width: 7.5, alpha: 0.36, clampY: 24.2, clap: true, band: 2.6 },
+  { a: [1.74, 36.43, 30.62], b: [11.67, 26.32, 30.62], down: [-R2, -R2, 0], width: 7.5, alpha: 0.36, clampY: 24.2, clap: true, band: 2.6 },
   // main gable rakes (field z 26.9, trim z 27.7)
-  { a: [2.3, 37.0, 27.82], b: [6.656, 41.437, 27.82], down: [R2, -R2, 0], width: 5.5, alpha: 0.5, clap: true },
-  { a: [6.656, 41.437, 27.82], b: [21.519, 26.322, 27.82], down: [-R2, -R2, 0], width: 5.5, alpha: 0.5, clampY: 23.8, clap: true },
+  { a: [2.3, 37.0, 27.82], b: [6.656, 41.437, 27.82], down: [R2, -R2, 0], width: 7.5, alpha: 0.28, clap: true, band: 1.8 },
+  { a: [6.656, 41.437, 27.82], b: [21.519, 26.322, 27.82], down: [-R2, -R2, 0], width: 7.5, alpha: 0.28, clampY: 23.8, clap: true, band: 1.8 },
   // the second-floor walls above the porch roof: a faint lift, no pools
-  { a: [-7.5, 16.4, 29.68], b: [14.4, 16.4, 29.68], down: [0, 1, 0], width: 2, alpha: 0.1, scallop: false, clap: true },
-  { a: [15.0, 16.4, 26.86], b: [21.4, 16.4, 26.86], down: [0, 1, 0], width: 2, alpha: 0.1, scallop: false, clap: true },
+  { a: [-7.5, 16.4, 29.68], b: [14.4, 16.4, 29.68], down: [0, 1, 0], width: 7, alpha: 0.25, scallop: false, clap: true },
+  { a: [15.0, 16.4, 26.86], b: [21.4, 16.4, 26.86], down: [0, 1, 0], width: 7, alpha: 0.25, scallop: false, clap: true },
   // garage front wall (z 29.8) under its eave
-  { a: [20.6, 13.0, 29.9], b: [46.5, 13.0, 29.9], down: [0, -1, 0], width: 6, alpha: 0.75, clap: true },
+  // (kept well under scene.js's bloom threshold: with the sconce floods and the
+  // soffit strip on top of it, this face went nova and fogged the frame)
+  { a: [20.6, 13.0, 29.9], b: [46.5, 13.0, 29.9], down: [0, -1, 0], width: 4.5, alpha: 0.32, clap: true, spacing: 1.5 },
   // east wall of the main house (x 20.6-20.9) under the side eave
   { a: [21.0, 26.25, 27.9], b: [21.0, 26.25, -12.0], down: [0, -1, 0], width: 5, alpha: 0.6, clap: true },
   // the porch fascia board itself, lit by its own string
@@ -107,11 +111,11 @@ const WASHES = [
   // ---- soffits: the underside of every overhang, lit from the bulbs hanging
   // just below it -- the "lit interior" of the gables. Strips run inward from
   // the fascia edge, a hair under the roof sheet, and pool under each bulb.
-  { a: [-8.2, 26.27, 30.7], b: [1.74, 36.38, 30.7], down: [0, 0, -1], width: 1.1, alpha: 0.9, soffit: true },
-  { a: [1.74, 36.38, 30.7], b: [11.67, 26.27, 30.7], down: [0, 0, -1], width: 1.1, alpha: 0.9, soffit: true },
-  { a: [2.3, 36.95, 27.9], b: [6.656, 41.39, 27.9], down: [0, 0, -1], width: 1.0, alpha: 0.8, soffit: true },
-  { a: [6.656, 41.39, 27.9], b: [21.519, 26.27, 27.9], down: [0, 0, -1], width: 1.0, alpha: 0.8, soffit: true },
-  { a: [20.6, 13.0, 30.68], b: [48.0, 13.0, 30.68], down: [0, 0, -1], width: 0.9, alpha: 0.9, soffit: true },
+  { a: [-8.2, 26.27, 30.7], b: [1.74, 36.38, 30.7], down: [0, 0, -1], width: 1.3, alpha: 0.85, soffit: true },
+  { a: [1.74, 36.38, 30.7], b: [11.67, 26.27, 30.7], down: [0, 0, -1], width: 1.3, alpha: 0.85, soffit: true },
+  { a: [2.3, 36.95, 27.9], b: [6.656, 41.39, 27.9], down: [0, 0, -1], width: 1.2, alpha: 0.75, soffit: true },
+  { a: [6.656, 41.39, 27.9], b: [21.519, 26.27, 27.9], down: [0, 0, -1], width: 1.2, alpha: 0.75, soffit: true },
+  { a: [20.6, 13.0, 30.68], b: [48.0, 13.0, 30.68], down: [0, 0, -1], width: 0.9, alpha: 0.38, soffit: true, spacing: 1.5 },
   { a: [21.55, 26.27, 27.9], b: [21.55, 26.27, -12.0], down: [-1, 0, 0], width: 0.95, alpha: 0.8, soffit: true },
   // the porch ceiling's front band (the ceiling plane is at y 12.6)
   { a: [-7.615, 12.55, 41.3], b: [20.928, 12.55, 41.3], down: [0, 0, -1], width: 1.6, alpha: 0.6, soffit: true },
@@ -121,30 +125,54 @@ const WASHES = [
 // Candela under r160's physical falloff with the foot as the unit, like
 // roomlights.js: illuminance = intensity / d^2.
 const PORCH_POINTS = [[-2.5, 11.0, 38.5], [8, 11.0, 38.5], [17, 11.0, 38.5]];
-const PORCH_INTENSITY = 36;
+const PORCH_INTENSITY = 48;
 const PORCH_RANGE = 16;
 // Stands west of the house and fires north-east at its west wall: the photo's
 // blue is on the treeline west of the house (environment.js does not plant it
 // yet, PLANT_TREES), with only a tinge reaching the porch's west column. From
 // the street it shows as the blue pool on the lawn and that tinge -- it must
 // NOT wash the facade, which reads purple the moment it does.
-const BLUE_SPOT = { pos: [-30, 0.5, 55], target: [-18, 8, 38], intensity: 1600,
-                    angle: 0.45, penumbra: 0.5, range: 70, color: 0x2040ff };
+const BLUE_SPOT = { pos: [-34, 1, 52], target: [-10, 6, 34], intensity: 4500,
+                    angle: 0.6, penumbra: 0.5, range: 80, color: 0x2040ff };
 // amber bed uplights: two in the walkway bed, one at the driveway's east edge
 const AMBER_POINTS = [[5.3, 0.3, 49.0], [8.6, 0.3, 48.8], [48.5, 0.3, 37.5]];
-const AMBER_INTENSITY = 5;
-const AMBER_RANGE = 7;
+const AMBER_INTENSITY = 2.5;
+const AMBER_RANGE = 5;
 // a tight warm pool over the walk and the bottom porch step (the photo's walk
 // is lit to ~40% grey right at the steps and black ten feet out)
 // Sits over the rock strip so the cobbles and steppers beside the walk read
 // (x 3..12, z 44..58 at ~60/255) and the walk at the steps stays ~100.
-const STEP_POOL = { pos: [10.5, 6.0, 49.0], intensity: 95, range: 18, color: 0xffb46b };
+// The walk fan (x 11..20, z 44..70) and the rock band beside it (x 8.6..15.6,
+// z 47..58) at ~100/255, the lawn either side dark: two downward spots whose
+// penumbra dies before the grass, not a point that spills in every direction.
+// A single wide, fully-feathered spot from the porch soffit: the walk fan, the
+// rock band, the step treads and the top of the drive in one even wash with no
+// pool edge anywhere (two tight 10 ft spots read as 'spotlights in a void').
+const WALK_SPOTS = [
+  // short and steep: the steps and the upper fan; cone and range end at z ~58
+  { pos: [21, 8, 46], target: [19, 0, 64], intensity: 1900, angle: 0.4, penumbra: 1.0, range: 36, color: 0xffb46b },
+];
+// the low path light at the rock band's end, where the photo's is
+const PATH_LIGHT = { pos: [11.6, 1.2, 57], intensity: 3, range: 8, color: 0xffb46b };
+// the step treads and risers, from under the porch fascia above them
+const STEP_LIGHT = { pos: [15.5, 6, 49], intensity: 60, range: 12, color: 0xffb46b };
 // The concrete is the brightest ground surface in the photo: warm grey ~35%
 // under the garage string, ~15% at the car, black by the street.
 // Higher and further back with a wider, softer cone: the same total on the
 // concrete without the hot ellipse round the car that a tight cone drew.
-const DRIVE_SPOT = { pos: [33, 16, 26], target: [33, 0, 66], intensity: 2600,
-                     angle: 0.95, penumbra: 0.8, range: 66, color: 0xffbe80 };
+// Two overlapping wide, fully-feathered spots from the garage eave: a broad,
+// near-even wash with no cone edge anywhere in frame (a single 0.95 rad cone
+// drew a hard grey wedge from the car to the bottom-right), falling to ~2/255
+// by the bottom edge on the range cutoff. The first casts the car's shadow.
+const DRIVE_SPOTS = [
+  // the garage string's throw down the drive: the door apron is the sconces'
+  // (roomlights), this carries z 40..60 and the cone/range end at the car's
+  // rear, so nothing lights the car's rear face, plate or tyres
+  { pos: [33, 13, 30], target: [29, 0, 62], intensity: 950, angle: 0.9, penumbra: 1.0, range: 50, color: 0xfff2e4, shadow: true },
+  // the garage door face itself, from the eave (the photo has it as the
+  // brightest surface on that wall; the sconces alone leave it at ~70)
+  { pos: [33, 12.6, 34], target: [34, 5, 29.8], intensity: 1500, angle: 0.85, penumbra: 0.6, range: 22, color: 0xffe6c8 },
+];
 
 // the lit upstairs window (glass at z 26.50 in a recess of the z 26.74 wall)
 // (mesh_8 in the shell: lower sash z 26.50, upper 26.66, in the z 26.74 wall)
@@ -155,15 +183,14 @@ const WINDOW = { x0: 14.55, x1: 17.15, y0: 18.3, y1: 24.0, z: 26.70 };
 let group = null;          // everything emissive, child of the shell group
 let halos = null;          // THREE.Points
 let haloMat = null;
+let bleedMat = null;
 let ledMat = null;         // the fixture spheres' material
 let washMat = null;
 let windowMat = null;
+let glowMat = null;
 let glass = [];            // [{m, orig}] the shell's transparent (window) materials
 const lights = [];         // [{light, local: Vector3, base}] at scene root
-let spot = null;           // the blue uplight (also in `lights`)
-let spotTargetLocal = null;
-let driveSpot = null;
-let driveTargetLocal = null;
+const spotTargets = [];    // [{light, local}] every SpotLight's aim point, shell-local
 let sky = null;            // night sky dome (scene root, follows the camera)
 let skyMat = null;
 let suspended = false;
@@ -186,44 +213,44 @@ function measuredToLocal() {
 
 export function initEaveLights() {
   // The lights, once, before the boot compile (see the header).
-  for (const p of PORCH_POINTS) {
-    const light = new THREE.PointLight(0xffb46b, 0, PORCH_RANGE, 2);
-    light.name = 'eaveLight:porch';
+  const addPoint = (name, pos, intensity, range, color) => {
+    const light = new THREE.PointLight(color, 0, range, 2);
+    light.name = name;
     scene.add(light);
-    lights.push({ light, local: new THREE.Vector3(...p), base: PORCH_INTENSITY });
-  }
-  for (const p of AMBER_POINTS) {
-    const light = new THREE.PointLight(AMBER, 0, AMBER_RANGE, 2);
-    light.name = 'eaveLight:amber';
+    lights.push({ light, local: new THREE.Vector3(...pos), base: intensity });
+  };
+  const addSpot = (name, cfg) => {
+    const light = new THREE.SpotLight(cfg.color, 0, cfg.range, cfg.angle, cfg.penumbra, 2);
+    light.name = name;
+    if (cfg.shadow) {
+      // The one shadow-casting light here: without it the car floats on the lit
+      // concrete. Set ONCE at init (a shadow toggle is a program cache-key term,
+      // like the light count). The spot's own fov is the shadow frustum, so the
+      // car (x ~28, z 58..74) sits inside it; near/far trimmed to the drive.
+      light.castShadow = true;
+      light.shadow.mapSize.set(2048, 2048);
+      light.shadow.camera.near = 4;
+      light.shadow.camera.far = 70;
+      light.shadow.bias = -0.0004;
+      light.shadow.normalBias = 0.3;
+    }
     scene.add(light);
-    lights.push({ light, local: new THREE.Vector3(...p), base: AMBER_INTENSITY });
-  }
-  {
-    const light = new THREE.PointLight(STEP_POOL.color, 0, STEP_POOL.range, 2);
-    light.name = 'eaveLight:step';
-    scene.add(light);
-    lights.push({ light, local: new THREE.Vector3(...STEP_POOL.pos), base: STEP_POOL.intensity });
-  }
-  driveSpot = new THREE.SpotLight(DRIVE_SPOT.color, 0, DRIVE_SPOT.range, DRIVE_SPOT.angle,
-                                  DRIVE_SPOT.penumbra, 2);
-  driveSpot.name = 'eaveLight:drive';
-  scene.add(driveSpot);
-  scene.add(driveSpot.target);
-  lights.push({ light: driveSpot, local: new THREE.Vector3(...DRIVE_SPOT.pos), base: DRIVE_SPOT.intensity });
-  driveTargetLocal = new THREE.Vector3(...DRIVE_SPOT.target);
-  spot = new THREE.SpotLight(BLUE_SPOT.color, 0, BLUE_SPOT.range, BLUE_SPOT.angle,
-                             BLUE_SPOT.penumbra, 2);
-  spot.name = 'eaveLight:blue';
-  scene.add(spot);
-  scene.add(spot.target);
-  lights.push({ light: spot, local: new THREE.Vector3(...BLUE_SPOT.pos), base: BLUE_SPOT.intensity });
-  spotTargetLocal = new THREE.Vector3(...BLUE_SPOT.target);
+    scene.add(light.target);
+    lights.push({ light, local: new THREE.Vector3(...cfg.pos), base: cfg.intensity });
+    spotTargets.push({ light, local: new THREE.Vector3(...cfg.target) });
+  };
+  for (const p of PORCH_POINTS) addPoint('eaveLight:porch', p, PORCH_INTENSITY, PORCH_RANGE, 0xffb46b);
+  for (const p of AMBER_POINTS) addPoint('eaveLight:amber', p, AMBER_INTENSITY, AMBER_RANGE, AMBER);
+  for (const c of WALK_SPOTS) addSpot('eaveLight:walk', c);
+  addPoint('eaveLight:path', PATH_LIGHT.pos, PATH_LIGHT.intensity, PATH_LIGHT.range, PATH_LIGHT.color);
+  addPoint('eaveLight:steps', STEP_LIGHT.pos, STEP_LIGHT.intensity, STEP_LIGHT.range, STEP_LIGHT.color);
+  for (const c of DRIVE_SPOTS) addSpot('eaveLight:drive', c);
+  addSpot('eaveLight:blue', BLUE_SPOT);
   // the measured numbers are world feet; the lights are placed relative to the
   // shell, so express them in its local space like the geometry
   const toLocal = measuredToLocal();
   for (const l of lights) l.local.applyMatrix4(toLocal);
-  spotTargetLocal.applyMatrix4(toLocal);
-  driveTargetLocal.applyMatrix4(toLocal);
+  for (const t of spotTargets) t.local.applyMatrix4(toLocal);
 
   // The night sky: the photo's black has faint sensor grain and a lift at the
   // horizon, and a clipped flat colour reads as a void. A big BackSide sphere
@@ -276,22 +303,24 @@ function build(shell) {
 
   // ---- LED positions along every run
   const dots = [];
+  const dotGain = [];
   let jseed = 11;
   const jitter = () => { jseed = (jseed * 16807) % 2147483647; return jseed / 2147483647; };
-  const pushDot = (v) => {
+  const pushDot = (v, gain) => {
     for (const d of dots) if (d.distanceToSquared(v) < 0.16) return; // shared corner
     dots.push(v);
+    dotGain.push(gain);
   };
   for (const run of RUNS) {
     for (let i = 0; i + 1 < run.pts.length; i++) {
       const a = local(run.pts[i]), b = local(run.pts[i + 1]);
       const off = new THREE.Vector3(...((i === 0 && run.outFirst) || run.out));
       const len = a.distanceTo(b);
-      const n = Math.max(1, Math.round(len / LED_SPACING));
+      const n = Math.max(1, Math.round(len / (run.spacing || LED_SPACING)));
       for (let k = 0; k <= n; k++) {
         // a little spacing jitter on the interior bulbs (+-6% of a gap)
         const jit = (k === 0 || k === n) ? 0 : (jitter() - 0.5) * 0.12;
-        pushDot(new THREE.Vector3().lerpVectors(a, b, (k + jit) / n).add(off));
+        pushDot(new THREE.Vector3().lerpVectors(a, b, (k + jit) / n).add(off), run.gain || 1);
       }
     }
   }
@@ -313,11 +342,12 @@ function build(shell) {
   // ---- the halos: Points, one per LED plus one per amber bed fixture
   const haloPts = [...dots];
   const haloCols = dots.map(() => LED_COLOR);
-  const haloSize = dots.map(() => HALO_SIZE);
-  // +-10% per-LED brightness, seeded so the string never twinkles between builds
+  // seeded, so the string never twinkles between builds
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  const haloBright = dots.map(() => 0.9 + 0.2 * rnd());
+  // +-12% size variance per bulb, +-10% brightness
+  const haloSize = dots.map(() => HALO_SIZE * (0.88 + 0.24 * rnd()));
+  const haloBright = dots.map((d, i) => (0.85 + 0.3 * rnd()) * (dotGain[i] || 1));
   for (const p of AMBER_POINTS) {
     haloPts.push(local(p));
     haloCols.push(AMBER);
@@ -329,12 +359,24 @@ function build(shell) {
   hg.setAttribute('color', new THREE.Float32BufferAttribute(haloCols.flatMap((c) => [c.r, c.g, c.b]), 3));
   hg.setAttribute('aSize', new THREE.Float32BufferAttribute(haloSize, 1));
   hg.setAttribute('aBright', new THREE.Float32BufferAttribute(haloBright, 1));
-  haloMat = makeHaloMaterial();
+  haloMat = makeHaloMaterial(1.0, 1.0, 0);
   halos = new THREE.Points(hg, haloMat);
   halos.name = 'eaveHalos';
   halos.renderOrder = 3;
   halos.frustumCulled = false;
   group.add(halos);
+  // the bleed: the same points, a much bigger and dimmer gaussian, so the lit
+  // roofline carries a hair of atmosphere against the sky instead of a knife edge
+  bleedMat = makeHaloMaterial(BLEED_SIZE / HALO_SIZE, 0.0, 1);
+  const bleed = new THREE.Points(hg, bleedMat);
+  bleed.name = 'eaveBleed';
+  bleed.renderOrder = 2;
+  bleed.frustumCulled = false;
+  group.add(bleed);
+  // scene.js night optics (UnrealBloom + grain + black lift) landed after this
+  // layer was written and supplies the atmospheric bleed itself; two bloom
+  // systems stacked into fog. Kept, off, so a sole-renderer deploy can re-arm it.
+  bleed.visible = false;
 
   // ---- the siding wash
   washMat = makeWashMaterial();
@@ -355,6 +397,16 @@ function build(shell) {
   win.name = 'litWindow';
   win.renderOrder = 2;
   group.add(win);
+  // the light it throws onto the siding round the frame
+  glowMat = new THREE.MeshBasicMaterial({
+    map: makeGlowTexture(), transparent: true, opacity: 0, toneMapped: false,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry((w.x1 - w.x0) * 2.4, (w.y1 - w.y0) * 1.7), glowMat);
+  glow.position.copy(win.position).add(new THREE.Vector3(0, 0, 0.03));
+  glow.name = 'litWindowGlow';
+  glow.renderOrder = 2;
+  group.add(glow);
 
   shell.add(group);
   lastApplied = -1; // force a repaint at the current night factor
@@ -372,7 +424,7 @@ function buildWashGeometry(local) {
     const alpha = w.alpha ?? 0.7;
     // pools sit under the bulbs, so the scallop period is the run's real gap
     // (RUNS fits a whole number of gaps into each edge, so it is len / n)
-    const spacing = w.scallop === false ? 0 : len / Math.max(1, Math.round(len / LED_SPACING));
+    const spacing = w.scallop === false ? 0 : len / Math.max(1, Math.round(len / (w.spacing || LED_SPACING)));
     const base = pos.length / 3;
     for (let i = 0; i <= segs; i++) {
       const p = new THREE.Vector3().lerpVectors(a, b, i / segs);
@@ -435,10 +487,10 @@ function makeWashMaterial() {
         float W = vParams.x; float spacing = vParams.y;
         bool soffit = vParams.w > 0.5;
         float d = vDist;
-        float band = soffit ? 0.35 : 1.0;
-        float rise = soffit ? 1.0 : smoothstep(0.0, 0.45, d);
+        float band = soffit ? 0.35 : 2.6;
+        float rise = soffit ? 1.0 : smoothstep(0.1, 0.9, d);
         float decay = d < band ? 1.0
-          : pow(max(0.0, 1.0 - (d - band) / max(0.01, W - band)), soffit ? 1.6 : 3.0);
+          : pow(max(0.0, 1.0 - (d - band) / max(0.01, W - band)), soffit ? 1.6 : 2.4);
         float p = rise * decay;
         if (spacing > 0.0) {
           float a = (fract(vAlong / spacing) - 0.5) * spacing;   // ft to the nearest bulb
@@ -448,7 +500,7 @@ function makeWashMaterial() {
         }
         if (vParams.z > 0.5) {
           float f = fract(vWorldY / uCourse);
-          p *= 1.0 - 0.28 * (1.0 - smoothstep(0.0, 0.12, f));
+          p *= 1.0 - 0.45 * (1.0 - smoothstep(0.0, 0.18, f));
         }
         vec3 c = vColor.rgb * (vColor.a * p * uOpacity);
         gl_FragColor = vec4(c, 1.0);
@@ -462,38 +514,49 @@ function makeWashMaterial() {
   });
 }
 
-// Screen-space halo: hot white core, soft warm skirt. Size in world feet with
-// perspective attenuation, clamped so a close fly-by keeps them dot-sized.
-function makeHaloMaterial() {
+// Screen-space bloom for a bulb. The sprite is ~5x the hot core: a gaussian
+// white core, an amber mid, and a long gaussian tail that fades into the
+// siding -- additive, so the bulbs crowding a gable apex build a hot-spot.
+// sizeMul/gain/mode make the same shader serve the wide, faint "bleed" layer.
+function makeHaloMaterial(sizeMul, gain, mode) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uScale: { value: 300 },
       uOpacity: { value: 0 },
+      uSizeMul: { value: sizeMul },
+      uGain: { value: gain },
+      uMode: { value: mode },
     },
     vertexShader: `
-      uniform float uScale;
+      uniform float uScale; uniform float uSizeMul;
       attribute float aSize; attribute float aBright;
-      varying vec3 vColor;
+      varying vec3 vColor; varying float vBright;
       void main() {
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        float ps = aSize * uScale / max(0.5, -mv.z);
-        gl_PointSize = clamp(ps, 4.0, 24.0);
+        float ps = aSize * uSizeMul * uScale / max(0.5, -mv.z);
+        gl_PointSize = clamp(ps, 5.0 * uSizeMul, 36.0 * uSizeMul);
         gl_Position = projectionMatrix * mv;
-        vColor = color * aBright;
+        vColor = color; vBright = aBright;
       }`,
     fragmentShader: `
-      uniform float uOpacity;
-      varying vec3 vColor;
+      uniform float uOpacity; uniform float uGain; uniform float uMode;
+      varying vec3 vColor; varying float vBright;
+      float g(float d, float s) { return exp(-(d * d) / (2.0 * s * s)); }
       void main() {
         float d = length(gl_PointCoord - 0.5) * 2.0;
         if (d > 1.0) discard;
-        float core = smoothstep(0.30, 0.05, d);
-        float skirt = pow(max(0.0, 1.0 - d), 1.4) * 0.45;
-        // the core overshoots 1.0 on purpose: additive onto lit siding it must
-        // still clip, or the dot is just a pinhead riding on the wash -- but
-        // it clips through the amber, so the bulb reads 2700K, not 6500K
-        vec3 c = mix(vColor, vec3(1.0), core * 0.55) * (core * 1.9 + skirt);
-        gl_FragColor = vec4(c * uOpacity, 1.0);
+        vec3 c;
+        if (uMode > 0.5) {
+          c = vColor * (g(d, 0.42) * uGain);          // bleed: one soft gaussian
+        } else {
+          float core = g(d, 0.09);
+          float mid = g(d, 0.24);
+          float tail = g(d, 0.5);
+          // the core overshoots 1.0 so it still clips on lit siding, but it
+          // clips THROUGH the amber -- a 2700K bulb, not a 6500K pinhead
+          c = mix(vColor, vec3(1.0), core * 0.6) * (core * 2.0 + mid * 0.22 + tail * 0.03) * uGain;
+        }
+        gl_FragColor = vec4(c * vBright * uOpacity, 1.0);
         #include <colorspace_fragment>
       }`,
     vertexColors: true,
@@ -503,7 +566,7 @@ function makeHaloMaterial() {
   });
 }
 
-// Tiled grain for the sky dome: near-black, a hair of blue, +-1/255 noise.
+// Tiled grain for the sky dome: near-black, a hair of blue, +-2/255 noise.
 function makeSkyTexture() {
   const cv = document.createElement('canvas');
   // 256x256 tiled 8x4 over the dome: ~0.18 degrees per texel both ways. An
@@ -513,10 +576,10 @@ function makeSkyTexture() {
   const img = ctx.createImageData(256, 256);
   let seed = 3;
   for (let y = 0; y < 256; y++) {
-    const base = 2.6;                      // flat: any gradient tiles into bands
+    const base = 2.0;                      // flat: any gradient tiles into bands
     for (let x = 0; x < 256; x++) {
       seed = (seed * 16807) % 2147483647;
-      const n = (seed / 2147483647 - 0.5) * 2.4;
+      const n = (seed / 2147483647 - 0.5) * 2.0;
       const v = Math.max(0, base + n);
       const i = (y * 256 + x) * 4;
       img.data[i] = v; img.data[i + 1] = v + 0.5; img.data[i + 2] = v + 1.5; img.data[i + 3] = 255;
@@ -530,22 +593,45 @@ function makeSkyTexture() {
   return tex;
 }
 
+// warm radial glow for the siding round the lit window
+function makeGlowTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(64, 64, 6, 64, 64, 64);
+  g.addColorStop(0, 'rgba(210, 225, 255, 0.5)');
+  g.addColorStop(0.35, 'rgba(200, 215, 255, 0.2)');
+  g.addColorStop(1, 'rgba(190, 210, 255, 0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 // warm light through a closed venetian blind
 function makeBlindsTexture() {
   const cv = document.createElement('canvas');
   cv.width = 32; cv.height = 128;
   const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#ffe2b0';
+  ctx.fillStyle = '#dfe9ff';                 // ~6000K: an LED ceiling light behind the blind
   ctx.fillRect(0, 0, 32, 128);
-  ctx.fillStyle = 'rgba(110, 70, 30, 0.6)';
+  ctx.fillStyle = 'rgba(40, 50, 80, 0.6)';
   for (let y = 2; y < 128; y += 7) ctx.fillRect(0, y, 32, 2);
   // a curtain: the lamp is up near the ceiling, the blind's foot is in shadow
   const grad = ctx.createLinearGradient(0, 0, 0, 128);
-  grad.addColorStop(0, 'rgba(255,250,230,0.45)');
-  grad.addColorStop(0.35, 'rgba(255,220,170,0)');
-  grad.addColorStop(1, 'rgba(40,20,5,0.7)');
+  grad.addColorStop(0, 'rgba(240,246,255,0.45)');
+  grad.addColorStop(0.35, 'rgba(220,230,255,0)');
+  grad.addColorStop(1, 'rgba(10,15,30,0.7)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 32, 128);
+  // the sash frame
+  ctx.strokeStyle = 'rgba(30, 35, 50, 0.9)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(1.5, 1.5, 29, 125);
+  ctx.fillStyle = 'rgba(30, 35, 50, 0.8)';
+  ctx.fillRect(0, 62, 32, 3);                // meeting rail
+  ctx.fillRect(15, 0, 2, 128);               // mullion
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
@@ -557,11 +643,11 @@ function dispose() {
   if (!group) return;
   group.removeFromParent();
   group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
-  for (const m of [ledMat, haloMat, washMat, windowMat]) {
+  for (const m of [ledMat, haloMat, bleedMat, washMat, windowMat, glowMat]) {
     if (m?.map) m.map.dispose();
     m?.dispose();
   }
-  group = null; halos = null; ledMat = null; haloMat = null; washMat = null; windowMat = null;
+  group = null; halos = null; ledMat = null; haloMat = null; bleedMat = null; washMat = null; windowMat = null; glowMat = null;
 }
 
 // ----------------------------------------------------------- per frame
@@ -574,14 +660,14 @@ function tick() {
   // the lights follow the shell (they are not its children -- see the header)
   if (shell && night > 0) {
     for (const l of lights) l.light.position.copy(l.local).applyMatrix4(shell.matrixWorld);
-    spot.target.position.copy(spotTargetLocal).applyMatrix4(shell.matrixWorld);
-    driveSpot.target.position.copy(driveTargetLocal).applyMatrix4(shell.matrixWorld);
+    for (const t of spotTargets) t.light.target.position.copy(t.local).applyMatrix4(shell.matrixWorld);
   }
 
   if (haloMat && renderer) {
     // gl_PointSize is in device pixels; scale = drawing-buffer height / 2 is
     // what three's own PointsMaterial uses for sizeAttenuation
     haloMat.uniforms.uScale.value = renderer.domElement.height / 2;
+    bleedMat.uniforms.uScale.value = renderer.domElement.height / 2;
   }
 
   if (sky) {
@@ -596,6 +682,7 @@ function tick() {
   if (!group) return;
   const on = night > 0.01;
   haloMat.uniforms.uOpacity.value = night;
+  bleedMat.uniforms.uOpacity.value = night;
   halos.visible = on;
   ledMat.emissiveIntensity = 6.0 * night;
   washMat.uniforms.uOpacity.value = night;
@@ -605,6 +692,8 @@ function tick() {
   for (const g of glass) g.m.color.copy(g.orig).lerp(GLASS_NIGHT, night * 0.92);
   windowMat.opacity = night;
   windowMat.visible = on;
+  glowMat.opacity = night;
+  glowMat.visible = on;
 }
 
 // snapshots.js brackets its room-card capture with this: cards persist, and a

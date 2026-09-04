@@ -2,6 +2,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { getStageRect, onStageChanged } from './stage.js';
 
 export let scene, camera, renderer, controls;
@@ -53,6 +58,7 @@ export function initScene(container) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
+  installOptics();
 
   // IBL: GLB models ship PBR (often metallic) materials that render black
   // without an environment map. Generated once at startup — the one-time
@@ -207,11 +213,246 @@ export function initScene(container) {
       }
       controls.update();
     }
-    renderer.render(scene, camera);
+    tickOptics(dt);
+    renderView();
   });
 
   // debug handle (console): inspect the scene / renderer stats
   window.__scene3d = { scene, camera, renderer, controls, hemiLight, sunLight };
+}
+
+// ───────────────────────── night camera optics ──────────────────────────────
+// The night exterior is judged against an iPhone night photograph
+// (demo/exterior_night.jpg), and what separated the raw render from it was not
+// the lighting but the LENS and the SENSOR: every emitter in the photo carries
+// glare, the blacks are lifted and noisy rather than #000, the shadows are
+// smeared by noise reduction, and the corners fall off. So at night — and only
+// at night — the frame goes through a small post stack:
+//
+//   RenderPass → UnrealBloomPass → OutputPass → OpticsPass (to screen)
+//
+// UnrealBloom runs in the composer's linear half-float target with a threshold
+// only the LED halos, the lamps, the lit window and the plate clear (the siding
+// wash peaks well under it), so it adds glare around emitters, never a smear
+// over the house. OutputPass then applies the renderer's own tone mapping and
+// output colour space, exactly as a direct render would, and the last pass is
+// perceptual — grain, black lift, shadow smear, vignette are sensor/display
+// effects and belong in display space (the same reason three puts FXAA after
+// OutputPass). It does no colour conversion of its own, so with uMix at 0 the
+// composed frame is the non-composed frame.
+//
+// By day none of this exists: `renderView` calls the plain renderer.render and
+// the composer is never even built until the first night frame. The mix is
+// eased from daylight.js's night factor so the ☀/☾ mode button does not pop.
+//
+// renderer.render itself is wrapped so that anyone painting the main view
+// directly — snapshots.js's post-capture repaint, roomkit's shot.py before it
+// screenshots the canvas — gets the composed frame too, rather than leaving a
+// raw one on the (non-preserved) drawing buffer. Any other camera (the room
+// card snapCam, PMREM, the composer's own internal passes) falls straight
+// through to the real render, which is what keeps the card captures clean.
+const OPTICS = {
+  enabled: true,                  // debug kill switch (__optics.params.enabled = false)
+  nightIn: 0.55, nightFull: 0.85, // night factor band over which the stack fades in
+  bloomStrength: 0.32, bloomRadius: 0.55, bloomThreshold: 1.2, // linear HDR: a small halo with a soft skirt, not a disc
+  grain: 0.045,     // ± amplitude in the darks; after the chroma mix the LUMA σ lands ≈ 2.5/255
+  grainMid: 0.2,    // fraction of that left in mids/highlights (σ ≈ 0.5/255)
+  grainPx: 1.4,     // device px per grain cell — texture, not static
+  chroma: 0.6,      // share of the grain that is per-channel (colour) noise in the darks;
+                    // sensor noise is chroma-heavy where the signal is low, luma-only in the mids
+  lift: 0.006,      // black point at the top of frame (~1.5/255; the photo's zenith is ~1.2)
+  horizon: 3.5,     // × extra lift in the horizon band (~5-6/255): light pollution, a faint
+                    // warm glow the tree-line silhouettes cut against, falling back off
+                    // toward the bottom of frame so the driveway keeps its own level
+  haze: [1.0, 0.93, 0.84], // warm grey — light pollution, R ≥ B (not the cold haze of r1)
+  smear: 0.85,      // how far dark pixels are pulled toward a 1.5px blur (noise reduction)
+  soften: 0.2,      // ...and how far EVERY non-highlight pixel is: a night-mode frame is never crisp
+  vignette: 0.40,
+};
+const COARSE = matchMedia('(pointer: coarse)').matches;
+
+const OpticsShader = {
+  name: 'NightOpticsShader',
+  uniforms: {
+    tDiffuse: { value: null },
+    uMix: { value: 0 },
+    uTime: { value: 0 },
+    uTexel: { value: new THREE.Vector2(1 / 1920, 1 / 1080) },
+    uAspect: { value: 16 / 9 },
+    uGrain: { value: OPTICS.grain },
+    uGrainPx: { value: OPTICS.grainPx },
+    uChroma: { value: OPTICS.chroma },
+    uLift: { value: OPTICS.lift },
+    uHorizon: { value: OPTICS.horizon },
+    uGrainMid: { value: OPTICS.grainMid },
+    uHaze: { value: new THREE.Vector3(...OPTICS.haze) },
+    uSmear: { value: OPTICS.smear },
+    uSoften: { value: OPTICS.soften },
+    uVignette: { value: OPTICS.vignette },
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: /* glsl */`
+    uniform sampler2D tDiffuse;
+    uniform float uMix, uTime, uAspect, uGrain, uGrainMid, uGrainPx, uChroma, uLift, uHorizon, uSmear, uSoften, uVignette;
+    uniform vec2 uTexel;
+    uniform vec3 uHaze;
+    varying vec2 vUv;
+
+    float hash(vec2 p) {
+      vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+      p3 += dot(p3, p3.yzx + 33.33);
+      return fract((p3.x + p3.y) * p3.z);
+    }
+    float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+
+    void main() {
+      vec4 src = texture2D(tDiffuse, vUv);
+      vec3 c = src.rgb;
+      float L = luma(c);
+
+      // shadow smear: a 1.5px diagonal blur blended in where it is dark.
+      // Phone noise reduction wipes detail out of the shadows first; this is
+      // also what softens the driveway speckle. Each tap is weighted by its
+      // OWN darkness, so a dark pixel on a bright edge (the car's silhouette
+      // against the lit driveway) pulls only from its dark neighbours and the
+      // edge stays crisp -- a plain blur read the car as a smudged cutout.
+      vec2 o = uTexel * 1.5;
+      vec3 b = vec3(0.0);
+      float wsum = 0.0;
+      for (int i = 0; i < 4; i++) {
+        vec2 d = (i == 0) ? vec2(o.x, o.y) : (i == 1) ? vec2(-o.x, o.y)
+               : (i == 2) ? vec2(o.x, -o.y) : vec2(-o.x, -o.y);
+        vec3 t = texture2D(tDiffuse, vUv + d).rgb;
+        float w = 1.0 - smoothstep(0.08, 0.35, luma(t));
+        b += t * w; wsum += w;
+      }
+      b = wsum > 0.0 ? b / wsum : c;
+      float dark = 1.0 - smoothstep(0.03, 0.30, L);
+      // the global soften spares the highlights: LED cores stay pin-sharp
+      float soft = uSoften * (1.0 - smoothstep(0.5, 0.9, L));
+      c = mix(c, mix(c, b, 0.7), max(soft, dark * uSmear));
+
+      // veiling haze / black lift: the photo's night sky is not #000. It is a
+      // faint warm light-pollution gradient -- near-black at the zenith,
+      // brightest in the horizon band (~1/3 down this frame), and it is SKY:
+      // the band eases back off below the eave line so the driveway and lawn
+      // keep the level their own lights give them.
+      float band = smoothstep(1.0, 0.55, vUv.y) * (0.35 + 0.65 * smoothstep(0.25, 0.6, vUv.y));
+      float lift = uLift * (1.0 + uHorizon * band);
+      c += uHaze * lift * (1.0 - c);
+
+      // vignette
+      vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+      c *= 1.0 - uVignette * smoothstep(0.35, 1.15, length(q) * 1.35);
+
+      // grain: luminance-weighted into the darks (sensor noise is additive, so
+      // it shows where the signal is low), a colour component on R/B,
+      // animated per frame, on cells slightly coarser than a device px
+      vec2 g = floor(gl_FragCoord.xy / uGrainPx) + vec2(fract(uTime * 7.31) * 913.0, fract(uTime * 3.17) * 571.0);
+      float darkW = 1.0 - smoothstep(0.0, 0.25, L);
+      float n = hash(g) - 0.5;                       // luminance grain
+      vec3 cn = vec3(hash(g + 17.3), hash(g + 29.1), hash(g + 41.7)) - 0.5; // per-channel, independent
+      float amp = uGrain * mix(uGrainMid, 1.0, darkW);
+      c += amp * mix(vec3(n), cn, uChroma * darkW);
+
+      gl_FragColor = vec4(mix(src.rgb, clamp(c, 0.0, 1.0), uMix), src.a);
+    }`,
+};
+
+let composer = null, bloomPass = null, opticsPass = null;
+let opticsMix = 0;           // eased 0..1: how much of the night stack is in
+let nightFactorOf = () => 0; // daylight.js getNightFactor — bound lazily, it imports us
+let compositing = false;     // true while the composer's own passes call renderer.render
+let rawRender = null;
+
+function installOptics() {
+  rawRender = renderer.render.bind(renderer);
+  renderer.render = (s, c) => {
+    if (!compositing && s === scene && c === camera) renderView();
+    else rawRender(s, c);
+  };
+  import('./daylight.js').then((m) => { nightFactorOf = m.getNightFactor; }).catch(() => {});
+  window.__optics = {
+    params: OPTICS,
+    get mix() { return opticsMix; },
+    get composer() { return composer; },
+    apply: applyOpticsParams,
+  };
+}
+
+function tickOptics(dt) {
+  // Only under the real sky. floorview.js swaps in a studio-gradient
+  // CanvasTexture backdrop for the single-floor dollhouse (and snapshots.js
+  // for the cards): OutputPass tone-maps a texture background that a direct
+  // render leaves alone (WebGLBackground skips tone mapping for sRGB
+  // textures), so the composed backdrop came out brighter and bluer, with a
+  // vignette over a flat studio sweep. That view is a presentation mode, not
+  // a photograph -- leave it exactly as it renders by day.
+  const underSky = !scene.background || scene.background.isColor;
+  const nf = OPTICS.enabled && underSky ? nightFactorOf() : 0;
+  const t = THREE.MathUtils.smoothstep(nf, OPTICS.nightIn, OPTICS.nightFull);
+  if (Math.abs(t - opticsMix) < 0.004) { opticsMix = t; return; }
+  opticsMix += (t - opticsMix) * (1 - Math.exp(-dt / 0.45));
+}
+
+function ensureComposer() {
+  if (composer) return composer;
+  const pr = renderer.getPixelRatio();
+  const size = renderer.getSize(new THREE.Vector2());
+  // MSAA on the target, or the LED strings and roof edges go jagged the moment
+  // the stack fades in — the canvas's own antialias only covers direct renders
+  const rt = new THREE.WebGLRenderTarget(
+    Math.max(1, Math.floor(size.x * pr)), Math.max(1, Math.floor(size.y * pr)),
+    { type: THREE.HalfFloatType, samples: COARSE ? 2 : 4 });
+  composer = new EffectComposer(renderer, rt);
+  composer.addPass(new RenderPass(scene, camera));
+  bloomPass = new UnrealBloomPass(new THREE.Vector2(size.x, size.y),
+    OPTICS.bloomStrength, OPTICS.bloomRadius, OPTICS.bloomThreshold);
+  composer.addPass(bloomPass);
+  composer.addPass(new OutputPass());
+  opticsPass = new ShaderPass(OpticsShader);
+  composer.addPass(opticsPass);
+  resizeOptics(size.x, size.y);
+  return composer;
+}
+
+function resizeOptics(W, H) {
+  if (!composer) return;
+  const pr = renderer.getPixelRatio();
+  composer.setPixelRatio(pr);
+  composer.setSize(W, H);
+  opticsPass.uniforms.uTexel.value.set(1 / (W * pr), 1 / (H * pr));
+  opticsPass.uniforms.uAspect.value = W / H;
+}
+
+// re-read OPTICS (console tuning: __optics.params.grain = …; __optics.apply())
+function applyOpticsParams() {
+  if (!composer) return;
+  bloomPass.radius = OPTICS.bloomRadius;
+  bloomPass.threshold = OPTICS.bloomThreshold;
+  const u = opticsPass.uniforms;
+  u.uGrain.value = OPTICS.grain; u.uGrainPx.value = OPTICS.grainPx;
+  u.uGrainMid.value = OPTICS.grainMid; u.uHorizon.value = OPTICS.horizon;
+  u.uChroma.value = OPTICS.chroma; u.uLift.value = OPTICS.lift;
+  u.uHaze.value.set(...OPTICS.haze); u.uSmear.value = OPTICS.smear;
+  u.uSoften.value = OPTICS.soften;
+  u.uVignette.value = OPTICS.vignette;
+}
+
+// Paint the main view: plain render by day, composed at night.
+export function renderView() {
+  if (opticsMix < 0.005) { rawRender(scene, camera); return; }
+  ensureComposer();
+  bloomPass.strength = OPTICS.bloomStrength * opticsMix;
+  opticsPass.uniforms.uMix.value = opticsMix;
+  opticsPass.uniforms.uTime.value = (performance.now() / 1000) % 1000;
+  compositing = true;
+  try { composer.render(); } finally { compositing = false; }
 }
 
 // envMapIntensity owner — daylight.js drives it with the day/night ramp so the
@@ -292,6 +533,7 @@ export function applyStage(rect = getStageRect()) {
     lastW = W; lastH = H;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(W, H);
+    resizeOptics(W, H); // the night composer follows the same size and ratio
   }
 }
 

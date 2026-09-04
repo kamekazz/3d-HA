@@ -1,0 +1,1 @@
+scene3d: True  boot: {'managerIdle': True, 'mgrLoaded': 657, 'mgrTotal': 657, 'mgrLast': '/api/house/model/323/file?v=1788294924', 'shown': 0.85, 'band': [0.85, 0.92], 'done': False, 'houseBuilt': True, 'pending': 0, 'msSinceProgress': 299, 'elapsedMs': 13793}

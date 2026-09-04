@@ -528,14 +528,14 @@ function addCobbleRim(rng, x0, z0, x1, z1, y, beds) {
 
 // The same coarse rim along an arbitrary world polyline — the lawn-side edge
 // of a polygon bed (addBedPoly) is not axis-aligned.
-function addCobbleRun(rng, pts, y, beds) {
+function addCobbleRun(rng, pts, y, beds, sc = 1) {
   for (let k = 0; k < pts.length - 1; k++) {
     const [ax, az] = pts[k], [bx, bz] = pts[k + 1];
     const L = Math.hypot(bx - ax, bz - az);
-    const n = Math.max(1, Math.round(L / 0.62));
+    const n = Math.max(1, Math.round(L / (0.62 * sc)));
     for (let i = 0; i < n; i++) {
       const t = (i + 0.5) / n;
-      const r = 0.28 + rng() * 0.24;
+      const r = (0.28 + rng() * 0.24) * sc;
       const s = new THREE.IcosahedronGeometry(r, 0);
       s.scale(1.15, 0.62, 1.15);
       s.translate(ax + (bx - ax) * t + (rng() - 0.5) * 0.35, y + r * 0.2,
@@ -669,9 +669,21 @@ function addSteppers(rng, pts, y, beds) {
 // into an r-wide dome, each its own size, tilt and shade, so the silhouette
 // is knobbly and the surface breaks into facets the way a mum's mass of
 // flower heads does.
-function addMum(rng, x, z, r, y, leaves, hue = 0.09, sat = 0.80, light = 0.46) {
-  lumpyMass(rng, x, z, r, y, leaves, 0.78, () =>
+// Round 9: a flatter dome (sq 0.60) and muted tints -- the saturated
+// 0.80-sat gold/red read as "red dots in a row" from 40 ft.
+function addMum(rng, x, z, r, y, leaves, hue = 0.07, sat = 0.60, light = 0.40) {
+  lumpyMass(rng, x, z, r, y, leaves, 0.60, () =>
     hsl(hue + (rng() - 0.5) * 0.035, sat, light + (rng() - 0.5) * 0.12), 0.42);
+}
+// A dried hydrangea / spent mum clump: the same lumpy dome in muted
+// November colours -- cream (papery hydrangea heads), straw, rust.
+const DRIED_TINT = {
+  cream: [0.10, 0.22, 0.60], straw: [0.12, 0.34, 0.50], rust: [0.045, 0.48, 0.33],
+};
+function addDriedClump(rng, x, z, r, y, leaves, kind = 'straw') {
+  const [h, sat, l] = DRIED_TINT[kind] || DRIED_TINT.straw;
+  lumpyMass(rng, x, z, r, y, leaves, 0.72, () =>
+    hsl(h + (rng() - 0.5) * 0.03, sat, l + (rng() - 0.5) * 0.14), 0.40);
 }
 // The lumpy dome itself: `sq` squashes the whole mass, `tint()` gives each
 // blob its colour, `amt` is paintNoisy's per-vertex jitter.
@@ -783,6 +795,37 @@ function addBoxwood(rng, x, z, r, y, leaves, sp = 'boxwood', lumpy = false) {
   paintNoisy(g, hsl(h + (rng() - 0.5) * 0.03, s, l + rng() * 0.055), rng, 0.30);
   shadeVertical(g, y, y + r * sq * 1.86);
   leaves.push(g);
+}
+
+// A dark clipped hedge run between two world points: overlapping blobs
+// r = h/2, so the mass is h tall, with the top-lit / dark-base ramp.
+function addHedgeMass(rng, [[ax, az], [bx, bz]], h, leaves) {
+  const L = Math.hypot(bx - ax, bz - az), n = Math.max(2, Math.round(L / (h * 0.55)));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, r = h / 2 * (0.92 + rng() * 0.16);
+    const g = new THREE.IcosahedronGeometry(r, 1);
+    g.scale(0.85 + rng() * 0.2, 1.0, 0.85 + rng() * 0.2);
+    g.rotateY(rng() * 6.283);
+    const x = ax + (bx - ax) * t + (rng() - 0.5) * 0.8, z = az + (bz - az) * t + (rng() - 0.5) * 0.8;
+    g.translate(x, r * 0.9, z);
+    paintNoisy(g, hsl(0.33 + (rng() - 0.5) * 0.04, 0.30, 0.11 + rng() * 0.04), rng, 0.3);
+    shadeVertical(g, 0, r * 1.9);
+    leaves.push(g);
+  }
+}
+
+// Dark undergrowth: big low blobs (r 3-5 ft, squashed to ~55%) in a
+// near-black green, with the top-lit ramp, for the foot of a tree group.
+function addUndergrowth(rng, pts, leaves) {
+  for (const [x, z, r] of pts) {
+    const g = new THREE.IcosahedronGeometry(r, 1);
+    g.scale(0.9 + rng() * 0.3, 0.5 + rng() * 0.12, 0.9 + rng() * 0.3);
+    g.rotateY(rng() * 6.283);
+    g.translate(x, r * 0.42, z);
+    paintNoisy(g, hsl(0.32 + (rng() - 0.5) * 0.04, 0.24, 0.075 + rng() * 0.03), rng, 0.3);
+    shadeVertical(g, 0, r * 1.1);
+    leaves.push(g);
+  }
 }
 
 // Bare deciduous tree: a trunk and a recursive fork of thinner cylinders,
@@ -1026,7 +1069,7 @@ function concretePoly(pts, y, beds) {
   const g = new THREE.ShapeGeometry(shape);
   g.rotateX(-Math.PI / 2);
   g.translate(0, y, 0);
-  paint(g, hsl(0.10, 0.02, 0.57));
+  paintBlotch(g, CONC(), 3.2, 0.08);
   beds.push(g);
 }
 
@@ -1042,11 +1085,15 @@ function addMulchBed(rng, x0, z0, x1, z1, y, h, beds) {
 // Leaf litter / dead-grass flecks: small pale quads lying on the lawn so an
 // unlit lawn is not a void once the fixture spill reaches it. `keep(x, z)`
 // says where a fleck may land (lawn only — never concrete, rock or bed).
-function addLeafLitter(rng, n, x0, z0, x1, z1, keep, y, beds) {
+// `drifts` are [cx, cz, r, n]: flecks gather round a centre (density
+// falling off to the radius) -- loose piles against an edge, never a field.
+function addLeafLitter(rng, drifts, keep, y, beds) {
+  for (const [cx, cz, rad, n] of drifts) {
   let placed = 0, tries = 0;
   while (placed < n && tries < n * 6) {
     tries++;
-    const x = x0 + rng() * (x1 - x0), z = z0 + rng() * (z1 - z0);
+    const a = rng() * Math.PI * 2, dd = rng() * rng() * rad;
+    const x = cx + Math.cos(a) * dd, z = cz + Math.sin(a) * dd * 0.8;
     if (!keep(x, z)) continue;
     const w = 0.22 + rng() * 0.3, d = 0.18 + rng() * 0.25;
     const g = slab(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y);
@@ -1056,18 +1103,58 @@ function addLeafLitter(rng, n, x0, z0, x1, z1, keep, y, beds) {
     beds.push(g);
     placed++;
   }
+  }
 }
 
-function addConcrete(x0, z0, x1, z1, y, joints, beds) {
-  const g = slab(x0, z0, x1, z1, y, 2, 2);
-  paint(g, hsl(0.10, 0.02, 0.57));
-  beds.push(g);
-  const dk = hsl(0.10, 0.02, 0.42).clone();
-  for (const [jx, jz, jw, jd] of joints) {
-    const j = slab(jx, jz, jx + jw, jz + jd, y + 0.012);
-    paint(j, dk);
-    beds.push(j);
+//
+// ROUND 7: the pour is NEUTRAL cool grey (the sepia the critics saw was the
+// drive spot's warmth), subdivided at ~2.5 ft and painted with a 2-4 ft
+// blotch (paintBlotch, +-8%) so it is not a uniform speckle, and `lanes`
+// lays two faint darker tyre lanes toward the garage. Heights: base y,
+// lanes +0.008, joints +0.016.
+const CONC = () => hsl(0.60, 0.012, 0.57);
+function paintBlotch(geo, color, cell, amt, rng) {
+  const pos = geo.attributes.position, n = pos.count;
+  const arr = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    const f = 1 + (worldNoise(x + 57, z - 23, cell) - 0.5) * 2 * amt
+                + (worldNoise(x - 11, z + 71, cell * 0.45) - 0.5) * amt
+                + (rng ? (rng() - 0.5) * 0.04 : 0);
+    arr[i * 3] = color.r * f; arr[i * 3 + 1] = color.g * f; arr[i * 3 + 2] = color.b * f;
   }
+  geo.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+}
+function addConcrete(x0, z0, x1, z1, y, joints, beds, lanes = [], rng = null) {
+  const g = slab(x0, z0, x1, z1, y, Math.max(2, Math.round((x1 - x0) / 2.5)),
+                 Math.max(2, Math.round((z1 - z0) / 2.5)));
+  paintBlotch(g, CONC(), 3.2, 0.08, rng);
+  beds.push(g);
+  for (const [lx, lz0, lz1, lw] of lanes) {
+    const l = slab(lx - lw / 2, lz0, lx + lw / 2, lz1, y + 0.008, 2,
+                   Math.max(2, Math.round((lz1 - lz0) / 2.5)));
+    paintBlotch(l, hsl(0.60, 0.012, 0.535), 3.2, 0.06, rng);
+    beds.push(l);
+  }
+  for (const j of joints) addJoint(j, y, beds);
+}
+// A control joint that reads at 40 ft: a 0.10 ft groove 12% darker than the
+// pour, flanked by two 0.07 ft chamfers 10% lighter. `rect` is [x, z, w, d]
+// with the thin dimension 0.16 (the old solid dark stripe), which is where
+// the groove is centred.
+const JOINT_DK = () => hsl(0.60, 0.012, 0.50), JOINT_LT = () => hsl(0.60, 0.012, 0.63);
+function addJoint([jx, jz, jw, jd], y, beds) {
+  const along = jw >= jd ? 'x' : 'z';                 // the long axis
+  const cz = jz + jd / 2, cx = jx + jw / 2;
+  const strip = (off, w, col, yy) => {
+    const g = along === 'x'
+      ? slab(jx, cz + off - w / 2, jx + jw, cz + off + w / 2, yy)
+      : slab(cx + off - w / 2, jz, cx + off + w / 2, jz + jd, yy);
+    paint(g, col); beds.push(g);
+  };
+  strip(-0.085, 0.07, JOINT_LT(), y + 0.014);
+  strip(0.085, 0.07, JOINT_LT(), y + 0.014);
+  strip(0, 0.10, JOINT_DK(), y + 0.016);
 }
 
 // Flagstone stepping stones: irregular slabs, blue-grey, set proud of the
@@ -1465,13 +1552,13 @@ function paintCarNightSky(g) {
   const string = (x0, x1, y, step, h) => {
     const band = g.createLinearGradient(0, y - h * 2.2, 0, y + h * 2.2);
     band.addColorStop(0.00, 'rgba(255,196,128,0)');
-    band.addColorStop(0.35, 'rgba(255,214,150,0.55)');
-    band.addColorStop(0.50, 'rgba(255,238,205,0.95)');
-    band.addColorStop(0.65, 'rgba(255,214,150,0.55)');
+    band.addColorStop(0.35, 'rgba(255,214,150,0.72)');
+    band.addColorStop(0.50, 'rgba(255,238,205,1.0)');
+    band.addColorStop(0.65, 'rgba(255,214,150,0.72)');
     band.addColorStop(1.00, 'rgba(255,196,128,0)');
     g.fillStyle = band;
     g.fillRect(x0 - h * 2, y - h * 2.2, x1 - x0 + h * 4, h * 4.4);
-    g.fillStyle = 'rgba(255,248,230,0.45)';   // the modulation: bulbs, faintly
+    g.fillStyle = 'rgba(255,248,230,0.6)';    // the modulation: bulbs, faintly
     for (let x = x0; x <= x1; x += step) {
       g.beginPath(); g.arc(x, y, h * 0.9, 0, Math.PI * 2); g.fill();
     }
@@ -1504,7 +1591,7 @@ function paintCarNightSky(g) {
 // bulb is a hundred times brighter than the siding it hangs on; this is the
 // HDR headroom a canvas cannot hold, with the sky above authored near-black
 // to compensate. (8 with pinpoint bulbs sparkled; the streak below reads at 5.)
-const CAR_NIGHT_ENV_INTENSITY = 5;
+const CAR_NIGHT_ENV_INTENSITY = 2;   // round 9: a faint rim on roofline and shoulders, no more
 
 // Picks day or night sky for every car material. Runs every frame once a car
 // exists (a few dozen uniform writes): daylight.js re-sweeps the whole scene's
@@ -1520,17 +1607,33 @@ function applyCarSky() {
   if (!env) return;
   const intensity = night ? CAR_NIGHT_ENV_INTENSITY : getEnvIntensity();
   for (const m of carEnvMats) {
+    const u = m.userData;
+    if (u.plate) {
+      // The plate is RETRO-reflective: it throws the sconce light straight
+      // back at the camera, which is why in the photo it is a blown white
+      // slab with the characters all but washed out — the brightest small
+      // thing on the car. No sky for it; at night it simply emits its
+      // washed-out face, by day it is the plain decal lit by the scene.
+      m.emissiveIntensity = night ? PLATE_NIGHT_EMIT : 0;
+      continue;
+    }
+    if (u.plateRim) { m.envMapIntensity = 0; continue; }
+    if (u.plateGlow) { m.opacity = 0; continue; }   // round 9: no fill on the rear at all
     if (m.envMap !== env) { m.envMap = env; m.needsUpdate = true; }
     // polishCar marks what must NOT take the full night sky: chrome and
     // wheels reflect it at 5x as the brightest things on the car, which the
     // photo flatly contradicts — its tips and rims are lost in the dark.
-    const u = m.userData;
     m.envMapIntensity = intensity * (night && u.nightEnvScale != null ? u.nightEnvScale : 1);
     if (u.dayColor) {
       if (night && u.nightAlbedo != null) m.color.copy(u.dayColor).multiplyScalar(u.nightAlbedo);
       else m.color.copy(u.dayColor);
     }
     if (u.dayMetalness != null) m.metalness = night ? u.nightMetalness : u.dayMetalness;
+    if (u.dayRoughness != null) m.roughness = night ? u.nightRoughness : Math.max(u.dayRoughness, u.nightEnvScale === 0.02 ? 0.7 : 0.45);
+    if (u.flatAtNight) {
+      if (u.dayNormalScale) m.normalScale.copy(u.dayNormalScale).multiplyScalar(night ? 0 : 1);
+      if (u.dayBumpScale != null) m.bumpScale = night ? 0 : u.dayBumpScale;
+    }
   }
 }
 
@@ -1603,26 +1706,42 @@ function polishCar(root) {
         // quad exhaust tips, mirror caps, window brights): a whisper of the
         // sky, or the tips become four lamps. applyCarSky reads these.
         m.userData.dayColor = m.color.clone();
-        m.userData.nightEnvScale = wheel ? 0.04 : 0.12;
-        m.userData.nightAlbedo = wheel ? 0.3 : 0.45;
+        m.userData.nightEnvScale = wheel ? 0.02 : 0.03;
+        m.userData.nightAlbedo = wheel ? 0.15 : 0.3;
         // and at night the metal goes dielectric: a rim at metalness 0.75
         // still draws the drive spot as a bright striped drum however rough
         // it is made, because a metal's specular IS its colour at full F0.
         // At 0 it is a 4% dielectric gloss on near-black rubber — gone.
         m.userData.dayMetalness = m.metalness;
-        m.userData.nightMetalness = wheel ? 0 : 0.3;
+        m.userData.nightMetalness = 0;   // both: a 4% dielectric under the lights, nothing gleams
+        m.userData.dayRoughness = m.roughness;
+        m.userData.nightRoughness = 0.85;
         m.roughness = Math.max(m.roughness, wheel ? 0.7 : 0.45);
+        if (wheel) {
+          // and no relief: a ribbed sidewall under the drive spot is the
+          // second most obvious tell, so any normal/bump map is flattened
+          // at night (the ribs that are geometry stay; they are dark now)
+          m.userData.flatAtNight = true;
+          if (m.normalScale) m.userData.dayNormalScale = m.normalScale.clone();
+          m.userData.dayBumpScale = m.bumpScale;
+        }
         continue;
       }
       if (m.transparent && m.opacity < 1) {          // glass
-        m.roughness = Math.min(m.roughness, 0.03);
+        // roughness 0 and 2.5x the night sky: the rear glass was a uniform
+        // black; in the photo it carries the bulb string and the lit door
+        m.roughness = 0;
+        m.opacity = Math.min(m.opacity, 0.6);   // tinted, not opaque: headrests and the door read through
+        m.userData.nightEnvScale = 2.5;
       } else if (red) {                              // tail-lamp lenses
         // a lens is polished plastic: gloss enough that the eave string
         // glints off it as a point, the way it does off the rear glass
         m.roughness = Math.min(m.roughness, 0.1);
       } else if (lum < 0.08 && m.metalness >= 0.5) { // paint, trim, brightwork
-        m.roughness = Math.min(m.roughness, 0.22);
-        if ('clearcoat' in m && m.clearcoat > 0) m.clearcoatRoughness = Math.min(m.clearcoatRoughness, 0.06);
+        // 0.22 / 0.06 drew the bulb band as a hard stripe; a touch rougher
+        // and the streak diffuses along the panel the way the photo's does
+        m.roughness = Math.min(Math.max(m.roughness, 0.35), 0.4);
+        if ('clearcoat' in m && m.clearcoat > 0) m.clearcoatRoughness = 0.25;
       }
     }
   });
@@ -1689,6 +1808,82 @@ function carContactShadow(w, d, opacity = 0.85) {
 const PLATE_TEXT = 'R53-PNS';
 const PLATE_W = 1.0, PLATE_H = 0.5;   // 12 x 6 in, the North American plate
 let plateTex = null;                  // one canvas, shared by every instance
+let nightPlateTex = null;             // the retro-reflective, washed-out face
+// 2.2 blew it to a text-less white slab, which no camera exposing for the
+// eave bulbs would do; 0.6 keeps the face at ~150-180/255 warm-white, under
+// the bloom threshold, with the characters clearly dark.
+// Round 8: NO emissive at all. Even 0.6 read as "a uniformly lit lightbox";
+// the real plate is a dim warm-grey slab lit only by its lamp's spill, its
+// characters dark, its frame visible. Kept as a constant so the retro-
+// reflective look can be dialled back in if a lit driveway ever calls for it.
+// ...but 0 with the sconces dimmed left the plate unreadable (~50/255). The
+// plate LAMP lights it, and since that lamp is faked, its light on the face
+// is carried as a texture-modulated emissive: the day decal itself as the
+// emissive map at 0.35, so the face lands ~110/255 warm-grey and the
+// characters and frame stay as dark as they are printed. Not a lightbox.
+// Round 9: back to 0. With the lighting builder's wash pulled off the car's
+// rear there is no source for a lit plate; the photo's is a dim grey
+// rectangle at ~40-60/255, and that is what an unlit neutral face gives.
+const PLATE_NIGHT_EMIT = 0;
+
+// The plate as the camera sees it at night: retro-reflective sheeting throws
+// the sconce light back along the line of sight, so the face goes to white
+// and the printed characters survive only as faint grey shapes.
+function makeNightPlateTexture() {
+  if (nightPlateTex) return nightPlateTex;
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = '#efe6cf';   // warm: the sheeting returns the sconces' colour
+  g.fillRect(0, 0, 1024, 512);
+  // the sheeting's hot centre: a soft bloom that fades toward the rim
+  const bloom = g.createRadialGradient(512, 256, 60, 512, 256, 620);
+  bloom.addColorStop(0, 'rgba(255,249,236,1)');
+  bloom.addColorStop(1, 'rgba(226,216,192,1)');
+  g.fillStyle = bloom;
+  g.fillRect(0, 0, 1024, 512);
+  g.strokeStyle = 'rgba(0,0,0,0.10)';
+  g.lineWidth = 12;
+  g.strokeRect(6, 6, 1012, 500);
+  g.fillStyle = '#3f3b34';   // the characters: ~25% grey, clearly legible
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = '700 236px "Arial Narrow", "Helvetica Neue", Arial, sans-serif';
+  if ('letterSpacing' in g) g.letterSpacing = '14px';
+  g.fillText(PLATE_TEXT, 512, 258);
+  // blur, as the day face is: retro-reflection blooms past the letter edges
+  const s = document.createElement('canvas');
+  s.width = 256; s.height = 128;
+  s.getContext('2d').drawImage(c, 0, 0, 256, 128);
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(s, 0, 0, 1024, 512);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  if (renderer) tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  nightPlateTex = tex;
+  return tex;
+}
+
+// The plate lamp's spill: a small warm pool on the bumper around the plate.
+// Faked as an additive quad rather than a PointLight -- adding a light after
+// boot recompiles every shader in the scene -- and driven night-only by
+// applyCarSky through `plateGlow`.
+let plateGlowTex = null;
+function makePlateGlowTexture() {
+  if (plateGlowTex) return plateGlowTex;
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(128, 44, 6, 128, 44, 120);
+  grad.addColorStop(0.00, 'rgba(255,220,170,0.9)');
+  grad.addColorStop(0.35, 'rgba(255,205,150,0.35)');
+  grad.addColorStop(1.00, 'rgba(255,190,130,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 256, 128);
+  plateGlowTex = new THREE.CanvasTexture(c);
+  return plateGlowTex;
+}
 
 function makePlateTexture() {
   if (plateTex) return plateTex;
@@ -1706,16 +1901,25 @@ function makePlateTexture() {
   // sconces it should sit a step DARKER than the door behind it.
   // (Round 5 took it down another ~1.5 stops: nothing on the car's rear may
   // be brighter than the house lights, and under the sconces it still was.)
-  const grad = g.createLinearGradient(0, 0, 0, 512);
-  grad.addColorStop(0.00, '#6e6547');
-  grad.addColorStop(0.50, '#797260');
-  grad.addColorStop(1.00, '#7f7b70');
+  // Round 8: a warm grey around 100/255 — the face is REFLECTIVE, not lit,
+  // and under the plate lamp alone that is where it sits — with a real
+  // frame: a dark outer rim, a light inner bevel line, then the face.
+  const grad = g.createLinearGradient(0, 0, 0, 512);   // NEUTRAL grey: "not amber"
+  grad.addColorStop(0.00, '#7c7b78');
+  grad.addColorStop(0.50, '#868582');
+  grad.addColorStop(1.00, '#8b8a87');
   g.fillStyle = grad;
   g.fillRect(0, 0, 1024, 512);
-  // rolled edge, read as a thin dark rim
-  g.strokeStyle = 'rgba(0,0,0,0.22)';
-  g.lineWidth = 12;
-  g.strokeRect(6, 6, 1012, 500);
+  // the frame: black-plastic surround, then the plate's own rolled bevel
+  g.strokeStyle = '#1a1a1a';
+  g.lineWidth = 34;
+  g.strokeRect(17, 17, 990, 478);
+  g.strokeStyle = 'rgba(255,255,255,0.28)';   // bevel catch-light
+  g.lineWidth = 6;
+  g.strokeRect(40, 40, 944, 432);
+  g.strokeStyle = 'rgba(0,0,0,0.35)';         // and its shadow side
+  g.lineWidth = 4;
+  g.strokeRect(46, 46, 932, 420);
   g.fillStyle = '#1c1b18';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
@@ -1780,8 +1984,16 @@ function mountPlate(g, pivot, sign, heights, lbox) {
       // draw the shoulder line on gloss paint, and on a matte plate it only
       // added a flat glow that read as emissive.
       const rim = new THREE.MeshStandardMaterial({ color: 0xa8a28c, roughness: 0.8, metalness: 0 });
+      rim.userData.plateRim = true;
+      // emissiveMap is wired from the start (a null -> texture flip would
+      // recompile the shader); applyCarSky drives emissiveIntensity 0 by day
+      // and PLATE_NIGHT_EMIT at night, and swaps `map` to the washed face.
       const face = new THREE.MeshStandardMaterial({
-        map: makePlateTexture(), roughness: 0.75, metalness: 0 });
+        map: makePlateTexture(), roughness: 0.75, metalness: 0,
+        emissive: 0xffe2b8, emissiveMap: makePlateTexture(), emissiveIntensity: 0 });
+      face.userData.plate = true;
+      carEnvMats.add(face);
+      carEnvMats.add(rim);
       // BoxGeometry material order: +x -x +y -y +z -z — the text is on +z
       const plate = new THREE.Mesh(geo, [rim, rim, rim, rim, face, rim.clone()]);
       plate.userData.ownGeometry = true;
@@ -1791,6 +2003,20 @@ function mountPlate(g, pivot, sign, heights, lbox) {
         p.clone().add(n), p, new THREE.Vector3(0, 1, 0));   // +z of the box = n
       plate.quaternion.setFromRotationMatrix(m);
       g.add(plate);
+      // the lamp's pool, centred a little above the plate, riding just off
+      // the panel so it never z-fights the plate or the bumper
+      const glow = new THREE.Mesh(
+        new THREE.PlaneGeometry(PLATE_W * 1.9, PLATE_H * 2.2),   // a SMALL lamp's pool, not a floodlit tailgate
+        new THREE.MeshBasicMaterial({
+          map: makePlateGlowTexture(), color: 0xffc990, transparent: true, opacity: 0,
+          blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.userData.ownGeometry = true;
+      glow.material.userData.plateGlow = true;
+      glow.position.copy(p).addScaledVector(n, 0.05).add(new THREE.Vector3(0, PLATE_H * 0.55, 0));
+      glow.quaternion.copy(plate.quaternion);
+      glow.renderOrder = 3;
+      g.add(glow);
+      carEnvMats.add(glow.material);
       return true;
     }
   }
@@ -2098,16 +2324,22 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   //    photograph shows one crossing the drive about 21 ft short of the kerb
   //    and plain concrete from there to the camera's feet, so the last joint
   //    sits at street - 21.4 and the rest step back 12.5 ft from it.
+  //    ROUND 7: three transverse joints -- 10 ft off the garage, mid-drive,
+  //    and the one 21.4 ft short of the kerb the night photo shows.
   const joints = [];
-  for (let z = L.street - 21.4; z > L.houseF + 6; z -= 12.5) {
+  for (const z of [L.houseF + 10, L.houseF + 29, L.street - 21.4]) {
     joints.push([L.driveL, z, L.driveR - L.driveL, 0.16]);
   }
   joints.push([(L.driveL + L.driveR) / 2 - 0.08, L.houseF, 0.16, L.street - L.houseF]);
+  // two faint tyre-worn lanes into the west bay (the car's track, 5.2 ft)
+  const laneX = (L.driveL + L.driveR) / 2 - 5.9;
+  const lanes = [[laneX - 2.6, L.houseF + 0.5, L.street - 22, 1.5],
+                 [laneX + 2.6, L.houseF + 0.5, L.street - 22, 1.5]];
   // lo + 0.05: above the sidewalk (lo + 0.03) it crosses at the street end,
   // so the crossing reads as driveway, and above the rock beds' gravel
   // (lo + 0.045) that abut its west edge.
   const CONC_Y = L.lo + 0.05;
-  addConcrete(L.driveL, L.houseF, L.driveR, L.street - 7.6, CONC_Y, joints, beds);
+  addConcrete(L.driveL, L.houseF, L.driveR, L.street - 7.6, CONC_Y, joints, beds, lanes, rng);
   //    The walk. Not a rectangle in front of the steps: demo/exterior_night.jpg
   //    (projected through the night_front pose) shows the concrete west of
   //    the drive as a long FAN — from the steps' full width at the pad face
@@ -2121,17 +2353,22 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   //    x 15.6 at z 58) and then a 4.4 ft band beside the drive that meets it
   //    at a shallow angle (cut from z 63.5 to 68). fanX(z) is the landing's
   //    west edge, which the rock strip, steppers and planter hug.
-  const walkEnd = L.padF + 27.0;                 // z 68: where the band's cut meets the drive
-  const walkW = L.stepW - 0.4;                   // x 11.6: the landing's west corner
+  //    ROUND 10: the band-and-cut ending of round 6 "dead-ended into lawn
+  //    with a hard step-off". The west edge is ONE straight diagonal again,
+  //    from the steps' west corner all the way to the drive edge at z 72.5
+  //    (the same slope the landing had), so the slab merges into the drive
+  //    with no lawn between throat and drive, at the drive's own height,
+  //    with a control joint scored along the seam at x = driveL.
+  const walkW = L.stepW - 0.4;                   // x 11.6: the slab's west corner
   const walkTopZ = L.stepF + 0.3;                // z 44.8: just off the bottom step
-  const bandW = 4.4, bandTop = L.stepF + 13.5;   // z 58: landing -> band
-  const fanX = (z) => z <= bandTop
-    ? walkW + (L.driveL - bandW - walkW) * Math.max(0, (z - walkTopZ) / (bandTop - walkTopZ))
-    : L.driveL - bandW;
+  const bandW = 4.4, bandTop = L.stepF + 13.5;   // (x 15.6 at z 58) fixes the diagonal's slope
+  const fanSlope = (L.driveL - bandW - walkW) / (bandTop - walkTopZ);
+  const walkEnd = walkTopZ + (L.driveL - walkW) / fanSlope;   // z 72.5: where the edge meets the drive
+  const fanX = (z) => Math.min(L.driveL, walkW + fanSlope * Math.max(0, z - walkTopZ));
   concretePoly([
-    [walkW, L.padF + 0.4], [L.driveL, L.padF + 0.4], [L.driveL, walkEnd],
-    [L.driveL - bandW, walkEnd - 4.5], [L.driveL - bandW, bandTop], [walkW, walkTopZ],
+    [walkW, L.padF + 0.4], [L.driveL, L.padF + 0.4], [L.driveL, walkEnd], [walkW, walkTopZ],
   ], CONC_Y, beds);                              // same pour as the drive
+  addJoint([L.driveL - 0.08, L.padF + 0.4, 0.16, walkEnd - L.padF - 0.4], CONC_Y, beds);
   // A broad TWO-RISER platform in front of the shell's own narrow steps
   // (x 11..19.5): lower tread top at lo + 0.86, upper at lo + 1.66, the
   // porch edge at 2.13 making the last lip. Both boxes enclose the shell's
@@ -2140,18 +2377,32 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   // within a hair of the platform tops and drew as faint bands across them)
   // Into `masses`, not `beds`: the beds bucket's grit map is UV'd from world
   // X/Z, so a riser face samples one line of it and streaks top to bottom.
+  // Round 9: the TREAD is a separate, lighter top plate (L 0.68 over the
+  // riser box's 0.54) so tread and riser read as two planes under a wash.
+  // Round 10: treads at L 0.74, risers at 0.58, and a dark nosing shadow
+  // line (0.14 ft, L 0.30) along the foot of each riser, so the front reads
+  // as two risers and three lit treads rather than one slab.
   for (const [zc, zd, h] of [[L.stepF + 0.7, 3.2, 0.92], [L.stepF - 2.0, 2.4, 1.72]]) {
-    const step = boxAt(8.6, h, zd, (L.stepW + L.stepE) / 2 - 0.5, L.lo, zc);
-    paintNoisy(step, hsl(0.10, 0.02, 0.60), rng, 0.06); masses.push(step);
+    const cx = (L.stepW + L.stepE) / 2 - 0.5;
+    const step = boxAt(8.6, h, zd, cx, L.lo, zc);
+    paintNoisy(step, hsl(0.60, 0.012, 0.58), rng, 0.06); masses.push(step);
+    const tread = slab(cx - 4.3, zc - zd / 2, cx + 4.3, zc + zd / 2, L.lo + h + 0.004);
+    paintNoisy(tread, hsl(0.60, 0.012, 0.74), rng, 0.04); masses.push(tread);
+  }
+  {
+    const cx = (L.stepW + L.stepE) / 2 - 0.5;
+    // foot of the lower riser, on the walk; foot of the upper riser, on the lower tread
+    for (const [z, yy] of [[L.stepF + 2.3, CONC_Y + 0.006], [L.stepF - 0.8, L.lo + 0.92 + 0.008]]) {
+      const sh = slab(cx - 4.3, z, cx + 4.3, z + 0.14, yy);
+      paint(sh, hsl(0.60, 0.012, 0.30)); masses.push(sh);
+    }
   }
   // and the same joint treatment: scored across the fan every ~5.5 ft, so
   // that once the path light and porch pools land on it the walk reads as
   // concrete with a shape, not a grey wedge
-  const jointDk = hsl(0.10, 0.02, 0.42).clone();
   for (let z = walkTopZ + 4.5; z < walkEnd - 3; z += 5.5) {
     const jx = fanX(z) + 0.15;
-    const j = slab(jx, z, L.driveL - 0.2, z + 0.16, CONC_Y + 0.012);
-    paint(j, jointDk); beds.push(j);
+    addJoint([jx, z, L.driveL - 0.2 - jx, 0.16], CONC_Y, beds);
   }
 
   // 2. Where the lot ends: sidewalk, verge, curb, carriageway, apron, mailbox.
@@ -2200,18 +2451,39 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   // 0.2 ft proud of the lawn; everything planted in it stands on mulchY.
   const mulchY = L.lo + 0.2;
   addMulchBed(rng, L.houseW - 1.4, bedF0, L.stepW - 0.8, bedF1, L.lo, 0.2, beds);
-  const stripEnd = L.stepF + 13.5;                        // z 58
-  // THREE pale steppers set on a diagonal across the strip (0.9 / 1.45 /
-  // 2.0 ft off the walk edge), first, so the pebble field is kept off them
-  const stepDiscs = addSteppers(rng, [L.stepF + 5.0, L.stepF + 8.6, L.stepF + 12.2].map((z, i) =>
-                                  [fanX(z) - 0.9 - i * 0.55, z]), rockY, beds);
-  // the strip: ~3.5 ft of pale river rock along the walk's west edge from
-  // the mulch bed to z 58, widening at its far end round the uplight
+  // ROUND 7: the rock is a BAND now, not a patch -- constant 3 ft width,
+  // measured square to the landing's west edge, running with that edge from
+  // the foot of the steps (z 47.4) to z 57.5 where the landing meets the
+  // drive-side band. Inner edge = the concrete; outer edge = a raised cobble
+  // rim against the lawn, so the shape reads when only half of it is lit.
+  // Two 18 in round pale steppers sit on its centreline at thirds.
+  const stripEnd = L.stepF + 13.0;                        // z 57.5
+  const bandTopZ = bedF1 - 0.2;                           // z 47.4
+  const ex = L.driveL - bandW - walkW, ez = bandTop - walkTopZ;  // edge direction
+  const eL = Math.hypot(ex, ez), nx = -ez / eL, nz = ex / eL;    // unit normal, west
+  const BAND_W = 3.0;
+  const stepDiscs = addSteppers(rng, [1 / 3, 2 / 3].map((t) => {
+    const z = bandTopZ + (stripEnd - bandTopZ) * t;
+    return [fanX(z) + nx * BAND_W * 0.5, z + nz * BAND_W * 0.5];
+  }), rockY, beds);
+  const bandOuter = [[fanX(bandTopZ) + nx * BAND_W, bandTopZ + nz * BAND_W],
+                     [fanX(stripEnd) + nx * BAND_W, stripEnd + nz * BAND_W]];
   addBedPoly(rng, [
-    [L.stepW - 0.8, bedF1 - 0.2], [fanX(bedF1 - 0.2), bedF1 - 0.2],
-    [fanX(stripEnd), stripEnd], [L.stepW - 1.0, stripEnd + 0.6],
-    [L.stepW - 3.4, bedF1 + 1.5], [L.stepW - 3.4, bedF1 - 0.2],
-  ], rockY, beds, 11, stepDiscs, 0.22, true);
+    [fanX(bandTopZ), bandTopZ], [fanX(stripEnd), stripEnd],
+    bandOuter[1], bandOuter[0],
+  ], rockY, beds, 13, stepDiscs, 0.17, true);
+  // The lawn-side edge: a dark 0.3 ft trench line under a run of SMALL flat
+  // stones (sc 0.42). Round 8's rim stones were 0.5 ft cobbles and the
+  // band's near end read as "a single rock pile"; the band must stay flat
+  // at grade with two parallel edges, and the dark line is what draws the
+  // outer edge straight.
+  {
+    const [[ax, az], [bx, bz]] = bandOuter;
+    const L2 = Math.hypot(bx - ax, bz - az), ang = Math.atan2(-(bz - az), bx - ax);
+    const trench = boxAt(L2, 0.03, 0.32, (ax + bx) / 2, rockY - 0.01, (az + bz) / 2, ang);
+    paint(trench, hsl(0.07, 0.25, 0.20)); beds.push(trench);
+  }
+  addCobbleRun(rng, [bandOuter[0], bandOuter[1]], rockY, beds, 0.42);
   // the uplight at the strip's far end, lighting the shrubs above it. The
   // fixture body only — eavelights.js puts the light here: x 11.6, z 57.0,
   // base y lo + 0.045 (0.235), 0.42 ft tall.
@@ -2229,21 +2501,43 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   // from the night photograph (left to right): a big pale rounded shrub, the
   // lit ORANGE mum, a dark-red mum, a low boxwood, a straw-coloured
   // ornamental grass, then the dark-red mum PLANTER hard against the steps.
-  const SP = ['boxwood', 'boxwood', 'euonymus', 'juniper', 'yew'];
-  for (let x = L.houseW - 0.6; x < L.stepW - 10.5; x += 1.55 + rng() * 0.85) {
-    addBoxwood(rng, x, bedF0 + 1.2 + rng() * 1.5, 0.9 + rng() * 1.2, mulchY,
-               leaves, SP[Math.floor(rng() * SP.length)]);
+  // ROUND 8: the porch's WEST half is a long low bed of DRIED hydrangea and
+  // mum clumps (muted rust / straw / cream, the night photograph's November
+  // bed), not the July boxwood-and-salvia row -- five varied clumps with
+  // straw tufts between, and a scatter of irregular cobbles along the
+  // mulch's front edge.
+  const SP = ['boxwood', 'boxwood', 'euonymus', 'juniper', 'yew'];   // still used by the east bed
+  const DRIED = ['cream', 'straw', 'rust', 'straw', 'cream', 'rust'];
+  let di = 0;
+  for (let x = L.houseW - 0.2; x < L.stepW - 10.5; x += 2.6 + rng() * 1.2) {
+    addDriedClump(rng, x, bedF0 + 1.4 + rng() * 2.2, 1.05 + rng() * 0.55, mulchY,
+                  leaves, DRIED[di++ % DRIED.length]);
+    if (rng() < 0.6) addGrassClump(rng, x + 1.3, bedF0 + 0.9 + rng() * 1.2, mulchY, leaves, true);
   }
-  for (let x = L.houseW + 1.5; x < L.stepW - 11; x += 3.4 + rng() * 2.4) {
-    addPerennial(rng, x, bedF1 - 1.4 - rng() * 0.9, mulchY, leaves,
-                 4 + Math.floor(rng() * 4), 2.6);
+  for (let x = L.houseW - 0.8; x < L.stepW - 1.5; x += 0.9 + rng() * 0.9) {
+    const r = 0.16 + rng() * 0.16;
+    const c = new THREE.IcosahedronGeometry(r, 0);
+    c.scale(1 + rng() * 0.5, 0.55, 1 + rng() * 0.5);
+    c.rotateY(rng() * 6.283);
+    c.translate(x, mulchY + r * 0.2, bedF1 - 0.35 - rng() * 0.5);
+    paint(c, hsl(0.58 + rng() * 0.05, 0.05, 0.36 + rng() * 0.3)); beds.push(c);
   }
   // (round 4: all lumpy clusters, not smooth spheres; mums rust and gold)
   addBoxwood(rng, L.stepW - 9.0, bedF0 + 2.6, 1.6, mulchY, leaves, 'euonymus', true);
-  addMum(rng, L.stepW - 6.4, bedF0 + 3.4, 1.05, mulchY, leaves, 0.105, 0.85, 0.46); // gold
-  addMum(rng, L.stepW - 4.3, bedF0 + 2.6, 1.0, mulchY, leaves, 0.045, 0.72, 0.30); // rust
+  addMum(rng, L.stepW - 6.4, bedF0 + 3.4, 1.2, mulchY, leaves, 0.075, 0.62, 0.40); // burnt orange
+  addMum(rng, L.stepW - 4.3, bedF0 + 2.6, 1.1, mulchY, leaves, 0.045, 0.55, 0.32); // rust
+  // and green low shrubs mixed through the dried clumps, so the bed is not a
+  // row of one thing
+  addBoxwood(rng, L.houseW + 3.2, bedF0 + 3.6, 0.85, mulchY, leaves, 'boxwood', true);
+  addBoxwood(rng, L.houseW + 8.4, bedF0 + 1.6, 0.95, mulchY, leaves, 'juniper', true);
   addBoxwood(rng, L.stepW - 2.5, bedF0 + 3.4, 0.9, mulchY, leaves, 'boxwood', true);
   addGrassClump(rng, L.stepW - 1.2, bedF0 + 1.9, mulchY, leaves, true);
+  // and four dry tufts between and behind the mums, so the bed is a mass
+  // of clumps rather than three balls in a row
+  for (const [tx, tz] of [[L.stepW - 7.6, bedF0 + 1.5], [L.stepW - 5.4, bedF0 + 1.3],
+                          [L.stepW - 3.4, bedF0 + 1.7], [L.stepW - 5.3, bedF0 + 4.4]]) {
+    addGrassClump(rng, tx, tz, mulchY, leaves, true);
+  }
   {
     // the planter at the foot of the steps, on the lawn just west of the
     // landing (clear of the new step platform, which reaches z 46.8):
@@ -2252,20 +2546,26 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
     const px = fanX(L.stepF + 2.8) - 0.9, pz = L.stepF + 2.8;
     const pot = cylAt(0.5, 0.38, 0.55, 10, px, L.lo + 0.02, pz);
     paint(pot, _c.setHex(0x2a2320)); props.push(pot);
-    addMum(rng, px, pz, 0.62, L.lo + 0.47, leaves, 0.03, 0.62, 0.27);
+    addMum(rng, px, pz, 0.62, L.lo + 0.47, leaves, 0.04, 0.50, 0.30);
   }
   // Lawn, not rock, between the strip's end and the street: the drive-side
   // border the earlier rounds ran to the sidewalk is in neither photograph.
-  // the two cast geese, west of the porch steps
-  addGoose(rng, L.stepW - 3.6, bedF1 - 0.9, mulchY, 0.5, props);
-  addGoose(rng, L.stepW - 2.6, bedF1 - 1.3, mulchY, 0.9, props);
+  // (the two cast geese are gone from the night frame: with the pot beside
+  // them they read as "three identical candle lanterns" from 40 ft)
   // Leaf litter and dead grass on the lawn between the bed, the strip and
   // the drive, and along the drive's west edge toward the street — so the
   // lawn has something to catch the fixture spill instead of being a void.
-  addLeafLitter(rng, 260, L.houseW - 4, bedF1, L.driveL, L.street - 12.5, (x, z) => {
-    if (z < bedF1 + 0.3 && x < L.stepW - 0.6) return false;      // the mulch bed
-    if (z < stripEnd + 1.0 && x > L.stepW - 3.8) return false;    // the strip
-    return x < fanX(z) - 0.3;                                    // never the walk
+  // (round 7: ~100 flecks in five drifts against the bed edge and the
+  // band's lawn side; the 260-fleck field read as a brown plane with a
+  // hard edge along the drive)
+  addLeafLitter(rng, [
+    [L.houseW + 6, bedF1 + 2.2, 3.6, 24], [L.houseW - 0.5, bedF1 + 1.8, 3.0, 16],
+    [L.stepW - 4.2, L.stepF + 7.5, 2.6, 22], [L.stepW - 1.5, L.stepF + 13.5, 2.6, 20],
+    [L.stepW - 6.5, L.stepF + 12, 2.2, 14],
+  ], (x, z) => {
+    if (z < bedF1 + 0.3 && x < L.stepW - 0.6) return false;       // the mulch bed
+    if (z < stripEnd + 1.4 && x > fanX(z) + nx * (BAND_W + 0.4)) return false; // the band
+    return x < fanX(z) - 0.3;                                     // never the walk
   }, L.lo + 0.02, beds);
 
   // 5. The EAST bed: the rock border down the far side of the drive, running
@@ -2281,8 +2581,8 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   addBoxwood(rng, L.driveR + 1.9, L.houseF + 4.4, 1.05, L.lo + 0.04, leaves, 'juniper', true);
   addBoxwood(rng, L.driveR + 3.4, L.houseF + 7.6, 1.2, L.lo + 0.04, leaves, 'boxwood', true);
   addBoxwood(rng, L.driveR + 1.7, L.houseF + 10.4, 0.9, L.lo + 0.04, leaves, 'euonymus', true);
-  addUplightCan(L.driveR + 0.9, L.houseF + 5.9, L.lo + 0.04, props);
-  addUplightCan(L.driveR + 1.1, L.houseF + 9.2, L.lo + 0.04, props);
+  // (no fixture cans here: the only can in the yard is the one at the rock
+  // band's end -- repeated identical fixtures were the round-7 tell)
   for (let z = L.houseF + 6; z < L.street - 21; z += 3.0 + rng() * 1.8) {
     const x = L.driveR + 3.0 + rng() * 6.0;
     if (rng() < 0.6) {
@@ -2342,8 +2642,11 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   // centres it on the west bay, z 65.8 sizes it. Earlier rounds sited it
   // against a pose whose house was ~10% too large and 50 px right, which put
   // the car 4 ft too far west and 5 ft too close — re-solve if the pose moves.
+  // Round 7 re-measured the dark silhouette row by row against the photo at
+  // 900x1200: rear width 230 vs 216 px (6.5% wide), roof top 7 px high --
+  // i.e. ~1.1 ft too close. z 64.7 now; x unchanged (left edges agreed).
   carSpot = { x: L.driveL + 6.9, y: L.lo + 0.02,
-              z: L.houseF + 36.3, ry: 0 };
+              z: L.houseF + 35.2, ry: 0 };
   // The bin stands just past the garage's EAST corner ("Front of the house"
   // x 1195), not in front of the door.
   addBin(L.driveR + 0.9, L.houseF + 0.9, props);
@@ -2354,7 +2657,7 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
     const urn = cylAt(0.85, 0.55, 1.25, 10, ux, L.lo, uz);
     paint(urn, _c.setHex(0x24252a)); props.push(urn);
   }
-  addMum(rng, L.driveL + 1.0, L.houseF + 2.2, 0.95, L.lo + 1.05, leaves, 0.085, 0.85, 0.46);
+  addMum(rng, L.driveL + 1.0, L.houseF + 2.2, 0.95, L.lo + 1.05, leaves, 0.075, 0.65, 0.42);
 
   // 8. Framing trees. The front photograph is framed top-left and top-right by
   //    mature canopies overhanging the drive; without them the house reads as
@@ -2376,10 +2679,45 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   addBareTree(rng, L.houseW - 12.5, L.houseF + 3.5, 34, trunks);
   addBareTree(rng, L.houseW - 7.5, L.houseF + 11.0, 29, trunks);
   addBareTree(rng, L.houseW - 11.0, L.houseF + 15.5, 26, trunks);
+  // and a dark undergrowth mass beneath and among those trunks (r 3-5 ft
+  // blobs), so the blue landscape light lands on a mass, not on sticks
+  addUndergrowth(rng, [
+    [L.houseW - 15.0, L.houseF + 1.5, 4.6], [L.houseW - 10.0, L.houseF + 6.0, 3.8],
+    [L.houseW - 13.5, L.houseF + 10.5, 4.2], [L.houseW - 7.0, L.houseF + 14.0, 3.4],
+    [L.houseW - 12.0, L.houseF + 17.5, 3.6], [L.houseW - 4.5, L.houseF + 9.0, 3.0],
+  ], leaves);
   addBareTree(rng, L.padE + 6.0, L.houseF + 4.5, 31, trunks);
   addBareTree(rng, L.padE + 11.0, L.houseF + 13.0, 27, trunks);
   addBoxwood(rng, L.houseW - 8.0, L.padF + 2.5, 1.6, L.lo, leaves, 'euonymus', true);
   addBoxwood(rng, L.houseW - 5.0, L.padF + 4.5, 1.3, L.lo, leaves, 'juniper', true);
+  // 8d. The BACKGROUND tree line: bare crowns behind and beside the house
+  //     that show above the garage ridge (18.2 ft) at right and behind the
+  //     porch roof at left from night_front -- the photograph's sky is not
+  //     a void, it has silhouettes bleeding into a low glow. An irregular
+  //     row: beside the house (x outside the block) at z -12..-30, behind
+  //     it (x across the block) at z -32..-44 so nothing stands in a room;
+  //     30-45 ft tall, 9-14 ft apart, plus two big crowns east of the
+  //     garage. About 1,500 five-sided cylinders in the one bark draw call.
+  //     Behind the GARAGE wing they stand closer (z -14..-24, right behind
+  //     its rear wall) and taller: at z -38 a 40 ft crown 128 ft out sits
+  //     only ~60 px above the garage ridge and vanished into the roofline.
+  for (let x = L.houseW - 24; x < L.padE + 26; x += 9 + rng() * 5) {
+    const inMain = x > L.houseW - 3 && x < L.blockE + 1;
+    const inWing = x >= L.blockE + 1 && x < L.padE + 3;
+    const z = inMain ? L.blockN - 8 - rng() * 12
+            : inWing ? L.wingN - 3 - rng() * 10 : L.wingN - 1 - rng() * 18;
+    const h = inWing ? 38 + rng() * 8 : 30 + rng() * 15;
+    addBareTree(rng, x + (rng() - 0.5) * 3, z, h, trunks);
+  }
+  addBareTree(rng, L.padE + 11.5, L.houseF + 6.5, 42, trunks);
+  addBareTree(rng, L.padE + 19.5, L.houseF - 5.5, 38, trunks);
+  // 8c. Dark hedge masses that BURY the horizon at both frame edges (the
+  //     whole-frame critic: "no flat ground plane meets a flat sky"). From
+  //     night_front the eye is 4 ft up, so anything under ~5 ft cannot cross
+  //     the horizon line; these are 6.5-8 ft. West: a diagonal run on the
+  //     lawn beyond the bed; east: a line up the garage's east flank.
+  addHedgeMass(rng, [[L.houseW - 4.0, L.padF + 11], [L.houseW - 13.0, L.padF + 22]], 6.5, leaves);
+  addHedgeMass(rng, [[L.padE + 4.0, L.houseF + 3.5], [L.padE + 9.5, L.houseF - 11]], 8.0, leaves);
 
   // 9. The neighbouring house at the west, two garage doors facing the street
   addNeighbour(L.driveL - 78, L.houseF + 7, 26, 30, 18, 0, 2, masses, rng);
@@ -2787,7 +3125,10 @@ function buildYard() {
   if (trunks.length) {
     yard.add(new THREE.Mesh(
       BufferGeometryUtils.mergeGeometries(flat(trunks), false),
-      new THREE.MeshStandardMaterial({ color: 0x6d4c33, roughness: 1 })));
+      // Near-black bark (albedo ~0.03). Every tree in this bucket is a bare
+      // winter silhouette now (PLANT_TREES is off), and at 0x6d4c33 the
+      // west group rendered as "bare white stick geometry lit blue".
+      new THREE.MeshStandardMaterial({ color: 0x0c0b0a, roughness: 1 })));
   }
   if (leaves.length) {
     yard.add(new THREE.Mesh(
