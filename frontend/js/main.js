@@ -18,6 +18,7 @@ import { initDrag, isTransforming, setSelected } from './drag.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
 import { initYardEditor, isYardEditorOpen, yardPickTargets, selectYardPiece } from './yard.js';
+import { initAddKit } from './addkit.js';
 import { initDaylight, settleDaylight } from './daylight.js';
 import { initEnvironment, setEnvironmentData, setYardModels } from './environment.js';
 import { initWeather } from './weather.js';
@@ -427,6 +428,7 @@ async function main() {
   api.getModels().then(setYardModels).catch(() => {});
   initFocus();
   initDrag();
+  initAddKit();      // the add tray, shared by the room editor and the yard's
   initUI({ structure, house, onReload: reloadHouse });
   initRoomPanel({ house });
   initPlanner({ getStructure: () => structure, onClose: reloadHouse });

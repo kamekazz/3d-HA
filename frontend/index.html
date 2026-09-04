@@ -104,22 +104,23 @@
     <button id="yard-close" type="button">Done</button>
   </div>
 
-  <!-- The add tray (yardkit.js): a bottom sheet of everything you can put in
-       the yard — the exterior's own vocabulary (read back off the yard that is
-       actually standing, so it cannot offer a piece environment.js does not
-       draw) and the whole .glb library, so a bench or a lamp can stand outside
-       too. Every tile's picture is shot from the real geometry. Opening it
-       lifts #yard-bar and #gizmo-bar clear via --kit-lift on body.kit-open. -->
-  <div id="yard-kit" class="glass hidden">
-    <div class="yk-head">
-      <span class="yk-title">Add to the yard</span>
-      <input id="yk-search" type="search" autocomplete="off"
+  <!-- The add tray (addkit.js): one bottom sheet, filled by whoever opened it.
+       The Outside editor (yardkit.js) fills it with the exterior's own
+       vocabulary — read back off the yard that is actually standing, so it
+       cannot offer a piece environment.js does not draw — plus the whole .glb
+       library; the room editor (ui.js) fills it with the library alone. Every
+       tile's picture is shot from the real geometry. Opening it lifts
+       #yard-bar and #gizmo-bar clear via --kit-lift on body.kit-open. -->
+  <div id="add-kit" class="glass hidden">
+    <div class="ak-head">
+      <span class="ak-title" id="ak-title">Add to the yard</span>
+      <input id="ak-search" type="search" autocomplete="off"
              placeholder="Search pieces…">
-      <button id="yk-close" class="close" type="button">&times;</button>
+      <button id="ak-close" class="close" type="button">&times;</button>
     </div>
-    <div id="yk-chips" class="yk-chips"></div>
-    <div id="yk-grid" class="yk-grid"></div>
-    <p id="yk-empty" class="muted hidden">Nothing matches that.</p>
+    <div id="ak-chips" class="ak-chips"></div>
+    <div id="ak-grid" class="ak-grid"></div>
+    <p id="ak-empty" class="muted hidden">Nothing matches that.</p>
   </div>
 
   <aside id="yard-panel" class="panel hidden">
@@ -293,6 +294,7 @@
       </div>
 
       <div class="btn-row">
+        <button type="button" id="op-duplicate" class="secondary">Duplicate</button>
         <button type="button" id="op-delete" class="danger">Delete object</button>
       </div>
     </form>
@@ -420,8 +422,9 @@
           <summary>Furniture &amp; objects<span class="ed-count" id="ed-n-objects"></span></summary>
           <div id="object-list"></div>
           <div class="btn-row">
-            <select id="obj-model-select"></select>
-            <button id="obj-add" type="button" class="small">Add to room</button>
+            <!-- Opens the same bottom tray the Outside editor uses, filled with
+                 the model library: a name is no way to pick furniture. -->
+            <button id="obj-add" type="button" class="small">Add furniture…</button>
           </div>
         </details>
       </section>

@@ -233,7 +233,8 @@ boot build sees is not the rect a frame later, and the whole yard hangs off it; 
 outside" in the root CLAUDE.md). The yard also carries per-piece identity so the **Outside editor**
 (`yard.js`) can move, scale, erase and duplicate individual trees, beds, slabs and props — the
 generated yard is never stored, only the deltas against it, and it is drawn per-item only while that
-editor is open, and `yardkit.js` adds new ones from a bottom tray — the yard's own pieces, whose
+editor is open, and `yardkit.js` adds new ones from the shared bottom tray (`addkit.js`, which the
+room editor's "Add furniture…" fills with the model library instead) — the yard's own pieces, whose
 catalogue and thumbnails are both read straight off those per-item groups, and the whole .glb library,
 which `addYardModels` instances into the yard in BOTH draw modes (a model cannot be merged into the six
 bucket meshes). Two consequences of library geometry living in the yard: the rebuild teardown disposes

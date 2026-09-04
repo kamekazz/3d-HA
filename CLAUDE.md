@@ -128,6 +128,29 @@ walks up to the `userData.kind` owner) so they win over translucent walls. `drag
 /api/house/model/<id>`, `POST /api/house/room/<id>/object`, `PATCH/DELETE /api/house/object/<id>`.
 Max upload 64 MB (`app.py MAX_CONTENT_LENGTH`; api.js maps the bodyless 413 to a friendly error).
 
+**Furnishing a room from the UI** — the room editor's "Furniture & objects" section gets a piece
+into a room two ways, and both are `ui.js` calling `POST /api/house/room/<id>/object`; there is no
+new route and no server change, since `add_object` already takes every column that matters.
+"Add furniture…" opens **the same bottom tray the Outside editor uses** (`frontend/js/addkit.js`,
+see "Adding to the yard") with the model library as its catalogue — a `<select>` of ~290 names was
+not a way to pick furniture. The room has no procedural vocabulary to offer beside it, so the tray's
+yard half is simply absent; `yardkit.js` and `ui.js` each hand `openAddKit` a catalogue and an
+`onAdd`, and the sheet knows nothing else about either. A tapped tile lands its piece in the middle
+of the room, scattered a couple of feet so tapping twice gives two chairs rather than one inside
+another, then opens the object panel with the gizmo on. **Duplicate** (in the object panel, and as
+`⧉` on each row of the object list) is the other half: it copies the model, name, rotation and
+scale, and offsets the copy by the model's own measured width (`models.js getModelSize`) so a
+nightstand lands beside its twin and a sectional does not land inside itself — flipped to the other
+side when +x would leave the room. It deliberately does **not** copy `entity_id`/`light_cfg`: two
+objects bound to the same HA entity would light the room twice and both answer the same click.
+Undo/redo needed nothing — `objects` was already in `HISTORY_TABLES`.
+
+One thing the tray flushed out: `updateData` refills the room form's floor and area `<select>`s on
+every house rebuild, which **drops their selection**, so the form read floor 0 / area "none" for a
+room on the second floor and "Update room" would then have moved it to the basement and unlinked its
+area. Latent since forever, but adding furniture reloads the house, so it went from a corner to the
+common path; `updateData` now puts both back from the room record.
+
 **Bound light fixtures** — a furniture `objects` row can carry an `entity_id` and *be* that HA
 entity: the lamp GLB already in the room becomes the thing you click to toggle it, and the thing
 the room is lit from. Three nullable columns on `objects` (`entity_id`, `visible`, `light_cfg`
@@ -187,7 +210,8 @@ wrapped by **reassigning their function declarations** (`installItemScopes`), so
   back is a visibility flip, and the bar's *Erased* list is the only handle on something you can no
   longer see. Only a duplicate (which changes the item *set*) rebuilds.
 
-**Adding to the yard** ("Add…" in the Outside editor's bar, `frontend/js/yardkit.js`) — a bottom
+**Adding to the yard** ("Add…" in the Outside editor's bar, `frontend/js/yardkit.js` filling the
+shared tray in `frontend/js/addkit.js`) — a bottom
 tray of everything the exterior is built out of, because the editor could only ever take things away.
 Two things make it cheap. The catalogue is **read back off the yard that is standing**, grouped by
 `label`, so it can never offer a piece `environment.js` does not draw and never goes stale when a

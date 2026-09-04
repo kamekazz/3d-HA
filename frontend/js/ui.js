@@ -10,7 +10,11 @@ import { objects3d, applyAllObjectVisibility } from './objects.js';
 import { setSelected, onDragMoved, setGizmoMode } from './drag.js';
 import { setRoomLightsData } from './roomlights.js';
 import { buildLabels } from './labels.js';
-import { invalidateModel } from './models.js';
+import { invalidateModel, getModelSize } from './models.js';
+import {
+  openAddKit, closeAddKit, refreshAddKit, isAddKitOpen, modelEntries,
+  MODEL_SECTIONS,
+} from './addkit.js';
 import { fillTextureSelect } from './textures.js';
 import { canEdit } from './route.js';
 import { showAlert, showConfirm } from './dialog.js';
@@ -34,7 +38,7 @@ export function setAppMode(mode) {
     el.classList.toggle('hidden', mode === 'view');
   });
   if (mode === 'view') {
-    closeEditor();
+    closeEditor();            // closes the add tray with it
     $('object-panel').classList.add('hidden');
     $('models-modal').classList.add('hidden');
     $('planner').classList.add('hidden');
@@ -224,7 +228,7 @@ export function initUI({ structure: s, house: h, onReload }) {
   $('mm-upload-form').onsubmit = onModelUpload;
   $('btn-align').onclick = openAlignPanel;
   wireShellPanel();
-  $('obj-add').onclick = onAddObject;
+  $('obj-add').onclick = toggleObjectKit;
   wireObjectPanel();
   refreshModels(); // async fill of the library-dependent selects
 
@@ -289,7 +293,21 @@ export function updateData({ structure: s, house: h }) {
     // deleted, or undone out of existence, while its screen was open
     backToRoomList();
   }
-  if (selectedRoomId) renderPlacementSection();
+  if (selectedRoomId) {
+    renderPlacementSection();
+    // Both selects above were emptied and refilled, which drops their
+    // selection -- so a rebuild while a room's screen is open left the form
+    // reading floor 0 and area "none" for a room on the second floor, and
+    // "Update room" would then have moved it to the basement and unlinked its
+    // HA area. The text fields keep their values; only these two need putting
+    // back. (Adding or duplicating a piece of furniture reloads the house, so
+    // this is now the common path, not a corner.)
+    const found = findRoom(selectedRoomId);
+    if (found) {
+      $('rf-floor').value = found.floor.id;
+      $('rf-area').value = found.room.ha_area_id || '';
+    }
+  }
   // scene was rebuilt: re-point the drag selection at the fresh meshes
   if (panelObjectId) {
     if (findObjectById(panelObjectId)) {
@@ -491,6 +509,7 @@ function openEditor() {
 
 function closeEditor() {
   $('editor').classList.add('hidden');
+  closeObjectKit();
   // leaving by the X or by flipping to view mode still means leaving the room
   if (getFocusedRoomId()) exitFocus();
   selectedRoomId = null;
@@ -506,6 +525,7 @@ function leaveRoomScreen() {
 }
 
 function backToRoomList() {
+  closeObjectKit();
   selectedRoomId = null;
   resetRoomForm();          // clears the fields and hides #placement-section
   setEditorView('list');
@@ -558,6 +578,8 @@ export function selectRoom(roomId) {
   // listener, which compares against this and drops the re-entry
   selectedRoomId = roomId;
   const { room, floor } = found;
+  // the tray is a room's tray: re-point it rather than keep adding next door
+  if (isAddKitOpen(ROOM_KIT) && kitRoomId !== roomId) openObjectKit();
   openEditor();
   // Transport. Drops the level selector to the room's floor, hides its
   // siblings, scopes markers + furniture to it and flies in. A no-op when we
@@ -942,6 +964,12 @@ function renderObjectSection(room) {
       return inp;
     });
 
+    const dup = document.createElement('button');
+    dup.className = 'small secondary icon';
+    dup.textContent = '⧉';
+    dup.title = 'Duplicate this piece';
+    dup.onclick = () => duplicateObject(o.id);
+
     const rm = document.createElement('button');
     rm.className = 'small danger';
     rm.textContent = '✕';
@@ -954,48 +982,130 @@ function renderObjectSection(room) {
       }
       reloadHouse();
     };
-    item.append(name, ...inputs, rm);
+    item.append(name, ...inputs, dup, rm);
     list.appendChild(item);
   }
   if (!list.children.length) {
     list.innerHTML = '<p class="muted">No objects in this room.</p>';
   }
 
-  const sel = $('obj-model-select');
-  sel.innerHTML = '';
-  if (!modelsList.length) {
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = '— upload models first —';
-    sel.appendChild(opt);
-    sel.disabled = true;
-    $('obj-add').disabled = true;
-  } else {
-    sel.disabled = false;
-    $('obj-add').disabled = false;
-    for (const m of modelsList) {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      opt.textContent = m.name;
-      sel.appendChild(opt);
-    }
-  }
+  $('obj-add').disabled = !modelsList.length;
+  $('obj-add').title = modelsList.length
+    ? 'Pick a piece from the model library'
+    : 'Upload a .glb from the Models button first';
 }
 
-async function onAddObject() {
+// ---------------------------------------------------------------- the add tray
+//
+// The room editor's half of addkit.js. The catalogue is the model library
+// alone: unlike the yard, a room has no procedurally generated vocabulary to
+// offer -- its contents ARE .glb files. Everything else (the sheet, the chips,
+// the search, the rendered tiles) is the same widget the Outside editor uses,
+// because picking furniture out of a <select> of ~290 names is not picking.
+const ROOM_KIT = 'room';
+let kitRoomId = null;   // the room the tray is adding to, which is not always
+                        // selectedRoomId a moment later (a reload, a re-select)
+
+function toggleObjectKit() {
+  if (isAddKitOpen(ROOM_KIT)) closeObjectKit();
+  else openObjectKit();
+}
+
+function openObjectKit() {
   const found = findRoom(selectedRoomId);
-  const modelId = Number($('obj-model-select').value);
-  if (!found || !modelId) return;
+  if (!found || !modelsList.length) return;
+  kitRoomId = found.room.id;
+  $('obj-add').classList.add('active');
+  openAddKit({
+    id: ROOM_KIT,
+    title: `Add to ${found.room.name}`,
+    sections: MODEL_SECTIONS,
+    noun: 'models',
+    // The room editor reaches the bottom of the screen on the left and the
+    // object panel does on the right, and both sit above the tray.
+    inset: true,
+    build: () => modelEntries(modelsList).map((e) => ({
+      ...e, hint: `Add ${e.label} to this room`,
+    })),
+    onAdd: addObjectFromKit,
+    onClose: () => { $('obj-add').classList.remove('active'); kitRoomId = null; },
+  });
+}
+
+function closeObjectKit() {
+  closeAddKit(ROOM_KIT);   // its onClose unpresses the section's button
+}
+
+// A tile was tapped. The piece lands in the middle of the room, scattered a
+// couple of feet so tapping the same tile twice gives two chairs rather than
+// one chair standing inside another, and is selected with the gizmo on --
+// dragging it where it belongs is the next thing anyone does.
+async function addObjectFromKit(entry) {
+  const found = findRoom(kitRoomId);
+  if (!found) return;
   const fp = found.room.footprint;
+  const jitter = (span) => {
+    const half = Math.min(2, span * 0.15);
+    return span / 2 + (Math.random() * 2 - 1) * half;
+  };
   try {
     const res = await api.addObject(found.room.id, {
-      model_id: modelId,
-      position: { x: +(fp.width / 2).toFixed(2), y: 0, z: +(fp.depth / 2).toFixed(2) },
+      model_id: entry.modelId,
+      position: {
+        x: +jitter(fp.width).toFixed(2), y: 0, z: +jitter(fp.depth).toFixed(2),
+      },
     });
     await reloadHouse();
     openObjectPanel(res.id); // selected right away, ready to drag into place
+    setGizmoMode('translate');
+    showBanner(`Added ${entry.label} — drag it where you want it.`, 3000);
   } catch (e) {
     showAlert(e.message, { title: 'Could not add object' });
+  }
+}
+
+// ---------------------------------------------------------------- duplicating
+//
+// A second copy of a piece already in the room -- the other half of "add", and
+// by far the quicker one once a room has the thing you want two of: a matching
+// nightstand keeps the model, the name, the rotation and the scale you already
+// settled, and only has to be slid across the bed.
+//
+// Two fields deliberately do NOT come along. `entity_id` (and with it
+// light_cfg): two objects bound to the same HA entity would light the room
+// twice and both answer the same click, so the copy is plain furniture until
+// the user says otherwise. There is no server-side duplicate -- add_object
+// already takes every column that matters, so this is one POST.
+async function duplicateObject(objectId) {
+  const found = findObjectById(objectId);
+  if (!found) return;
+  const { obj, room } = found;
+  const fp = room.footprint;
+
+  // Beside the original, not inside it: a nightstand is 1.5 ft across and a
+  // sectional 9, so a flat offset either overlaps or throws the copy across
+  // the room. The model's own width is what "beside" means.
+  let step = 2;
+  try {
+    const size = await getModelSize(obj.model_id);
+    step = Math.max(1, size.width * (obj.scale ?? 1)) + 0.5;
+  } catch { /* model gone or unreadable: 2 ft still separates them */ }
+  let x = obj.position.x + step;
+  if (x > fp.width - 0.5) x = Math.max(0.5, obj.position.x - step);
+
+  try {
+    const res = await api.addObject(room.id, {
+      model_id: obj.model_id,
+      name: obj.name || '',
+      position: { x: +x.toFixed(2), y: obj.position.y, z: obj.position.z },
+      rot_y: obj.rot_y || 0,
+      scale: obj.scale ?? 1,
+    });
+    await reloadHouse();
+    openObjectPanel(res.id);
+    setGizmoMode('translate');
+  } catch (e) {
+    showAlert(e.message, { title: 'Could not duplicate that' });
   }
 }
 
@@ -1197,6 +1307,9 @@ function wireObjectPanel() {
     $('op-lc-color').disabled = $('op-lc-auto').checked;
     patch({ light_cfg: lightCfg() });
   };
+  $('op-duplicate').onclick = () => {
+    if (panelObjectId) duplicateObject(panelObjectId);
+  };
   $('op-delete').onclick = async () => {
     if (!panelObjectId) return;
     await api.deleteObject(panelObjectId);
@@ -1241,6 +1354,7 @@ async function refreshModels() {
   }
   renderModelsList();
   updateAlignAvailability();
+  refreshAddKit(ROOM_KIT);   // a fresh upload belongs in the tray at once
   if (selectedRoomId) renderPlacementSection();
 }
 
