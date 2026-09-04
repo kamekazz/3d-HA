@@ -104,6 +104,14 @@ export const api = {
   deleteModel: (id) => del(`/api/house/model/${id}`),
   getHouseShell: () => get('/api/house/shell'),
   setHouseShell: (data) => put('/api/house/shell', data),
+  // Yard: overrides on the procedural exterior, filed under the builder's own
+  // key for a piece. encodeURIComponent because a key carries ':' and ','.
+  getYard: () => get('/api/house/yard'),
+  updateYard: (key, data) => patch('/api/house/yard', { key, ...data }),
+  cloneYard: (src, data) => post('/api/house/yard/clone', { src, ...data }),
+  resetYardPiece: (key) => del(`/api/house/yard/${encodeURIComponent(key)}`),
+  resetYard: () => post('/api/house/yard/reset'),
+
   addObject: (roomId, data) => post(`/api/house/room/${roomId}/object`, data),
   updateObject: (id, data) => patch(`/api/house/object/${id}`, data),
   deleteObject: (id) => del(`/api/house/object/${id}`),

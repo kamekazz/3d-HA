@@ -151,6 +151,61 @@ levels they connect (`userData.levels`). In the planner they appear on both floo
 "▼ down"), drawn with "+ Stairs" (they connect the active floor down to the one below), moved/
 resized as rects, direction set in the side panel. Endpoints: `POST/PATCH/DELETE /api/house/stairs*`.
 
+**Editing the outside** ("Outside" topbar button, `frontend/js/yard.js`) — the exterior is *generated*,
+not stored: `environment.js` draws every tree, shrub, bed, slab, prop, neighbour and the street from
+one fixed seed, identically on every load, and merges the lot into six meshes. So editing works by
+**delta**, and the only thing persisted is what the user changed. While the yard builds, each
+geometry is filed under an *item* — one tree, one shrub, one slab of driveway — and the item is keyed
+by its kind plus the position the builder gave it (`kind:x*10:z*10`, e.g. `tree:-230:280`; ordinals
+were rejected because inserting one tree upstream would renumber everything after it). `yard_edits`
+stores `dx/dy/dz/rot_y/scale/deleted` against that key, plus clone rows (`src` = the key they copy).
+On the next load the yard is generated exactly as before and the deltas go on top, so an untouched
+yard is **vertex-identical** to the one that file drew before any of this existed (verified: 890,769
+verts either way). Item boundaries come from two rules — a call to one of `ITEM_FACTORIES` opens an
+item and owns everything it pushes (nested calls stay in the outer item, so a shrub built from three
+lumps is one shrub), and consecutive *unscoped* pushes group into one item, which is what keeps a
+hand-built step platform or a scattered row of cobbles grabbable as one thing. The factories are
+wrapped by **reassigning their function declarations** (`installItemScopes`), so no call site in the
+~600 lines of `addFrontYard`/`addBackYard` changed, including the
+`(cond ? addConifer : addDeciduous)(...)` dispatch. Four things are load-bearing:
+
+- **Empty items are dropped before keys are handed out.** `PLANT_TREES` and `BUILD_NEIGHBOURS` are
+  both `false`, so `addDeciduous`/`addConifer`/`addShadeTree`/`addWeeper`/`addNeighbour` still open an
+  item and push nothing — 108 of them. An item with no geometry measures at the origin, so every one
+  keyed to `0,0` and took a collision suffix: 106 keys whose identity would shift the day either flag
+  moved.
+- **The yard is drawn per-item only while the editor is open**, and as the same six merged meshes
+  otherwise (`setYardEditing`). A piece's group sits at its own pivot — footprint centre at its lowest
+  point, so a tree turns about its trunk and grows up from the ground — with its geometry re-centred
+  there, which is what lets `drag.js` move it with the normal gizmo and read the gesture straight back
+  out as the delta to save (`kind: 'yard'`, subtracting `userData.pivot`).
+- **The lawn is not clickable** (`SURFACE_KINDS`). It is one item covering the whole lot, so left
+  clickable it swallows every click on open grass — you could never deselect, and never reach anything
+  lying flat on it. Same rule `objects.js` applies to room-wide floors and ceilings. It is still an
+  item and still takes edits.
+- **Erasing hides, it does not destroy.** The group stays in the scene invisible, so putting a piece
+  back is a visibility flip, and the bar's *Erased* list is the only handle on something you can no
+  longer see. Only a duplicate (which changes the item *set*) rebuilds.
+
+Undo/redo needed nothing new beyond adding `yard_edits` to `HISTORY_TABLES` — `export_snapshot`/
+`restore_snapshot` are column-agnostic, and restoring original row ids is what makes an undone
+duplicate come back as the same `clone:<id>`. Endpoints: `GET /api/house/yard`, `PATCH /api/house/yard`
+(upsert by key), `POST /api/house/yard/clone`, `DELETE /api/house/yard/<key>` (revert one piece),
+`POST /api/house/yard/reset`. The rows also ride along on `GET /api/house` as `yard`, since
+`setEnvironmentData` needs them at build time.
+
+**The shell's measurement is not final when the yard first measures it**
+(`settleShellAnchors` in `environment.js`). Measured here: the `roofRect` the boot build sees is
+z0 −25.43 / z1 41.36, and a frame later the same measurement gives −25.77 / 41.70. The whole yard is
+laid out from that rect, so the yard drawn at boot was **not** the yard any later rebuild produced —
+open the planner, hit undo, or sync, and the exterior quietly shifted and reshuffled (187 items
+against 189, and every bare tree a few feet off). Nothing noticed while the yard was anonymous
+geometry; the Outside editor made it visible, because a piece has to still be the same piece across a
+rebuild to be editable at all. The fix re-measures at 0/120/500 ms and rebuilds only if the anchors
+really moved, using the same guard `levelChanged` has always used. `setTimeout`, not
+`requestAnimationFrame` — rAF is paused in a backgrounded or occluded tab and the yard must settle
+whether or not anyone is watching.
+
 **The 2D floor-plan editor** (`frontend/js/planner.js`, "Floor plan" topbar button) is a full-screen
 canvas overlay: per-floor tabs, draw rooms as rectangles, drag vertices/edge-midpoints (edges stay
 rectilinear), Alt+click an edge to insert a vertex, drag whole rooms, snap in ft (Shift bypasses),

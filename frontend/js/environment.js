@@ -23,6 +23,7 @@ let roofRect = null;  // {x0,z0,x1,z1} of the shell's roof masses = the building
 // pale site pad). repaintGrass tints these alongside the main lawn disc; they
 // are rebuilt/disposed with the yard, so grassMat itself is never in here.
 let yardGrassMats = [];
+let applyYardVisibility = () => {};   // set by initEnvironment
 
 // Metered off "Front of the house.jpg", not chosen by eye. The photographed
 // lawn is a HAZY summer turf: clean patches read RGB 116-123 / 128-136 /
@@ -206,7 +207,12 @@ export function initEnvironment() {
   // the grid, single-floor view shows floorview.js's studio backdrop
   let inViewMode = true;
   let onHouseLevel = true;
-  const applyVisibility = () => { root.visible = inViewMode && onHouseLevel; };
+  // ...except while the Outside editor is open, which is the one time edit
+  // mode needs to see the yard: it IS what is being edited.
+  const applyVisibility = () => {
+    root.visible = (inViewMode || yardEditing) && onHouseLevel;
+  };
+  applyYardVisibility = applyVisibility;
   window.addEventListener('appModeChanged', (e) => {
     inViewMode = e.detail.mode === 'view';
     applyVisibility();
@@ -218,16 +224,7 @@ export function initEnvironment() {
   window.addEventListener('levelChanged', (e) => {
     onHouseLevel = e.detail.level === 'all';
     applyVisibility();
-    if (!lastHouse) return;
-    const shell = getShellRoot();
-    const r = shell ? rectOfShell(shell) : null;
-    const rr = shell ? rectOfRoof() : null;
-    if (JSON.stringify(r) !== JSON.stringify(shellRect)
-        || JSON.stringify(rr) !== JSON.stringify(roofRect)) {
-      shellRect = r;
-      roofRect = rr;
-      buildYard();
-    }
+    if (lastHouse && remeasureShell()) buildYard();
   });
 }
 
@@ -244,6 +241,20 @@ function rectOfShell(shell) {
   });
   if (box.isEmpty()) return null;
   return { x0: box.min.x, z0: box.min.z, x1: box.max.x, z1: box.max.z };
+}
+
+// Re-read the two rects the whole yard is anchored to. Returns true when either
+// actually moved, which is the caller's cue to rebuild -- the guard matters
+// because a Box3 traversal of the shell is cheap but a yard rebuild is not.
+function remeasureShell() {
+  const shell = getShellRoot();
+  const r = shell ? rectOfShell(shell) : null;
+  const rr = shell ? rectOfRoof() : null;
+  if (JSON.stringify(r) === JSON.stringify(shellRect)
+      && JSON.stringify(rr) === JSON.stringify(roofRect)) return false;
+  shellRect = r;
+  roofRect = rr;
+  return true;
 }
 
 // The BUILDING footprint, as opposed to rectOfShell's whole-lot bounds above,
@@ -2931,12 +2942,316 @@ function hideShellPatioProps() {
 // landscaped mound at the back-right, open lawn to the east, and shrub beds
 // at the house front + driveway entrance. Scene front/street = +Z, garage on
 // the +X side. Called at boot and after every reloadHouse.
+// ===========================================================================
+// EDITABLE YARD
+//
+// The exterior is not stored piece by piece. Every tree, bed, slab and prop
+// above is drawn by this file from one fixed seed, identically on every load.
+// That is what makes it cheap, and it is also what made it uneditable: by the
+// time the yard reaches the screen it is six merged meshes, and a tree has no
+// more identity in them than a vertex does.
+//
+// So editing works by DELTA. While the yard builds, every geometry it produces
+// is attributed to an "item" — one tree, one shrub, one slab of driveway — and
+// each item gets a key derived from what it is and where the builder put it
+// (see itemKey). The backend stores nothing but the changes made against those
+// keys: a nudge, a spin, a scale, an erase, a duplicate. On the next load the
+// yard is generated exactly as before and the deltas are laid on top, so an
+// untouched yard is identical to the one this file drew before any of this
+// existed, and an edited one is that yard plus the edits.
+//
+// Item boundaries come from two rules:
+//   * a call to one of the factories in ITEM_FACTORIES opens an item and
+//     everything it pushes belongs to it. Nested factory calls stay inside the
+//     outer item, so a shrub built out of three lumps is one shrub;
+//   * geometry pushed with no factory open joins a RUN: consecutive loose
+//     pushes form a single item. That is what keeps a hand-built step platform
+//     or a scattered row of cobbles as one thing you can grab.
+// ===========================================================================
+
+// A geometry bucket that also records which item each geometry came from.
+// Drop-in for the plain arrays the yard builders push into — they only ever
+// call .push() and read .length.
+class Bucket {
+  constructor(name) {
+    this.name = name;
+    this.geos = [];
+    this.own = [];        // parallel to geos: owning item index
+  }
+
+  push(...gs) {
+    for (const g of gs) {
+      const owner = ownerForPush();
+      items[owner].geos.push({ bucket: this.name, i: this.geos.length });
+      this.geos.push(g);
+      this.own.push(owner);
+    }
+    return this.geos.length;
+  }
+
+  get length() { return this.geos.length; }
+}
+
+let items = [];        // rebuilt from scratch by every buildYard
+let itemsByKey = new Map();
+let curItem = -1;      // the open factory item, -1 for none
+let looseRun = -1;     // the open run of unscoped pushes, -1 for none
+
+function newItem(kind, label) {
+  items.push({ kind, label, geos: [], key: '', pivot: [0, 0, 0], edit: null });
+  return items.length - 1;
+}
+
+// Who owns the geometry being pushed right now: inside a factory, that
+// factory's item; outside, the current loose run, opening one if this is the
+// first loose push since the last factory closed.
+function ownerForPush() {
+  if (curItem >= 0) return curItem;
+  if (looseRun < 0) looseRun = newItem('piece', 'Yard piece');
+  return looseRun;
+}
+
+// Wrap a yard factory so everything it pushes is attributed to one item.
+// Reassigning the function declaration is deliberate: every call site above
+// resolves the binding at call time — including the
+// `(cond ? addConifer : addDeciduous)(...)` dispatch — so no call site changes.
+function scoped(kind, label, fn) {
+  return function (...args) {
+    if (curItem >= 0) return fn.apply(this, args);   // nested: stay in the outer item
+    looseRun = -1;                                   // a factory ends any loose run
+    curItem = newItem(kind, label);
+    try {
+      return fn.apply(this, args);
+    } finally {
+      curItem = -1;
+    }
+  };
+}
+
+// What counts as one grabbable piece of the yard. Everything that draws a
+// discrete object is here; the pure helpers (slab, boxAt, paint…) are not,
+// because they are the material these are built out of, not things in
+// themselves. Getter/setter pairs rather than names because a module binding
+// cannot be reached by string without eval.
+const ITEM_FACTORIES = [
+  ['lawn', 'Lawn', () => addGroundCover, (f) => (addGroundCover = f)],
+  ['tree', 'Shade tree', () => addShadeTree, (f) => (addShadeTree = f)],
+  ['tree', 'Bare tree', () => addBareTree, (f) => (addBareTree = f)],
+  ['tree', 'Conifer', () => addConifer, (f) => (addConifer = f)],
+  ['tree', 'Deciduous tree', () => addDeciduous, (f) => (addDeciduous = f)],
+  ['tree', 'Weeping tree', () => addWeeper, (f) => (addWeeper = f)],
+  ['shrub', 'Bush', () => addBush, (f) => (addBush = f)],
+  ['shrub', 'Shrub', () => addBoxwood, (f) => (addBoxwood = f)],
+  ['shrub', 'Photinia', () => addPhotinia, (f) => (addPhotinia = f)],
+  ['shrub', 'Shrub mound', () => addMound, (f) => (addMound = f)],
+  ['shrub', 'Hedge', () => addHedgeMass, (f) => (addHedgeMass = f)],
+  ['shrub', 'Undergrowth', () => addUndergrowth, (f) => (addUndergrowth = f)],
+  ['plant', 'Mum', () => addMum, (f) => (addMum = f)],
+  ['plant', 'Dried clump', () => addDriedClump, (f) => (addDriedClump = f)],
+  ['plant', 'Perennials', () => addPerennial, (f) => (addPerennial = f)],
+  ['plant', 'Grass clump', () => addGrassClump, (f) => (addGrassClump = f)],
+  ['plant', 'Ground cover', () => addGroundCoverMass, (f) => (addGroundCoverMass = f)],
+  ['bed', 'Planting bed', () => addBed, (f) => (addBed = f)],
+  ['bed', 'Rock bed', () => addBedPoly, (f) => (addBedPoly = f)],
+  ['bed', 'Mulch bed', () => addMulchBed, (f) => (addMulchBed = f)],
+  ['bed', 'Leaf litter', () => addLeafLitter, (f) => (addLeafLitter = f)],
+  ['edge', 'Cobble rim', () => addCobbleRim, (f) => (addCobbleRim = f)],
+  ['edge', 'Cobble run', () => addCobbleRun, (f) => (addCobbleRun = f)],
+  ['edge', 'Stone edge', () => addStoneEdge, (f) => (addStoneEdge = f)],
+  ['edge', 'Retaining slate', () => addSlate, (f) => (addSlate = f)],
+  ['paving', 'Concrete', () => addConcrete, (f) => (addConcrete = f)],
+  ['paving', 'Concrete pour', () => concretePoly, (f) => (concretePoly = f)],
+  ['paving', 'Flagstones', () => addFlagstones, (f) => (addFlagstones = f)],
+  ['paving', 'Stepping stones', () => addSteppers, (f) => (addSteppers = f)],
+  ['paving', 'Control joint', () => addJoint, (f) => (addJoint = f)],
+  ['prop', 'Uplight', () => addUplightCan, (f) => (addUplightCan = f)],
+  ['prop', 'Path light', () => addPathLight, (f) => (addPathLight = f)],
+  ['prop', 'Wheelie bin', () => addBin, (f) => (addBin = f)],
+  ['prop', 'Bird feeder', () => addFeeder, (f) => (addFeeder = f)],
+  ['prop', 'Goose', () => addGoose, (f) => (addGoose = f)],
+  ['building', 'Neighbour', () => addNeighbour, (f) => (addNeighbour = f)],
+  ['street', 'Street', () => addStreet, (f) => (addStreet = f)],
+];
+
+let scopesInstalled = false;
+
+function installItemScopes() {
+  if (scopesInstalled) return;
+  scopesInstalled = true;
+  for (const [kind, label, get, set] of ITEM_FACTORIES) set(scoped(kind, label, get()));
+}
+
+// ---- identity --------------------------------------------------------------
+//
+// A key has to survive a rebuild, and ideally survive an edit to this file that
+// leaves the piece itself alone. Ordinals fail the second test — insert one
+// tree and every key after it shifts by one — so a key is the piece's KIND plus
+// the position the builder gave it, in tenths of a foot. Two pieces of one kind
+// at the same spot get a disambiguating suffix, only ever reached by coincident
+// geometry.
+function itemKey(item, used) {
+  const [cx, , cz] = item.pivot;
+  let key = `${item.kind}:${Math.round(cx * 10)}:${Math.round(cz * 10)}`;
+  if (used.has(key)) {
+    let n = 2;
+    while (used.has(`${key}#${n}`)) n++;
+    key = `${key}#${n}`;
+  }
+  used.add(key);
+  return key;
+}
+
+const _ibox = new THREE.Box3();
+const _ivec = new THREE.Vector3();
+
+// An item's pivot: the centre of its footprint at its lowest point, so a tree
+// turns about its trunk and grows up from the ground rather than out of it.
+function measureItem(item, buckets) {
+  _ibox.makeEmpty();
+  for (const { bucket, i } of item.geos) {
+    const g = buckets[bucket].geos[i];
+    if (!g.boundingBox) g.computeBoundingBox();
+    _ibox.union(g.boundingBox);
+  }
+  if (_ibox.isEmpty()) return [0, 0, 0];
+  _ibox.getCenter(_ivec);
+  return [_ivec.x, _ibox.min.y, _ivec.z];
+}
+
+// ---- the stored edits ------------------------------------------------------
+
+let yardEdits = [];        // rows straight from the backend
+let yardEditing = false;   // is the Outside editor open?
+
+// house.yard from GET /api/house, or the standalone GET /api/house/yard.
+export function setYardEdits(rows) {
+  yardEdits = Array.isArray(rows) ? rows : [];
+}
+
+export function getYardEdits() {
+  return yardEdits;
+}
+
+// The editor draws the yard one mesh per item so each piece can be picked and
+// dragged; the viewer keeps the six merged meshes. Returns true if the mode
+// actually changed, so callers know whether a rebuild is owed.
+export function setYardEditing(on) {
+  if (yardEditing === !!on) return false;
+  yardEditing = !!on;
+  applyYardVisibility();
+  buildYard();
+  return true;
+}
+
+export function isYardEditing() {
+  return yardEditing;
+}
+
+// Every item in the yard as it currently stands, for the editor's list and
+// for restoring erased pieces.
+export function getYardItems() {
+  return items;
+}
+
+export function getYardItem(key) {
+  return itemsByKey.get(key) || null;
+}
+
+// The per-item groups the editor raycasts against. Empty unless the editor is
+// open — in view mode there are no per-item meshes to hit.
+// Re-run the whole build. Needed only when the item SET changes (a duplicate,
+// a reset-everything); a move/turn/scale is live on the group already and an
+// erase is a visibility flip, so neither pays for this.
+export function rebuildYard() {
+  buildYard();
+}
+
+// Fold one saved override into the local copy of the edits, so the next
+// rebuild sees it without re-fetching the house.
+export function applyYardEdit(key, patch) {
+  const row = yardEdits.find((e) => e.key === key);
+  if (row) Object.assign(row, patch);
+  else yardEdits.push({ key, ...IDENTITY_EDIT, ...patch });
+  const item = itemsByKey.get(key);
+  if (item) item.edit = yardEdits.find((e) => e.key === key);
+}
+
+export function dropYardEdit(key) {
+  yardEdits = yardEdits.filter((e) => e.key !== key);
+  const item = itemsByKey.get(key);
+  if (item) item.edit = null;
+}
+
+// Kinds that are GROUND rather than something standing on it. The lawn is one
+// item covering the whole lot, so left clickable it swallows every click on
+// open grass -- you could never deselect, and never reach anything lying flat
+// on it. Same rule objects.js applies to room-wide floors and ceilings, for the
+// same reason. It stays an item and still takes edits; it just is not what a
+// click on the yard means.
+const SURFACE_KINDS = new Set(['lawn']);
+
+// Every per-item group in the yard. Empty unless the editor is open -- in view
+// mode the yard is six merged meshes and there is nothing per-piece to hit.
+export function getYardPickables() {
+  if (!yardEditing || !yard) return [];
+  return yard.children.filter((o) => o.userData?.kind === 'yard');
+}
+
+// What a CLICK may land on: the pickables minus the ground.
+export function getYardClickTargets() {
+  return getYardPickables().filter((o) => !SURFACE_KINDS.has(o.userData.yardKind));
+}
+
+const IDENTITY_EDIT = { dx: 0, dy: 0, dz: 0, rot_y: 0, scale: 1, deleted: 0 };
+
+function editFor(key) {
+  return yardEdits.find((e) => e.key === key && !e.src) || null;
+}
+
+// T(pivot + d) · Ry · S · T(-pivot): turn and scale a piece about its own base,
+// then move it. Returns null for an untouched piece so the common path costs
+// nothing.
+function editMatrix(pivot, edit) {
+  if (!edit) return null;
+  const dx = edit.dx || 0, dy = edit.dy || 0, dz = edit.dz || 0;
+  const ry = edit.rot_y || 0, s = edit.scale ?? 1;
+  if (!dx && !dy && !dz && !ry && s === 1) return null;
+  const [px, py, pz] = pivot;
+  return new THREE.Matrix4()
+    .makeTranslation(px + dx, py + dy, pz + dz)
+    .multiply(new THREE.Matrix4().makeRotationY(ry))
+    .multiply(new THREE.Matrix4().makeScale(s, s, s))
+    .multiply(new THREE.Matrix4().makeTranslation(-px, -py, -pz));
+}
+
 export function setEnvironmentData(house) {
   lastHouse = house;
-  const shell = getShellRoot();
-  shellRect = shell ? rectOfShell(shell) : null;
-  roofRect = shell ? rectOfRoof() : null;
+  setYardEdits(house?.yard);   // overrides on the generated exterior
+  remeasureShell();
   buildYard();
+  settleShellAnchors();
+}
+
+// The shell has not finished settling the moment main() hands us the house.
+// Measured on this machine: the roofRect this build sees is z0 -25.43 / z1
+// 41.36, and one frame later the same measurement gives -25.77 / 41.70. The
+// entire yard is laid out from that rect, so the yard drawn at boot was NOT the
+// yard any later rebuild produced -- open the planner, hit undo, or sync, and
+// the whole exterior quietly shifted and reshuffled. Nothing noticed while the
+// yard was anonymous geometry; the Outside editor made it visible, because a
+// piece has to still be the same piece across a rebuild to be editable at all.
+//
+// So: re-measure a few times over the first half second and rebuild only if the
+// anchors really moved. The guard is the one levelChanged has always used, and
+// a settled shell makes every check after the first a no-op. setTimeout rather
+// than requestAnimationFrame on purpose -- rAF is paused in a backgrounded or
+// occluded tab, and the yard must settle whether or not anyone is watching.
+const ANCHOR_SETTLE_MS = [0, 120, 500];
+
+function settleShellAnchors() {
+  for (const ms of ANCHOR_SETTLE_MS) {
+    setTimeout(() => { if (lastHouse && remeasureShell()) buildYard(); }, ms);
+  }
 }
 
 function buildYard() {
@@ -2983,7 +3298,17 @@ function buildYard() {
 
   const rng = mulberry32(1337);
   carSpot = null;       // re-recorded by addFrontYard, if there is a shell
-  const trunks = [], leaves = [], beds = [], props = [], lawns = [], masses = [];
+  // Recording buckets, not plain arrays: they file every geometry under the
+  // item that pushed it, which is what makes an individual tree editable
+  // afterwards. The builders below only ever .push() and read .length, so
+  // nothing about how the yard is drawn changes. See "EDITABLE YARD" above.
+  installItemScopes();
+  items = [];
+  curItem = -1;
+  looseRun = -1;
+  const trunks = new Bucket('trunks'), leaves = new Bucket('leaves');
+  const beds = new Bucket('beds'), props = new Bucket('props');
+  const lawns = new Bucket('lawns'), masses = new Bucket('masses');
   const onPad = (x, z, m = 3) =>
     pads.some((p) => x > p.x0 - m && x < p.x1 + m && z > p.z0 - m && z < p.z1 + m);
   // frontmost pad edge at this x — puts foundation beds in front of the porch
@@ -3058,26 +3383,79 @@ function buildYard() {
     hideShellPatioProps();
   }
 
-  // mergeGeometries refuses to mix indexed (cylinder/cone) with non-indexed
-  // (icosahedron) geometry — normalize everything to non-indexed first
-  const flat = (geos) => geos.map((g) => (g.index ? g.toNonIndexed() : g));
-  if (lawns.length) {
-    // own material (not grassMat) because the yard disposes its materials on
-    // rebuild; registered so weather.js's wet/snow tint still reaches it
-    const mat = new THREE.MeshStandardMaterial({
-      color: grassMat.color.clone(), map: grassMat.map, roughness: 1,
-      vertexColors: true });
-    yardGrassMats.push(mat);
-    const geo = BufferGeometryUtils.mergeGeometries(flat(lawns), false);
-    // re-derive UVs from world position exactly as the 1200-radius grass disc
-    // does, so the shared speckle map keeps the same scale across the seam
-    const pos = geo.attributes.position, uv = geo.attributes.uv;
-    // ...and the large-scale mown patchiness the tile is not allowed to carry.
-    // Three octaves at 54 / 19 / 7 ft, sampled in WORLD feet — so it never
-    // repeats, and it interpolates smoothly across slab()'s 2 ft cells. The
-    // photographed lawn carries heavy broad tonal banding from mowing
-    // direction and tree shade; without this the render is one flat plate at
-    // any distance where the 8.6 ft tile has mipped away.
+  // ---- resolve items, apply the stored edits, emit ------------------------
+  //
+  // Everything above pushed geometry in WORLD coordinates and, along the way,
+  // told each Bucket which item it belonged to. Now the items get their
+  // identity (a key derived from where the builder put them), the user's saved
+  // deltas are laid on top, and the result is drawn — six merged meshes for the
+  // viewer, one mesh per item while the Outside editor is open so each piece
+  // can be picked and dragged.
+  const buckets = { lawns, beds, props, masses, trunks, leaves };
+
+  // Drop the items that drew nothing, BEFORE keys are handed out. A factory
+  // gated off by a build flag — PLANT_TREES and BUILD_NEIGHBOURS are both
+  // false — still opens an item and then pushes no geometry, and there are 108
+  // of those here. They are unselectable, and worse, an item with no geometry
+  // measures at the origin, so every one of them keys to 0,0 and takes a
+  // collision suffix: 106 keys whose identity would shift the day either flag
+  // moves. Nothing can own geometry through a dropped item, so compacting the
+  // list only has to renumber the survivors.
+  const remap = new Int32Array(items.length).fill(-1);
+  const kept = [];
+  for (let i = 0; i < items.length; i++) {
+    if (!items[i].geos.length) continue;
+    remap[i] = kept.length;
+    kept.push(items[i]);
+  }
+  for (const b of Object.values(buckets)) {
+    for (let i = 0; i < b.own.length; i++) b.own[i] = remap[b.own[i]];
+  }
+  items = kept;
+
+  const used = new Set();
+  itemsByKey = new Map();
+  for (const item of items) {
+    item.pivot = measureItem(item, buckets);
+    item.key = itemKey(item, used);
+    item.edit = editFor(item.key);
+    itemsByKey.set(item.key, item);
+  }
+
+  // Clones: an extra copy of a piece that already exists, with its own key and
+  // its own delta measured from the ORIGINAL's pivot — so "duplicate, then drag
+  // it 10 ft east" is exactly dx: 10. Cloned from the source's geometry before
+  // any deletion filtering, so a piece can be erased and still have copies.
+  for (const row of yardEdits) {
+    if (!row.src) continue;
+    const src = itemsByKey.get(row.src);
+    if (!src) continue;   // the source no longer exists in the build
+    const idx = newItem(src.kind, src.label);
+    const clone = items[idx];
+    clone.key = row.key;
+    clone.pivot = src.pivot.slice();
+    clone.edit = row;
+    clone.isClone = true;
+    for (const { bucket, i } of src.geos) {
+      const b = buckets[bucket];
+      clone.geos.push({ bucket, i: b.geos.length });
+      b.geos.push(b.geos[i].clone());
+      b.own.push(idx);
+    }
+    itemsByKey.set(row.key, clone);
+  }
+
+  // World-space surface detail, derived per geometry rather than per merged
+  // mesh so it survives being split into per-item meshes. Same maths as before:
+  // the lawn re-derives its UVs the way the 1200 ft grass disc does and carries
+  // the large-scale mown patchiness in vertex colours (three octaves at
+  // 54 / 19 / 7 ft, sampled in world feet, so it never repeats and interpolates
+  // smoothly across slab()'s cells); the hardscape takes one grain scale
+  // across slabs of very different sizes. Read from the position the BUILDER
+  // gave the geometry, so an untouched yard is pixel-identical to before and a
+  // moved slab carries its own grain with it.
+  for (const g of lawns.geos) {
+    const pos = g.attributes.position, uv = g.attributes.uv;
     const col = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
@@ -3087,67 +3465,120 @@ function buildYard() {
                   + (worldNoise(x + 91, z - 47, 7) - 0.5) * 0.11;
       col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = f;
     }
-    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
     uv.needsUpdate = true;
-    const lawn = new THREE.Mesh(geo, mat);
-    lawn.receiveShadow = true;
-    yard.add(lawn);
   }
-  if (beds.length) {
+  for (const g of beds.geos) {
+    const pos = g.attributes.position, uv = g.attributes.uv;
+    for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 6, -pos.getZ(i) / 6);
+    uv.needsUpdate = true;
+  }
+
+  // One material per bucket, shared by every mesh drawn from it. Created here
+  // rather than at the merge sites because the per-item path needs the same
+  // six, and because the yard disposes its own materials on rebuild (which is
+  // why the lawn cannot simply reuse grassMat).
+  const lawnMat = new THREE.MeshStandardMaterial({
+    color: grassMat.color.clone(), map: grassMat.map, roughness: 1,
+    vertexColors: true });
+  // registered so weather.js's wet/snow tint still reaches the yard's lawn;
+  // skipped when there is no lawn, or the list would collect a material no
+  // mesh owns and the rebuild teardown would never dispose it
+  if (lawns.length) yardGrassMats.push(lawnMat);
+  const MATS = {
+    lawns: lawnMat,
     // Fine grain on the hardscape. Vertex colours alone gave the driveway
     // sd 3.7 / mean|Δ| 0.30 against the photograph's 10.8 / 6.3 — the right
-    // average value and no texture at all at the scale the eye reads, which is
-    // the "sd is scale-blind" trap. A near-white 4 ft noise tile multiplies
-    // into the same vertex colours and costs one 128px canvas for every bed,
-    // wall and slab in both yards. UVs re-derived from world position (as the
-    // lawn does) so the grain keeps ONE physical scale across slabs of very
-    // different sizes.
-    const geo = BufferGeometryUtils.mergeGeometries(flat(beds), false);
-    const pos = geo.attributes.position, uv = geo.attributes.uv;
-    for (let i = 0; i < pos.count; i++) {
-      uv.setXY(i, pos.getX(i) / 6, -pos.getZ(i) / 6);
+    // average value and no texture at the scale the eye reads, which is the
+    // "sd is scale-blind" trap. A near-white 4 ft noise tile multiplies into
+    // the same vertex colours for every bed, wall and slab in both yards.
+    beds: new THREE.MeshStandardMaterial({
+      vertexColors: true, map: makeGritTexture(), roughness: 1, flatShading: true }),
+    props: new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.45, metalness: 0.15, flatShading: true }),
+    // Background BUILDING massing (the neighbours) must be matte and
+    // UNTEXTURED: the beds bucket's UVs come from world X/Z, so a wall face
+    // samples one line of the grit tile and streaks eave to grade, and props'
+    // semi-gloss metal is equally wrong for painted siding.
+    masses: new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.9, metalness: 0.0, flatShading: true }),
+    // Near-black bark (albedo ~0.03). Every tree in this bucket is a bare
+    // winter silhouette now (PLANT_TREES is off), and at 0x6d4c33 the west
+    // group rendered as "bare white stick geometry lit blue".
+    trunks: new THREE.MeshStandardMaterial({ color: 0x0c0b0a, roughness: 1 }),
+    leaves: new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 1, flatShading: true }),
+  };
+  const CASTS = { props: true, masses: true };   // props: the car needs to sit on the drive
+  const RECEIVES = { lawns: true, beds: true };
+
+  // mergeGeometries refuses to mix indexed (cylinder/cone) with non-indexed
+  // (icosahedron) geometry — normalize everything to non-indexed first
+  const flat = (geos) => geos.map((g) => (g.index ? g.toNonIndexed() : g));
+
+  function bucketMesh(name, geos) {
+    if (!geos.length) return null;
+    const m = new THREE.Mesh(
+      BufferGeometryUtils.mergeGeometries(flat(geos), false), MATS[name]);
+    m.castShadow = !!CASTS[name];
+    m.receiveShadow = !!RECEIVES[name];
+    return m;
+  }
+
+  if (yardEditing) {
+    // EDITOR: one group per item, sitting at its own pivot with its geometry
+    // re-centred there, so TransformControls can move/turn/scale it directly
+    // and the gesture reads straight back out as the delta to save.
+    for (const item of items) {
+      const byBucket = new Map();
+      for (const { bucket, i } of item.geos) {
+        if (!byBucket.has(bucket)) byBucket.set(bucket, []);
+        byBucket.get(bucket).push(buckets[bucket].geos[i].clone());
+      }
+      const [px, py, pz] = item.pivot;
+      const group = new THREE.Group();
+      for (const [name, geos] of byBucket) {
+        for (const g of geos) g.translate(-px, -py, -pz);
+        const mesh = bucketMesh(name, geos);
+        if (mesh) { mesh.userData.ownGeometry = true; group.add(mesh); }
+      }
+      const e = item.edit;
+      group.position.set(px + (e?.dx || 0), py + (e?.dy || 0), pz + (e?.dz || 0));
+      group.rotation.y = e?.rot_y || 0;
+      group.scale.setScalar(e?.scale ?? 1);
+      // An erased piece is BUILT and hidden, not skipped: un-erasing it is then
+      // a visibility flip instead of a rebuild, and the panel's erased list has
+      // something to name.
+      group.visible = !e?.deleted;
+      group.userData = {
+        kind: 'yard',
+        yardKey: item.key,
+        name: item.label,
+        yardKind: item.kind,
+        // the untouched pivot: drag.js subtracts it to recover dx/dy/dz
+        pivot: item.pivot,
+        isClone: !!item.isClone,
+        userScale: e?.scale ?? 1,
+      };
+      yard.add(group);
     }
-    uv.needsUpdate = true;
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
-      vertexColors: true, map: makeGritTexture(), roughness: 1, flatShading: true }));
-    m.receiveShadow = true;
-    yard.add(m);
-  }
-  if (props.length) {
-    const m = new THREE.Mesh(
-      BufferGeometryUtils.mergeGeometries(flat(props), false),
-      new THREE.MeshStandardMaterial({
-        vertexColors: true, roughness: 0.45, metalness: 0.15, flatShading: true }));
-    m.castShadow = true; // one extra caster — the car needs to sit on the drive
-    yard.add(m);
-  }
-  if (masses.length) {
-    // Background BUILDING massing (the neighbours), in its own bucket for one
-    // reason: it must be matte and UNTEXTURED. Round 1 merged it into `beds`,
-    // whose UVs are derived from world X/Z so a wall face can only sample one
-    // line of the grit tile — every neighbour rendered with its texture
-    // smeared vertically from eave to grade. `props`'s semi-gloss metal is
-    // equally wrong for painted siding.
-    const m = new THREE.Mesh(
-      BufferGeometryUtils.mergeGeometries(flat(masses), false),
-      new THREE.MeshStandardMaterial({
-        vertexColors: true, roughness: 0.9, metalness: 0.0, flatShading: true }));
-    m.castShadow = true;
-    yard.add(m);
-  }
-  if (trunks.length) {
-    yard.add(new THREE.Mesh(
-      BufferGeometryUtils.mergeGeometries(flat(trunks), false),
-      // Near-black bark (albedo ~0.03). Every tree in this bucket is a bare
-      // winter silhouette now (PLANT_TREES is off), and at 0x6d4c33 the
-      // west group rendered as "bare white stick geometry lit blue".
-      new THREE.MeshStandardMaterial({ color: 0x0c0b0a, roughness: 1 })));
-  }
-  if (leaves.length) {
-    yard.add(new THREE.Mesh(
-      BufferGeometryUtils.mergeGeometries(flat(leaves), false),
-      new THREE.MeshStandardMaterial({
-        vertexColors: true, roughness: 1, flatShading: true })));
+  } else {
+    // VIEWER: the original six merged meshes. Deleted items drop out and every
+    // other item's delta is baked into its geometry here, so the merged path
+    // costs exactly what it always did.
+    for (const [name, bucket] of Object.entries(buckets)) {
+      const keep = [];
+      for (let i = 0; i < bucket.geos.length; i++) {
+        const item = items[bucket.own[i]];
+        if (item?.edit?.deleted) continue;
+        const g = bucket.geos[i];
+        const m = editMatrix(item.pivot, item.edit);
+        if (m) g.applyMatrix4(m);
+        keep.push(g);
+      }
+      const mesh = bucketMesh(name, keep);
+      if (mesh) yard.add(mesh);
+    }
   }
 
   // Soft contact-occlusion blob under the house: now that the shell casts a
@@ -3163,4 +3594,8 @@ function buildYard() {
   yard.add(shadow);
 
   syncCar();
+
+  // yard.js holds references into the groups this build just replaced, and
+  // undo/redo and a house reload both land here without going through it.
+  window.dispatchEvent(new CustomEvent('yardRebuilt'));
 }

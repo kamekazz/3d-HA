@@ -227,7 +227,15 @@ view (dense west treeline, treeline across the back, open east lawn, shrubs flan
 entrance), plus a fake-AO contact shadow. Plants anchor to the house-shell GLB's **measured**
 footprint when one is loaded — re-measured on `levelChanged` since the shell loads async, with flat
 hardscape meshes (<3 ft tall, e.g. the driveway) excluded from the bounds — and never grow on a
-room rect (`onPad`). `setEnvironmentData(house)` re-runs on every `reloadHouse`.
+room rect (`onPad`). `setEnvironmentData(house)` re-runs on every `reloadHouse`, and re-measures the
+shell a few times over the first half second before trusting it (`settleShellAnchors` — the rect the
+boot build sees is not the rect a frame later, and the whole yard hangs off it; see "Editing the
+outside" in the root CLAUDE.md). The yard also carries per-piece identity so the **Outside editor**
+(`yard.js`) can move, scale, erase and duplicate individual trees, beds, slabs and props — the
+generated yard is never stored, only the deltas against it, and it is drawn per-item only while that
+editor is open. Read the "EDITABLE YARD" banner comment in `environment.js` before touching any
+`add*` factory: the item boundaries are the factory calls themselves, so adding, renaming or
+reordering one moves the keys that every saved edit is filed under.
 `frontend/js/weather.js` renders the HA weather condition: rain streaks (LineSegments) + snow
 (Points) from fixed max-size pools throttled with `setDrawRange`, ~9 drifting cloud meshes,
 lightning as `renderer.toneMappingExposure` flashes (never add/remove lights — shader recompile),
@@ -235,7 +243,8 @@ and eased wet/whitened lawn tinting via `setGroundWet/Snow`. It follows daylight
 sun+weather through `onDaylightChanged`, so the mode button and `__daylight.simulate({condition})`
 drive it too; `window.__weather.step(secs)` advances the easing manually for testing (rAF pauses in
 hidden tabs, so nothing eases while the tab is backgrounded). Both hide in edit mode
-(`appModeChanged`), where the grid/dark ground shows instead, and in single-floor view (below).
+(`appModeChanged`), where the grid/dark ground shows instead, and in single-floor view (below) — the
+one exception being the yard while the Outside editor is open, since that is what is being edited.
 
 **The dollhouse cutaway** (`frontend/js/cutaway.js`): the walls between you and a room fade out, so
 every room reads like a Sims-4 build-mode shot — two far walls, no near walls, no ceiling. This used

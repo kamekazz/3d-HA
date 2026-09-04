@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { api } from './api.js';
+import { applyYardEdit } from './environment.js';
 import { scene, camera, renderer, controls, onFrame, getStageFovScale } from './scene.js';
 import { onStageChanged } from './stage.js';
 import { appMode } from './ui.js';
@@ -158,6 +159,30 @@ async function persist() {
       for (const fn of movedListeners) fn({ kind: 'house-shell', ...payload });
     } catch (err) {
       console.warn('shell transform save failed:', err);
+    }
+    return;
+  }
+
+  // A yard piece is not room-anchored: it sits in world space at the pivot the
+  // procedural builder gave it, and what gets stored is the OFFSET from there
+  // (see environment.js "EDITABLE YARD"). Subtracting the pivot is what keeps
+  // an edit meaningful when the yard is regenerated around it.
+  if (ud.kind === 'yard') {
+    const [px, py, pz] = ud.pivot;
+    const payload = {
+      dx: +(selected.position.x - px).toFixed(2),
+      dy: +(selected.position.y - py).toFixed(2),
+      dz: +(selected.position.z - pz).toFixed(2),
+      rot_y: rot,
+      scale,
+    };
+    try {
+      await api.updateYard(ud.yardKey, { kind: ud.yardKind, label: ud.name, ...payload });
+      applyYardEdit(ud.yardKey, payload);
+      ud.userScale = scale;
+      for (const fn of movedListeners) fn({ kind: 'yard', id: ud.yardKey, ...payload });
+    } catch (err) {
+      console.warn('yard transform save failed:', err);
     }
     return;
   }

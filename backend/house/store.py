@@ -103,6 +103,27 @@ CREATE TABLE IF NOT EXISTS openings (
     elevation REAL NOT NULL DEFAULT 0,
     entity_id TEXT
 );
+-- Edits to the procedurally-generated yard (environment.js). The yard is NOT
+-- stored row-by-row: it is rebuilt from seed 1337 on every load, and this table
+-- holds only the DELTA the user applied to an individual piece of it -- a tree
+-- nudged 4 ft, a shrub erased, a stepping stone duplicated. `key` is the
+-- builder's stable identity for a piece (kind + its original position, see
+-- environment.js itemKey), so a row keeps pointing at the same tree even when
+-- the yard is rebuilt around it. `src` non-NULL means this row is not a delta
+-- but a CLONE of the piece named by `src`, drawn as an extra copy.
+CREATE TABLE IF NOT EXISTS yard_edits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL UNIQUE,
+    kind TEXT NOT NULL DEFAULT '',
+    label TEXT NOT NULL DEFAULT '',
+    dx REAL NOT NULL DEFAULT 0,
+    dy REAL NOT NULL DEFAULT 0,
+    dz REAL NOT NULL DEFAULT 0,
+    rot_y REAL NOT NULL DEFAULT 0,
+    scale REAL NOT NULL DEFAULT 1.0,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    src TEXT
+);
 CREATE TABLE IF NOT EXISTS house_shell (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     model_id INTEGER REFERENCES models(id) ON DELETE SET NULL,
@@ -130,6 +151,9 @@ MODEL_FIELDS = ("name",)
 # The whole-house shell: one chosen library model + a single rigid transform
 # used to align it in the scene. Singleton row (id=1). Not in HISTORY_TABLES.
 SHELL_FIELDS = ("model_id", "x", "y", "z", "rot_y", "scale")
+# A yard piece's override. Everything is optional -- a PATCH that carries
+# only `deleted` erases a tree without disturbing a nudge already saved on it.
+YARD_FIELDS = ("kind", "label", "dx", "dy", "dz", "rot_y", "scale", "deleted", "src")
 # stairs.floor_id is the LOWER of the two floors they connect; they rise that
 # floor's full floor_height. direction = which way they ascend on the plan.
 STAIR_FIELDS = ("name", "x", "z", "width", "depth", "direction", "floor_id")
@@ -138,7 +162,8 @@ STAIR_DIRECTIONS = ("n", "s", "e", "w")
 # Tables covered by undo/redo snapshots, in parent -> child FK order.
 # `models` is deliberately excluded: model upload/delete manage files on disk
 # and are not undoable; restores null/drop references to vanished models.
-HISTORY_TABLES = ("floors", "rooms", "stairs", "placements", "objects", "openings")
+HISTORY_TABLES = ("floors", "rooms", "stairs", "placements", "objects",
+                  "openings", "yard_edits")
 
 # Defaults for rooms generated from HA areas (editable afterwards). Feet.
 GEN_ROOM = {"width": 16.0, "depth": 13.0, "height": 8.0, "gap": 3.0}
@@ -311,6 +336,7 @@ class HouseStore:
                 "SELECT o.*, m.name AS model_name FROM objects o"
                 " JOIN models m ON m.id = o.model_id ORDER BY o.id")
             openings = self._rows("SELECT * FROM openings ORDER BY id")
+            yard = self._rows("SELECT * FROM yard_edits ORDER BY id")
 
         rooms_by_floor = {}
         for room in rooms:
@@ -366,7 +392,8 @@ class HouseStore:
         for floor in floors:
             floor["rooms"] = rooms_by_floor.get(floor["id"], [])
             floor["stairs"] = stairs_by_floor.get(floor["id"], [])
-        return {"floors": floors, "house_shell": self.get_house_shell()}
+        return {"floors": floors, "house_shell": self.get_house_shell(),
+                "yard": yard}
 
     def export_snapshot(self):
         """Raw rows of every history table, keyed by table name (undo/redo)."""
@@ -939,6 +966,69 @@ class HouseStore:
                 tuple(allowed.values()))
             self._db.commit()
         return self.get_house_shell()
+
+    # ---- yard edits (overrides on the procedural exterior) -------------------
+
+    def list_yard_edits(self):
+        with self._lock:
+            return self._rows("SELECT * FROM yard_edits ORDER BY id")
+
+    def upsert_yard_edit(self, key, data):
+        """Write a piece's override, creating the row on first touch.
+
+        Unlisted fields keep their current value, so the panel can PATCH just
+        `deleted` or just `scale` without resurrecting an earlier nudge.
+        Returns False when the payload carries nothing we store.
+        """
+        allowed = {k: data[k] for k in YARD_FIELDS if k in data}
+        if not allowed:
+            return False
+        if "deleted" in allowed:
+            allowed["deleted"] = int(bool(allowed["deleted"]))
+        cols = ", ".join(allowed)
+        ph = ", ".join("?" for _ in allowed)
+        updates = ", ".join(f"{k}=excluded.{k}" for k in allowed)
+        with self._lock:
+            self._db.execute(
+                f"INSERT INTO yard_edits (key, {cols}) VALUES (?, {ph})"
+                f" ON CONFLICT(key) DO UPDATE SET {updates}",
+                (key, *allowed.values()))
+            self._db.commit()
+        return True
+
+    def add_yard_clone(self, src_key, data):
+        """An extra copy of an existing piece. Its own key is assigned from the
+        row id (`clone:<id>`), which is what makes clones of clones possible and
+        keeps the key stable across a rebuild."""
+        allowed = {k: data[k] for k in YARD_FIELDS
+                   if k in data and k not in ("src",)}
+        allowed.pop("deleted", None)
+        cols = "".join(f", {k}" for k in allowed)
+        ph = "".join(", ?" for _ in allowed)
+        with self._lock:
+            cur = self._db.execute(
+                f"INSERT INTO yard_edits (key, src{cols})"
+                f" VALUES ('', ?{ph})",
+                (src_key, *allowed.values()))
+            row_id = cur.lastrowid
+            self._db.execute("UPDATE yard_edits SET key=? WHERE id=?",
+                             (f"clone:{row_id}", row_id))
+            self._db.commit()
+        return f"clone:{row_id}"
+
+    def delete_yard_edit(self, key):
+        """Drop the override entirely: a procedural piece reverts to how the
+        builder draws it, a clone stops existing."""
+        with self._lock:
+            cur = self._db.execute("DELETE FROM yard_edits WHERE key=?", (key,))
+            self._db.commit()
+            return cur.rowcount > 0
+
+    def clear_yard_edits(self):
+        with self._lock:
+            cur = self._db.execute("DELETE FROM yard_edits")
+            self._db.commit()
+            return cur.rowcount
 
     # ---- objects (standalone furniture/decor) --------------------------------
 

@@ -498,3 +498,55 @@ def delete_opening(opening_id):
         return jsonify({"error": "opening not found"}), 404
     return jsonify({"ok": True})
 
+
+
+# ---- yard (overrides on the procedurally-generated exterior) ----------------
+#
+# The yard is not stored piece by piece: environment.js rebuilds it from a fixed
+# seed every load, and these endpoints persist only what the user changed on top
+# of it. `key` is the builder's own identity for a piece and is opaque here --
+# the backend never parses it, it only files edits under it.
+
+@bp.get("/yard")
+def list_yard_edits():
+    return jsonify({"yard": _store().list_yard_edits()})
+
+
+@bp.patch("/yard")
+@undoable
+def update_yard_edit():
+    """Upsert one piece's override. Body: {key, ...fields}."""
+    data = request.get_json(force=True)
+    key = (data.get("key") or "").strip()
+    if not key:
+        return jsonify({"error": "key is required"}), 400
+    if not _store().upsert_yard_edit(key, data):
+        return jsonify({"error": "nothing to update"}), 400
+    return jsonify({"ok": True, "key": key})
+
+
+@bp.post("/yard/clone")
+@undoable
+def clone_yard_piece():
+    """Draw an extra copy of an existing piece. Body: {src, ...transform}."""
+    data = request.get_json(force=True)
+    src = (data.get("src") or "").strip()
+    if not src:
+        return jsonify({"error": "src is required"}), 400
+    return jsonify({"key": _store().add_yard_clone(src, data)}), 201
+
+
+@bp.delete("/yard/<path:key>")
+@undoable
+def delete_yard_edit(key):
+    """Drop the override: a procedural piece reverts to default, a clone goes."""
+    if not _store().delete_yard_edit(key):
+        return jsonify({"error": "no edit for that piece"}), 404
+    return jsonify({"ok": True})
+
+
+@bp.post("/yard/reset")
+@undoable
+def reset_yard():
+    """Throw away every yard edit and go back to the generated exterior."""
+    return jsonify({"ok": True, "removed": _store().clear_yard_edits()})

@@ -17,6 +17,7 @@ import { initUI, updateData, setConnStatus, showBanner, openDevicePanel, openObj
 import { initDrag, isTransforming, setSelected } from './drag.js';
 import { initRoomPanel, updateRoomPanelData } from './roompanel.js';
 import { initPlanner } from './planner.js';
+import { initYardEditor, isYardEditorOpen, yardPickTargets, selectYardPiece } from './yard.js';
 import { initDaylight, settleDaylight } from './daylight.js';
 import { initEnvironment, setEnvironmentData, setYardModels } from './environment.js';
 import { initWeather } from './weather.js';
@@ -146,9 +147,11 @@ function setupPicking() {
     }
 
     // device markers + objects first so they win over the room that contains
-    // them (recursive: GLB groups only register through their children)
+    // them (recursive: GLB groups only register through their children).
+    // Yard pieces join them while the Outside editor is open, and only then --
+    // in the viewer the yard is six merged meshes with nothing to hit.
     const priorityHits = raycaster.intersectObjects(
-      [...markers.values(), ...objects3d.values()], true);
+      [...markers.values(), ...objects3d.values(), ...yardPickTargets()], true);
     for (const hit of priorityHits) {
       if (hit.distance > occluderDist + 0.25) break; // hidden behind a wall
       const owner = ownerOf(hit.object);
@@ -239,6 +242,9 @@ function setupPicking() {
     } else if (ud.kind === 'object') {
       tooltip.innerHTML =
         `<strong>${ud.name}</strong><br><span class="sub">${ud.roomName}</span>`;
+    } else if (ud.kind === 'yard') {
+      tooltip.innerHTML =
+        `<strong>${ud.name}</strong><br><span class="sub">outside · ${ud.yardKind}</span>`;
     } else {
       tooltip.innerHTML = `<strong>${ud.roomName}</strong><br><span class="sub">Level ${ud.level}</span>`;
     }
@@ -276,6 +282,9 @@ function setupPicking() {
     lastClick = { obj, time: now };
 
     if (!obj) {
+      // in the Outside editor, empty space just drops the selection — there is
+      // no focus to leave and the yard is the whole subject
+      if (isYardEditorOpen()) { selectYardPiece(null); return; }
       // clicking empty space leaves focus mode
       if (!isDouble) exitFocus();
       return;
@@ -287,6 +296,10 @@ function setupPicking() {
     // piece of furniture, so it can be moved, rebound or hidden.
     if (ud.kind === 'object' && ud.entityId && appMode !== 'edit') {
       handleEntityClick(ud.entityId, isDouble);
+      return;
+    }
+    if (ud.kind === 'yard') {
+      selectYardPiece(obj);
       return;
     }
     if (ud.kind === 'device') {
@@ -417,6 +430,7 @@ async function main() {
   initUI({ structure, house, onReload: reloadHouse });
   initRoomPanel({ house });
   initPlanner({ getStructure: () => structure, onClose: reloadHouse });
+  initYardEditor();
   initUndo({ defaultRefresh: reloadHouse });
   initRoomLights();
   initEaveLights(); // its lights must exist before compileAsync too (fixed count)

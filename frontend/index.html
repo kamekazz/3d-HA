@@ -73,6 +73,7 @@
     <button id="btn-models" class="edit-only hidden" type="button" title="Upload and manage 3D models (.glb) for devices and furniture">Models</button>
     <button id="btn-align" class="edit-only hidden" type="button" title="Position, rotate and scale the whole-house model">Align house</button>
     <button id="btn-editor" class="edit-only hidden" type="button">Room editor</button>
+    <button id="btn-yard" class="edit-only hidden" type="button" title="Move, scale, erase or duplicate the trees, beds, paving and props outside">Outside</button>
     <button id="btn-sync" class="edit-only hidden" type="button" title="Re-read HA and update the layout: move rooms to match their HA floor, add new areas, drop empty floors deleted in HA">Sync with HA</button>
     <button id="btn-refresh" class="edit-only hidden" type="button" title="Re-read floors/areas/devices from HA">Refresh HA</button>
   </header>
@@ -85,6 +86,45 @@
     <button type="button" data-gizmo="rotate">Rotate</button>
     <button type="button" data-gizmo="scale">Scale</button>
   </div>
+
+  <!-- Outside editor (yard.js): a bar while it is open, and a panel for the
+       selected piece. The yard is generated, so "reset" really does put a
+       piece back exactly where the builder had it. -->
+  <div id="yard-bar" class="glass hidden">
+    <span class="yb-title">Outside</span>
+    <span class="yb-hint">Click a tree, shrub, slab or prop</span>
+    <div id="yard-erased-wrap" class="hidden">
+      <details>
+        <summary>Erased (<span id="yard-erased-count">0</span>)</summary>
+        <div id="yard-erased"></div>
+      </details>
+    </div>
+    <button id="yard-reset-all" type="button" class="secondary">Reset all</button>
+    <button id="yard-close" type="button">Done</button>
+  </div>
+
+  <aside id="yard-panel" class="panel hidden">
+    <button class="close" id="yp-close" type="button">&times;</button>
+    <h2 id="yp-name">Yard piece</h2>
+    <p id="yp-where" class="muted"></p>
+    <p class="muted">Drag it with the handles in the 3D view, or set the numbers:</p>
+    <form id="yard-form" onsubmit="return false">
+      <div class="row3">
+        <label>X (ft) <input id="yp-x" type="number" step="0.5"></label>
+        <label>Y (ft) <input id="yp-y" type="number" step="0.25"></label>
+        <label>Z (ft) <input id="yp-z" type="number" step="0.5"></label>
+      </div>
+      <div class="row3">
+        <label>Rotation (°) <input id="yp-rot" type="number" step="15"></label>
+        <label>Scale <input id="yp-scale" type="number" step="0.05" min="0.05" max="20"></label>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="yp-duplicate" class="secondary">Duplicate</button>
+        <button type="button" id="yp-reset" class="secondary">Reset</button>
+        <button type="button" id="yp-erase" class="danger">Erase</button>
+      </div>
+    </form>
+  </aside>
 
   <div id="banner" class="hidden"></div>
   <div id="tooltip" class="hidden"></div>

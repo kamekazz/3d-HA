@@ -1253,7 +1253,7 @@ function openModelsModal() {
 
 // Sync the level nav's active button without importing focus.js (which imports
 // us). Mirrors focus.js's own DOM-only helper.
-function setActiveLevelBtn(level) {
+export function setActiveLevelBtn(level) {
   document.querySelectorAll('#levels button').forEach((b) => {
     b.classList.toggle('active', String(b.dataset.level) === String(level));
   });
