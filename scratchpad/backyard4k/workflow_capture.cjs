@@ -1,6 +1,7 @@
 /* Capture the real app using roomkit/shot.py's exact camera setup.
    node workflow_capture.cjs <round> [pose-name ...]
-   Optional --pose-file file.json supplies alternate exact registered poses. */
+   Optional --pose-file file.json supplies alternate exact registered poses.
+   --no-promote or pose.experimental keeps native experiments off comparisons. */
 const fs = require('fs');
 const path = require('path');
 const {spawnSync}=require('child_process');
@@ -13,6 +14,8 @@ if(fi >= 0) poseFile = path.resolve(argv.splice(fi, 2)[1]);
 let lightFile=null;
 const li=argv.indexOf('--light-file');
 if(li>=0)lightFile=path.resolve(argv.splice(li,2)[1]);
+const ni=argv.indexOf('--no-promote'),noPromote=ni>=0;
+if(noPromote)argv.splice(ni,1);
 const poses = JSON.parse(fs.readFileSync(poseFile, 'utf8').replace(/^\uFEFF/, ''));
 const selected = argv.length ? argv : Object.keys(poses);
 const shot = fs.readFileSync(path.join(root, 'tools/roomkit/shot.py'), 'utf8');
@@ -124,16 +127,17 @@ function progress(status, details) {
       }
       await page.close();
       const fp=path.join(here,'progress.json');let prev={};try{prev=JSON.parse(fs.readFileSync(fp,'utf8'))}catch{}
-      // Exploratory camera fits remain on disk; only full-resolution captures
-      // are promoted to the public comparison page.
+      // Native experiments still get lightweight previews for inspection.
       if(Math.max(...state.canvas)>=3840){
         const previewResult=spawnSync('C:/Users/Manuel/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe',
           [path.join(here,'progress_preview.py'),out],{windowsHide:true,encoding:'utf8'});
         if(previewResult.status!==0)throw Error('Progress preview failed: '+previewResult.stderr);
+        if(!noPromote && !pose.experimental){
         const renders={...prev.renders,[name]:path.relative(here,out).replaceAll('\\','/')};
         const previews={...prev.previews,[name]:path.relative(here,out.replace(/\.png$/,'-progress.jpg')).replaceAll('\\','/')};
         const renderSizes={...prev.renderSizes,[name]:state.canvas};
         fs.writeFileSync(fp,JSON.stringify({...prev,renders,previews,renderSizes,round,updated:new Date().toISOString()},null,2));
+        }
       }
     }
     progress('Render capture complete',round+' · '+selected.length+' camera views');

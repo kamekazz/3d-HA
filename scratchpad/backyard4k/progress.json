@@ -1,17 +1,17 @@
 {
-  "status": "Render capture complete",
-  "details": "deck_critic_r6 · 1 camera views",
-  "updated": "2026-09-12T17:22:53.613Z",
+  "status": "Capturing ground_critic_r10",
+  "details": "photo12 · native 3840 × 2880 · rear daylight",
+  "updated": "2026-09-12T17:46:59.306Z",
   "renders": {
-    "lawn_spacing": "renders/spacing-verified/lawn_spacing.png",
+    "lawn_spacing": "renders/light-r5-native/lawn_spacing.png",
     "rear_site": "renders/woodland-r5-final/rear_site.png",
-    "photo14": "renders/deck_critic_r6/photo14.png",
+    "photo14": "renders/deck-r7-orientation/photo14.png",
     "photo02": "renders/deck-layout2/photo02.png",
-    "photo09": "renders/planting-r5-final/photo09.png",
-    "photo12": "renders/ground-r10/photo12.png",
+    "photo09": "renders/light_critic_r5/photo09.png",
+    "photo12": "renders/light_critic_r5/photo12.png",
     "photo11": "renders/sky-r4-final/photo11.png"
   },
-  "round": "deck_critic_r6",
+  "round": "deck-r7-orientation",
   "references": {
     "photo03": "references/03.png",
     "photo12": "references/12.png",
@@ -24,13 +24,13 @@
     "photo08": "references/08.png"
   },
   "notes": [
-    "Porch structure and back door: Build 5 rendered; critic pending — Grill broad face corrected from overhead camera evidence; source ownership and front geometry preserved.",
-    "Siding and roof detail: Build 5 rendered; critic pending — Softer physical laps replace painted dark stripes. Broad wall illumination remains under review.",
-    "Deck and steps: Build 6 rendered; critic pending — Sharper chalk wear, grit and localized scuffs; native render verified.",
-    "Ground and grass: Build 10 rendered; further revision needed — Shorter, denser grass still shows a comb pattern. Lighting diagnostics underway; extra 20 feet of lawn retained.",
-    "Plantings: Build 5 rendered; critic pending — Layered evergreen added without changing old plants. Shoots still appear too regular and needle clusters too stiff.",
-    "Lake edge and horizon: Build 6 rendered; critic pending — Far woodland now renders after memory fix. Distant detail remains too uniform.",
-    "Light: Build 5 diagnostics found usable shadow pattern — Southwest sun195/30 shades house-facing samples and clears lake-facing samples. Rear grass response restores contrast; blue balance needs validation.",
+    "Porch structure and back door: Build 5 rendered; critic pending â€” Grill broad face corrected from overhead camera evidence; source ownership and front geometry preserved.",
+    "Siding and roof detail: Build 5 rendered; critic pending â€” Softer physical laps replace painted dark stripes. Broad wall illumination remains under review.",
+    "Deck and steps: Build 6 failed blind review; build 7 capturing â€” Reference overheads show incorrect board directions. Correcting angles before changing physical width; camera registration also under review.",
+    "Ground and grass: Build 10 rendered; further revision needed â€” Shorter, denser grass still shows a comb pattern. Lighting diagnostics underway; extra 20 feet of lawn retained.",
+    "Plantings: Build 5 rendered; critic pending â€” Layered evergreen added without changing old plants. Shoots still appear too regular and needle clusters too stiff.",
+    "Lake edge and horizon: Build 6 rendered; critic pending â€” Far woodland now renders after memory fix. Distant detail remains too uniform.",
+    "Light: Build 5 failed blind review; facade study underway â€” Ground contrast corrected. Rear facade lacks diffuse sky fill; lake-facing view lacks atmospheric daylight wash.",
     "No piece has passed until its independent blind verdict is recorded.",
     "Comparisons use native photo resolution; 4K renders are linked above."
   ],
@@ -44,8 +44,8 @@
       "gap": "Softer physical laps replace painted dark stripes. Broad wall illumination remains under review."
     },
     "Deck and steps": {
-      "status": "Build 6 rendered; critic pending",
-      "gap": "Sharper chalk wear, grit and localized scuffs; native render verified."
+      "status": "Build 6 failed blind review; build 7 capturing",
+      "gap": "Reference overheads show incorrect board directions. Correcting angles before changing physical width; camera registration also under review."
     },
     "Ground and grass": {
       "status": "Build 10 rendered; further revision needed",
@@ -60,8 +60,8 @@
       "gap": "Far woodland now renders after memory fix. Distant detail remains too uniform."
     },
     "Light": {
-      "status": "Build 5 diagnostics found usable shadow pattern",
-      "gap": "Southwest sun195/30 shades house-facing samples and clears lake-facing samples. Rear grass response restores contrast; blue balance needs validation."
+      "status": "Build 5 failed blind review; facade study underway",
+      "gap": "Ground contrast corrected. Rear facade lacks diffuse sky fill; lake-facing view lacks atmospheric daylight wash."
     }
   },
   "renderSizes": {
@@ -92,11 +92,11 @@
   },
   "previews": {
     "rear_site": "renders/woodland-r5-final/rear_site-progress.jpg",
-    "photo14": "renders/deck_critic_r6/photo14-progress.jpg",
+    "photo14": "renders/deck-r7-orientation/photo14-progress.jpg",
     "photo02": "renders/deck-layout2/photo02-progress.jpg",
-    "photo09": "renders/planting-r5-final/photo09-progress.jpg",
-    "photo12": "renders/ground-r10/photo12-progress.jpg",
+    "photo09": "renders/light_critic_r5/photo09-progress.jpg",
+    "photo12": "renders/light_critic_r5/photo12-progress.jpg",
     "photo11": "renders/sky-r4-final/photo11-progress.jpg",
-    "lawn_spacing": "renders/spacing-verified/lawn_spacing-progress.jpg"
+    "lawn_spacing": "renders/light-r5-native/lawn_spacing-progress.jpg"
   }
 }

@@ -4450,8 +4450,10 @@ function addRearDeckDetail(L, props, masses) {
       }
     }
   };
-  platform(3.0,-42.2,20.60,-24.43,2.744,Math.PI/4);
-  platform(20.60,-42.2,42.20,-10.91,2.424,-Math.PI/4);
+  // Both overhead references: upper runs east/west; lower southwest/northeast.
+  // The angle is ACROSS the boards, perpendicular to their visible grain.
+  platform(3.0,-42.2,20.60,-24.43,2.744,Math.PI/2);
+  platform(20.60,-42.2,42.20,-10.91,2.424,Math.PI/4);
   const meshGeometry=new THREE.BufferGeometry();
   meshGeometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
   meshGeometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));

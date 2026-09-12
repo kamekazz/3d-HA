@@ -2,6 +2,16 @@
 
 The original seven-piece build/shoot/blind-critic loop remains active. No piece has passed. Latest user steering (larger grass area) is implemented as rearSite.yardN = L.yardN - 20; keep this. Native spacing proof is renders/spacing-verified/lawn_spacing.png, now first card on http://127.0.0.1:8765/progress.html. App is http://127.0.0.1:5001.
 
+## Latest integration (takes precedence over older round notes below)
+
+Root APPLIED light R5 proposal inside addRearLightDetail: four rear ground meshes only directional sunlight4, env intensity0.02; living turf/tufts/clover blue1.425 with snow excluded. Litter gets lighting, no pigment. No global lighting edits. Native renders/light-r5-native/photo09.png,photo12.png,lawn_spacing.png all293/293,zeroerrors,frontsignature unchanged; previews promoted. First live card now uses this updated lawn spacing image with195/30 light. Explicit reference-light-r5.json records photographic sun195/30; workflow default335/42 unchanged, use explicit light-file for future photo reviews.
+
+light-r5-lifecycle.cjs/json passed actual editor/rebuild: all4 hooks present, no color accumulation, all4 old materials disposed/replaced; all11 shrub contacts and deck transforms still move/scale/delete correctly, zeroerrors. Snow pigment invariance proved earlier in blue-final ROI. Light R5 fresh critic FAIL99.9%: photograph09 LEFT,12 RIGHT, correct. Biggest09gap diffuse sky fill on dark rear facade;12gap bright upper-right atmospheric daylight wash/contrast compression. rear_facade_light_r6 now prepares bounded facade-only component study, no source change, no GPU yet. Haze deferred separately. Preserve ground response.
+
+Deck R6 fresh critic FAIL99.9%: cropRIGHT/fullLEFT photos. Called boards~2x too narrow. Fresh deck_builder_r7 found BOTH board directions wrong from two overheads: upper should worldX parallelnorthrail, lower southwest/northeast diagonal. Applied ONLY upper anglepi/4->pi/2, lower -pi/4->pi/4; pitch0.48/UV/material/perimeter/heights unchanged. Source syntax passed. Camera fitting is also imperfect; do NOT blindly double plank width. Separate deck-r7-camera-candidate.json fits seam vanishing point+slider+perimeter (one anchor still38.6pxoff), canonical unchanged. Approx slider-only originalfit9.81pxRMSE andboundhit, not scale-exact. World units may not equal physical feet, so no hard eye-height assumption. Deck builder CURRENTLY owns GPU for canonical orientation14 and separate candidate at195/30; report closure before next grant. Root mutation lock held during this capture.
+
+Next GPU: rear_facade_light_r6 after deck builder closes. Fresh sidingR5/lakeR6/porchR5/plantingR5/grassR10 critics still pending. None passed. Completed porch_grill_builder_r5 can appear in slot list; new spawns sometimes hit threadlimit until a currently active agent finalizes. Avoid repeated failed attempts.
+
 ## Capture discipline
 
 Run one browser at a time. Four simultaneous 4K captures caused stalled multi-GB Chrome processes. Woodland now flushes temporary leaf arrays per tree; serialized captures succeed. Use initial exec require_escalated because existing Three.js CDN imports are denied in sandbox. workflow_capture.cjs now records early startup errors and logs phases. It generates lightweight *-progress.jpg previews while keeping native PNG links. Use canonical_poses.json; no camera-fit experiments.

@@ -1,0 +1,156 @@
+{
+  "editorGround": {
+    "response": {
+      "directionalScale": 4,
+      "environmentScale": 0.02,
+      "livingBlueScale": 1.425,
+      "materials": [
+        "rear-mown-turf",
+        "rear-short-grass-tufts",
+        "rear-mown-clover",
+        "rear-fallen-leaves"
+      ]
+    },
+    "colorsStable": true,
+    "keys": [
+      "rear-turf-cc0-snow-v1|rear-contact-v4|rear-ground-light-response-v1",
+      "rear-grass-thin-blade-v2|rear-contact-v4|rear-ground-light-response-v1",
+      "onBeforeCompile( /* shaderobject, renderer */ ) {}|rear-contact-v4|rear-ground-light-response-v1",
+      "rear-fallen-oak-autumn-v1|rear-contact-v4|rear-ground-light-response-v1"
+    ]
+  },
+  "rebuiltGround": {
+    "response": {
+      "directionalScale": 4,
+      "environmentScale": 0.02,
+      "livingBlueScale": 1.425,
+      "materials": [
+        "rear-mown-turf",
+        "rear-short-grass-tufts",
+        "rear-mown-clover",
+        "rear-fallen-leaves"
+      ]
+    },
+    "colorsStable": true,
+    "keys": [
+      "rear-turf-cc0-snow-v1|rear-contact-v4|rear-ground-light-response-v1",
+      "rear-grass-thin-blade-v2|rear-contact-v4|rear-ground-light-response-v1",
+      "onBeforeCompile( /* shaderobject, renderer */ ) {}|rear-contact-v4|rear-ground-light-response-v1",
+      "rear-fallen-oak-autumn-v1|rear-contact-v4|rear-ground-light-response-v1"
+    ]
+  },
+  "disposed": [
+    "rear-mown-turf",
+    "rear-short-grass-tufts",
+    "rear-mown-clover",
+    "rear-fallen-leaves"
+  ],
+  "materialsReplaced": true,
+  "count": 11,
+  "before": {
+    "center": [
+      50.4537353515625,
+      1.0844135284423828,
+      -41.32621765136719,
+      0
+    ],
+    "radius": [
+      7.87060546875,
+      5.50465202331543,
+      6.933376312255859,
+      1
+    ],
+    "deckInverse": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      3.3306690738754696e-16,
+      0,
+      1
+    ],
+    "deckVisible": 1
+  },
+  "moved": {
+    "center": [
+      54.93194103239375,
+      1.5594074577135741,
+      -41.38718795775078,
+      0
+    ],
+    "radius": [
+      11.805908203125,
+      8.256978034973145,
+      10.400064468383789,
+      1
+    ],
+    "deckInverse": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      -2,
+      3.3306690738754696e-16,
+      0,
+      1
+    ],
+    "deckVisible": 1
+  },
+  "deleted": {
+    "center": [
+      54.93194103239375,
+      1.5594074577135741,
+      -41.38718795775078,
+      0
+    ],
+    "radius": [
+      11.805908203125,
+      8.256978034973145,
+      10.400064468383789,
+      0
+    ],
+    "deckInverse": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      -2,
+      3.3306690738754696e-16,
+      0,
+      1
+    ],
+    "deckVisible": 0
+  },
+  "rebuiltCount": 11,
+  "shrubMoves": true,
+  "shrubScales": true,
+  "shrubDeletes": true,
+  "deckMoves": true,
+  "deckDeletes": true,
+  "errors": []
+}
