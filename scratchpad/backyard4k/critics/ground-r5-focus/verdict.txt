@@ -1,0 +1,4 @@
+Photograph: LEFT
+Confidence: 99.9%
+Single biggest ground gap: The right lawn is a flat, uniformly dark teal carpet without the long, directionally bent and clumped grass blades and pale sunlit tuft variation visible on the left. Its tiny short fibers cannot create the left side's rough, uneven surface relief.
+Gate: FAIL. Recognition is immediate.

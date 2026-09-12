@@ -1,0 +1,17 @@
+Woodland round 4 builder self-review — not a blind verdict
+
+Implemented only rear lake woodland and its private leaf material, plus the approved optional authoredPivot guard in measureItem.
+- Dense upper crowns: five irregular overlapping crown tiers per tree, nine branching scaffold tiers, secondary twigs, lower north-reaching boughs and western understory.
+- Curved ovate leaves: eight perimeter vertices in near trees; six at the far bank. Single surfaces rendered DoubleSide, avoiding duplicated undersides. Inner spray colors encode occlusion variation. No additional mesh calls.
+- All 13 mature trees retain exact original keys and pivots. Baseline rear-tree-pivots-r3.json equals final-wide rear_site.json state.rearTrees (verified True).
+- Wider lawn remains rearSite.yardN = L.yardN - 20. Tree bases/shore did not move south.
+
+Actual captures:
+renders/woodland-r4-final/photo11.png — 3840 x 2880, registered lake_r2_poses photo11.
+renders/woodland-r4-final-wide/rear_site.png — 3840 x 2160, registered site_poses rear_site.
+Both have zero page errors, 293/293 models, and front geometry fingerprint 482260 triangles / xor 166137678 / sum 3351587226.
+Final photo11 renderInfo: 15 calls, 11868966 triangles.
+Final wide renderInfo: 320 calls, 12396851 triangles.
+These are whole-scene counters, with other rear builders changing concurrently.
+
+Self-review: wide view now reads as full interlocking summer tree crowns instead of a near-barren row. Eye-level foliage is much denser and less angular, but remains recognizably procedural. Remaining visible weaknesses include the simple central sky opening, uniform far shore band and tree silhouettes, flat-looking gravel strip/stone chain, and insufficient varied bank relief. No blind pass claimed. Fresh independent critic required.

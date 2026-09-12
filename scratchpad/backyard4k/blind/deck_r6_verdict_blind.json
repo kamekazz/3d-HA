@@ -1,0 +1,19 @@
+{
+  "critic": "deck_critic_r6",
+  "scope": "deck boards and steps only",
+  "keys_read": false,
+  "crop": {
+    "pair": "deck_r6_crop/pair.png",
+    "photograph_guess": "right",
+    "confidence": 0.999,
+    "indistinguishable": false
+  },
+  "full_frame": {
+    "pair": "deck_r6_full/pair.png",
+    "photograph_guess": "left",
+    "confidence": 0.999,
+    "indistinguishable": false
+  },
+  "single_biggest_deck_gap": "Board width and seam spacing are visibly wrong. The presumed render has much narrower, more densely repeated decking planks across the matched foreground patch, approximately twice the seam density of the presumed photograph. This gives the platform and visible step boards a finely striped, miniaturized appearance instead of the broad worn boards in the photograph.",
+  "verdict": "FAIL: photograph readily identified in both independently randomized pairs. Correct deck plank scale/spacing before claiming a blind match."
+}

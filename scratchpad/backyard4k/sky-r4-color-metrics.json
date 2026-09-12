@@ -1,0 +1,77 @@
+[
+  {
+    "name": "reference14",
+    "path": "references/14.png",
+    "box": [
+      390,
+      5,
+      490,
+      55
+    ],
+    "meanRGB": [
+      213.37,
+      232.17,
+      253.54
+    ]
+  },
+  {
+    "name": "prior14",
+    "path": "renders/spacing-verified/photo14-progress.jpg",
+    "box": [
+      1200,
+      40,
+      1450,
+      170
+    ],
+    "meanRGB": [
+      95.0,
+      116.0,
+      145.0
+    ]
+  },
+  {
+    "name": "final14",
+    "path": "renders/sky-r4-final/photo14-progress.jpg",
+    "box": [
+      1200,
+      40,
+      1450,
+      170
+    ],
+    "meanRGB": [
+      171.49,
+      200.44,
+      236.34
+    ]
+  },
+  {
+    "name": "prior11",
+    "path": "renders/spacing-verified/photo11-progress.jpg",
+    "box": [
+      940,
+      30,
+      1100,
+      120
+    ],
+    "meanRGB": [
+      94.36,
+      115.45,
+      142.76
+    ]
+  },
+  {
+    "name": "final11",
+    "path": "renders/sky-r4-final/photo11-progress.jpg",
+    "box": [
+      940,
+      30,
+      1100,
+      120
+    ],
+    "meanRGB": [
+      182.17,
+      204.56,
+      231.94
+    ]
+  }
+]

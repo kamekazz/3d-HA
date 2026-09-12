@@ -1,0 +1,2 @@
+Key check: photograph LEFT, so the blind selection was correct (99% confidence).
+Capture: errors 0; loaded 293/293. Front geometry fingerprint: triangles 482260, xor 166137678, sum 3351587226; selection environment triangles with every world-space vertex z >= 0.

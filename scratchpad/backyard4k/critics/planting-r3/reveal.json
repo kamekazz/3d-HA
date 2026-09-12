@@ -1,0 +1,7 @@
+{
+  "revealed_at": "2026-09-12T13:33:16.0569428-03:00",
+  "hidden_key_photograph": "left",
+  "blind_prediction_correct": true,
+  "verdict": "FAIL",
+  "note": "Verdict was persisted to verdict.json before key.json was read. Native capture is 3840x2880; full-frame blind pair uses the 600x450 reference size. Capture reported 0 runtime errors and no failed requests, with four resource console responses (two 502 and two 503); all 293 models loaded."
+}

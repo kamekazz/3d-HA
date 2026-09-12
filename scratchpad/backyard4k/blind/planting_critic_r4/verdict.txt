@@ -1,0 +1,6 @@
+Blind planting verdict — reference 09
+Photograph side: LEFT.
+Confidence: 100%.
+Verdict: FAIL; the planting treatment is immediately distinguishable.
+Single largest planting gap: the RIGHT image lacks the broad, low, tiered evergreen canopy behind and to the right of the clipped round shrub. The LEFT image has a dense, horizontally spreading conifer that occupies the right edge and overlaps the rounded shrub and background. The RIGHT image instead ends at an isolated, uniformly oval shrub with empty sky/horizon beyond it. Restore that substantial background planting mass, with irregular layered branches and visible depth; isolated small ground mounds do not replace it.
+This verdict was written after viewing only the randomized unlabeled full-frame pair and before revealing its key. Assessment is restricted to plantings.

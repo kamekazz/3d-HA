@@ -1,0 +1,15 @@
+Woodland round 5 builder self-review — not a blind verdict
+
+Changes: private rearOakLeaf material split uses the supplied CC0 OakLeaf05 photographic albedo/alpha and DX normal with normalScale (.4,-.4), alphaTest .45, DoubleSide. Only the new fully UV-mapped individual oak leaves take this material; unrelated rear foliage and front materials are unaffected. Each leaf has four bent triangles, neutral per-leaf brightness variation and photographic lobes/veins. Face winding and normals agree.
+
+The far shoreline now curves at several scales, has variable bank elevation, dark soil, discontinuous reeds and dense irregular low scrub, intermediate saplings, and three overlapping woodland ranks of unequal height and depth. All stay in the existing far-bank item. Near mature tree authoredPivot data and their keys remain exact. rearSite.yardN remains L.yardN - 20.
+
+Final actual app renders:
+renders/woodland-r5-final/photo11.png (3840 x 2880)
+renders/woodland-r5-final/rear_site.png (3840 x 2160)
+Both: 0 page errors, 293/293 models, front geometry 482260 triangles / xor 166137678 / sum 3351587226. Both state.rearTrees arrays equal the 13 baseline key/pivot records in rear-tree-pivots-r3.json.
+Photo11: 15 draw calls / 12253626 whole-scene triangles.
+Wide: 350 draw calls / 13153679 whole-scene triangles.
+Other builders changed their pieces concurrently; these whole-scene totals are not isolated component benchmarks.
+
+Self-review: native oak leaf lobes and veins are visible, eliminating the polygon-leaf outline. Low far-bank vegetation now connects the receding ranks rather than leaving isolated crowns on a bare shelf. The scene still looks rendered: foliage shading and large-scale spacing are more regular than the photograph, water and near bank remain simplistic, and broad sky openings differ from reference. No pass claimed; a fresh blind verdict is required.

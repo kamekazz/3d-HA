@@ -1,0 +1,48 @@
+{
+  "result": "FAIL",
+  "focus": {
+    "photographGuess": "left",
+    "confidence": 1.0,
+    "key": "left",
+    "correct": true,
+    "crop": [
+      60,
+      300,
+      540,
+      450
+    ]
+  },
+  "full": {
+    "photographGuess": "right",
+    "confidence": 1.0,
+    "key": "right",
+    "correct": true
+  },
+  "biggestGrassGap": "Tall pale wiry tufts with dark inter-clump gaps; the photograph is dense low fine turf.",
+  "capture": {
+    "canvas": [
+      3840,
+      2880
+    ],
+    "loaded": {
+      "total": 293,
+      "loaded": 293
+    },
+    "errors": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 503 (SERVICE UNAVAILABLE)",
+      "Failed to load resource: the server responded with a status of 502 (BAD GATEWAY)",
+      "Failed to load resource: the server responded with a status of 502 (BAD GATEWAY)",
+      "Failed to load resource: the server responded with a status of 503 (SERVICE UNAVAILABLE)"
+    ],
+    "requestsFailed": [],
+    "frontGeometry": {
+      "selection": "environment triangles with every world-space vertex z >= 0",
+      "triangles": 482260,
+      "xor": 166137678,
+      "sum": 3351587226
+    },
+    "captured": "2026-09-12T16:29:54.278Z"
+  },
+  "protocol": "Independent actual-app canonical photo12 capture; browser closed before randomized pairs viewed; verdict saved before keys read."
+}

@@ -1,0 +1,10 @@
+{
+  "verdict": "FAIL",
+  "photograph_side": "right",
+  "confidence": 1.0,
+  "blind": true,
+  "biggest_gap": "The workstation is substantially undersized: the left image shows a small, shallow, narrow cabinet next to an unusually tall/narrow back door, while the right image has a broad stainless workstation occupying much more of the wall and deck depth. This incorrect relative scale makes the porch composition fail before material detail matters.",
+  "next_change": "Match the workstation's projected width, height, depth, and position relative to the back door and rear rail in the registered view; also verify the door's opening proportions instead of adding small surface details.",
+  "other_observations": "The left image is immediately recognizable as a render from uniformly lit railings, very regular deck texture, simplified black grill cover and background vegetation, but the workstation/door scale is the largest requested component gap.",
+  "procedure": "Independent fresh app capture. Inspected only randomized full-frame pair.png before writing this verdict. No production code, builder report, individual source image, or key inspected."
+}

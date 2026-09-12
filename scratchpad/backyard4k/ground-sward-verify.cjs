@@ -1,0 +1,8 @@
+const fs=require('fs'),{chromium}=require('C:/Users/Manuel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true,args:['--use-gl=angle','--enable-unsafe-swiftshader']});try{
+const p=await browser.newPage({viewport:{width:1000,height:750}});await p.goto('http://127.0.0.1:5001',{waitUntil:'load',timeout:90000});
+await p.waitForFunction(async()=>!!(await import('/js/environment.js')).getEnvironmentRoot()?.getObjectByName('rear-short-grass-tufts'),{},{timeout:90000});await p.waitForTimeout(2500);
+const data=await p.evaluate(async()=>{const env=await import('/js/environment.js'),{renderer,scene,camera}=window.__scene3d,root=env.getEnvironmentRoot();
+const meshes=[];root.traverse(m=>{if(m.isInstancedMesh)meshes.push(m);});if(meshes.length!==2)throw Error('Expected two sward meshes, got '+meshes.map(m=>m.name));const colors=()=>{renderer.render(scene,camera);return meshes.map(m=>{m.onBeforeRender();return m.material.color.toArray();});};
+env.setGroundSnow(0);env.setGroundWet(0);const dry=colors();env.setGroundWet(1);const wet=colors();env.setGroundSnow(1);const snow=colors();env.setGroundSnow(0);env.setGroundWet(0);colors();
+return{meshes:meshes.map(m=>{m.computeBoundingBox();const b=m.boundingBox.clone().applyMatrix4(m.matrixWorld);return{name:m.name,instances:m.count,triangles:m.geometry.attributes.position.count/3*m.count,worldBounds:[b.min.toArray(),b.max.toArray()],strictlyRear:b.max.z<0};}),dry,wet,snow};});fs.writeFileSync(__dirname+'/ground-sward-verify.json',JSON.stringify(data,null,2));console.log(JSON.stringify(data));}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

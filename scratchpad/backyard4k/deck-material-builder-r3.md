@@ -1,0 +1,7 @@
+# Deck material round 3
+
+Fresh deck critic r2 failed, identifying stretched stripes instead of believable discrete deck boards. Builder inspected its actual blind pair and ref14. The actual cause was the noise mapping: equal U/V lattice frequencies were mapped to a 0.444ft-wide board and 8ft length, stretching dirt/weather by about18:1.
+
+Only addRearDeckDetail was edited. Physical weather sampling now uses the board's .444:8 aspect; low-amplitude fine longitudinal fibres remain. Added smaller physical mottling, short scrapes/weather pits, and reduced the broad patch amplitude after first actual selfshot showed excessive cloud-like marks. Boards retain .48ft pitch with .444ft outer width, .010ft edge bevels and .011ft bevel depth. The dark substrate is actual geometry below the 0.036ft gaps. Fine grain amplitude24→4; bumpScale.007→.0025. Platform, rails/stairs, runtime reconciliation, object offsets and lifecycle code are unchanged.
+
+First native selfshot renders/deck-material3/photo14.png loaded293/293 with zero errors, normal type2 shadows, front checksum unchanged482260/166137678/3351587226. It made individual boards sharply legible and removed the stretched fibre, but broad dirt patches were too cloudy. Final frequency rebalance captured separately as renders/deck-material3b/photo14.png using identical deck_layout_poses.json/photo14 (3840x2880). No photograph pixels enter any material or geometry. Preview JPEGs are reduced copies for self-inspection only. No independent critic pass is claimed.

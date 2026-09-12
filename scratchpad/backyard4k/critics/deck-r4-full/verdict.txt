@@ -1,0 +1,7 @@
+PRE-REVEAL FULL-FRAME VERDICT
+Photograph: LEFT.
+Confidence: 100%.
+Gate: FAIL; photograph is unambiguously identifiable.
+Strongest deck/material gap: RIGHT deck is dominated by dense, narrow, continuous dark grain strokes. LEFT deck reads as broad weathered gray boards with cloudy wear and sparse broken grain. The right deck therefore reads as graphic wood texture rather than worn exterior timber.
+Further deck/steps observation: RIGHT has a conspicuous long white diagonal foreground rail and exposes a large lower-left run of boards; LEFT has a dark timber step/edge in that position. This foreground silhouette remains visibly different.
+Full-frame cues: RIGHT has a flat blue background, low-detail round hedge masses and evenly clean surfaces. These make the photograph identifiable independently of the focused deck verdict.

@@ -1,0 +1,248 @@
+{
+  "report": {
+    "comparisons": {
+      "front": {
+        "position": [
+          80,
+          45,
+          110
+        ],
+        "target": [
+          16,
+          15,
+          0
+        ],
+        "changedPixels": 0,
+        "maxDelta": 0,
+        "pixels": 1080000
+      },
+      "west": {
+        "position": [
+          -110,
+          20,
+          -5
+        ],
+        "target": [
+          16,
+          15,
+          0
+        ],
+        "changedPixels": 0,
+        "maxDelta": 0,
+        "pixels": 1080000
+      },
+      "east": {
+        "position": [
+          120,
+          20,
+          -5
+        ],
+        "target": [
+          16,
+          15,
+          0
+        ],
+        "changedPixels": 0,
+        "maxDelta": 0,
+        "pixels": 1080000
+      },
+      "interior": {
+        "position": [
+          16,
+          8,
+          -15
+        ],
+        "target": [
+          16,
+          8,
+          -30
+        ],
+        "changedPixels": 0,
+        "maxDelta": 0,
+        "pixels": 1080000
+      },
+      "rear": {
+        "position": [
+          18,
+          5.7,
+          -86
+        ],
+        "target": [
+          13.5,
+          16,
+          -24.5
+        ],
+        "changedPixels": 465454,
+        "maxDelta": 127,
+        "pixels": 1080000
+      }
+    },
+    "bounds": [
+      {
+        "name": "rear-atmosphere-dome",
+        "min": [
+          -284,
+          -300,
+          -601
+        ],
+        "max": [
+          316,
+          300,
+          -1
+        ],
+        "north": true
+      }
+    ],
+    "dry": [
+      {
+        "name": "rear-atmosphere-dome",
+        "day": 1,
+        "wet": 0,
+        "color": [
+          0.8807716534164476,
+          0.9013777615322491,
+          0.9169994437367056
+        ],
+        "sky": [
+          0.27278740831647597,
+          0.5105053533270516,
+          0.8786831843765989
+        ]
+      }
+    ],
+    "wet": [
+      {
+        "name": "rear-atmosphere-dome",
+        "day": 1,
+        "wet": 1,
+        "color": [
+          0.8807716534164476,
+          0.9013777615322491,
+          0.9169994437367056
+        ],
+        "sky": [
+          0.27278740831647597,
+          0.5105053533270516,
+          0.8786831843765989
+        ]
+      }
+    ],
+    "night": [
+      {
+        "name": "rear-atmosphere-dome",
+        "day": 0,
+        "wet": 0,
+        "color": [
+          0.00030352698352941176,
+          0.0006070539670588235,
+          0.0009105809505882353
+        ],
+        "sky": [
+          0.0007436411096470589,
+          0.0017604565044705882,
+          0.0028228009468235296
+        ]
+      }
+    ],
+    "nightPixels": {
+      "position": [
+        18,
+        5.7,
+        -86
+      ],
+      "target": [
+        13.5,
+        16,
+        -24.5
+      ],
+      "changedPixels": 0,
+      "maxDelta": 0,
+      "pixels": 1080000
+    },
+    "cloudy": [
+      {
+        "name": "rear-atmosphere-dome",
+        "day": 0,
+        "wet": 0,
+        "color": [
+          0.8888634557515986,
+          0.9095890412073099,
+          0.9247564870621929
+        ],
+        "sky": [
+          0.55600049004676,
+          0.8506869398652821,
+          1.2222093887910397
+        ]
+      }
+    ],
+    "cloudyPixels": {
+      "position": [
+        18,
+        5.7,
+        -86
+      ],
+      "target": [
+        13.5,
+        16,
+        -24.5
+      ],
+      "changedPixels": 0,
+      "maxDelta": 0,
+      "pixels": 1080000
+    },
+    "rainy": [
+      {
+        "name": "rear-atmosphere-dome",
+        "day": 0,
+        "wet": 0,
+        "color": [
+          0.8890054635422897,
+          0.9097732985344841,
+          0.9253393174355127
+        ],
+        "sky": [
+          0.5609707627209448,
+          0.8583204577053544,
+          1.2480204481809163
+        ]
+      }
+    ],
+    "rainyPixels": {
+      "position": [
+        18,
+        5.7,
+        -86
+      ],
+      "target": [
+        13.5,
+        16,
+        -24.5
+      ],
+      "changedPixels": 0,
+      "maxDelta": 0,
+      "pixels": 1080000
+    },
+    "wetPixels": {
+      "position": [
+        18,
+        5.7,
+        -86
+      ],
+      "target": [
+        13.5,
+        16,
+        -24.5
+      ],
+      "changedPixels": 0,
+      "maxDelta": 0,
+      "pixels": 1080000
+    },
+    "renderer": {
+      "exposure": 1.15,
+      "toneMapping": 4,
+      "colorSpace": "srgb"
+    }
+  },
+  "errors": []
+}

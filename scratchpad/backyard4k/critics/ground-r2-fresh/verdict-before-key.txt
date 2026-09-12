@@ -1,0 +1,7 @@
+BLIND VERDICT — committed before opening any key
+Photograph selection: LEFT.
+Confidence: 100%.
+Result: FAIL; I can readily select the photograph.
+Single biggest remaining GROUND/GRASS gap: the right-side lawn reads as a uniformly lit, uniformly green short-pile carpet. Its fine detail and scattered leaves do not reproduce the left lawn's strongly varied blade clumps, directional mowing grain, and broad irregular shifts between cool shadowed grass and pale sunlit grass. The missing multi-scale grass and lighting variation is the dominant ground gap.
+Camera mismatch: the right image has a lower/flatter view with the horizon and bank much higher relative to foreground lawn detail; its apparent grass scale and coverage cannot be treated as a precise same-pixel match. The deliberately expanded lawn and larger house/lake/tree spacing are accepted user intent and are not counted as failure.
+Blind procedure: viewed only the randomized composite pair.png returned by blind_pair.py, no individual image and no key before this verdict.

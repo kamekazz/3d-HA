@@ -1,0 +1,12 @@
+BLIND VERDICT — written before reading key.json
+Photograph: RIGHT.
+Confidence: 100%.
+Gate: FAIL; the other side is immediately identifiable as computer graphics.
+Single biggest gap: the tree canopy has almost no continuous, shadowed volume. Widely separated, repeated leaf cards expose a large, uniform blue-gray sky rectangle, while the photograph is dominated by dense interlocking dark canopy, branching, occlusion, and depth. This destroys the wooded enclosure and makes the lake read as an open artificial backdrop.
+Further visible defects: a perfectly straight, level far shoreline with repetitive shrubs; flat uniform lake color and tidy repeated reflections; thin straight foreground trunks with insufficient branching; smooth strip-like near shoreline without bank relief and understory; gravel rendered as uniform noise rather than mixed stones and litter; stone border arranged as a clean manufactured chain. Foreground tree placement and ground extent differ visibly from the photograph. The photo has a substantial left-side understory and stump near the right light that are absent or visually negligible in the other side.
+
+KEY REVEAL: photograph=right. Blind identification was correct.
+Capture: 3840x2880. Full-frame blind pair: 600x450 per side (reference native size; utility resizes render to reference).
+Capture errors: 0. Models: 293/293 loaded.
+Front geometry selection: environment triangles with every world-space vertex z >= 0.
+Front geometry: triangles=482260, xor=166137678, sum=3351587226.

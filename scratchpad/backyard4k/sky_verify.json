@@ -1,0 +1,178 @@
+{
+  "report": {
+    "comparisons": {
+      "front": {
+        "position": [
+          80,
+          45,
+          110
+        ],
+        "target": [
+          16,
+          15,
+          0
+        ],
+        "changedPixels": 0,
+        "maxDelta": 0,
+        "pixels": 1080000
+      },
+      "west": {
+        "position": [
+          -110,
+          20,
+          -5
+        ],
+        "target": [
+          16,
+          15,
+          0
+        ],
+        "changedPixels": 0,
+        "maxDelta": 0,
+        "pixels": 1080000
+      },
+      "east": {
+        "position": [
+          120,
+          20,
+          -5
+        ],
+        "target": [
+          16,
+          15,
+          0
+        ],
+        "changedPixels": 0,
+        "maxDelta": 0,
+        "pixels": 1080000
+      },
+      "interior": {
+        "position": [
+          16,
+          8,
+          -15
+        ],
+        "target": [
+          16,
+          8,
+          -30
+        ],
+        "changedPixels": 0,
+        "maxDelta": 0,
+        "pixels": 1080000
+      },
+      "rear": {
+        "position": [
+          18,
+          5.7,
+          -86
+        ],
+        "target": [
+          13.5,
+          16,
+          -24.5
+        ],
+        "changedPixels": 11207,
+        "maxDelta": 30,
+        "pixels": 1080000
+      }
+    },
+    "bounds": [
+      {
+        "name": "rear-house-cirrus",
+        "min": [
+          -584,
+          43,
+          -0.25
+        ],
+        "max": [
+          616,
+          609,
+          -0.25
+        ],
+        "north": true
+      },
+      {
+        "name": "rear-lake-cirrus",
+        "min": [
+          -734,
+          30,
+          -720
+        ],
+        "max": [
+          766,
+          680,
+          -720
+        ],
+        "north": true
+      }
+    ],
+    "dry": [
+      {
+        "name": "rear-house-cirrus",
+        "day": 1,
+        "wet": 0,
+        "color": [
+          0.7070294282962797,
+          0.7375909863841368,
+          0.7739390312658385
+        ]
+      },
+      {
+        "name": "rear-lake-cirrus",
+        "day": 1,
+        "wet": 0,
+        "color": [
+          0.7070294282962797,
+          0.7375909863841368,
+          0.7739390312658385
+        ]
+      }
+    ],
+    "wet": [
+      {
+        "name": "rear-house-cirrus",
+        "day": 1,
+        "wet": 1,
+        "color": [
+          0.7070294282962797,
+          0.7375909863841368,
+          0.7739390312658385
+        ]
+      },
+      {
+        "name": "rear-lake-cirrus",
+        "day": 1,
+        "wet": 1,
+        "color": [
+          0.7070294282962797,
+          0.7375909863841368,
+          0.7739390312658385
+        ]
+      }
+    ],
+    "night": [
+      {
+        "name": "rear-house-cirrus",
+        "day": 0,
+        "wet": 0,
+        "color": [
+          0.00030352698352941176,
+          0.0006070539670588235,
+          0.0009105809505882353
+        ]
+      },
+      {
+        "name": "rear-lake-cirrus",
+        "day": 0,
+        "wet": 0,
+        "color": [
+          0.00030352698352941176,
+          0.0006070539670588235,
+          0.0009105809505882353
+        ]
+      }
+    ]
+  },
+  "errors": []
+}

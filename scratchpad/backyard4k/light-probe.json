@@ -1,0 +1,160 @@
+{
+  "url": "http://127.0.0.1:5001",
+  "state": {
+    "local": {
+      "indirectMaterials": 9,
+      "crowns": 11,
+      "deckMeshes": 4
+    },
+    "deck": [
+      {
+        "name": "mesh_0",
+        "cast": true,
+        "receive": true
+      },
+      {
+        "name": "mesh_0_1",
+        "cast": true,
+        "receive": true
+      },
+      {
+        "name": "mesh_0_2",
+        "cast": true,
+        "receive": true
+      },
+      {
+        "name": "mesh_0_3",
+        "cast": true,
+        "receive": true
+      }
+    ],
+    "lights": [
+      {
+        "type": "HemisphereLight",
+        "name": ""
+      },
+      {
+        "type": "DirectionalLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": ""
+      },
+      {
+        "type": "PointLight",
+        "name": "eaveLight:porch"
+      },
+      {
+        "type": "PointLight",
+        "name": "eaveLight:porch"
+      },
+      {
+        "type": "PointLight",
+        "name": "eaveLight:porch"
+      },
+      {
+        "type": "PointLight",
+        "name": "eaveLight:amber"
+      },
+      {
+        "type": "PointLight",
+        "name": "eaveLight:amber"
+      },
+      {
+        "type": "PointLight",
+        "name": "eaveLight:amber"
+      },
+      {
+        "type": "SpotLight",
+        "name": "eaveLight:walk"
+      },
+      {
+        "type": "PointLight",
+        "name": "eaveLight:path"
+      },
+      {
+        "type": "PointLight",
+        "name": "eaveLight:steps"
+      },
+      {
+        "type": "SpotLight",
+        "name": "eaveLight:drive"
+      },
+      {
+        "type": "SpotLight",
+        "name": "eaveLight:drive"
+      },
+      {
+        "type": "SpotLight",
+        "name": "eaveLight:blue"
+      }
+    ],
+    "exposure": 1.15,
+    "shadow": {
+      "enabled": true,
+      "type": 2,
+      "map": [
+        2048,
+        2048
+      ],
+      "normalBias": 1,
+      "bias": -0.0005
+    },
+    "background": "5f7692",
+    "sun": {
+      "color": "fff6e8",
+      "intensity": 1.5
+    },
+    "hemi": {
+      "sky": "dfe8ff",
+      "ground": "8e97a1",
+      "intensity": 1
+    }
+  },
+  "errors": []
+}

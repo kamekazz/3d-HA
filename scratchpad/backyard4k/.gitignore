@@ -1,0 +1,17 @@
+python-deps/
+*.log
+workflow_servers.json
+environment-baseline.js
+# Local photo references, native render evidence and downloaded PBR originals.
+# Runtime textures are versioned separately under frontend/textures/backyard.
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.heic
+*.zip
+renders/
+*-material-source/
+material-catalog.json
+siding-probe.json
+rear-roof-probe.json

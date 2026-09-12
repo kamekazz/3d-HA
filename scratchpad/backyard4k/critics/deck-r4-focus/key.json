@@ -1,0 +1,16 @@
+{
+  "photograph": "right",
+  "reference": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\backyard4k\\references\\14.png",
+  "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\backyard4k\\renders\\critic-deck-r4\\photo14.png",
+  "comparison_size": [
+    400,
+    150
+  ],
+  "diagnostic_crop": [
+    160,
+    290,
+    560,
+    440
+  ],
+  "test": "focused component diagnostic"
+}

@@ -1,0 +1,1 @@
+Reveal: key confirms photograph LEFT. Identification correct. Blind verdict remains FAIL, confidence 100%. Native render capture 3840x2880; pair compared at the source photograph's 600x450 resolution using blind_pair.py.

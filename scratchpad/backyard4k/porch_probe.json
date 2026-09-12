@@ -1,0 +1,4227 @@
+{
+  "meshes": [
+    {
+      "name": "Root_Node",
+      "min": [
+        -17.105032325620872,
+        0.16404197043448393,
+        -75.7514231190892
+      ],
+      "max": [
+        48.0163157628434,
+        41.43592341903448,
+        75.75142311908918
+      ],
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "name": "sofa+go+do",
+      "min": [
+        31.326892768512813,
+        0.16490826978249798,
+        -45.717454670768056
+      ],
+      "max": [
+        41.39401470713869,
+        3.0867887100225424,
+        -37.017563539238814
+      ],
+      "mat": "bg_texture___wood_by_nortago"
+    },
+    {
+      "name": "106341",
+      "min": [
+        28.986647669258474,
+        0.874237760277988,
+        -49.0795228703398
+      ],
+      "max": [
+        44.14302449568844,
+        3.41931575686802,
+        -34.12469348453249
+      ],
+      "mat": "depositphotos_1634740-Fabric-texture"
+    },
+    {
+      "name": "mesh_11",
+      "min": [
+        -5.805025234128365,
+        0.1640419704344942,
+        -42.94396104503999
+      ],
+      "max": [
+        48.015676006310066,
+        24.345137677119343,
+        30.718907650131825
+      ],
+      "mat": "PaletteMaterial003"
+    },
+    {
+      "name": "Group#162",
+      "min": [
+        37.16868848322274,
+        8.637764600492664,
+        -41.04893066774189
+      ],
+      "max": [
+        37.3156395257814,
+        8.651577936880612,
+        -40.90197962518323
+      ],
+      "mat": "*67"
+    },
+    {
+      "name": "129562",
+      "min": [
+        31.417853963273764,
+        7.381889517352457,
+        -46.799764929404056
+      ],
+      "max": [
+        43.06647352915676,
+        9.381984999955831,
+        -35.15114568141251
+      ],
+      "mat": "*67"
+    },
+    {
+      "name": "mesh_8",
+      "min": [
+        -11.116021669484518,
+        2.296588253629759,
+        -24.359232488045755
+      ],
+      "max": [
+        47.28077022232665,
+        24.85849352126363,
+        30.739750433026824
+      ],
+      "mat": "PaletteMaterial004"
+    }
+  ],
+  "hits": [
+    {
+      "x": -6,
+      "y": 2.7,
+      "p": [
+        -6,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5.5,
+      "y": 2.7,
+      "p": [
+        -5.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5,
+      "y": 2.7,
+      "p": [
+        -5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4.5,
+      "y": 2.7,
+      "p": [
+        -4.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4,
+      "y": 2.7,
+      "p": [
+        -4,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3.5,
+      "y": 2.7,
+      "p": [
+        -3.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3,
+      "y": 2.7,
+      "p": [
+        -3,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2.5,
+      "y": 2.7,
+      "p": [
+        -2.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2,
+      "y": 2.7,
+      "p": [
+        -2,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1.5,
+      "y": 2.7,
+      "p": [
+        -1.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1,
+      "y": 2.7,
+      "p": [
+        -1,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -0.5,
+      "y": 2.7,
+      "p": [
+        -0.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0,
+      "y": 2.7,
+      "p": [
+        0,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0.5,
+      "y": 2.7,
+      "p": [
+        0.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1,
+      "y": 2.7,
+      "p": [
+        1,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1.5,
+      "y": 2.7,
+      "p": [
+        1.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2,
+      "y": 2.7,
+      "p": [
+        2,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2.5,
+      "y": 2.7,
+      "p": [
+        2.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3,
+      "y": 2.7,
+      "p": [
+        3,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3.5,
+      "y": 2.7,
+      "p": [
+        3.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4,
+      "y": 2.7,
+      "p": [
+        4,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4.5,
+      "y": 2.7,
+      "p": [
+        4.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5,
+      "y": 2.7,
+      "p": [
+        5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5.5,
+      "y": 2.7,
+      "p": [
+        5.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6,
+      "y": 2.7,
+      "p": [
+        6,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6.5,
+      "y": 2.7,
+      "p": [
+        6.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7,
+      "y": 2.7,
+      "p": [
+        7,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7.5,
+      "y": 2.7,
+      "p": [
+        7.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8,
+      "y": 2.7,
+      "p": [
+        8,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8.5,
+      "y": 2.7,
+      "p": [
+        8.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9,
+      "y": 2.7,
+      "p": [
+        9,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9.5,
+      "y": 2.7,
+      "p": [
+        9.5,
+        2.7,
+        -24.372
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 10,
+      "y": 2.7,
+      "p": [
+        10,
+        2.7,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 10.5,
+      "y": 2.7,
+      "p": [
+        10.5,
+        2.7,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11,
+      "y": 2.7,
+      "p": [
+        11,
+        2.7,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11.5,
+      "y": 2.7,
+      "p": [
+        11.5,
+        2.7,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12,
+      "y": 2.7,
+      "p": [
+        12,
+        2.7,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12.5,
+      "y": 2.7,
+      "p": [
+        12.5,
+        2.7,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 13,
+      "y": 2.7,
+      "p": [
+        13,
+        2.7,
+        -24.279
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 13.5,
+      "y": 2.7,
+      "p": [
+        13.5,
+        2.7,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14,
+      "y": 2.7,
+      "p": [
+        14,
+        2.7,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14.5,
+      "y": 2.7,
+      "p": [
+        14.5,
+        2.7,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15,
+      "y": 2.7,
+      "p": [
+        15,
+        2.7,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15.5,
+      "y": 2.7,
+      "p": [
+        15.5,
+        2.7,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16,
+      "y": 2.7,
+      "p": [
+        16,
+        2.7,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16.5,
+      "y": 2.7,
+      "p": [
+        16.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17,
+      "y": 2.7,
+      "p": [
+        17,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17.5,
+      "y": 2.7,
+      "p": [
+        17.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18,
+      "y": 2.7,
+      "p": [
+        18,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18.5,
+      "y": 2.7,
+      "p": [
+        18.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19,
+      "y": 2.7,
+      "p": [
+        19,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19.5,
+      "y": 2.7,
+      "p": [
+        19.5,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 20,
+      "y": 2.7,
+      "p": [
+        20,
+        2.7,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -6,
+      "y": 3,
+      "p": [
+        -6,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5.5,
+      "y": 3,
+      "p": [
+        -5.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5,
+      "y": 3,
+      "p": [
+        -5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4.5,
+      "y": 3,
+      "p": [
+        -4.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4,
+      "y": 3,
+      "p": [
+        -4,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3.5,
+      "y": 3,
+      "p": [
+        -3.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3,
+      "y": 3,
+      "p": [
+        -3,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2.5,
+      "y": 3,
+      "p": [
+        -2.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2,
+      "y": 3,
+      "p": [
+        -2,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1.5,
+      "y": 3,
+      "p": [
+        -1.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1,
+      "y": 3,
+      "p": [
+        -1,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -0.5,
+      "y": 3,
+      "p": [
+        -0.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "p": [
+        0,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0.5,
+      "y": 3,
+      "p": [
+        0.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "p": [
+        1,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1.5,
+      "y": 3,
+      "p": [
+        1.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "p": [
+        2,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2.5,
+      "y": 3,
+      "p": [
+        2.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "p": [
+        3,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3.5,
+      "y": 3,
+      "p": [
+        3.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "p": [
+        4,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4.5,
+      "y": 3,
+      "p": [
+        4.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "p": [
+        5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5.5,
+      "y": 3,
+      "p": [
+        5.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "p": [
+        6,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6.5,
+      "y": 3,
+      "p": [
+        6.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "p": [
+        7,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7.5,
+      "y": 3,
+      "p": [
+        7.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8,
+      "y": 3,
+      "p": [
+        8,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8.5,
+      "y": 3,
+      "p": [
+        8.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9,
+      "y": 3,
+      "p": [
+        9,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9.5,
+      "y": 3,
+      "p": [
+        9.5,
+        3,
+        -24.372
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 10,
+      "y": 3,
+      "p": [
+        10,
+        3,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 10.5,
+      "y": 3,
+      "p": [
+        10.5,
+        3,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11,
+      "y": 3,
+      "p": [
+        11,
+        3,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11.5,
+      "y": 3,
+      "p": [
+        11.5,
+        3,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12,
+      "y": 3,
+      "p": [
+        12,
+        3,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12.5,
+      "y": 3,
+      "p": [
+        12.5,
+        3,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 13,
+      "y": 3,
+      "p": [
+        13,
+        3,
+        -24.279
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 13.5,
+      "y": 3,
+      "p": [
+        13.5,
+        3,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14,
+      "y": 3,
+      "p": [
+        14,
+        3,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14.5,
+      "y": 3,
+      "p": [
+        14.5,
+        3,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15,
+      "y": 3,
+      "p": [
+        15,
+        3,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15.5,
+      "y": 3,
+      "p": [
+        15.5,
+        3,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16,
+      "y": 3,
+      "p": [
+        16,
+        3,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16.5,
+      "y": 3,
+      "p": [
+        16.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17,
+      "y": 3,
+      "p": [
+        17,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17.5,
+      "y": 3,
+      "p": [
+        17.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18,
+      "y": 3,
+      "p": [
+        18,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18.5,
+      "y": 3,
+      "p": [
+        18.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19,
+      "y": 3,
+      "p": [
+        19,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19.5,
+      "y": 3,
+      "p": [
+        19.5,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 20,
+      "y": 3,
+      "p": [
+        20,
+        3,
+        -24.443
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -6,
+      "y": 4,
+      "p": [
+        -6,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5.5,
+      "y": 4,
+      "p": [
+        -5.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5,
+      "y": 4,
+      "p": [
+        -5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4.5,
+      "y": 4,
+      "p": [
+        -4.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4,
+      "y": 4,
+      "p": [
+        -4,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3.5,
+      "y": 4,
+      "p": [
+        -3.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3,
+      "y": 4,
+      "p": [
+        -3,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2.5,
+      "y": 4,
+      "p": [
+        -2.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2,
+      "y": 4,
+      "p": [
+        -2,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1.5,
+      "y": 4,
+      "p": [
+        -1.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1,
+      "y": 4,
+      "p": [
+        -1,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -0.5,
+      "y": 4,
+      "p": [
+        -0.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "p": [
+        0,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0.5,
+      "y": 4,
+      "p": [
+        0.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "p": [
+        1,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1.5,
+      "y": 4,
+      "p": [
+        1.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "p": [
+        2,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2.5,
+      "y": 4,
+      "p": [
+        2.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "p": [
+        3,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3.5,
+      "y": 4,
+      "p": [
+        3.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "p": [
+        4,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4.5,
+      "y": 4,
+      "p": [
+        4.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "p": [
+        5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5.5,
+      "y": 4,
+      "p": [
+        5.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "p": [
+        6,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6.5,
+      "y": 4,
+      "p": [
+        6.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "p": [
+        7,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7.5,
+      "y": 4,
+      "p": [
+        7.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8,
+      "y": 4,
+      "p": [
+        8,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8.5,
+      "y": 4,
+      "p": [
+        8.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9,
+      "y": 4,
+      "p": [
+        9,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9.5,
+      "y": 4,
+      "p": [
+        9.5,
+        4,
+        -24.372
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 10,
+      "y": 4,
+      "p": [
+        10,
+        4,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 10.5,
+      "y": 4,
+      "p": [
+        10.5,
+        4,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11,
+      "y": 4,
+      "p": [
+        11,
+        4,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11.5,
+      "y": 4,
+      "p": [
+        11.5,
+        4,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12,
+      "y": 4,
+      "p": [
+        12,
+        4,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12.5,
+      "y": 4,
+      "p": [
+        12.5,
+        4,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 13,
+      "y": 4,
+      "p": [
+        13,
+        4,
+        -24.279
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 13.5,
+      "y": 4,
+      "p": [
+        13.5,
+        4,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14,
+      "y": 4,
+      "p": [
+        14,
+        4,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14.5,
+      "y": 4,
+      "p": [
+        14.5,
+        4,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15,
+      "y": 4,
+      "p": [
+        15,
+        4,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15.5,
+      "y": 4,
+      "p": [
+        15.5,
+        4,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16,
+      "y": 4,
+      "p": [
+        16,
+        4,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16.5,
+      "y": 4,
+      "p": [
+        16.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17,
+      "y": 4,
+      "p": [
+        17,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17.5,
+      "y": 4,
+      "p": [
+        17.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18,
+      "y": 4,
+      "p": [
+        18,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18.5,
+      "y": 4,
+      "p": [
+        18.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19,
+      "y": 4,
+      "p": [
+        19,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19.5,
+      "y": 4,
+      "p": [
+        19.5,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 20,
+      "y": 4,
+      "p": [
+        20,
+        4,
+        -24.439
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -6,
+      "y": 6,
+      "p": [
+        -6,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5.5,
+      "y": 6,
+      "p": [
+        -5.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5,
+      "y": 6,
+      "p": [
+        -5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4.5,
+      "y": 6,
+      "p": [
+        -4.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4,
+      "y": 6,
+      "p": [
+        -4,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3.5,
+      "y": 6,
+      "p": [
+        -3.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3,
+      "y": 6,
+      "p": [
+        -3,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2.5,
+      "y": 6,
+      "p": [
+        -2.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2,
+      "y": 6,
+      "p": [
+        -2,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1.5,
+      "y": 6,
+      "p": [
+        -1.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1,
+      "y": 6,
+      "p": [
+        -1,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -0.5,
+      "y": 6,
+      "p": [
+        -0.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "p": [
+        0,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0.5,
+      "y": 6,
+      "p": [
+        0.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "p": [
+        1,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1.5,
+      "y": 6,
+      "p": [
+        1.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "p": [
+        2,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2.5,
+      "y": 6,
+      "p": [
+        2.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3,
+      "y": 6,
+      "p": [
+        3,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3.5,
+      "y": 6,
+      "p": [
+        3.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4,
+      "y": 6,
+      "p": [
+        4,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4.5,
+      "y": 6,
+      "p": [
+        4.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5,
+      "y": 6,
+      "p": [
+        5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5.5,
+      "y": 6,
+      "p": [
+        5.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6,
+      "y": 6,
+      "p": [
+        6,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6.5,
+      "y": 6,
+      "p": [
+        6.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7,
+      "y": 6,
+      "p": [
+        7,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7.5,
+      "y": 6,
+      "p": [
+        7.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8,
+      "y": 6,
+      "p": [
+        8,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8.5,
+      "y": 6,
+      "p": [
+        8.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9,
+      "y": 6,
+      "p": [
+        9,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9.5,
+      "y": 6,
+      "p": [
+        9.5,
+        6,
+        -24.372
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 10,
+      "y": 6,
+      "p": [
+        10,
+        6,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 10.5,
+      "y": 6,
+      "p": [
+        10.5,
+        6,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11,
+      "y": 6,
+      "p": [
+        11,
+        6,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11.5,
+      "y": 6,
+      "p": [
+        11.5,
+        6,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12,
+      "y": 6,
+      "p": [
+        12,
+        6,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12.5,
+      "y": 6,
+      "p": [
+        12.5,
+        6,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 13,
+      "y": 6,
+      "p": [
+        13,
+        6,
+        -24.279
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 13.5,
+      "y": 6,
+      "p": [
+        13.5,
+        6,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14,
+      "y": 6,
+      "p": [
+        14,
+        6,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14.5,
+      "y": 6,
+      "p": [
+        14.5,
+        6,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15,
+      "y": 6,
+      "p": [
+        15,
+        6,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15.5,
+      "y": 6,
+      "p": [
+        15.5,
+        6,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16,
+      "y": 6,
+      "p": [
+        16,
+        6,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16.5,
+      "y": 6,
+      "p": [
+        16.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17,
+      "y": 6,
+      "p": [
+        17,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17.5,
+      "y": 6,
+      "p": [
+        17.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18,
+      "y": 6,
+      "p": [
+        18,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18.5,
+      "y": 6,
+      "p": [
+        18.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19,
+      "y": 6,
+      "p": [
+        19,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19.5,
+      "y": 6,
+      "p": [
+        19.5,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 20,
+      "y": 6,
+      "p": [
+        20,
+        6,
+        -24.487
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -6,
+      "y": 8,
+      "p": [
+        -6,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5.5,
+      "y": 8,
+      "p": [
+        -5.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5,
+      "y": 8,
+      "p": [
+        -5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4.5,
+      "y": 8,
+      "p": [
+        -4.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4,
+      "y": 8,
+      "p": [
+        -4,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3.5,
+      "y": 8,
+      "p": [
+        -3.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3,
+      "y": 8,
+      "p": [
+        -3,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2.5,
+      "y": 8,
+      "p": [
+        -2.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2,
+      "y": 8,
+      "p": [
+        -2,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1.5,
+      "y": 8,
+      "p": [
+        -1.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1,
+      "y": 8,
+      "p": [
+        -1,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -0.5,
+      "y": 8,
+      "p": [
+        -0.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0,
+      "y": 8,
+      "p": [
+        0,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0.5,
+      "y": 8,
+      "p": [
+        0.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1,
+      "y": 8,
+      "p": [
+        1,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1.5,
+      "y": 8,
+      "p": [
+        1.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2,
+      "y": 8,
+      "p": [
+        2,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2.5,
+      "y": 8,
+      "p": [
+        2.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3,
+      "y": 8,
+      "p": [
+        3,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3.5,
+      "y": 8,
+      "p": [
+        3.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4,
+      "y": 8,
+      "p": [
+        4,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4.5,
+      "y": 8,
+      "p": [
+        4.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5,
+      "y": 8,
+      "p": [
+        5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5.5,
+      "y": 8,
+      "p": [
+        5.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6,
+      "y": 8,
+      "p": [
+        6,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6.5,
+      "y": 8,
+      "p": [
+        6.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7,
+      "y": 8,
+      "p": [
+        7,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7.5,
+      "y": 8,
+      "p": [
+        7.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8,
+      "y": 8,
+      "p": [
+        8,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8.5,
+      "y": 8,
+      "p": [
+        8.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9,
+      "y": 8,
+      "p": [
+        9,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9.5,
+      "y": 8,
+      "p": [
+        9.5,
+        8,
+        -24.372
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 10,
+      "y": 8,
+      "p": [
+        10,
+        8,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 10.5,
+      "y": 8,
+      "p": [
+        10.5,
+        8,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11,
+      "y": 8,
+      "p": [
+        11,
+        8,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11.5,
+      "y": 8,
+      "p": [
+        11.5,
+        8,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12,
+      "y": 8,
+      "p": [
+        12,
+        8,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12.5,
+      "y": 8,
+      "p": [
+        12.5,
+        8,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 13,
+      "y": 8,
+      "p": [
+        13,
+        8,
+        -24.279
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 13.5,
+      "y": 8,
+      "p": [
+        13.5,
+        8,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14,
+      "y": 8,
+      "p": [
+        14,
+        8,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14.5,
+      "y": 8,
+      "p": [
+        14.5,
+        8,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15,
+      "y": 8,
+      "p": [
+        15,
+        8,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15.5,
+      "y": 8,
+      "p": [
+        15.5,
+        8,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16,
+      "y": 8,
+      "p": [
+        16,
+        8,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16.5,
+      "y": 8,
+      "p": [
+        16.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17,
+      "y": 8,
+      "p": [
+        17,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17.5,
+      "y": 8,
+      "p": [
+        17.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18,
+      "y": 8,
+      "p": [
+        18,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18.5,
+      "y": 8,
+      "p": [
+        18.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19,
+      "y": 8,
+      "p": [
+        19,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19.5,
+      "y": 8,
+      "p": [
+        19.5,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 20,
+      "y": 8,
+      "p": [
+        20,
+        8,
+        -24.478
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -6,
+      "y": 9,
+      "p": [
+        -6,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5.5,
+      "y": 9,
+      "p": [
+        -5.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5,
+      "y": 9,
+      "p": [
+        -5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4.5,
+      "y": 9,
+      "p": [
+        -4.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4,
+      "y": 9,
+      "p": [
+        -4,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3.5,
+      "y": 9,
+      "p": [
+        -3.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3,
+      "y": 9,
+      "p": [
+        -3,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2.5,
+      "y": 9,
+      "p": [
+        -2.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2,
+      "y": 9,
+      "p": [
+        -2,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1.5,
+      "y": 9,
+      "p": [
+        -1.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1,
+      "y": 9,
+      "p": [
+        -1,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -0.5,
+      "y": 9,
+      "p": [
+        -0.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0,
+      "y": 9,
+      "p": [
+        0,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0.5,
+      "y": 9,
+      "p": [
+        0.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1,
+      "y": 9,
+      "p": [
+        1,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1.5,
+      "y": 9,
+      "p": [
+        1.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2,
+      "y": 9,
+      "p": [
+        2,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2.5,
+      "y": 9,
+      "p": [
+        2.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3,
+      "y": 9,
+      "p": [
+        3,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3.5,
+      "y": 9,
+      "p": [
+        3.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4,
+      "y": 9,
+      "p": [
+        4,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4.5,
+      "y": 9,
+      "p": [
+        4.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5,
+      "y": 9,
+      "p": [
+        5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5.5,
+      "y": 9,
+      "p": [
+        5.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6,
+      "y": 9,
+      "p": [
+        6,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6.5,
+      "y": 9,
+      "p": [
+        6.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7,
+      "y": 9,
+      "p": [
+        7,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7.5,
+      "y": 9,
+      "p": [
+        7.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8,
+      "y": 9,
+      "p": [
+        8,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8.5,
+      "y": 9,
+      "p": [
+        8.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9,
+      "y": 9,
+      "p": [
+        9,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9.5,
+      "y": 9,
+      "p": [
+        9.5,
+        9,
+        -24.372
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 10,
+      "y": 9,
+      "p": [
+        10,
+        9,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 10.5,
+      "y": 9,
+      "p": [
+        10.5,
+        9,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11,
+      "y": 9,
+      "p": [
+        11,
+        9,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11.5,
+      "y": 9,
+      "p": [
+        11.5,
+        9,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12,
+      "y": 9,
+      "p": [
+        12,
+        9,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12.5,
+      "y": 9,
+      "p": [
+        12.5,
+        9,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 13,
+      "y": 9,
+      "p": [
+        13,
+        9,
+        -24.279
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 13.5,
+      "y": 9,
+      "p": [
+        13.5,
+        9,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14,
+      "y": 9,
+      "p": [
+        14,
+        9,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14.5,
+      "y": 9,
+      "p": [
+        14.5,
+        9,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15,
+      "y": 9,
+      "p": [
+        15,
+        9,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15.5,
+      "y": 9,
+      "p": [
+        15.5,
+        9,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16,
+      "y": 9,
+      "p": [
+        16,
+        9,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16.5,
+      "y": 9,
+      "p": [
+        16.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17,
+      "y": 9,
+      "p": [
+        17,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17.5,
+      "y": 9,
+      "p": [
+        17.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18,
+      "y": 9,
+      "p": [
+        18,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18.5,
+      "y": 9,
+      "p": [
+        18.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19,
+      "y": 9,
+      "p": [
+        19,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19.5,
+      "y": 9,
+      "p": [
+        19.5,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 20,
+      "y": 9,
+      "p": [
+        20,
+        9,
+        -24.475
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -6,
+      "y": 10,
+      "p": [
+        -6,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5.5,
+      "y": 10,
+      "p": [
+        -5.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -5,
+      "y": 10,
+      "p": [
+        -5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4.5,
+      "y": 10,
+      "p": [
+        -4.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -4,
+      "y": 10,
+      "p": [
+        -4,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3.5,
+      "y": 10,
+      "p": [
+        -3.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -3,
+      "y": 10,
+      "p": [
+        -3,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2.5,
+      "y": 10,
+      "p": [
+        -2.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -2,
+      "y": 10,
+      "p": [
+        -2,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1.5,
+      "y": 10,
+      "p": [
+        -1.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -1,
+      "y": 10,
+      "p": [
+        -1,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": -0.5,
+      "y": 10,
+      "p": [
+        -0.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0,
+      "y": 10,
+      "p": [
+        0,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 0.5,
+      "y": 10,
+      "p": [
+        0.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1,
+      "y": 10,
+      "p": [
+        1,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 1.5,
+      "y": 10,
+      "p": [
+        1.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2,
+      "y": 10,
+      "p": [
+        2,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 2.5,
+      "y": 10,
+      "p": [
+        2.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3,
+      "y": 10,
+      "p": [
+        3,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 3.5,
+      "y": 10,
+      "p": [
+        3.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4,
+      "y": 10,
+      "p": [
+        4,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 4.5,
+      "y": 10,
+      "p": [
+        4.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5,
+      "y": 10,
+      "p": [
+        5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 5.5,
+      "y": 10,
+      "p": [
+        5.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6,
+      "y": 10,
+      "p": [
+        6,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 6.5,
+      "y": 10,
+      "p": [
+        6.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7,
+      "y": 10,
+      "p": [
+        7,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 7.5,
+      "y": 10,
+      "p": [
+        7.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8,
+      "y": 10,
+      "p": [
+        8,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 8.5,
+      "y": 10,
+      "p": [
+        8.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9,
+      "y": 10,
+      "p": [
+        9,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 9.5,
+      "y": 10,
+      "p": [
+        9.5,
+        10,
+        -24.372
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 10,
+      "y": 10,
+      "p": [
+        10,
+        10,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 10.5,
+      "y": 10,
+      "p": [
+        10.5,
+        10,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11,
+      "y": 10,
+      "p": [
+        11,
+        10,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 11.5,
+      "y": 10,
+      "p": [
+        11.5,
+        10,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12,
+      "y": 10,
+      "p": [
+        12,
+        10,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 12.5,
+      "y": 10,
+      "p": [
+        12.5,
+        10,
+        -24.328
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 13,
+      "y": 10,
+      "p": [
+        13,
+        10,
+        -24.279
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 13.5,
+      "y": 10,
+      "p": [
+        13.5,
+        10,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14,
+      "y": 10,
+      "p": [
+        14,
+        10,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 14.5,
+      "y": 10,
+      "p": [
+        14.5,
+        10,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15,
+      "y": 10,
+      "p": [
+        15,
+        10,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 15.5,
+      "y": 10,
+      "p": [
+        15.5,
+        10,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16,
+      "y": 10,
+      "p": [
+        16,
+        10,
+        -24.228
+      ],
+      "name": "mesh_8",
+      "mat": "PaletteMaterial004"
+    },
+    {
+      "x": 16.5,
+      "y": 10,
+      "p": [
+        16.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17,
+      "y": 10,
+      "p": [
+        17,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 17.5,
+      "y": 10,
+      "p": [
+        17.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18,
+      "y": 10,
+      "p": [
+        18,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 18.5,
+      "y": 10,
+      "p": [
+        18.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19,
+      "y": 10,
+      "p": [
+        19,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 19.5,
+      "y": 10,
+      "p": [
+        19.5,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    },
+    {
+      "x": 20,
+      "y": 10,
+      "p": [
+        20,
+        10,
+        -24.47
+      ],
+      "name": "Root_Node",
+      "mat": "PaletteMaterial001"
+    }
+  ],
+  "glass": [
+    [
+      16.1094,
+      11.108,
+      -24.228
+    ],
+    [
+      16.1094,
+      2.2966,
+      -24.228
+    ],
+    [
+      13.0083,
+      11.108,
+      -24.228
+    ],
+    [
+      13.0083,
+      2.2966,
+      -24.228
+    ],
+    [
+      12.6804,
+      11.108,
+      -24.3278
+    ],
+    [
+      12.6804,
+      2.2966,
+      -24.3278
+    ],
+    [
+      9.5793,
+      11.108,
+      -24.3278
+    ],
+    [
+      9.5793,
+      2.2966,
+      -24.3278
+    ]
+  ]
+}

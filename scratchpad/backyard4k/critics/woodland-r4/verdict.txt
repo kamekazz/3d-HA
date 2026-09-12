@@ -1,0 +1,10 @@
+Blind verdict — woodland r4
+
+Photograph: LEFT. Confidence: 100%.
+Full-frame gate: FAIL; the right panel is immediately identifiable as a synthetic scene.
+
+Primary lake/horizon gap: the far shore reads as a perfectly level, thin horizontal strip with a sparse row of isolated, similarly scaled tree clumps. The left panel has a low, irregular, layered band of shore vegetation and overlapping woodland receding behind it. The right panel's sharp, uninterrupted shoreline and exposed blue sky between discrete tree silhouettes make the horizon look assembled and flat; this is the single biggest lake/horizon woodland mismatch.
+
+Additional major leaf-component gap: the overhead foliage in the right panel is made of large, clearly separated, flat polygon leaves with hard silhouette edges and uniform green faces. The left canopy is a dense, fine-grained, softly varied mass with many tiny irregular gaps and overlapping shadow depth. This remains an unmistakable synthetic cue even away from the far shore.
+
+Verdict recorded before opening key.json; only randomized full-frame pair.png was viewed.

@@ -1,0 +1,6 @@
+BLIND VERDICT — RECORDED BEFORE REVEAL
+Photograph: LEFT.
+Confidence: 100%.
+Full-frame gate: FAIL if LEFT is confirmed as photograph.
+Single biggest SIDING/ROOF component gap: The tall rear gable's siding on the RIGHT reads as mechanically uniform horizontal striping over a flat gray face. The LEFT has softer, less uniformly contrasted courses with broad, uneven light/shadow variation across the wall; the RIGHT's almost uninterrupted crisp repeated bands give away a synthetic cladding material even at full-frame size. Match the broad wall illumination and subdued, variable course contrast before adding more surface detail.
+Capture telemetry: 0 errors; 293/293 models loaded. Front guard: 482260 triangles, xor 166137678, sum 3351587226 (all environment triangle vertices world z >= 0).

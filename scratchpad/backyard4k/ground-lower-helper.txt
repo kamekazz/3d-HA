@@ -1,0 +1,95 @@
+
+// Imported site-pad surgery is restricted to the measured triangle signatures
+// below. Index offsets address the already prop-masked live Root_Node geometry.
+// A changed/re-exported shell fails closed instead of cutting unknown surfaces.
+let rearPadPatch = null;
+function lowerRearShellPad() {
+  const shell = getShellRoot();
+  if (!shell || rearPadPatch?.shell === shell) return;
+  if (rearPadPatch) { rearPadPatch.geometry.dispose(); rearPadPatch = null; }
+  shell.updateWorldMatrix(true, true);
+  let mesh = null;
+  shell.traverse(o => { if(o.isMesh && o.name==='Root_Node' && o.material?.name==='PaletteMaterial001') mesh=o; });
+  if(!mesh) return;
+  const source=mesh.geometry, index=source.index, attrs=source.attributes;
+  if(!index || !attrs.position || source.groups.length) return;
+  const candidates=REAR_PAD_SIGNATURES;
+  const point=i=>new THREE.Vector3().fromBufferAttribute(attrs.position,index.getX(i)).applyMatrix4(mesh.matrixWorld);
+  for(const [offset, expected] of candidates) {
+    if(offset+2>=index.count) return;
+    for(let j=0;j<3;j++) if(point(offset+j).distanceTo(new THREE.Vector3(...expected[j]))>0.004) {
+      console.warn('Rear pad signature changed; preserving source geometry.'); return;
+    }
+  }
+  const byOffset=new Map(candidates), output=[], additions=[];
+  const names=Object.keys(attrs);
+  const vertex=i=>({id:i,world:new THREE.Vector3().fromBufferAttribute(attrs.position,i).applyMatrix4(mesh.matrixWorld),
+    data:Object.fromEntries(names.map(n=>[n,Array.from({length:attrs[n].itemSize},(_,j)=>attrs[n].getComponent(i,j))]))});
+  const interpolate=(a,b,t)=>({id:null,world:a.world.clone().lerp(b.world,t),
+    data:Object.fromEntries(names.map(n=>[n,a.data[n].map((v,j)=>v+(b.data[n][j]-v)*t)]))});
+  const clip=(poly,axis,limit,less)=>{
+    const out=[];for(let i=0;i<poly.length;i++) {
+      const a=poly[i],b=poly[(i+1)%poly.length],da=a.world[axis]-limit,db=b.world[axis]-limit;
+      const ina=less?da<=0:da>=0,inb=less?db<=0:db>=0;
+      if(ina)out.push(a);if(ina!==inb)out.push(interpolate(a,b,da/(da-db)));
+    }return out;
+  };
+  const add=v=>{if(v.id!==null)return v.id;v.id=attrs.position.count+additions.length;additions.push(v);return v.id;};
+  let changed=0;
+  for(let k=0;k<index.count;k+=3) {
+    if(!byOffset.has(k)){output.push(index.getX(k),index.getX(k+1),index.getX(k+2));continue;}
+    const triangle=[0,1,2].map(j=>vertex(index.getX(k+j)));
+    // Split at the rear elevation's step, retain only the south portion of
+    // each resulting polygon. Attributes at cut edges interpolate linearly.
+    const parts=[clip(clip(triangle,'x',20.5973,true),'z',-24.5107,false),
+      clip(clip(triangle,'x',20.5973,false),'z',-10.9445,false)];
+    for(const p of parts) for(let j=1;j<p.length-1;j++) {
+      if(new THREE.Vector3().subVectors(p[j].world,p[0].world).cross(new THREE.Vector3().subVectors(p[j+1].world,p[0].world)).lengthSq()<1e-14)continue;
+      output.push(add(p[0]),add(p[j]),add(p[j+1]));
+    }
+    changed++;
+  }
+  const geo=source.clone();
+  for(const name of names) {
+    const attr=attrs[name],data=new attr.array.constructor((attr.count+additions.length)*attr.itemSize);
+    data.set(attr.array);
+    const next=new THREE.BufferAttribute(data,attr.itemSize,attr.normalized);
+    additions.forEach((v,i)=>v.data[name].forEach((value,j)=>next.setComponent(attr.count+i,j,value)));
+    geo.setAttribute(name,next);
+  }
+  geo.setIndex(output);geo.computeBoundingBox();geo.computeBoundingSphere();
+  mesh.geometry=geo;
+  mesh.userData.rearPadCut={sourceTriangles:index.count/3,resultTriangles:output.length/3,candidates:changed};
+  rearPadPatch={shell,geometry:geo};
+}
+
+// The old deck's single high north tread occupies a measured box. Hide only
+// triangles wholly in that box and only under the named outdoor deck root.
+// Deferred models receive bounded retries, cancelled when this yard is replaced.
+let rearTreadTimer = null, rearTreadPatches = [];
+function maskRearSourceTread() {
+  if(rearTreadTimer)clearTimeout(rearTreadTimer);
+  for(const p of rearTreadPatches) { if(p.mesh.geometry===p.geometry)p.mesh.geometry=p.source;p.geometry.dispose(); }
+  rearTreadPatches=[];
+  const owner=yard, shell=getShellRoot();
+  const attempt=(remaining)=>{
+    rearTreadTimer=null;if(yard!==owner || getShellRoot()!==shell)return;
+    let deck=null;scene.traverse(o=>{if(o.userData?.kind==='object'&&o.userData.name==='Backyard Deck'&&o.userData.outdoor)deck=o;});
+    if(!deck?.children.length){if(remaining)rearTreadTimer=setTimeout(()=>attempt(remaining-1),250);return;}
+    deck.updateWorldMatrix(true,true);
+    deck.traverse(mesh=>{
+      if(!mesh.isMesh||!mesh.geometry?.attributes?.position)return;
+      const source=mesh.geometry,index=source.index,pos=source.attributes.position,keep=[];
+      const n=index?.count||pos.count;let cut=0;
+      for(let k=0;k<n;k+=3){const ids=[0,1,2].map(j=>index?index.getX(k+j):k+j);
+        const hit=ids.every(i=>{const v=new THREE.Vector3().fromBufferAttribute(pos,i).applyMatrix4(mesh.matrixWorld);
+          return v.x>=7.89&&v.x<=12.71&&v.z>=-43.51&&v.z<=-42.24&&v.y>=1.79&&v.y<=2.41;});
+        if(hit)cut++;else keep.push(...ids);
+      }
+      if(!cut)return;
+      const geometry=source.clone();geometry.setIndex(keep);mesh.geometry=geometry;
+      mesh.userData.rearSourceTreadCut=cut;rearTreadPatches.push({mesh,source,geometry});
+    });
+  };
+  attempt(120);
+}

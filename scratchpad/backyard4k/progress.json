@@ -1,0 +1,102 @@
+{
+  "status": "Render capture complete",
+  "details": "deck_critic_r6 · 1 camera views",
+  "updated": "2026-09-12T17:22:53.613Z",
+  "renders": {
+    "lawn_spacing": "renders/spacing-verified/lawn_spacing.png",
+    "rear_site": "renders/woodland-r5-final/rear_site.png",
+    "photo14": "renders/deck_critic_r6/photo14.png",
+    "photo02": "renders/deck-layout2/photo02.png",
+    "photo09": "renders/planting-r5-final/photo09.png",
+    "photo12": "renders/ground-r10/photo12.png",
+    "photo11": "renders/sky-r4-final/photo11.png"
+  },
+  "round": "deck_critic_r6",
+  "references": {
+    "photo03": "references/03.png",
+    "photo12": "references/12.png",
+    "rear_elevation": "references/09.png",
+    "lake_center": "references/11.png",
+    "photo02": "references/02.png",
+    "photo14": "references/14.png",
+    "photo09": "references/09.png",
+    "photo11": "references/11.png",
+    "photo08": "references/08.png"
+  },
+  "notes": [
+    "Porch structure and back door: Build 5 rendered; critic pending — Grill broad face corrected from overhead camera evidence; source ownership and front geometry preserved.",
+    "Siding and roof detail: Build 5 rendered; critic pending — Softer physical laps replace painted dark stripes. Broad wall illumination remains under review.",
+    "Deck and steps: Build 6 rendered; critic pending — Sharper chalk wear, grit and localized scuffs; native render verified.",
+    "Ground and grass: Build 10 rendered; further revision needed — Shorter, denser grass still shows a comb pattern. Lighting diagnostics underway; extra 20 feet of lawn retained.",
+    "Plantings: Build 5 rendered; critic pending — Layered evergreen added without changing old plants. Shoots still appear too regular and needle clusters too stiff.",
+    "Lake edge and horizon: Build 6 rendered; critic pending — Far woodland now renders after memory fix. Distant detail remains too uniform.",
+    "Light: Build 5 diagnostics found usable shadow pattern — Southwest sun195/30 shades house-facing samples and clears lake-facing samples. Rear grass response restores contrast; blue balance needs validation.",
+    "No piece has passed until its independent blind verdict is recorded.",
+    "Comparisons use native photo resolution; 4K renders are linked above."
+  ],
+  "pieces": {
+    "Porch structure and back door": {
+      "status": "Build 5 rendered; critic pending",
+      "gap": "Grill broad face corrected from overhead camera evidence; source ownership and front geometry preserved."
+    },
+    "Siding and roof detail": {
+      "status": "Build 5 rendered; critic pending",
+      "gap": "Softer physical laps replace painted dark stripes. Broad wall illumination remains under review."
+    },
+    "Deck and steps": {
+      "status": "Build 6 rendered; critic pending",
+      "gap": "Sharper chalk wear, grit and localized scuffs; native render verified."
+    },
+    "Ground and grass": {
+      "status": "Build 10 rendered; further revision needed",
+      "gap": "Shorter, denser grass still shows a comb pattern. Lighting diagnostics underway; extra 20 feet of lawn retained."
+    },
+    "Plantings": {
+      "status": "Build 5 rendered; critic pending",
+      "gap": "Layered evergreen added without changing old plants. Shoots still appear too regular and needle clusters too stiff."
+    },
+    "Lake edge and horizon": {
+      "status": "Build 6 rendered; critic pending",
+      "gap": "Far woodland now renders after memory fix. Distant detail remains too uniform."
+    },
+    "Light": {
+      "status": "Build 5 diagnostics found usable shadow pattern",
+      "gap": "Southwest sun195/30 shades house-facing samples and clears lake-facing samples. Rear grass response restores contrast; blue balance needs validation."
+    }
+  },
+  "renderSizes": {
+    "photo14": [
+      3840,
+      2880
+    ],
+    "photo12": [
+      3840,
+      2880
+    ],
+    "photo11": [
+      3840,
+      2880
+    ],
+    "photo09": [
+      3840,
+      2880
+    ],
+    "rear_site": [
+      3840,
+      2160
+    ],
+    "lawn_spacing": [
+      3840,
+      2160
+    ]
+  },
+  "previews": {
+    "rear_site": "renders/woodland-r5-final/rear_site-progress.jpg",
+    "photo14": "renders/deck_critic_r6/photo14-progress.jpg",
+    "photo02": "renders/deck-layout2/photo02-progress.jpg",
+    "photo09": "renders/planting-r5-final/photo09-progress.jpg",
+    "photo12": "renders/ground-r10/photo12-progress.jpg",
+    "photo11": "renders/sky-r4-final/photo11-progress.jpg",
+    "lawn_spacing": "renders/spacing-verified/lawn_spacing-progress.jpg"
+  }
+}

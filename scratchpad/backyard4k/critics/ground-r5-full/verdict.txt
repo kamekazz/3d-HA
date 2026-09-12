@@ -1,0 +1,5 @@
+Photograph: LEFT
+Confidence: 100%
+Single biggest ground gap: The right lawn has nearly uniform dark teal illumination instead of the broad directional light gradient, bright yellow-green midslope, and irregular tuft-scale highlights in the left photograph. This is an entire lawn lighting/material failure, visible before examining leaves.
+Gate: FAIL. Overall render is immediately identifiable as computer graphics.
+Additional ground evidence: Ground leaves read as evenly distributed flat bright cutouts; photograph leaves vary strongly in orientation, burial, clustering, curled shadows, and local contrast. Grass surface lacks the photograph's thick, leaning tufts.

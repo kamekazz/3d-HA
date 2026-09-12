@@ -1,0 +1,9 @@
+{
+  "test": "full-frame blind comparison with newly randomized pair",
+  "photo_choice": "right",
+  "confidence": 1.0,
+  "whole_scene_result": "Clearly distinguishable; photorealism pass not earned.",
+  "single_deck_material_gap": "The left deck's broad cloudy mottling and uniformly drawn seams lack the photograph's fine directional weathering and varied plank-edge relief.",
+  "unrelated_to_deck_giveaways": "Yes. The flat blue sky and bare horizon, simple green shrub mound, block-shaped black grill, dark reflectionless door glass and evenly lit siding identify the left image as rendered independently of the deck material.",
+  "judgment_recorded_before_key": true
+}

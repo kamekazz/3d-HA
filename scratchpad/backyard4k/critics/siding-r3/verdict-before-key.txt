@@ -1,0 +1,7 @@
+BLIND VERDICT — committed before reading key.json
+Photograph: LEFT image.
+Confidence: 100%.
+Result: Easily distinguishable; full-frame blind gate fails.
+Single biggest siding/rear-roof component gap: The right image's siding reads as perfectly regular, uniformly gray horizontal striping across a flat facade. The left image has substantially richer lap-edge highlights, irregular broad tonal variation and local shadowing, particularly across the tall gable and lower wall. The right facade therefore reads as a manufactured shader surface even without considering the surroundings.
+Secondary roof evidence: The right dormer/rear roof has a conspicuously clean, hard diagonal shadow and low-detail dark planes; the left roof has more mottled shingle texture and less graphic shading.
+Whole-frame identification is dominated by the right image's featureless blue background, absent neighboring houses, simplified spherical bushes, and different framing/perspective. Those cues do not excuse the siding gap.

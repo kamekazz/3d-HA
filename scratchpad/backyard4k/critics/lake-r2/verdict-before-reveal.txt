@@ -1,0 +1,8 @@
+BLIND VERDICT — saved before key reveal
+Photograph: RIGHT.
+Confidence: 99.9%.
+Pass: NO. The two images are immediately distinguishable.
+Single biggest remaining LAKE EDGE / HORIZON / TREE gap: the shore-tree layer is a repeated, rigid screen. The left image has nearly straight, smooth pole trunks supporting an almost level, densely tiled foliage ceiling; it lacks the irregular branching, trunks of varied girth and lean, and broken canopy openings that make the right shoreline read as mature trees occupying depth. Rebuild the near-shore tree silhouettes and branch structure, with distinct asymmetric crowns and gaps revealing the opposite bank. This is the dominant remaining giveaway in the requested lake-facing region.
+Accepted layout changes excluded from critique: larger lawn and 20-foot shore-tree shift north.
+Capture provenance: actual app independently captured by workflow_capture.cjs using lake_r2_poses.json. Initial sandboxed capture timed out at page.waitForFunction (60000 ms). Escalated network retry succeeded. Native capture errors=0; loaded=293/293; camera position=[16,5.700000000000001,-82]; shadow map enabled=true, type=2. Front geometry fingerprint: selection=environment triangles with every world-space vertex z >= 0; triangles=482260; xor=166137678; sum=3351587226.
+Viewed only neutralpair.png, copied unchanged from the blind pair script output pair.png. No source, standalone render/reference, or build reports inspected. Key not yet read.

@@ -1,0 +1,21 @@
+# Rear light response — bounded build
+
+Scope: rear-only contact/indirect response and the existing named outdoor deck's participation in actual sun shadows. No new emitters, exposure/background/sun/weather edits, front geometry changes, interior changes, or reference-image pixel use. Read repository roomkit SKILL, RESUME, ROOM-BRIEF, STYLE-BAR, frontend CLAUDE and actual scene.js. The docs' statement that all shadows are off is stale: the live renderer uses PCFSoft shadows with the sun's existing 2048 map and normalBias 1 ft.
+
+Inspected references 09, 14, 11 and 12 and actual 4K siding-build2/photo09. The main bounded issue is uniformly exposed green ground under the raised deck and weak contact around the clipped shrubs. The source outdoor object path never opts its loaded meshes into shadows, unlike the separately authored rear foliage.
+
+Implementation is `addRearLightDetail()` at environment.js EOF. Parent calls it after yard bucket emission. It applies a rear-only analytical ambient-visibility term to indirect diffuse/specular light for the already modeled two deck slabs and clipped crowns. The term affects only world Z -54..-17 and Y below 8; exact footprint falloff narrows it further. Direct sunlight and direct HA fixture contributions retain their original arithmetic. Shared yard materials get a shader branch, whose front path performs no light modification; rear siding, trim, neutral upper glazing and lake materials are excluded. There are no additional vertices, textures, global environment maps, frame callbacks or render targets.
+
+Shrub occluders read current item pivots and stored translation/rotation/scale/deletion, limited to 32 current clipped-evergreen items. The deck slabs use the same measured world rectangles as the fixed procedural board overlays. This inherits those overlays' existing limitation: the procedural finish/occlusion rectangles do not track a subsequent independent move of the original deck object. The named `Backyard Deck` outdoor root gets castShadow/receiveShadow on its existing meshes. A 30-second bounded deferred-load retry cancels itself if the yard is replaced.
+
+Occlusion is an approximation of the modeled opaque slabs and dense plant crowns, not a path-traced solution. Lake reflection/sky, pale gravel, furniture, facade material and silhouette differences remain outside this bounded work. No photo-match pass is claimed.
+
+## First actual-app self-inspection
+
+Parent integrated the call after the yard's contact-shadow mesh and before syncCar. `node --check frontend/js/environment.js` passed. Native `renders/light-build1/photo09.png` is 3840x2880 from http://127.0.0.1:5001, exact elevation_poses.json/photo09 position [15,5.7,-68], target [13,18,-24.5], FOV80, House/all, no markers/cutaway, capture-only sunny elevation42/azimuth335. All 293/293 objects loaded; zero page errors, failed requests or shader errors. Four unrelated HA resource responses were HTTP502/503 and are retained in the capture JSON rather than suppressed.
+
+The full PNG hit a view_image decoder limitation; visually inspected its unretouched 1600x1200 `photo09-preview.jpg` reduction. Shaded underdeck ground and contact at shrub bottoms now appear, and rail/deck shadows are visible. No oversized black contact discs or disconnected geometry appeared in this shot. Whole-photo mismatch is still large: uniform empty sky, exposed unskirted deck structure, regular planting silhouettes, furniture arrangement and gravel value remain visible limitations. No new sky or reflection treatment was attempted within this strictly rear-local lighting scope.
+
+`light-probe.cjs` read-only report confirms 9 yard material programs, 11 current crown occluders, and all 4 existing deck meshes casting/receiving. Global renderer settings remain shadows enabled/type2, sun map2048x2048, normalBias1 and bias-0.0005. The source change creates no lights and writes none of the global light uniforms.
+
+Front geometry fingerprint exactly matches workflow_front_baseline: 482260 triangles, xor166137678, sum3351587226. This checksum audits geometry; it is not a front pixel comparison. The material branch preserves original indirect-light arithmetic outside the bounded rear region. The first bounded build/selfshot is complete and ready for an independent blind critic, with no photo-match approval claimed.

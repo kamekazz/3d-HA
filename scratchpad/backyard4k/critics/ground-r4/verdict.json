@@ -1,0 +1,16 @@
+{
+  "test": "full-frame blind gate, freshly randomized after diagnostic",
+  "photo_pick": "left",
+  "confidence": 0.999,
+  "verdict": "FAIL: full-frame render plainly distinguishable",
+  "single_ground_gap": "The right lawn remains a uniformly fine, flat, grey-green granular surface, with no convincing directional blade clumps and associated relief through the near foreground. It reads as a texture laid on terrain; the left has tuft structure, varied blade direction, localized dark gaps and highlights.",
+  "other_scene_giveaway": "The right image also has conspicuously sparse, repeated-looking tree foliage and exposed simplified background geometry. Those independently reveal it as rendered. The ground diagnosis does not depend on the sky.",
+  "accepted_scope": "Larger approximately 20 ft lawn accepted; lawn extent was not used as a failure criterion.",
+  "decision_recorded_before_key_reveal": true,
+  "independence_note": "No source, individual reference, individual render or builder reports viewed. Per requested sequence, the focused pair was viewed and its key revealed before this separately randomized full-frame pair; the two verdicts are therefore not independent exposure experiments.",
+  "capture": {
+    "errors": 0,
+    "loaded": {"total": 293, "loaded": 293},
+    "frontGeometry": {"triangles": 482260, "xor": 166137678, "sum": 3351587226}
+  }
+}

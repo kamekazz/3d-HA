@@ -1,0 +1,20 @@
+{
+  "function addFrontYard(": {
+    "unchanged": true,
+    "sha256": "fe95049f7fa0b54fb1cea4f9112ff55740b51cae55e309867dddd24491c28e8a"
+  },
+  "function makeGrassTexture(": {
+    "unchanged": true,
+    "sha256": "b33db73d6608700a53588a2cba43523ba366474169e306d8889a8e9b84db823a"
+  },
+  "function repaintGrass()": {
+    "unchanged": true,
+    "sha256": "b357ff5973a1410995eb8629211f205efb3ad47d09337fb8e4aaa8c83898a2a4"
+  },
+  "GRASS_BASE": {
+    "unchanged": true
+  },
+  "globalRenderingFiles": {
+    "groundBuilderEdits": "none: scene.js, daylight.js, weather.js, textures.js untouched by this builder"
+  }
+}

@@ -1,0 +1,4 @@
+Photograph: LEFT.
+Confidence: 99%.
+SINGLE biggest lighting gap: the right image has a broadly sunlit, bright green rear lawn with little large-scale shadow coverage, while the left has a substantially darker lawn under broad soft building/tree shade. This makes the right ground read as evenly lit CGI and breaks the real reference daylight contrast between the relatively bright house and shaded foreground.
+Actionable rear-only correction: add or strengthen broad, soft cast-shadow coverage over the rear lawn/foreground, especially the central lawn extending from the deck toward the camera. Keep the house daylight level while reducing direct-sun contribution on that ground; do not globally darken front/interior/other elevations.

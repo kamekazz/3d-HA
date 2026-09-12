@@ -1,0 +1,24 @@
+{
+  "round": "planting-r3",
+  "protocol": "Independent canonical photo09 capture; full-frame randomized unlabeled pair viewed before hidden key; no individual images, source, or builder reports inspected",
+  "verdict": "FAIL",
+  "photograph_side": "left",
+  "confidence": 1.0,
+  "full_frame_reason": "The photograph is readily identifiable: the right image has simplified foliage silhouettes, uniformly bright procedural lawn, clean facade shading, and sparse surrounding context.",
+  "single_biggest_plantings_gap": "The planting strip in front of the deck reads as separate low, smooth ellipsoids with repetitive green surfaces. The photograph shows a taller, dense, irregularly spreading shrub mass with overlapping branches, dark interior gaps, and varied leaf-scale texture.",
+  "capture": "scratchpad/backyard4k/renders/critic-planting-r3/photo09.png",
+  "resolution": [
+    3840,
+    2880
+  ],
+  "models_loaded": 293,
+  "models_total": 293,
+  "runtime_errors": 0,
+  "front_geometry": {
+    "triangles": 482260,
+    "sum": 3351587226,
+    "xor": 166137678
+  },
+  "judged_before_key": true,
+  "judged_at": "2026-09-12T13:32:59.5668216-03:00"
+}

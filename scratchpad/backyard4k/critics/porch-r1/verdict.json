@@ -1,0 +1,12 @@
+{
+  "round": "porch-r1",
+  "scope": "rear porch structure and back door",
+  "photograph": "right",
+  "confidence": 1.0,
+  "result": "fail",
+  "single_biggest_gap": "The porch decking on the left is a uniformly pale, smooth plane with perfectly regular dark seams. The right-hand boards have strong irregular weathering, grain, scuffs and board-to-board gray variation. The foreground deck alone makes the left side unmistakably computer generated.",
+  "dependency_outside_scope": "The furniture occupying the left foreground versus the open photographed deck, the simplified covered grill, vegetation and flat sky are additional obvious tells outside this porch-structure/back-door scope. They prevent a whole-image indistinguishability pass independently.",
+  "capture": "scratchpad/backyard4k/renders/critic-porch-r1/porch_photo14.png",
+  "pair": "scratchpad/backyard4k/critics/porch-r1/pair.png",
+  "blind_protocol": "Independently captured the final real-app build. Viewed only randomized pair.png, never render or reference alone. This verdict was written before opening key.json. No builder source or build reports were consulted."
+}

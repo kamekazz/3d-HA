@@ -1,0 +1,2 @@
+from pathlib import Path
+p=Path('frontend/js/environment.js');s=p.read_text();s=s.replace('          rearFarOakMat=rearOakLeafMat.clone();\n          const atmosphere=', '          rearFarOakMat=rearOakLeafMat.clone();\n          // Far foliage can remain when every editable near tree is deleted.\n          // It therefore also owns disposal of the shared leaf textures.\n          rearFarOakMat.addEventListener(\'dispose\',()=>{rearFarOakMat.map?.dispose();rearFarOakMat.normalMap?.dispose();});\n          const atmosphere=',1);p.write_text(s)

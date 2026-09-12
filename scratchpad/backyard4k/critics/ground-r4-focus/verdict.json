@@ -1,0 +1,9 @@
+{
+  "test": "focused component diagnostic, not full-scene pass",
+  "photo_pick": "right",
+  "confidence": 0.995,
+  "verdict": "FAIL: grass is immediately distinguishable",
+  "single_ground_gap": "The left grass reads as a flat, uniformly fine speckled carpet: it lacks the photo candidate's visibly tufted, directionally matted blade clumps and their small light/shadow relief. The leaf size difference helps identification, but the turf surface alone is sufficient.",
+  "decision_recorded_before_key_reveal": true,
+  "crop": [60, 300, 540, 450]
+}

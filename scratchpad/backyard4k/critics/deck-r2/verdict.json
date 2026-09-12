@@ -1,0 +1,9 @@
+{
+  "photograph_side": "right",
+  "confidence": 1.0,
+  "pass": false,
+  "biggest_deck_gap": "The left deck surface reads as a stretched striped texture rather than individually constructed weathered planks. The photograph has crisp dark gaps, discrete board edges, irregular gray wear and fine surface roughness; the left surface has long smeared grain bands with weak physical board separation. This dominates the deck realism failure.",
+  "scope_note": "Large lawn is accepted as explicit user intent and is not a criticism.",
+  "capture": {"errors": 0, "loaded": 293, "total": 293, "front_triangles": 482260, "front_xor": 166137678, "front_sum": 3351587226},
+  "blind_protocol": "Viewed only the pair image copied to neutralpair.png. Verdict written before reading key.json."
+}

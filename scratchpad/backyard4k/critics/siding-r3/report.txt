@@ -1,0 +1,10 @@
+REVEAL REPORT
+Key confirms photograph LEFT; blind choice correct at 100% confidence. FAIL: still easily identifiable.
+Biggest siding/rear-roof gap: uniformly regular gray siding lacks the photograph's stronger lap-edge highlight variation, broad tonal irregularity and local shadowing. Roof/dormer shading additionally looks graphic, with a clean hard diagonal shadow and insufficient mottled shingle detail.
+Pair inspected only; no individual render/reference images, source, build notes, or previous reports inspected. Full-frame randomized pair; no crop. Verdict was written before opening key.json.
+Independent actual-app capture: scratchpad/backyard4k/renders/critic-siding-r3/photo09.png
+Native capture dimensions verified: 3840 x 2880.
+Capture errors: 0. Models: 293 loaded / 293 total.
+Front guard: environment triangles with every world-space vertex z >= 0; triangles 482260; xor 166137678; sum 3351587226.
+Shadow map: enabled true; type 2.
+Whole-frame background/framing cues dominate identification, but component gap remains clearly visible.

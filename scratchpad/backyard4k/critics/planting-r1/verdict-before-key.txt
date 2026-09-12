@@ -1,0 +1,4 @@
+Photograph: LEFT. Confidence: 100%.
+Verdict: FAIL; the rendered image is immediately identifiable.
+Single biggest PLANTING gap: the render lacks the substantial clipped shrub on the left flank of the rear deck. The photograph has two large, irregular, dark broadleaf shrubs framing the deck, while the render shows one compact near-spherical shrub on the right and an open left flank; this missing left planting mass changes the entire rear planting silhouette. Restore its volume, asymmetrical broad crown and visible branching/trunk base before refining smaller bed shrubs. Larger lawn and farther shoreline trees are accepted and are not the basis of this verdict.
+Written before inspecting filekey.json.

@@ -1,0 +1,15 @@
+{
+  "blind_verdict_written_before_key_read": true,
+  "crop_photograph_actual": "right",
+  "crop_guess_correct": true,
+  "full_frame_photograph_actual": "left",
+  "full_frame_guess_correct": true,
+  "blind_match_pass": false,
+  "result": "FAIL",
+  "single_biggest_deck_gap": "Rendered boards are too narrow / seams too dense in the registered viewpoint; broad photographic deck planks read approximately twice as wide in the matched foreground patch.",
+  "capture": "../renders/deck_critic_r6/photo14.png",
+  "capture_exit_code": 0,
+  "capture_assets_loaded": "293/293",
+  "capture_errors": 0,
+  "browser_closed_gpu_released": true
+}

@@ -1,0 +1,10 @@
+{
+  "photograph": "left",
+  "confidence": 1.0,
+  "single_biggest_siding_roof_gap": "The right image's large gable siding is an almost flat, uniformly gray surface with mechanically even fine lines. The left image has much stronger overlapping clapboard relief, irregular wavy courses and uneven light/shadow across the wall; this dominates the siding realism gap.",
+  "verdict": "fail",
+  "reason": "The photograph is immediately identifiable even when restricting judgment to siding and roof detail.",
+  "outside_context_dependency": "The right image's blank blue background, missing neighboring houses and synthetic lawn also make the photograph identifiable independently of siding and roof detail.",
+  "capture": "Own actual app capture; 293 of 293 models loaded, zero errors.",
+  "key_read_before_verdict": false
+}

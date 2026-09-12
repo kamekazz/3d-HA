@@ -1,0 +1,11 @@
+{
+  "photograph": "left",
+  "reference": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\backyard4k\\references\\09.png",
+  "render": "C:\\Users\\Manuel\\Desktop\\Pro\\3d HA\\scratchpad\\backyard4k\\renders\\planting_critic_r4\\photo09.png",
+  "comparison_size": [
+    600,
+    450
+  ],
+  "diagnostic_crop": null,
+  "test": "full-frame blind gate"
+}

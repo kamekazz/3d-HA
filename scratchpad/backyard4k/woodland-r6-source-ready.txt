@@ -1,0 +1,14 @@
+Woodland round 6 — source ready; final post-optimization render pending
+
+Final source changes are limited to the opposite bank and water reflection response:
+- Opposite shoreline moved farther north, to about 260 ft across the water. This is a visual depth estimate based on references 05/06/11/13, not a surveyed distance. Near shore and rearSite.yardN = L.yardN - 20 are unchanged.
+- Smaller distant scanned oak leaf surfaces, denser distal sprays, lighter exposed bank and irregular shoreline openings.
+- A far-only private material desaturates distant leaves and mixes current scene-sky atmosphere by camera distance and day/night state. No global fog/light changes and no foreground leaf material changes.
+- Reflection still renders the actual mirrored scene. Crossed ripple offsets, a distance-dependent water sampling footprint and weaker distant reflectance soften the horizontal green band.
+- Shared leaf resource disposal remains owned even if every near tree is deleted.
+
+Rejected self-review trials used sparse over-hazed leaves and then rounded interior crown volumes. Those volumes have been removed from final source; all final crowns use real small leaf surfaces.
+
+The first final leaf-only capture stalled with a multi-GB temporary geometry peak amid concurrent captures. Its owned process was terminated (session 4872, exit 1). The far forest now flushes JS Number arrays into typed geometry after each plant/tree; the existing merged bucket preserves exact vertex order, RNG sequence, geometry and material appearance. node --check passes. No new native capture launched pending root's serialized capture slot.
+
+Do not review woodland-r6-reviewed (rejected volume trial). woodland-r6-leaves is empty from the terminated run. A fresh final actual capture and blind verdict remain required. No pass claimed.

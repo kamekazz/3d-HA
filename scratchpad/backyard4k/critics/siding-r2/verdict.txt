@@ -1,0 +1,5 @@
+Blind verdict recorded before key inspection.
+Photograph: LEFT. Confidence: 99%.
+FAIL: I can clearly identify the photograph.
+Single most important siding/roof gap: the rendered lower rear roof and dormer roof are pale beige/taupe with a regular visible shingle pattern, while the photograph shows substantially darker cool charcoal-gray roof surfaces with softer, less regular tonal variation. This light warm roof reads as the wrong roofing material/color and is the strongest roof/siding-specific mismatch. Correct the roof base tone and tonal/shingle contrast before adding more detail.
+Capture: errors=0; assets loaded 293/293. Front geometry fingerprint: triangles=482260, xor=166137678, sum=3351587226.

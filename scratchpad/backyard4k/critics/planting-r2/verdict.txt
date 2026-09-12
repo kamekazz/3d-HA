@@ -1,0 +1,7 @@
+Blind verdict recorded before reading key.
+Photograph: RIGHT. Confidence: 100%.
+Full-frame gate: FAIL. The left image is unmistakably a render.
+Single biggest planting gap: the two large clipped shrubs are much too small. The right-hand canopy is roughly 60–65% of the photograph’s screen-space diameter, with the left shrub similarly lacking mass. Enlarge the clipped canopies to approximately 1.5–1.6 times their present diameter while maintaining their positions, then check their base height against the bed. The photograph’s shrubs occupy substantial height beside the deck and obscure more railing; the left image reads as miniature spherical ornaments.
+Global confound: the flat blue sky and absent neighboring houses make the render immediately identifiable, but the planting scale gap remains independently obvious.
+Viewed only the randomized full-frame pair.png; no individual reference or capture viewed.
+Key read after verdict: photograph RIGHT, confirmed. Reference comparison_size is 600x450, so blind_pair.py made a full-frame 600x450-per-side comparison; native capture remains separate. Capture: errors 0; models 293/293; frontGeometry triangles 482260, xor 166137678, sum 3351587226.

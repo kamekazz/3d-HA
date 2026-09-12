@@ -1,0 +1,58 @@
+--- a/frontend/js/environment.js
++++ b/frontend/js/environment.js
+@@ -5832,5 +5832,53 @@
+     owner.userData.rearLightDetail.deckMeshes=meshes;
+   };
+   settle(120);
+-}
+-
++
++  // Rear ground needs a stronger direct-to-environment ratio than the global
++  // indoor fill. These measured material coefficients still follow the actual
++  // sun, weather, shadows and HA lights; they do not encode a camera or shadow.
++  // Litter shares the light response but keeps its authored autumn pigment.
++  const groundNames = ['rear-mown-turf', 'rear-short-grass-tufts',
++    'rear-mown-clover', 'rear-fallen-leaves'];
++  const directionalChunk = THREE.ShaderChunk.lights_fragment_begin;
++  const directionalMarker = 'getDirectionalLightInfo( directionalLight, directLight );';
++  const responseMaterials = [];
++  for (const name of groundNames) {
++    const mesh = owner.getObjectByName(name);
++    const material = mesh?.material;
++    if (!material?.isMeshStandardMaterial) continue;
++    const beforeCompile = material.onBeforeCompile;
++    const previousKey = material.customProgramCacheKey();
++    const beforeRender = mesh.onBeforeRender;
++    material.onBeforeCompile = function(shader, activeRenderer) {
++      beforeCompile.call(this, shader, activeRenderer);
++      shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_begin>',
++        directionalChunk.replace(directionalMarker,
++          directionalMarker + '\ndirectLight.color *= 4.0;'));
++      if (name === 'rear-mown-turf') {
++        // The snow-detail luminance was computed above this line. Correct only
++        // the uncovered grass pigment, leaving full snow color/detail intact.
++        const snowMix = 'diffuseColor.rgb = mix(diffuseColor.rgb, rearSnowColor';
++        shader.fragmentShader = shader.fragmentShader.replace(snowMix,
++          'diffuseColor.b *= 1.425;\n' + snowMix);
++      }
++    };
++    material.customProgramCacheKey = () => previousKey + '|rear-ground-light-response-v1';
++    material.needsUpdate = true;
++    mesh.onBeforeRender = function(...args) {
++      beforeRender.apply(this, args);
++      material.envMapIntensity = getEnvIntensity() * 0.02;
++      if (name === 'rear-short-grass-tufts' || name === 'rear-mown-clover') {
++        // Their existing hooks already interpolate snow. Tint only the dry/wet
++        // grass contribution, preserving the snow-white part at every blend.
++        material.color.b += (material.color.b - GRASS_SNOW.b * snowF) * 0.425;
++      }
++    };
++    responseMaterials.push(name);
++  }
++  owner.userData.rearLightDetail.groundResponse = {
++    directionalScale: 4, environmentScale: 0.02, livingBlueScale: 1.425,
++    materials: responseMaterials,
++  };
++
++}
++

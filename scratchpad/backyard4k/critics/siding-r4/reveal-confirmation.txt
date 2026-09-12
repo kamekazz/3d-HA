@@ -1,0 +1,2 @@
+REVEAL CONFIRMATION
+key.json confirms photograph = LEFT. Pre-reveal identification was correct at 100% confidence. Full-frame gate: FAIL.
