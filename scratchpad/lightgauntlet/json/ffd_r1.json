@@ -1,0 +1,24 @@
+Traceback (most recent call last):
+  File "C:\Users\Manuel\Desktop\Pro\3d HA\scratchpad\lightgauntlet\slabsweep.py", line 115, in <module>
+    main()
+  File "C:\Users\Manuel\Desktop\Pro\3d HA\scratchpad\lightgauntlet\slabsweep.py", line 67, in main
+    page.goto(BASE, wait_until='load', timeout=60000)
+  File "C:\Users\Manuel\Desktop\Pro\3d HA\backend\.venv\Lib\site-packages\playwright\sync_api\_generated.py", line 9875, in goto
+    self._sync(
+  File "C:\Users\Manuel\Desktop\Pro\3d HA\backend\.venv\Lib\site-packages\playwright\_impl\_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "C:\Users\Manuel\Desktop\Pro\3d HA\backend\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Manuel\Desktop\Pro\3d HA\backend\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+  File "C:\Users\Manuel\Desktop\Pro\3d HA\backend\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Manuel\Desktop\Pro\3d HA\backend\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Page.goto: Timeout 60000ms exceeded.
+Call log:
+  - navigating to "http://127.0.0.1:5000/", waiting until "load"
+

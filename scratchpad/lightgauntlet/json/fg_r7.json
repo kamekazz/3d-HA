@@ -1,0 +1,748 @@
+{
+  "room": 7,
+  "aimed": true,
+  "day": false,
+  "frames": [
+    {
+      "slab": 0.0,
+      "state": "on",
+      "file": "shots/fg_r7_s0_on.png",
+      "meter": {
+        "mean": 44.6,
+        "centre": 74.0,
+        "p95": 142
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0.0277,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 4
+          }
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0.0277,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 8,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 2
+          }
+        }
+      ]
+    },
+    {
+      "slab": 0.05,
+      "state": "on",
+      "file": "shots/fg_r7_s0.05_on.png",
+      "meter": {
+        "mean": 52.4,
+        "centre": 78.4,
+        "p95": 142
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0.0432,
+          "wall": 0.0277,
+          "floor": 0.0432,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 4
+          }
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0.0432,
+          "wall": 0.0277,
+          "floor": 0.0432,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 8,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 2
+          }
+        }
+      ]
+    },
+    {
+      "slab": 0.08,
+      "state": "on",
+      "file": "shots/fg_r7_s0.08_on.png",
+      "meter": {
+        "mean": 56.3,
+        "centre": 80.6,
+        "p95": 142
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0.0692,
+          "wall": 0.0277,
+          "floor": 0.0692,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 4
+          }
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0.0692,
+          "wall": 0.0277,
+          "floor": 0.0692,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 8,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 2
+          }
+        }
+      ]
+    },
+    {
+      "slab": 0.0,
+      "state": "off",
+      "file": "shots/fg_r7_s0_off.png",
+      "meter": {
+        "mean": 8.0,
+        "centre": 7.2,
+        "p95": 34
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 4
+          }
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 8,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 2
+          }
+        }
+      ]
+    },
+    {
+      "slab": 0.05,
+      "state": "off",
+      "file": "shots/fg_r7_s0.05_off.png",
+      "meter": {
+        "mean": 8.0,
+        "centre": 7.2,
+        "p95": 34
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 4
+          }
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 8,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 2
+          }
+        }
+      ]
+    },
+    {
+      "slab": 0.08,
+      "state": "off",
+      "file": "shots/fg_r7_s0.08_off.png",
+      "meter": {
+        "mean": 8.0,
+        "centre": 7.2,
+        "p95": 34
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": [
+        {
+          "roomId": 1,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 4
+          }
+        },
+        {
+          "roomId": 2,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 5,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 8,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        },
+        {
+          "roomId": 11,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 14,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 0,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 15,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 0
+          }
+        },
+        {
+          "roomId": 27,
+          "mode": "centre",
+          "slab": 0.45,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 2
+          }
+        }
+      ]
+    }
+  ]
+}

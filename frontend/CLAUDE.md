@@ -176,7 +176,14 @@ walls). Topbar `☀ auto` button cycles auto/day/night (persisted in `localStora
   scopes its tile to, so a fixture must never become a second `rooms[]` entry — `Array.find` would
   return a 1-light set for a 5-light room and "all off" would turn one light off. Fixtures live in
   their own array, and `getAllHouseLightIds` stays `light.*`-only because a fixture may be bound to
-  a `switch.*` (`roomcards.js toggleRoomLights` hardcodes `domain: 'light'`). One consequence of
+  a `switch.*`. **Room cards read `getRoomControlIds` instead**, which is that room's `light.*` plus
+  whatever its own emitting fixtures are bound to: five rooms here (Dining, Kitchen, Laundry, Pantry,
+  Office printers) are lit *entirely* by a wall switch, so under the `light.*`-only rule their card
+  read "no lights" and its toggle did nothing while the 3D fixture worked perfectly. That widening is
+  only safe because `toggleRoomLights` now derives the service domain per `entity_id` — it used to
+  hardcode `domain: 'light'`, and calling `light.turn_off` on a `switch.*` is a 400 from HA and a card
+  stuck showing the state it optimistically painted. Widen the set without fixing the caller and that
+  bug comes straight back. One consequence of
   that `light.*`-only rule: a room whose only lighting is a `switch.*` fixture has an **empty**
   `lightIds`, so the record used to be skipped outright and the fill had nothing to hang on — five
   rooms here (Dining, Kitchen, Laundry, Pantry, Office closet). The record is now also kept when the
@@ -201,8 +208,73 @@ The fill is worth four notes of its own:
   and stays black. The reference's floor is a *plateau* anyway — 66 under a torchiere, 38 across the
   rest, no bright disc — and a plateau is exactly what an emissive is. `SLAB_FILL` (0.05) rides the
   existing `roomGoal`/`paintSlab` path beside `SLAB_INTENSITY`, night-gated the same way, so at noon
-  it is exactly 0 and the day frame is unchanged. A room whose slab is covered by a GLB floor piece
-  (`Movie Floor Planks`) gets nothing from it and leans on the point fill.
+  it is exactly 0 and the day frame is unchanged (verified: the garage's noon pair is md5-identical
+  with the term at 0 and at 0.05).
+  **And the slab is usually not the floor you can see** — the same discovery as the wall skins
+  below, one axis over. Eight rooms are floored with a GLB laid over the slab, each measuring the
+  room's footprint to the inch, so `paintSlab` was painting a slab nobody sees and every one of
+  those floors metered ~20 against the reference's *unlit* floor of 28. It now paints the skin too,
+  through the same `paintSkin` (`SLAB_GLOW` instead of `WALL_GLOW`; `emissive × emissiveIntensity`
+  is what the shader adds, so colour-premultiplied at intensity 1 is the identical radiance the slab
+  branch lands). Measured, lights on, median over every pixel the term moved: Garage **10 → 37**,
+  Movie **1 → 28**, Office **5 → 26** (a one-lamp room, so a lower `fillFactor`), and the bare-slab
+  Guest room **3 → 31** — which is what says one budget serves both carriers, and it stays 0.05.
+  Three things it needed:
+  - **The skin takes the FILL only, never the centre wash** (`floorFillGoal`, its own eased
+    `r.floorGlow`), which is the same split `wallFillGoal` already makes and for a sharper reason:
+    `roomGoal`'s other branch is `SLAB_INTENSITY` **0.45**, ten times the fill, and that number was
+    calibrated against a surface you cannot see. Carried onto the skin it would put a blazing orange
+    sheet on the floor of every focused room with no visible bound fixture — room 17's `Hall2F Floor
+    Planks`, for one. It also cannot ride `r.glow` and read it only while the mode says `fill`: that
+    value *eases between the two branches*, so the skin would flash at ~0.45 for the frames after a
+    centre→fill switch.
+  - **`FLOOR_SKIN_RE` is the delicate half**, much more so than `WALL_SKIN_RE`. `\bfloor\b` alone
+    catches a `Floor Lamp`, and sixteen pieces here are named `<Room> Floor <something>` and are
+    emphatically not the floor: rugs, runners, bath mats, vents, a stairwell lining, `Pantry Floor
+    Stock`, and two `* Floor Shadows` fake-AO decals whose whole job is to be *dark*. Size does not
+    separate them either — `Movie Floor Rug` is 16.7 × 23.4 ft in a 20.4 × 23.5 ft room. So it reads
+    the library's `<Room> <Thing>` convention the way `yardkit.js modelKind` does: the name must
+    **end** in `floor`, optionally plus one word from a closed list of floor *finishes*
+    (`planks/boards/tiles/carpet/nap`). Everything excluded is named for a thing that sits *on* a
+    floor. `carpet`/`nap` are in because wall-to-wall carpet *is* the floor; a rug is furniture and
+    keeps its authored look.
+  - **Its ease runs on the wall loop's always-write rule** (`continue` only once the goal is 0), for
+    the wall loop's reason: a floor GLB resolves async, and a lit room that stopped writing at settle
+    would hand it the authored black and never touch it again. The *slab* loop keeps its
+    converge-and-stop — `buildHouse` creates that mesh synchronously, so it cannot arrive late. A
+    dark room still stops dead either way, which is what the off-state guarantee rests on — verified
+    md5-identical off frames across `slab` 0 / 0.05 / 0.08 / 0.12.
+- **The wall half is the same emissive one axis over**, and it needed a second writer to exist.
+  `WALL_FILL` (0.032) is night- and `fillFactor`-gated exactly like `SLAB_FILL` — the far wall is
+  what a point light at the room centre reaches worst, taking both the 1/d² and the cosine penalty,
+  so the shadow end of a lit room metered 4-16 against a bright end of 78-149 while the Sims
+  reference keeps its far corner at 25. It lifts *only* the surfaces the direct term does not reach,
+  so the near end does not move at all (measured: the garage's bright box is 149 with the term at 0
+  and 149 at 0.05). Three things about it:
+  - **It goes through a composer, `house.js applyWallEmissive`.** A material has ONE emissive colour
+    and ONE intensity, and the accent hover/selection glow already owned it; whichever wrote last
+    won. The two now ADD, premultiplied into the colour with `emissiveIntensity` pinned at 1 (exact,
+    not an approximation — the shader adds `emissive × emissiveIntensity`). `paintRoomEmissive`
+    stores its level in `userData.accentEmissive` and `setRoomWallFill` stores the fill's in
+    `userData.fillEmissive`/`fillColor`; `baseEmissive` still means what it meant, the accent level
+    a hover restores *to*. Without this a hover erased the fill until the room's lights next moved,
+    because roomlights stops writing once its ease converges.
+  - **The generated wall shell is not what you are looking at.** Every finished room here is skinned
+    — `<Room> Wall Wash` is a run of full-height GLB planes, one per wall, sitting inside the shell
+    so each wall can carry its own albedo (`tools/roomkit/ROOM-BRIEF.md`). A 99-ray fan from the
+    garage's own shot camera hit `Garage Wall Wash` 15 times and the room's wall mesh **zero**, and
+    the first version of this rendered byte-identical frames. So `paintSkin` paints those too, via
+    `WALL_SKIN_RE` (`\bwall wash\b`, the documented skin, deliberately not every object with "wall"
+    in its name — `Arcade TV Wall` and `Movie Screen Wall` are furniture). It touches **only
+    materials the GLB authored as non-emissive**, which needs no restore bookkeeping (intensity 0
+    writes black, which *is* the authored value), keeps the term off light sources, and settles the
+    one collision it could have had with `windowlight.js`, whose panes are authored emissive.
+  - **A lit room repaints every frame; a dark one still stops dead.** The slab's converge-and-stop
+    does not carry over, because the materials being painted can arrive *after* the ease settles: a
+    skin GLB resolves async, and `cutaway.js splitMerged` then rebuilds that run as one fresh
+    material clone per wall (`<Room> Wall Wash` matches `WALL_ARCH_RE`, so it is always split —
+    hence `origFor`, the same parent fallback `windowlight.js` needs). Either event hands over a
+    material with the authored black emissive that a settled room would never overwrite.
 - **`fillFactor` saturates**: `1 - e^(-Σ glow)` over the room's shown, emitting fixtures — 1 lamp
   0.63, 2 → 0.86, 3 → 0.95, because bounce is not additive the way emitters are. Being built from
   the *eased* glows, it fades with the lamp instead of popping and is exactly 0 when the room is off
@@ -214,10 +286,19 @@ The fill is worth four notes of its own:
   pays for them out of the **furthest** direct owners. In room focus there are only ever a handful
   of direct owners, so this changes nothing in the view a room is judged in.
 
-`window.__roomlights.tune({fixture, fill, slab})` writes those three budgets live (which is why they
-are `let`) and `scratchpad/lightgauntlet/sweep.py` drives it: one browser session per room instead of
-one per value, and — since the rooms' `light_cfg` is edited between rounds — the only way to get a
-before/after pair from the *same* scene.
+`window.__roomlights.tune({fixture, fill, slab, wall})` writes those four budgets live (which is why
+they are `let`) and `scratchpad/lightgauntlet/sweep.py` / `wallsweep.py` / `slabsweep.py` drive it:
+one browser session per room instead of one per value, and — since the rooms' `light_cfg` is edited
+between rounds — the only way to get a before/after pair from the *same* scene. `slab` moves the
+room's slab *and* the floor GLB over it: one budget, two carriers, deliberately one knob.
+`__roomlights.surfaces()` lists every room's two emissive terms, **off rooms included**, which is
+what the "an off room is exactly as dark as it was" check reads, plus a `skins` count of the GLB
+carriers each term found — a room reporting `slab 0.043, skins.floor 0` is either a bare slab
+(correct) or a floor GLB missed by name, and the numbers alone cannot tell those apart.
+(Note `wallsweep.py` re-probes the focus pose per pass and so shoots its ON and OFF frames from
+different points — room 1 gave `[8.30,4.77,34.28]` and `[16.17,4.77,31.02]`; `slabsweep.py` pins the
+solved pose for the whole run, as `lightshot.py`'s own `main()` does. Its per-value frames were
+always same-pose, so a value sweep was never affected.)
 
 Four more things are load-bearing and not guessable:
 
@@ -237,8 +318,9 @@ Four more things are load-bearing and not guessable:
   a light that is on reads as on at noon. Consequences: `settleRoomLights()` exists and is called
   beside `settleDaylight()` (or the curtain lifts onto a dozen lamps ramping up), `snapshots.js`
   brackets its capture with `suspendRoomLights()` (cards are keyed by *geometry* and persisted, so a
-  card shot while a lamp was on would bake it in forever — and the restore must be intensity-only,
-  see the pool rule above), and the single-floor dollhouse view scales spill by `FLOORVIEW_SPILL`
+  card shot while a lamp was on would bake it in forever — and the restore must be intensity-only for
+  the pool lights, see the pool rule above, while the slab and wall emissives are zeroed and put back
+  by value), and the single-floor dollhouse view scales spill by `FLOORVIEW_SPILL`
   but **room focus does not**, being the one view close enough to want a lamp to read properly.
 - **A fixture's world position is computed, not read.** `getWorldPosition` is wrong here twice over:
   frame callbacks run before `renderer.render` refreshes `matrixWorld`, and at `setRoomLightsData`
@@ -292,10 +374,59 @@ things are worth knowing:
   a card captured after dark would bake black windows into a daylit room forever.
 
 `window.__windowlight.setEnabled(false)` is the before/after switch — the only way to A/B this from
-one identical pose (`scratchpad/lightgauntlet/abshot.py`). Note the Dining bay is not visible from
-inside its own focused room at all: its units are mounted on the outer face of walls that are either
-opaque (far wall) or faded away with their windows (near wall), which is why room 4's night meter is
-unchanged before and after. That is a cutaway property, not this module's.
+one identical pose (`scratchpad/lightgauntlet/abshot.py`, `--on` for a lit room). Note the Dining bay
+is not visible from inside its own focused room at all: its units are mounted on the outer face of
+walls that are either opaque (far wall) or faded away with their windows (near wall), which is why
+room 4's night meter is unchanged before and after. That is a cutaway property, not this module's.
+
+**The same module ramps the other authored lie: faux fill** (`mode: 'fill'`). A window fakes the view
+out; the rest of the authored emissive in this house fakes the bounce *in* — a flat grey
+`emissiveFactor` added to a diffuse material so a cabinet door or a ceiling reads as lit without
+costing a light. Same bug, same shape, and the fix is the same ramp with two differences: it goes to
+**zero**, not to `NIGHT_LUM`, and it carries **no tint** — a pane really is showing you a moonlit
+outdoors, a cupboard is not showing you anything and should just be lit by the room's lamps. Measured
+in room 6 at 22:00 with a `scratchpad/lightgauntlet/abfill.py` A/B (one pose, one session): the
+unlit Kitchen's centre went 47.5 → 10.3 and its **lit:unlit ratio 1.80 → 5.79** (mean 1.98 → 7.19),
+where the whole of the 47.5 was ~1000 sq ft of `white` 0.178 / `trim` 0.153 / `whitelo` 0.093 cabinet
+door that no `light_cfg` anywhere could reach. The garage door leaf (`gleaf` 0.212 over ~349 sq ft)
+metered 141.8 → 0.0. Four things:
+
+- **`isFillMat` matches on what the value DOES, never on what the material is called.** The names
+  here are `white`, `trim`, `black`, `steel`, `paper`, `quartz` — a name list would collide with the
+  library the first time someone uploads a lamp whose lens is called `white`. Three tests, all
+  required: **neutral** (linear saturation ≤ `FILL_SAT` 0.06 — the 37 fills measure 0.000 to 0.034,
+  the nearest deliberate emitter is 0.135 and the arcade's screens and marquees run 0.3 to 0.93);
+  **no `KHR_materials_emissive_strength`** (`orig.emissiveIntensity` exactly 1, which is the author
+  saying "a bit brighter" rather than "this emits" — it is what spares the Kitchen ceiling's `glow`
+  ×1.55 and the Garage's `gshop` ×2.2, both neutral enough to pass the first test); and **not a
+  fixture's own lens** (`FIXTURE_MAT_RE`, the VIEW_MATS forbidden nouns as a substring veto, plus
+  `glow|globe|flame|neon|candle`). Verified two ways that agree exactly: an offline sweep of every
+  placed GLB's glTF materials and `__windowlight.windows()` in the page both name the **same 37
+  objects** (`scratchpad/lightgauntlet/probe_fill.py`).
+- **The arcade is the reason the tests are conjunctive.** Its cabinet marquees, LED strips and hex
+  panels *are* emissive on purpose and correspond to real HA light entities; every one of them is
+  chromatic, so the neutrality test alone spares them, and its unlit frame is byte-identical
+  (0 px differ) before and after. The one arcade object that does ramp is `Arcade Ceiling` — which
+  is exactly why the whole class went unnoticed for months: in most rooms the trick landed on the
+  ceiling, and `CEILING_RE` deletes those. It only ever showed where it landed on a wall, a cabinet
+  face or a prop.
+- **A window-named object is claimed exclusively by the window mode**, before the material detectors
+  run. `win_slat` and `win_trim` are authored neutral at strength < 1 and would otherwise read as
+  fill too, and two modes writing one material on the same frame is the one thing the split entries
+  must not do. An entity-bound object is still skipped before either — that guard matters far more
+  now, since a bound lamp's body and base are exactly the neutral unit-strength emissive this looks
+  for.
+- **Day is proved per-material, not per-frame.** The rig reproduces a frame only to ~1 sRGB level
+  run to run (two identical runs: 1.6% of pixels, max delta 5), so a pixel diff cannot answer
+  "byte-identical". `probe_emx.py` instead reads every live material at noon against its `__orig`:
+  2523 emissive records, 35 differ, and all 35 are HA-bound fixtures that `roomlights.js` owns and
+  this module never touches.
+
+Two things were deliberately **left** and are binding problems, not faux fill: the Movie props'
+`m2bulb` (object 323) and the Office desk lamp's `globe` (object 174) are unshaded lamp bulbs on
+*unbound* props, so they blow white in a dark room. They are warm and carry a strength multiplier,
+so all three tests spare them; the fix is to bind them (or split the bulb into its own object), which
+is `roomlights.js`'s job.
 
 **The transform gizmo** (`frontend/js/drag.js`) is three's `TransformControls`. In r160 it *is* an
 `Object3D` — `scene.add(tc)`, there is no `getHelper()`. Four non-obvious things:

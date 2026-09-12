@@ -67,9 +67,13 @@ const SLAB_INTENSITY = 0.45;
 // light ON. Nearly half that budget now goes to the fill below, which is what
 // buys the direct term the headroom to fall off steeply and still leave a room
 // standing behind it.
-// FIXTURE_BASE / FILL_BASE / SLAB_FILL are `let` only because
-// window.__roomlights.tune() writes them -- see the note on tune(). Nothing in
-// the module itself assigns them.
+// FIXTURE_BASE / FILL_BASE / SLAB_FILL / WALL_FILL / EMISSIVE_MAX are `let` only
+// because window.__roomlights.tune() writes them -- see the note on tune().
+// Nothing in the module itself assigns them. Sweeping them in one page session
+// is the only way to A/B a lighting constant honestly: the alternative is an
+// edit-reload-reshoot cycle across a house whose DB another agent may be
+// editing at the same time, which is how two earlier rounds ended up comparing
+// numbers taken against different builds.
 let FIXTURE_BASE = 24;
 const CENTRE_BASE = 90;            // a room centre sits further from every surface
 const FIXTURE_RANGE = 22;          // ft; the light.distance cutoff
@@ -134,7 +138,52 @@ const FILL_COLOR = new THREE.Color(0xffb277);
 // slab carries the floor half of the indirect term and the point light carries
 // the rest. Night-gated like the centre wash it sits beside: at noon the sun
 // is already doing this.
+//
+// Re-swept once it reached the floor SKINS below (which is where most of this
+// house's floors actually are), in one page session on the garage's hand-aimed
+// pose, reading the median of 8 boxes across the widest strip of floor that
+// moved -- lights on, everything else fixed:
+//
+//   slab   floor band                        median
+//   0       0  2  6 15 18 11  4  0            5.0   a black void under the walls
+//   0.05   28 30 34 41 43 38 33 27           33.5   <- unchanged; the reference
+//   0.08   42 44 47 53 55 51 47 42           47.0   floor now out-reads the wall
+//   0.12   58 59 62 68 70 66 62 57           62.0   a self-lit orange sheet
+//
+// 0.05 was already the right number and stays: the Sims reference's floor
+// plateaus at 38 with no bright disc, and past 0.05 the floor stops being a
+// surface the room lights and starts being a lamp -- which inverts the
+// reference's own rule that the wall wash is hot and the floor pool is weak.
 let SLAB_FILL = 0.05;
+// ...but the generated slab is usually not the floor you can SEE, exactly as
+// the generated wall shell is not the wall you can see (the note under
+// WALL_SKIN_RE below). Eight rooms here are floored with a GLB laid over the
+// slab -- `Garage Floor`, `Movie Floor Planks`, `Rios Floor`, `Hall2F Floor
+// Planks` -- each measuring the room's own footprint to the inch (Garage Floor
+// is 20.40 x 21.70 ft in a 20.40 x 21.70 ft room), so SLAB_FILL was painting a
+// slab nobody sees and every one of those floors metered ~20, below the Sims
+// reference's UNLIT floor of 28. Room 13's floor, whose slab is bare, metered
+// 29.7 the whole time on the same budget -- which is what says the number was
+// right and only its carrier was wrong.
+//
+// Picking the skin out by name is the delicate half. `\bfloor\b` alone catches
+// a `Floor Lamp`, and this house lays sixteen pieces named `<Room> Floor
+// <something>` ON its floors that are emphatically not the floor: rugs,
+// runners, bath mats, two air vents, a stairwell lining, `Pantry Floor Stock`
+// (boxes), `Laundry Floor Marks`, and two `* Floor Shadows` fake-AO decals
+// whose whole job is to be DARK -- painting a baked shadow with the room's
+// bounce is exactly backwards. Some of them are room-scale, so no size test
+// separates them either: `Movie Floor Rug` is 16.7 x 23.4 ft in a 20.4 x 23.5
+// ft room, and a rug is furniture that must keep its authored look.
+//
+// So this reads the library's `<Room> <Thing>` naming convention the way
+// yardkit.js modelKind does: the name must END in `floor`, optionally followed
+// by ONE word from a closed list of floor FINISHES. Every excluded piece is
+// named for an object that SITS ON a floor, and none of those words is a
+// finish. `carpet` and `nap` are in the list because a wall-to-wall carpet IS
+// the floor -- `Master Closet Floor Nap` is 13.5 x 8.4 ft in a 13.6 x 8.4 ft
+// closet -- unlike a rug, which is a discrete furnishing lying on one.
+const FLOOR_SKIN_RE = /\bfloor(\s+(planks?|boards?|tiles?|carpet|nap))?$/i;
 // ...and the far WALL is the same argument one axis over. A point fill sits at
 // the room centre, so illuminance on a vertical surface falls off with the
 // distance to it AND with the cosine of the angle it is struck at -- the wall
@@ -154,10 +203,25 @@ let SLAB_FILL = 0.05;
 // because a material has one emissive and the two writers would otherwise
 // clobber each other -- roomlights stops writing once its ease converges, so a
 // hover would have erased the fill until the room's lights next moved.
-// Sized against the reference's dark end: alone, an emissive of 0.055 in this
-// colour tone-maps to about L 30 through ACESFilmic, and fillFactor takes ~0.63
-// of that off a single-lamp room.
-let WALL_FILL = 0.075;
+//
+// Swept in one page session per room (scratchpad/lightgauntlet/wallsweep.py,
+// which drives tune() exactly as sweep.py does), reading the median of 8 boxes
+// across a horizontal band of the far wall. Garage, two strips lit, the same
+// band each time:
+//
+//   WALL_FILL  far-wall band                            dark end
+//   0          8  23 149 103 136  77  24   9              8
+//   0.015     18  30 149 107 137  77  32  18             18
+//   0.025     25  36 149 110 137  77  37  24             24   <- the reference
+//   0.035     30  41 149 112 137  77  42  29             29
+//   0.05      38  48 149 116 137  77  49  37             37   too far
+//
+// The bright end does not move (149 either way): the direct term owns it, and
+// leaving it alone is the whole point -- the last round's mistake was buying the
+// dark end with the near end's contrast. 0.032 lands the dark ends of the four
+// rooms that had none at 25-30 and stops there. It is multiplied by fillFactor,
+// so a one-lamp room settles nearer 22 than 30, which is right.
+let WALL_FILL = 0.032;
 const WALL_GLOW = new THREE.Color(0xffb277);   // the same bounce warm as FILL_COLOR
 // ...but the generated wall shell is NOT what you are looking at in a furnished
 // room. Every finished room here is skinned: `<Room> Wall Wash` is a run of
@@ -168,10 +232,10 @@ const WALL_GLOW = new THREE.Color(0xffb277);   // the same bounce warm as FILL_C
 // 15 hits, the room's wall mesh ZERO -- so an emissive on the shell alone
 // rendered frames that were byte-identical to the ones before it. The fill
 // therefore goes on the room's vertical room-scale surfaces, shell AND skin.
-// SLAB_FILL has exactly this hole one axis over (its own comment notes a room
-// floored with a `<Room> Floor` GLB gets nothing from it), and that is why every
-// lit floor in this house meters below the Sims reference's UNLIT floor of 28.
-// Deliberately only `wall wash`, the documented full-wall skin, and not every
+// SLAB_FILL had exactly this hole one axis over, which is why every lit floor in
+// this house used to meter below the Sims reference's UNLIT floor of 28; see
+// FLOOR_SKIN_RE above for the same fix and the harder naming problem it ran
+// into. Deliberately only `wall wash`, the documented full-wall skin, and not every
 // object with "wall" in its name: `Arcade TV Wall` and `Movie Screen Wall` are
 // furniture that happens to stand against one, and painting a TV screen with the
 // room's bounce is not what an indirect term is.
@@ -194,7 +258,7 @@ const EXTERIOR_WARM = new THREE.Color(0xffb46b);
 // thing in the room, not because the room got brighter. Under ACESFilmic a warm
 // lens needs to be pushed well past 1.0 to clip, and the warm light_cfg.color
 // costs blue channel on the way, so this sits high.
-const EMISSIVE_MAX = 3.4;
+let EMISSIVE_MAX = 3.4;
 const SMOOTH_TAU = 0.4;
 
 // Interior light is no longer gated to darkness. It reads at DAY_FLOOR of full
@@ -350,22 +414,38 @@ export function initRoomLights() {
     // every room's two emissive terms, off rooms included — the off-state
     // check is "is this list all zeros", which `fills` above cannot answer
     // because it filters the off rooms out.
+    // `skins` is how many GLB carriers each term found, which is the other
+    // question a shot cannot answer: a room reporting slab 0.043 and skins 0
+    // is either a bare slab (room 13, correct) or a floor GLB this missed by
+    // name (FLOOR_SKIN_RE), and those look identical in the numbers.
     surfaces: () => rooms.map((r) => ({
       roomId: r.roomId, mode: roomLightMode(r),
       slab: +r.glow.toFixed(4), wall: +r.wallGlow.toFixed(4),
+      floor: +r.floorGlow.toFixed(4),
+      skins: { floor: r.floorSkins.length, wall: r.wallSkins.length },
     })),
     bound: () => [...boundEntities],
-    // Sweep the three lighting budgets without a page reload. One shot per
-    // value costs a browser boot and ~40 s of model loading, and the numbers
-    // only mean anything compared against each other from the SAME scene --
-    // the room's light_cfg is edited between rounds, so a shot taken an hour
-    // ago is not a baseline. scratchpad/lightgauntlet/sweep.py drives this and
-    // calls settleRoomLights() after each change.
+    // Sweep the lighting budgets without a page reload. One shot per value
+    // costs a browser boot and ~40 s of model loading, and the numbers only
+    // mean anything compared against each other from the SAME scene -- the
+    // room's light_cfg is edited between rounds, so a shot taken an hour ago is
+    // not a baseline. scratchpad/lightgauntlet/sweep.py drives this and calls
+    // settleRoomLights() after each change; wallsweep.py sweeps `wall` and
+    // slabsweep.py `slab`, which moves the room's slab AND the floor GLB laid
+    // over it (FLOOR_SKIN_RE) -- one budget, two carriers, deliberately one
+    // knob, so a floor cannot be tuned to a different brightness for being
+    // skinned. That is what the sweep confirmed: the skinned Garage floor and
+    // the bare-slab Guest floor both want 0.05.
     tune: (o) => { if (o.fixture !== undefined) FIXTURE_BASE = o.fixture;
                    if (o.fill !== undefined) FILL_BASE = o.fill;
                    if (o.slab !== undefined) SLAB_FILL = o.slab;
                    if (o.wall !== undefined) WALL_FILL = o.wall;
-                   return { FIXTURE_BASE, FILL_BASE, SLAB_FILL, WALL_FILL }; },
+                   if (o.emissive !== undefined) {
+                     EMISSIVE_MAX = o.emissive;
+                     for (const f of fixtures) f.painted = -1;   // force a repaint
+                   }
+                   return { FIXTURE_BASE, FILL_BASE, SLAB_FILL, WALL_FILL,
+                            EMISSIVE_MAX }; },
   };
 }
 
@@ -400,11 +480,13 @@ export function setRoomLightsData({ house, structure }) {
       // --- fixtures: furniture carrying an entity ---
       const roomFixtures = [];
       const roomWallSkins = [];
+      const roomFloorSkins = [];
       for (const o of room.objects || []) {
-        // ...and, in the same pass, the wall skins the fill has to reach. An
-        // entity-bound piece is a fixture and never a surface, so this tests
-        // the name only for the ones that fall through.
+        // ...and, in the same pass, the wall and floor skins the fill has to
+        // reach. An entity-bound piece is a fixture and never a surface, so
+        // this tests the name only for the ones that fall through.
         if (!o.entity_id && WALL_SKIN_RE.test(o.name || '')) roomWallSkins.push(o.id);
+        if (!o.entity_id && FLOOR_SKIN_RE.test(o.name || '')) roomFloorSkins.push(o.id);
         if (!o.entity_id) continue;
         boundEntities.add(o.entity_id);
         const rec = {
@@ -499,8 +581,9 @@ export function setRoomLightsData({ house, structure }) {
         radius: Math.hypot(fp.width, fp.depth) / 2,
         lightIds,
         lit: false,
-        glow: 0,     // eased slab emissive intensity
-        wallGlow: 0, // eased wall-shell emissive intensity (the vertical half)
+        glow: 0,      // eased slab emissive intensity
+        wallGlow: 0,  // eased wall-shell emissive intensity (the vertical half)
+        floorGlow: 0, // eased floor-SKIN intensity -- fill only, see floorFillGoal
         // The room-centre fallback yields to a fixture only while that fixture
         // is actually ON SCREEN — tested per frame, not decided here. House
         // mode hides all indoor furniture, and a room whose only candidate was
@@ -509,6 +592,7 @@ export function setRoomLightsData({ house, structure }) {
         fixtures: roomFixtures,
         exteriors: roomExteriors,
         wallSkins: roomWallSkins,
+        floorSkins: roomFloorSkins,
       };
       rooms.push(rec);
       for (const id of lightIds) {
@@ -698,6 +782,31 @@ export function getRoomLightIds(roomId) {
   return rooms.find((r) => r.roomId === roomId)?.lightIds ?? new Set();
 }
 
+// What a room card may COUNT and TOGGLE: the light.* above, plus whatever this
+// room's own emitting fixtures are bound to -- which is often a switch.*, since
+// a switch-controlled lamp is the common case in this house.
+//
+// This exists as a second accessor rather than widening the first because the
+// two answer different questions. `lightIds` is "light entities attributed to
+// this room" and is what a light-domain service may be called on wholesale;
+// this is "things in this room a person would call the lights". Five rooms here
+// -- Dining, Kitchen, Laundry, Pantry, Office printers -- are lit entirely by a
+// switch, so under the light.*-only rule their card read "no lights" and its
+// toggle did nothing, while the 3D fixture worked perfectly.
+//
+// Whoever calls a service on these MUST derive the domain per entity_id.
+// Calling light.turn_off on a switch.* is exactly the bug the light.*-only
+// rule was protecting against, and widening the set without fixing the caller
+// re-opens it.
+export function getRoomControlIds(roomId) {
+  const rec = rooms.find((r) => r.roomId === roomId);
+  const out = new Set(rec?.lightIds ?? []);
+  for (const f of fixtures) {
+    if (f.roomId === roomId && f.emits) out.add(f.entityId);
+  }
+  return out;
+}
+
 // entity_id -> [roomId] so a light's state change can update just its cards
 export function getRoomsForEntity(entityId) {
   const ids = (byEntity.get(entityId) || []).map((r) => r.roomId);
@@ -879,12 +988,43 @@ function wallFillGoal(r, night) {
   return roomLightMode(r) === 'fill' ? WALL_FILL * fillFactor(r) * night : 0;
 }
 
+// The floor SKIN's term, and it is fill-only for the same reason the wall's is
+// -- with one sharper edge. roomGoal's other branch is the centre wash at
+// SLAB_INTENSITY 0.45, which is TEN TIMES the fill: that number was calibrated
+// against a surface you cannot see (in a skinned room the slab is under a GLB),
+// so carrying it onto the skin would put a blazing orange sheet on the floor of
+// every focused room with no visible bound fixture -- room 17's Hall2F Floor
+// Planks, for one. So the skin takes the fill and nothing else, and a
+// centre-lit room's floor skin gets exactly what it got before: nothing.
+//
+// It needs its OWN eased value rather than riding r.glow, because r.glow eases
+// between the two branches: reading it only while the mode is 'fill' would flash
+// the skin at ~0.45 for the frames after a centre->fill switch, before the ease
+// arrived at 0.043.
+function floorFillGoal(r, night) {
+  return roomLightMode(r) === 'fill' ? SLAB_FILL * fillFactor(r) * night : 0;
+}
+
 function paintSlab(r) {
   const slab = roomMeshes.get(r.roomId)?.children
     .find((c) => c.userData.part === 'slab');
   if (!slab) return;
   slab.material.emissive.copy(SLAB_GLOW);
   slab.material.emissiveIntensity = r.glow;
+}
+
+// ...and the GLB laid over that slab, which in eight lit rooms here is the only
+// floor there is to light (FLOOR_SKIN_RE). Same paint as the wall skin, in the
+// slab's own warm rather than the wall's, so a skinned floor and a bare one
+// carry the identical term: `emissive x emissiveIntensity` is what the shader
+// adds, so colour-premultiplied at intensity 1 is exactly the radiance the slab
+// branch above lands. Its own function and its own eased level because it is
+// NOT the same goal -- see floorFillGoal.
+function paintFloorSkins(r) {
+  for (const id of r.floorSkins) {
+    const root = objects3d.get(id);
+    if (root) paintSkin(root, SLAB_GLOW, r.floorGlow);
+  }
 }
 
 // The authored-material record for one mesh, or null. Same fallback
@@ -901,14 +1041,15 @@ function origFor(child) {
   return p?.isMesh && p.userData.__orig ? p.userData.__orig : null;
 }
 
-// Paint the fill onto a wall skin. Only materials the GLB authored as NON
-// emissive are touched, which does three jobs at once: it needs no restore
-// bookkeeping (intensity 0 writes black, which IS the authored value), it keeps
-// this off anything that is a light source rather than a surface, and it settles
-// the one collision this could have had -- windowlight.js writes the same
-// property on glazing materials wherever they turn up, and a pane is authored
-// emissive.
-function paintSkin(root, intensity) {
+// Paint the fill onto a room-scale skin -- a wall wash or a floor. Only
+// materials the GLB authored as NON emissive are touched, which does three jobs
+// at once: it needs no restore bookkeeping (intensity 0 writes black, which IS
+// the authored value), it keeps this off anything that is a light source rather
+// than a surface, and it settles the one collision this could have had --
+// windowlight.js writes the same property on glazing materials wherever they
+// turn up, and a pane is authored emissive. (Not one material in the nine floor
+// GLBs is authored emissive, so a floor takes the term whole.)
+function paintSkin(root, color, intensity) {
   root.traverse((child) => {
     if (!child.isMesh) return;
     const origs = origFor(child);
@@ -917,7 +1058,7 @@ function paintSkin(root, intensity) {
     mats.forEach((m, i) => {
       const orig = origs[i] ?? origs[0];
       if (!m.emissive || !orig || orig.emissive) return;
-      m.emissive.copy(WALL_GLOW).multiplyScalar(intensity);
+      m.emissive.copy(color).multiplyScalar(intensity);
       m.emissiveIntensity = 1;
     });
   });
@@ -928,7 +1069,7 @@ function paintWalls(r) {
   if (mesh) setRoomWallFill(mesh, WALL_GLOW, r.wallGlow);
   for (const id of r.wallSkins) {
     const root = objects3d.get(id);
-    if (root) paintSkin(root, r.wallGlow);
+    if (root) paintSkin(root, WALL_GLOW, r.wallGlow);
   }
 }
 
@@ -955,6 +1096,8 @@ export function settleRoomLights() {
     paintSlab(r);
     r.wallGlow = wallFillGoal(r, night);
     paintWalls(r);
+    r.floorGlow = floorFillGoal(r, night);
+    paintFloorSkins(r);
   }
   for (const p of pool) p.light.intensity = slotGoal(p, spill);
 }
@@ -972,18 +1115,23 @@ export function suspendRoomLights() {
   for (const p of pool) p.light.intensity = 0;
   // The slab wash is not a pool light and was never covered here, so a card
   // captured after dark baked the room's warm floor glow in forever. The fill
-  // added a second, quieter writer of it (SLAB_FILL), so close it now. Material
+  // added a second, quieter writer of it (SLAB_FILL), and the floor SKINS a
+  // third -- which matters MORE than the slab it stands in for, since in eight
+  // rooms the skin is the floor a card actually photographs. Material
   // `emissiveIntensity` is a plain uniform, not a program define -- writing it
   // costs no recompile, unlike the light.visible the note above forbids.
   // The wall shell is the same hole one axis over, and it is a bigger one: a
   // room card frames a room's walls, not its floor. Same reasoning, same fix.
   const slabs = rooms.map((r) => r.glow);
   const wallGlows = rooms.map((r) => r.wallGlow);
+  const floorGlows = rooms.map((r) => r.floorGlow);
   for (const r of rooms) {
     r.glow = 0;
     paintSlab(r);
     r.wallGlow = 0;
     paintWalls(r);
+    r.floorGlow = 0;
+    paintFloorSkins(r);
   }
   const painted = fixtures.map((f) => f.painted);
   for (const f of fixtures) {
@@ -998,6 +1146,8 @@ export function suspendRoomLights() {
       paintSlab(r);
       r.wallGlow = wallGlows[i];
       paintWalls(r);
+      r.floorGlow = floorGlows[i];
+      paintFloorSkins(r);
     });
     fixtures.forEach((f, i) => {
       f.painted = painted[i];
@@ -1054,7 +1204,10 @@ function tick(dt) {
   for (const r of rooms) {
     const goal = roomGoal(r, night);
     // converge exactly, then stop writing. The old `&& r.glow === 0` guard let
-    // a room settled at a non-zero glow rewrite its material every frame.
+    // a room settled at a non-zero glow rewrite its material every frame. Safe
+    // here and NOT in the two skin loops below, because the mesh this paints is
+    // the room's own slab: buildHouse creates it synchronously and it cannot
+    // arrive after the ease has settled the way a GLB can.
     if (Math.abs(r.glow - goal) < 1e-3) {
       if (r.glow === goal) continue;
       r.glow = goal;
@@ -1087,6 +1240,23 @@ function tick(dt) {
       r.wallGlow = THREE.MathUtils.lerp(r.wallGlow, goal, k);
     }
     paintWalls(r);
+  }
+
+  // --- rooms: the floor SKIN's half, on the same always-write rule ---
+  // A floor GLB resolves async exactly as a wall wash does, so a lit room that
+  // stopped writing at settle would leave the authored black on a material that
+  // arrived a second later. (cutaway.js never splits these -- `floor` is
+  // deliberately absent from WALL_ARCH_RE -- so origFor's parent fallback is
+  // dead weight here, not a second reason.) A settled DARK room stops dead.
+  for (const r of rooms) {
+    const goal = floorFillGoal(r, night);
+    if (Math.abs(r.floorGlow - goal) < 1e-4) {
+      if (r.floorGlow === goal && goal === 0) continue;
+      r.floorGlow = goal;
+    } else {
+      r.floorGlow = THREE.MathUtils.lerp(r.floorGlow, goal, k);
+    }
+    paintFloorSkins(r);
   }
 
   // --- the pool ---

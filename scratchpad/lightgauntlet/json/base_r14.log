@@ -1,0 +1,174 @@
+{
+  "room": 14,
+  "level": 2,
+  "ks": [
+    1.0
+  ],
+  "entities": [
+    "light.2nd_floor_master_bedroom_light",
+    "light.edwin_bedside_light",
+    "light.humidifier_bed_room_humidifier_ambient_light",
+    "light.rosemary_bedside_light",
+    "light.rosemarys_closet"
+  ],
+  "pose": {
+    "pos": [
+      8.365000143051148,
+      22.77,
+      6.716600312113763
+    ],
+    "target": [
+      8.365000143051148,
+      20.39,
+      -3.040000012516976
+    ],
+    "fov": 74,
+    "probe": {
+      "clear": 12.76,
+      "dist": 9.76
+    }
+  },
+  "at_on": [
+    8.37,
+    22.77,
+    6.72
+  ],
+  "probe": {
+    "out": [
+      {
+        "id": 13,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0",
+          "mesh_0_1",
+          "mesh_0_2",
+          "mesh_0_3",
+          "mesh_0_4",
+          "mesh_0_5"
+        ],
+        "rect": [
+          309,
+          -388,
+          604,
+          98
+        ],
+        "behind": false,
+        "dist": 13.81,
+        "firstHit": 13.6,
+        "occluded": false,
+        "onScreen": true
+      },
+      {
+        "id": 14,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0_10"
+        ],
+        "rect": [
+          625,
+          298,
+          658,
+          317
+        ],
+        "behind": false,
+        "dist": 18.65,
+        "firstHit": 18.25,
+        "occluded": true,
+        "onScreen": true
+      },
+      {
+        "id": 356,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0_10"
+        ],
+        "rect": [
+          367,
+          298,
+          399,
+          317
+        ],
+        "behind": false,
+        "dist": 18.43,
+        "firstHit": 18.04,
+        "occluded": true,
+        "onScreen": true
+      }
+    ],
+    "W": 1000,
+    "H": 750,
+    "at": [
+      8.37,
+      22.77,
+      6.72
+    ]
+  },
+  "lens_px": 6103,
+  "ring_px": 24164,
+  "sweep": [
+    {
+      "mean": 47.8,
+      "frame_max": 255.0,
+      "nonlens_p99": 223.0,
+      "nonlens_p999": 244.0,
+      "nonlens_max": 255.0,
+      "nonlens_frac_over210": 1.345,
+      "lens_px": 6103,
+      "lens_median": 242.0,
+      "lens_p90": 250.0,
+      "lens_max": 255.0,
+      "wall_median": 68.0,
+      "wall_p90": 236.0,
+      "wall_max": 255.0,
+      "ratio": 3.56,
+      "k": 1.0,
+      "fixture_base": 24.0,
+      "file": "shots/base_r14_k1_on.png",
+      "centre": 70.0,
+      "slots": [
+        {
+          "owner": "object 13",
+          "intensity": 43.2,
+          "decay": 2,
+          "distance": 13
+        },
+        {
+          "owner": "object 14",
+          "intensity": 52.8,
+          "decay": 2,
+          "distance": 5.5
+        },
+        {
+          "owner": "object 356",
+          "intensity": 52.8,
+          "decay": 2,
+          "distance": 5.5
+        },
+        {
+          "owner": "room 14 fill",
+          "intensity": 0.48,
+          "decay": 0.45,
+          "distance": 25
+        }
+      ],
+      "lit_unlit": 6.54
+    }
+  ],
+  "off": {
+    "file": "shots/base_r14_off.png",
+    "centre": 10.7,
+    "at": [
+      8.37,
+      22.77,
+      6.72
+    ],
+    "slots": [],
+    "all_slots": []
+  }
+}

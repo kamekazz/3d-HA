@@ -1,0 +1,155 @@
+{
+  "room": 16,
+  "level": 2,
+  "ks": [
+    1.0
+  ],
+  "entities": [
+    "light.2nd_floor_master_bathroom_light"
+  ],
+  "pose": {
+    "pos": [
+      25.4,
+      22.2,
+      4.2
+    ],
+    "target": [
+      25.4,
+      23.4,
+      11.6
+    ],
+    "fov": 74
+  },
+  "at_on": [
+    25.4,
+    22.2,
+    4.2
+  ],
+  "probe": {
+    "out": [
+      {
+        "id": 155,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0_17"
+        ],
+        "rect": [
+          273,
+          314,
+          740,
+          348
+        ],
+        "behind": false,
+        "dist": 8.21,
+        "firstHit": 8.43,
+        "occluded": false,
+        "onScreen": true
+      }
+    ],
+    "W": 1000,
+    "H": 750,
+    "at": [
+      25.4,
+      22.2,
+      4.2
+    ]
+  },
+  "wall_probe_names": [
+    {
+      "name": "root",
+      "mesh": "mesh_0_14#1",
+      "part": null,
+      "dist": 9.62
+    },
+    {
+      "name": "root",
+      "mesh": "mesh_0_28",
+      "part": null,
+      "dist": 8.05
+    }
+  ],
+  "lens_rects": [
+    [
+      271,
+      312,
+      742,
+      350
+    ]
+  ],
+  "wall_rects": [
+    [
+      -428,
+      317,
+      -54,
+      345
+    ],
+    [
+      1067,
+      317,
+      1440,
+      345
+    ]
+  ],
+  "sweep": [
+    {
+      "mean": 87.7,
+      "frame_max": 253.0,
+      "nonlens_p99": 249.0,
+      "nonlens_p999": 252.0,
+      "nonlens_max": 253.0,
+      "nonlens_frac_over210": 10.236,
+      "lens": [
+        {
+          "median": 239.0,
+          "p90": 252.0,
+          "max": 253.0,
+          "px": 17898
+        }
+      ],
+      "wall": [
+        {
+          "median": 124.0,
+          "max": 126.0,
+          "px": 28
+        },
+        {
+          "median": 137.0,
+          "max": 138.0,
+          "px": 28
+        }
+      ],
+      "k": 1.0,
+      "fixture_base": 24.0,
+      "file": "shots/lv16_h_k1_on.png",
+      "centre": 146.4,
+      "slots": [
+        {
+          "owner": "object 155",
+          "intensity": 62.4,
+          "decay": 2,
+          "distance": 12
+        },
+        {
+          "owner": "room 16 fill",
+          "intensity": 0.32,
+          "decay": 0.45,
+          "distance": 17.6
+        }
+      ],
+      "lit_unlit": 13.31
+    }
+  ],
+  "off": {
+    "file": "shots/lv16_h_off.png",
+    "centre": 11.0,
+    "at": [
+      25.4,
+      22.2,
+      4.2
+    ],
+    "slots": [],
+    "all_slots": []
+  }
+}

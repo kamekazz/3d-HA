@@ -1,0 +1,139 @@
+{
+  "room": 17,
+  "level": 2,
+  "ks": [
+    1.0
+  ],
+  "entities": [
+    "light.2nd_floor_2nd_floor_hallway"
+  ],
+  "pose": {
+    "pos": [
+      12.66,
+      22.77,
+      23.086399994516377
+    ],
+    "target": [
+      12.66,
+      20.39,
+      14.995000000000001
+    ],
+    "fov": 74,
+    "probe": {
+      "clear": 11.09,
+      "dist": 8.09
+    }
+  },
+  "at_on": [
+    12.66,
+    22.77,
+    23.09
+  ],
+  "probe": {
+    "out": [
+      {
+        "id": 370,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0"
+        ],
+        "rect": [
+          562,
+          72,
+          618,
+          103
+        ],
+        "behind": false,
+        "dist": 12.74,
+        "firstHit": 12.38,
+        "occluded": true,
+        "onScreen": true
+      },
+      {
+        "id": 371,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0"
+        ],
+        "rect": [
+          276,
+          -449,
+          494,
+          -183
+        ],
+        "behind": false,
+        "dist": 4.95,
+        "firstHit": 4.7,
+        "occluded": false,
+        "onScreen": false
+      }
+    ],
+    "W": 1000,
+    "H": 750,
+    "at": [
+      12.66,
+      22.77,
+      23.09
+    ]
+  },
+  "lens_px": 985,
+  "ring_px": 13968,
+  "sweep": [
+    {
+      "mean": 79.5,
+      "frame_max": 245.0,
+      "nonlens_p99": 218.0,
+      "nonlens_p999": 232.0,
+      "nonlens_max": 236.0,
+      "nonlens_frac_over210": 1.834,
+      "lens_px": 985,
+      "lens_median": 245.0,
+      "lens_p90": 245.0,
+      "lens_max": 245.0,
+      "wall_median": 43.0,
+      "wall_p90": 135.0,
+      "wall_max": 201.0,
+      "ratio": 5.7,
+      "k": 1.0,
+      "fixture_base": 24.0,
+      "file": "shots/base_r17_k1_on.png",
+      "centre": 93.4,
+      "slots": [
+        {
+          "owner": "object 370",
+          "intensity": 67.2,
+          "decay": 2,
+          "distance": 10
+        },
+        {
+          "owner": "object 371",
+          "intensity": 67.2,
+          "decay": 2,
+          "distance": 10
+        },
+        {
+          "owner": "room 17 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 18.6
+        }
+      ],
+      "lit_unlit": 7.3
+    }
+  ],
+  "off": {
+    "file": "shots/base_r17_off.png",
+    "centre": 12.8,
+    "at": [
+      12.66,
+      22.77,
+      23.09
+    ],
+    "slots": [],
+    "all_slots": []
+  }
+}

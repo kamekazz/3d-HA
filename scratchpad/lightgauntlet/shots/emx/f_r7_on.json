@@ -1,0 +1,29 @@
+C:\Users\Manuel\Desktop\Pro\3d HA\scratchpad\lightgauntlet\abfill.py:41: SyntaxWarning: invalid escape sequence '\.'
+  if (VIEW.has((m.name || '').toLowerCase().replace(/\.\d+$/, ''))) return;
+{
+ "room": 7,
+ "night": true,
+ "lights_on": true,
+ "at": [
+  29.1,
+  13.39,
+  34.15
+ ],
+ "after": {
+  "file": "shots/emx/f_r7_on_after.png",
+  "meter": {
+   "mean": 25.8,
+   "centre": 30.4,
+   "p95": 111
+  }
+ },
+ "restored": 217,
+ "before": {
+  "file": "shots/emx/f_r7_on_before.png",
+  "meter": {
+   "mean": 25.8,
+   "centre": 30.4,
+   "p95": 111
+  }
+ }
+}

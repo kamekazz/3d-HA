@@ -1,0 +1,106 @@
+{
+  "room": 27,
+  "level": 2,
+  "ks": [
+    1.0
+  ],
+  "entities": [
+    "light.rosemarys_closet"
+  ],
+  "pose": {
+    "pos": [
+      25.400000000000006,
+      22.77,
+      23.17800008773804
+    ],
+    "target": [
+      25.400000000000006,
+      20.39,
+      16.6
+    ],
+    "fov": 74,
+    "probe": {
+      "clear": 9.58,
+      "dist": 6.58
+    }
+  },
+  "at_on": [
+    25.4,
+    22.77,
+    23.18
+  ],
+  "probe": {
+    "out": [
+      {
+        "id": 390,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0"
+        ],
+        "rect": [
+          444,
+          -163,
+          556,
+          -61
+        ],
+        "behind": false,
+        "dist": 7.21,
+        "firstHit": 6.91,
+        "occluded": false,
+        "onScreen": false
+      }
+    ],
+    "W": 1000,
+    "H": 750,
+    "at": [
+      25.4,
+      22.77,
+      23.18
+    ]
+  },
+  "lens_px": 0,
+  "ring_px": 0,
+  "sweep": [
+    {
+      "mean": 59.4,
+      "frame_max": 245.0,
+      "nonlens_p99": 197.0,
+      "nonlens_p999": 231.0,
+      "nonlens_max": 245.0,
+      "nonlens_frac_over210": 0.335,
+      "lens_px": 0,
+      "k": 1.0,
+      "fixture_base": 24.0,
+      "file": "shots/base_r27_k1_on.png",
+      "centre": 56.3,
+      "slots": [
+        {
+          "owner": "object 390",
+          "intensity": 81.6,
+          "decay": 2,
+          "distance": 9
+        },
+        {
+          "owner": "room 27 fill",
+          "intensity": 0.32,
+          "decay": 0.45,
+          "distance": 14.4
+        }
+      ],
+      "lit_unlit": 7.13
+    }
+  ],
+  "off": {
+    "file": "shots/base_r27_off.png",
+    "centre": 7.9,
+    "at": [
+      25.4,
+      22.77,
+      23.18
+    ],
+    "slots": [],
+    "all_slots": []
+  }
+}

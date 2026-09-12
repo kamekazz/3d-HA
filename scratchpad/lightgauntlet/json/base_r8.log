@@ -1,0 +1,115 @@
+{
+  "room": 8,
+  "level": 1,
+  "ks": [
+    1.0
+  ],
+  "entities": [
+    "light.edwin_desk_light_2",
+    "light.rosemary_desk_light_2",
+    "light.work_office_desk"
+  ],
+  "pose": {
+    "pos": [
+      34.1,
+      13.389999999999999,
+      6.9580000877380375
+    ],
+    "target": [
+      34.1,
+      10.73,
+      1.2999999999999998
+    ],
+    "fov": 74,
+    "probe": {
+      "clear": 8.66,
+      "dist": 5.66
+    }
+  },
+  "at_on": [
+    34.1,
+    13.39,
+    6.96
+  ],
+  "probe": {
+    "out": [
+      {
+        "id": 385,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0"
+        ],
+        "rect": [
+          423,
+          -362,
+          577,
+          -193
+        ],
+        "behind": false,
+        "dist": 6.35,
+        "firstHit": 6.06,
+        "occluded": false,
+        "onScreen": false
+      }
+    ],
+    "W": 1000,
+    "H": 750,
+    "at": [
+      34.1,
+      13.39,
+      6.96
+    ]
+  },
+  "lens_px": 1104,
+  "ring_px": 4932,
+  "sweep": [
+    {
+      "mean": 39.7,
+      "frame_max": 241.0,
+      "nonlens_p99": 182.0,
+      "nonlens_p999": 190.0,
+      "nonlens_max": 192.0,
+      "nonlens_frac_over210": 0.0,
+      "lens_px": 1104,
+      "lens_median": 238.0,
+      "lens_p90": 240.0,
+      "lens_max": 241.0,
+      "wall_median": 23.0,
+      "wall_p90": 54.0,
+      "wall_max": 113.0,
+      "ratio": 10.35,
+      "k": 1.0,
+      "fixture_base": 24.0,
+      "file": "shots/base_r8_k1_on.png",
+      "centre": 27.4,
+      "slots": [
+        {
+          "owner": "object 385",
+          "intensity": 81.6,
+          "decay": 2,
+          "distance": 10
+        },
+        {
+          "owner": "room 8 fill",
+          "intensity": 0.32,
+          "decay": 0.45,
+          "distance": 14.1
+        }
+      ],
+      "lit_unlit": 4.22
+    }
+  ],
+  "off": {
+    "file": "shots/base_r8_off.png",
+    "centre": 6.5,
+    "at": [
+      34.1,
+      13.39,
+      6.96
+    ],
+    "slots": [],
+    "all_slots": []
+  }
+}

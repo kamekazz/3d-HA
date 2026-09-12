@@ -1,0 +1,273 @@
+{
+  "room": 15,
+  "level": 2,
+  "ks": [
+    1.0,
+    0.7,
+    0.5,
+    0.35
+  ],
+  "entities": [
+    "light.rios_room",
+    "fan.rios_room"
+  ],
+  "pose": {
+    "pos": [
+      -1.8220003509521483,
+      22.77,
+      28.549999999999997
+    ],
+    "target": [
+      4.25,
+      20.39,
+      28.549999999999997
+    ],
+    "fov": 74,
+    "probe": {
+      "clear": 9.07,
+      "dist": 6.07
+    }
+  },
+  "at_on": [
+    -1.82,
+    22.77,
+    28.55
+  ],
+  "probe": {
+    "out": [
+      {
+        "id": 125,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0_1",
+          "mesh_0_2"
+        ],
+        "rect": [
+          311,
+          161,
+          407,
+          216
+        ],
+        "behind": false,
+        "dist": 11.64,
+        "firstHit": 10.93,
+        "occluded": true,
+        "onScreen": true
+      },
+      {
+        "id": 393,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0",
+          "mesh_0_1"
+        ],
+        "rect": [
+          433,
+          -41,
+          567,
+          95
+        ],
+        "behind": false,
+        "dist": 6.23,
+        "firstHit": 5.74,
+        "occluded": true,
+        "onScreen": true
+      }
+    ],
+    "W": 1000,
+    "H": 750,
+    "at": [
+      -1.82,
+      22.77,
+      28.55
+    ]
+  },
+  "lens_px": 11941,
+  "ring_px": 14520,
+  "fixture_ids": [],
+  "sweep": [
+    {
+      "mean": 58.1,
+      "frame_max": 255.0,
+      "nonlens_p99": 231.0,
+      "nonlens_p999": 247.0,
+      "nonlens_max": 255.0,
+      "nonlens_frac_over210": 2.521,
+      "lens_px": 11941,
+      "lens_median": 244.0,
+      "lens_p90": 245.0,
+      "lens_max": 248.0,
+      "wall_median": 154.0,
+      "wall_p90": 243.0,
+      "wall_max": 254.0,
+      "ratio": 1.58,
+      "per_fixture": {},
+      "k": 1.0,
+      "fixture_base": 24.0,
+      "file": "shots/sw_r15_k1_on.png",
+      "centre": 65.5,
+      "slots": [
+        {
+          "owner": "object 125",
+          "intensity": 38.4,
+          "decay": 2,
+          "distance": 5.5
+        },
+        {
+          "owner": "object 393",
+          "intensity": 62.4,
+          "decay": 2,
+          "distance": 6.5
+        },
+        {
+          "owner": "room 15 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 15.4
+        }
+      ],
+      "lit_unlit": 24.26
+    },
+    {
+      "mean": 54.6,
+      "frame_max": 255.0,
+      "nonlens_p99": 221.0,
+      "nonlens_p999": 243.0,
+      "nonlens_max": 255.0,
+      "nonlens_frac_over210": 1.426,
+      "lens_px": 11941,
+      "lens_median": 244.0,
+      "lens_p90": 245.0,
+      "lens_max": 248.0,
+      "wall_median": 133.0,
+      "wall_p90": 237.0,
+      "wall_max": 253.0,
+      "ratio": 1.83,
+      "per_fixture": {},
+      "k": 0.7,
+      "fixture_base": 16.799999999999997,
+      "file": "shots/sw_r15_k0.7_on.png",
+      "centre": 61.6,
+      "slots": [
+        {
+          "owner": "object 125",
+          "intensity": 26.88,
+          "decay": 2,
+          "distance": 5.5
+        },
+        {
+          "owner": "object 393",
+          "intensity": 43.68,
+          "decay": 2,
+          "distance": 6.5
+        },
+        {
+          "owner": "room 15 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 15.4
+        }
+      ],
+      "lit_unlit": 22.81
+    },
+    {
+      "mean": 51.6,
+      "frame_max": 255.0,
+      "nonlens_p99": 208.0,
+      "nonlens_p999": 238.0,
+      "nonlens_max": 254.0,
+      "nonlens_frac_over210": 0.924,
+      "lens_px": 11941,
+      "lens_median": 244.0,
+      "lens_p90": 245.0,
+      "lens_max": 248.0,
+      "wall_median": 116.0,
+      "wall_p90": 230.0,
+      "wall_max": 251.0,
+      "ratio": 2.1,
+      "per_fixture": {},
+      "k": 0.5,
+      "fixture_base": 12.0,
+      "file": "shots/sw_r15_k0.5_on.png",
+      "centre": 57.9,
+      "slots": [
+        {
+          "owner": "object 125",
+          "intensity": 19.2,
+          "decay": 2,
+          "distance": 5.5
+        },
+        {
+          "owner": "object 393",
+          "intensity": 31.2,
+          "decay": 2,
+          "distance": 6.5
+        },
+        {
+          "owner": "room 15 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 15.4
+        }
+      ],
+      "lit_unlit": 21.44
+    },
+    {
+      "mean": 48.8,
+      "frame_max": 254.0,
+      "nonlens_p99": 192.0,
+      "nonlens_p999": 231.0,
+      "nonlens_max": 253.0,
+      "nonlens_frac_over210": 0.516,
+      "lens_px": 11941,
+      "lens_median": 244.0,
+      "lens_p90": 245.0,
+      "lens_max": 247.0,
+      "wall_median": 99.0,
+      "wall_p90": 220.0,
+      "wall_max": 249.0,
+      "ratio": 2.46,
+      "per_fixture": {},
+      "k": 0.35,
+      "fixture_base": 8.399999999999999,
+      "file": "shots/sw_r15_k0.35_on.png",
+      "centre": 54.3,
+      "slots": [
+        {
+          "owner": "object 125",
+          "intensity": 13.44,
+          "decay": 2,
+          "distance": 5.5
+        },
+        {
+          "owner": "object 393",
+          "intensity": 21.84,
+          "decay": 2,
+          "distance": 6.5
+        },
+        {
+          "owner": "room 15 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 15.4
+        }
+      ],
+      "lit_unlit": 20.11
+    }
+  ],
+  "off": {
+    "file": "shots/sw_r15_off.png",
+    "centre": 2.7,
+    "at": [
+      -1.82,
+      22.77,
+      28.55
+    ],
+    "slots": [],
+    "all_slots": []
+  }
+}

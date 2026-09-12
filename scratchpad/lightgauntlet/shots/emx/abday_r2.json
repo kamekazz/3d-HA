@@ -1,0 +1,27 @@
+{
+ "room": 2,
+ "night": false,
+ "nocut": false,
+ "lights_on": false,
+ "at": [
+  16.06,
+  4.77,
+  7.56
+ ],
+ "before": {
+  "file": "shots/emx/abday_r2_before.png",
+  "meter": {
+   "mean": 100.4,
+   "centre": 122.8,
+   "p95": 231
+  }
+ },
+ "after": {
+  "file": "shots/emx/abday_r2_after.png",
+  "meter": {
+   "mean": 100.4,
+   "centre": 122.8,
+   "p95": 231
+  }
+ }
+}

@@ -206,3 +206,22 @@ Together with the wall-leak fix, this means **any number produced before now is
 unreliable, and any conclusion drawn from one should be re-taken.** The two
 failure modes pushed in opposite directions — the leak inflated the off frame,
 the roaming camera could inflate or deflate either — so they do not cancel.
+
+## Rig limitation: the garage needs a hand-aimed pose
+
+The clearance probe stands the eye where there is most open air and aims at the
+room centre. Room 7's centre is occupied by the car, so every ray from the
+centre hits it within a few feet, the best clearance is small in all eight
+directions, and the eye ends up just above the car roof looking across it -- the
+lower half of the frame is the car's body. Proved to be geometry and not
+lighting by shooting the same pose with `--day`: the dark slab is still there.
+
+An enclosure test now lifts the eye when the start point is boxed in (which is
+correct and kept -- it is what a genuinely-inside-a-cabinet case needs), but it
+does not help here, because horizontally the centre is not enclosed; the
+obstruction is *between* the eye and the target.
+
+Not worth solving generally for one room. Shoot room 7 with `critshot.py` /
+`fixshot.py` and an explicit `--pos/--target`. Its hand-aimed numbers are good:
+delta 79.8, and a far-wall probe of `24 30 20 28 16 97 106 74` (6.62:1) in which
+both strip lights are individually visible -- the best-shaped probe in the house.

@@ -23,7 +23,7 @@
 // finding a room you rarely open, so it must not move under you too.
 import { api } from './api.js';
 import { enterFocus, onFocusChanged } from './focus.js';
-import { getRoomLightIds, getRoomsForEntity } from './roomlights.js';
+import { getRoomControlIds, getRoomsForEntity } from './roomlights.js';
 import { isHiddenRoom } from './house.js';
 import { isOn, getState, onStateApplied } from './state.js';
 import { showBanner } from './ui.js';
@@ -141,7 +141,7 @@ function updateCard(roomId) {
   const entries = instancesOf(roomId);
   const st = roomState.get(roomId);
   if (!entries.length || !st) return;
-  const lightIds = [...getRoomLightIds(roomId)];
+  const lightIds = [...getRoomControlIds(roomId)];
   const known = lightIds.filter((id) => getState(id));
   let n = known.filter((id) => isOn(id)).length;
   let anyOn = n > 0;
@@ -178,7 +178,7 @@ function updateCard(roomId) {
 
 async function toggleRoomLights(roomId) {
   const st = roomState.get(roomId);
-  const known = [...getRoomLightIds(roomId)].filter((id) => getState(id));
+  const known = [...getRoomControlIds(roomId)].filter((id) => getState(id));
   if (!st || !known.length) return;
   const intended = !known.some((id) => isOn(id));
   st.intended = intended;
@@ -186,8 +186,11 @@ async function toggleRoomLights(roomId) {
   updateCard(roomId);
   setTimeout(() => updateCard(roomId), 4100); // reconcile if echoes were lost
   const service = intended ? 'turn_on' : 'turn_off';
+  // Domain per entity, never a hardcoded 'light': a room lit by a wall switch
+  // has switch.* in this set, and light.turn_off on one of those is a 400 from
+  // HA and a card stuck showing the state it optimistically painted.
   const results = await Promise.allSettled(known.map((id) =>
-    api.control({ entity_id: id, domain: 'light', service })));
+    api.control({ entity_id: id, domain: id.split('.')[0], service })));
   if (results.some((r) => r.status === 'rejected')) {
     st.pendingUntil = 0;
     updateCard(roomId);

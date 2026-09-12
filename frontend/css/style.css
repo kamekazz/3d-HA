@@ -230,6 +230,28 @@ body.booted #boot-screen { opacity: 0; pointer-events: none; }
   #boot-screen, #boot-fill { transition: none; }
 }
 
+/* A passive direction reference, beside the stage even in room focus. */
+#scene-compass {
+  position: fixed;
+  top: calc(var(--chrome-top) + 96px);
+  left: var(--stage-left);
+  width: 80px; height: 80px; z-index: 21;
+  border: 1px solid var(--glass-border); border-radius: 50%;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  pointer-events: none; user-select: none;
+}
+#scene-compass svg { display: block; width: 100%; height: 100%; }
+.compass-ring { fill: none; stroke: var(--glass-border); }
+.compass-label {
+  fill: var(--text-faint); font: 600 11px var(--font);
+  text-anchor: middle; dominant-baseline: central;
+}
+.compass-north { fill: var(--danger); }
+.compass-south, .compass-center { fill: var(--text-faint); }
+.compass-cross { fill: none; stroke: var(--text-dim); stroke-width: 1; }
+
 /* The unobstructed rect the 3D house is framed into. Invisible but laid out,
    so ONE getBoundingClientRect() in stage.js resolves calc(), env(), every
    media query, the live orientation and any body-state override at once —

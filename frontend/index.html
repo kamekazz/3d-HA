@@ -52,6 +52,22 @@
        re-frames the 3D for free and no JS ever knows the chrome layout. -->
   <div id="stage-rect" aria-hidden="true"></div>
 
+  <div id="scene-compass" role="img" aria-label="Scene compass: north, east, south and west. Follows the camera orientation.">
+    <svg viewBox="0 0 88 88" aria-hidden="true">
+      <circle class="compass-ring" cx="44" cy="44" r="23" />
+      <g class="compass-rose">
+        <path class="compass-north" d="M44 23 L50 44 L44 40 L38 44 Z" />
+        <path class="compass-south" d="M44 65 L50 44 L44 48 L38 44 Z" />
+        <path class="compass-cross" d="M23 44 H34 M54 44 H65" />
+      </g>
+      <circle class="compass-center" cx="44" cy="44" r="2" />
+      <text class="compass-label compass-north" x="44" y="13">N</text>
+      <text class="compass-label" x="75" y="44">E</text>
+      <text class="compass-label" x="44" y="75">S</text>
+      <text class="compass-label" x="13" y="44">W</text>
+    </svg>
+  </div>
+
   <header id="topbar">
     <h1>Olan House</h1>
     <span id="conn-status" class="status-dot" title="Realtime status"></span>

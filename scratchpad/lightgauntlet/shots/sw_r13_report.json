@@ -1,0 +1,314 @@
+{
+  "room": 13,
+  "level": 2,
+  "ks": [
+    1.0,
+    0.6,
+    0.4,
+    0.28,
+    0.2
+  ],
+  "entities": [
+    "light.guest_room"
+  ],
+  "pose": {
+    "pos": [
+      4.300000000000001,
+      22.77,
+      17.926000175476073
+    ],
+    "target": [
+      4.300000000000001,
+      20.39,
+      11.899999999999999
+    ],
+    "fov": 74,
+    "probe": {
+      "clear": 9.03,
+      "dist": 6.03
+    }
+  },
+  "at_on": [
+    4.3,
+    22.77,
+    17.93
+  ],
+  "probe": {
+    "out": [
+      {
+        "id": 235,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0_5",
+          "mesh_0_6"
+        ],
+        "rect": [
+          207,
+          232,
+          283,
+          278
+        ],
+        "behind": false,
+        "dist": 11.7,
+        "firstHit": 11.26,
+        "occluded": true,
+        "onScreen": true
+      },
+      {
+        "id": 369,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0"
+        ],
+        "rect": [
+          435,
+          -243,
+          565,
+          -114
+        ],
+        "behind": false,
+        "dist": 6.71,
+        "firstHit": 6.42,
+        "occluded": false,
+        "onScreen": false
+      }
+    ],
+    "W": 1000,
+    "H": 750,
+    "at": [
+      4.3,
+      22.77,
+      17.93
+    ]
+  },
+  "lens_px": 2178,
+  "ring_px": 9144,
+  "fixture_ids": [],
+  "sweep": [
+    {
+      "mean": 64.2,
+      "frame_max": 255.0,
+      "nonlens_p99": 247.0,
+      "nonlens_p999": 253.0,
+      "nonlens_max": 255.0,
+      "nonlens_frac_over210": 4.029,
+      "lens_px": 2178,
+      "lens_median": 243.0,
+      "lens_p90": 243.0,
+      "lens_max": 248.0,
+      "wall_median": 242.0,
+      "wall_p90": 252.0,
+      "wall_max": 255.0,
+      "ratio": 1.0,
+      "per_fixture": {},
+      "k": 1.0,
+      "fixture_base": 24.0,
+      "file": "shots/sw_r13_k1_on.png",
+      "centre": 56.3,
+      "slots": [
+        {
+          "owner": "object 369",
+          "intensity": 76.8,
+          "decay": 2,
+          "distance": 9.5
+        },
+        {
+          "owner": "object 235",
+          "intensity": 76.8,
+          "decay": 2,
+          "distance": 4.5
+        },
+        {
+          "owner": "room 13 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 14.8
+        }
+      ],
+      "lit_unlit": 13.73
+    },
+    {
+      "mean": 54.2,
+      "frame_max": 255.0,
+      "nonlens_p99": 240.0,
+      "nonlens_p999": 251.0,
+      "nonlens_max": 255.0,
+      "nonlens_frac_over210": 2.869,
+      "lens_px": 2178,
+      "lens_median": 243.0,
+      "lens_p90": 243.0,
+      "lens_max": 248.0,
+      "wall_median": 232.0,
+      "wall_p90": 248.0,
+      "wall_max": 253.0,
+      "ratio": 1.05,
+      "per_fixture": {},
+      "k": 0.6,
+      "fixture_base": 14.399999999999999,
+      "file": "shots/sw_r13_k0.6_on.png",
+      "centre": 47.1,
+      "slots": [
+        {
+          "owner": "object 369",
+          "intensity": 46.08,
+          "decay": 2,
+          "distance": 9.5
+        },
+        {
+          "owner": "object 235",
+          "intensity": 46.08,
+          "decay": 2,
+          "distance": 4.5
+        },
+        {
+          "owner": "room 13 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 14.8
+        }
+      ],
+      "lit_unlit": 11.49
+    },
+    {
+      "mean": 47.7,
+      "frame_max": 255.0,
+      "nonlens_p99": 232.0,
+      "nonlens_p999": 248.0,
+      "nonlens_max": 255.0,
+      "nonlens_frac_over210": 2.129,
+      "lens_px": 2178,
+      "lens_median": 243.0,
+      "lens_p90": 243.0,
+      "lens_max": 248.0,
+      "wall_median": 220.0,
+      "wall_p90": 244.0,
+      "wall_max": 251.0,
+      "ratio": 1.1,
+      "per_fixture": {},
+      "k": 0.4,
+      "fixture_base": 9.600000000000001,
+      "file": "shots/sw_r13_k0.4_on.png",
+      "centre": 41.2,
+      "slots": [
+        {
+          "owner": "object 369",
+          "intensity": 30.72,
+          "decay": 2,
+          "distance": 9.5
+        },
+        {
+          "owner": "object 235",
+          "intensity": 30.72,
+          "decay": 2,
+          "distance": 4.5
+        },
+        {
+          "owner": "room 13 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 14.8
+        }
+      ],
+      "lit_unlit": 10.05
+    },
+    {
+      "mean": 42.9,
+      "frame_max": 254.0,
+      "nonlens_p99": 222.0,
+      "nonlens_p999": 244.0,
+      "nonlens_max": 254.0,
+      "nonlens_frac_over210": 1.468,
+      "lens_px": 2178,
+      "lens_median": 243.0,
+      "lens_p90": 243.0,
+      "lens_max": 247.0,
+      "wall_median": 205.0,
+      "wall_p90": 237.0,
+      "wall_max": 249.0,
+      "ratio": 1.19,
+      "per_fixture": {},
+      "k": 0.28,
+      "fixture_base": 6.720000000000001,
+      "file": "shots/sw_r13_k0.28_on.png",
+      "centre": 36.8,
+      "slots": [
+        {
+          "owner": "object 369",
+          "intensity": 21.5,
+          "decay": 2,
+          "distance": 9.5
+        },
+        {
+          "owner": "object 235",
+          "intensity": 21.5,
+          "decay": 2,
+          "distance": 4.5
+        },
+        {
+          "owner": "room 13 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 14.8
+        }
+      ],
+      "lit_unlit": 8.98
+    },
+    {
+      "mean": 39.2,
+      "frame_max": 253.0,
+      "nonlens_p99": 209.0,
+      "nonlens_p999": 239.0,
+      "nonlens_max": 253.0,
+      "nonlens_frac_over210": 0.951,
+      "lens_px": 2178,
+      "lens_median": 243.0,
+      "lens_p90": 243.0,
+      "lens_max": 246.0,
+      "wall_median": 190.0,
+      "wall_p90": 230.0,
+      "wall_max": 246.0,
+      "ratio": 1.28,
+      "per_fixture": {},
+      "k": 0.2,
+      "fixture_base": 4.800000000000001,
+      "file": "shots/sw_r13_k0.2_on.png",
+      "centre": 33.3,
+      "slots": [
+        {
+          "owner": "object 369",
+          "intensity": 15.36,
+          "decay": 2,
+          "distance": 9.5
+        },
+        {
+          "owner": "object 235",
+          "intensity": 15.36,
+          "decay": 2,
+          "distance": 4.5
+        },
+        {
+          "owner": "room 13 fill",
+          "intensity": 0.43,
+          "decay": 0.45,
+          "distance": 14.8
+        }
+      ],
+      "lit_unlit": 8.12
+    }
+  ],
+  "off": {
+    "file": "shots/sw_r13_off.png",
+    "centre": 4.1,
+    "at": [
+      4.3,
+      22.77,
+      17.93
+    ],
+    "slots": [],
+    "all_slots": []
+  }
+}

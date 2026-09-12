@@ -6,7 +6,13 @@ window that is bound to a NEAR wall: cutaway.js fades that wall and takes its
 windows with it, so "Dining Windows" (five units on four walls of one GLB) is
 not in a focused dining-room frame at all.
 
-    python abshot.py <roomId> <level> <outprefix> [--day] [--nocut]
+--on forces the room's lights ON instead of off, which is the frame to use when
+the question is whether a change is visible in a LIT room (the lightshot rig is
+not bit-deterministic run to run -- two identical runs differ by up to 5 sRGB
+levels on ~1.6% of a frame -- so a before/after across two runs cannot answer
+"did anything change"; one session and one pose can).
+
+    python abshot.py <roomId> <level> <outprefix> [--day] [--nocut] [--on]
 """
 import json, sys, os
 sys.path.insert(0, os.path.abspath('../../tools'))
@@ -37,6 +43,7 @@ async () => {
 room, level, out = int(sys.argv[1]), int(sys.argv[2]), sys.argv[3]
 night = "--day" not in sys.argv
 nocut = "--nocut" in sys.argv
+lights_on = "--on" in sys.argv
 light = ({"elevation": -18, "azimuth": 0, "condition": "clear-night"} if night
          else {"elevation": 42, "azimuth": 155, "condition": "sunny"})
 with sync_playwright() as pw:
@@ -48,7 +55,7 @@ with sync_playwright() as pw:
     p.wait_for_function("() => !!window.__scene3d", timeout=30000)
     p.wait_for_timeout(9000)
     ids = p.evaluate(COLLECT_JS, room)["ids"]
-    arg = {"roomId": room, "level": level, "light": light, "entityIds": ids, "on": False}
+    arg = {"roomId": room, "level": level, "light": light, "entityIds": ids, "on": lights_on}
     p.evaluate(SETUP_JS, arg); p.wait_for_timeout(1500)
     info = p.evaluate(SETUP_JS, arg); p.wait_for_timeout(600)
     if nocut:
@@ -58,7 +65,8 @@ with sync_playwright() as pw:
         px, py, pz, tx, ty, tz = (float(v) for v in pose.split(","))
         info = p.evaluate(POSE, {"pos": [px, py, pz], "target": [tx, ty, tz]})
         p.wait_for_timeout(500)
-    res = {"room": room, "night": night, "nocut": nocut, "at": info["at"]}
+    res = {"room": room, "night": night, "nocut": nocut, "lights_on": lights_on,
+           "at": info["at"]}
     for tag, on in (("before", False), ("after", True)):
         p.evaluate("(v) => window.__windowlight.setEnabled(v)", on)
         p.wait_for_timeout(700)

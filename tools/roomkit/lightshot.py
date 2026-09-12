@@ -127,9 +127,33 @@ async ({ roomId, level, light, entityIds, on, pose: given }) => {
   // frame from the east wall and its OFF frame from a diagonal, and the delta
   // between two different photographs means nothing. The caller solves the pose
   // on the first pass and hands the same one back for every pass after it.
-  const eyeY = box.min.y + h * 0.62;
-  const from = new THREE.Vector3(c.x, eyeY, c.z);
+  // The probe casts FROM the room centre, and in the garage the room centre is
+  // inside the car -- so every ray started enclosed, the clearance came back
+  // tiny in all eight directions, and the eye was placed in the car's black
+  // interior with the bottom 55% of the frame solid black. Test the start point
+  // for enclosure first and lift it until it is in open air (a car roof is
+  // ~4.5 ft; eye height in a 7 ft garage lands at 4.3, right inside it).
   const rc = new THREE.Raycaster();
+  const PROBES = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]];
+  const enclosed = (p) => {
+    let near = 0;
+    for (const [dx, dy, dz] of PROBES) {
+      rc.set(p, new THREE.Vector3(dx, dy, dz));
+      rc.far = 2.5;
+      const hits = rc.intersectObjects(scene.children, true).filter((hit) => {
+        for (let n = hit.object; n; n = n.parent) if (!n.visible) return false;
+        return true;
+      });
+      if (hits.length) near += 1;
+    }
+    return near >= 3;   // boxed in on most sides
+  };
+  let eyeY = box.min.y + h * 0.62;
+  for (let lift = 0; lift < 3; lift++) {
+    if (!enclosed(new THREE.Vector3(c.x, eyeY, c.z))) break;
+    eyeY = Math.min(box.min.y + h * 0.9, eyeY + h * 0.14);
+  }
+  const from = new THREE.Vector3(c.x, eyeY, c.z);
   rc.far = want + 3;
   const D = 0.7071;
   const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0],

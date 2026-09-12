@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { api } from './api.js';
 import { initScene, scene, camera, renderer, applyEnvIntensity, refitStage, wasMultiTouch } from './scene.js';
 import { initStage } from './stage.js';
+import { initCompass } from './compass.js';
 import { initSideRail } from './siderail.js';
 import { buildHouse, roomMeshes, stairGroups, paintRoomEmissive, getLevel, houseShellReady } from './house.js';
 import { setModelVersions } from './models.js';
@@ -376,6 +377,7 @@ async function main() {
     refitStage();
   });
   initScene(document.getElementById('scene-container'));
+  initCompass();
   initDaylight();
   initEnvironment();
   initWeather();

@@ -1,0 +1,108 @@
+{
+  "room": 16,
+  "level": 2,
+  "ks": [
+    1.0
+  ],
+  "entities": [
+    "light.2nd_floor_master_bathroom_light"
+  ],
+  "pose": {
+    "pos": [
+      31.041671349860085,
+      22.77,
+      11.091671349860086
+    ],
+    "target": [
+      26,
+      20.39,
+      6.050000000000001
+    ],
+    "fov": 74,
+    "probe": {
+      "clear": 10.13,
+      "dist": 7.13
+    }
+  },
+  "at_on": [
+    31.04,
+    22.77,
+    11.09
+  ],
+  "probe": {
+    "out": [
+      {
+        "id": 155,
+        "glow": 1,
+        "shown": true,
+        "on": true,
+        "parts": [
+          "mesh_0_17"
+        ],
+        "rect": [
+          -6875,
+          -5118,
+          88958,
+          71016
+        ],
+        "behind": true,
+        "dist": 6.02,
+        "firstHit": 6.58,
+        "occluded": false,
+        "onScreen": false
+      }
+    ],
+    "W": 1000,
+    "H": 750,
+    "at": [
+      31.04,
+      22.77,
+      11.09
+    ]
+  },
+  "wall_probe_names": [],
+  "lens_rects": [],
+  "wall_rects": [],
+  "sweep": [
+    {
+      "mean": 61.4,
+      "frame_max": 241.0,
+      "nonlens_p99": 225.0,
+      "nonlens_p999": 237.0,
+      "nonlens_max": 241.0,
+      "nonlens_frac_over210": 2.757,
+      "lens": [],
+      "wall": [],
+      "k": 1.0,
+      "fixture_base": 24.0,
+      "file": "shots/lv16_probe_k1_on.png",
+      "centre": 54.0,
+      "slots": [
+        {
+          "owner": "object 155",
+          "intensity": 62.4,
+          "decay": 2,
+          "distance": 12
+        },
+        {
+          "owner": "room 16 fill",
+          "intensity": 0.32,
+          "decay": 0.45,
+          "distance": 17.6
+        }
+      ],
+      "lit_unlit": 8.18
+    }
+  ],
+  "off": {
+    "file": "shots/lv16_probe_off.png",
+    "centre": 6.6,
+    "at": [
+      31.04,
+      22.77,
+      11.09
+    ],
+    "slots": [],
+    "all_slots": []
+  }
+}

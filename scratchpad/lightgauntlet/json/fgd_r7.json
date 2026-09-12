@@ -1,0 +1,123 @@
+{
+  "room": 7,
+  "aimed": true,
+  "day": true,
+  "frames": [
+    {
+      "slab": 0.0,
+      "state": "on",
+      "file": "shots/fgd_r7_s0_on.png",
+      "meter": {
+        "mean": 127.4,
+        "centre": 173.7,
+        "p95": 240
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": []
+    },
+    {
+      "slab": 0.05,
+      "state": "on",
+      "file": "shots/fgd_r7_s0.05_on.png",
+      "meter": {
+        "mean": 127.4,
+        "centre": 173.7,
+        "p95": 240
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": []
+    },
+    {
+      "slab": 0.0,
+      "state": "off",
+      "file": "shots/fgd_r7_s0_off.png",
+      "meter": {
+        "mean": 124.9,
+        "centre": 171.0,
+        "p95": 239
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": []
+    },
+    {
+      "slab": 0.05,
+      "state": "off",
+      "file": "shots/fgd_r7_s0.05_off.png",
+      "meter": {
+        "mean": 124.9,
+        "centre": 171.0,
+        "p95": 239
+      },
+      "at": [
+        29.1,
+        12.01,
+        25.5
+      ],
+      "surfaces": [
+        {
+          "roomId": 7,
+          "mode": "fill",
+          "slab": 0,
+          "wall": 0,
+          "floor": 0,
+          "skins": {
+            "floor": 1,
+            "wall": 1
+          }
+        }
+      ],
+      "nonzero_surfaces": []
+    }
+  ]
+}
