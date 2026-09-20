@@ -22,6 +22,9 @@
   <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/style.css">
+  <!-- Warm the CDN connection before the blocking socket.io fetch below needs
+       it; one DNS+TLS handshake off the critical path. -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
   <script type="importmap">
   {
@@ -31,6 +34,10 @@
     }
   }
   </script>
+  <!-- AFTER the import map, never before: a module preload counts as a module
+       load, and an import map that arrives after the first module load is
+       ignored (every `three` import would then 404). -->
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js">
 </head>
 <body>
   <!-- Boot curtain: opaque from the very first paint until boot.js says every

@@ -1,7 +1,7 @@
 // Bootstrap: load data, build the 3D scene, wire UI + realtime.
 import * as THREE from 'three';
 import { api } from './api.js';
-import { initScene, scene, camera, renderer, applyEnvIntensity, refitStage, wasMultiTouch } from './scene.js';
+import { initScene, scene, camera, renderer, applyEnvIntensity, refitStage, wasMultiTouch, setRenderPaused, renderView } from './scene.js';
 import { initStage } from './stage.js';
 import { initCompass } from './compass.js';
 import { initSideRail } from './siderail.js';
@@ -418,10 +418,24 @@ async function main() {
   // callback can fire inside it - the furniture band is in place before
   // DefaultLoadingManager reports the first of its items.
   bootStage('Loading furniture…', 0.45, 0.85);
+  // No draws from here until compileAsync below: the shell is framed and the
+  // curtain is opaque, so nothing needs a frame, and a draw would compile each
+  // freshly built material on the main thread as it lands (see scene.js).
+  setRenderPaused(true);
   buildDevices(house);
   buildObjects(house);
   setCutawayData(house); // wall meshes + furniture are new objects after a rebuild
   buildLabels(house);
+  // BEFORE the yard, and this order is load-bearing. The eave lights hang a
+  // group (LED strips, siding wash, lit window) INSIDE the shell, and
+  // house.js getBuildingBox() measures those meshes along with the roof: the
+  // roof rect is z −25.43 / 41.36 without them and −25.77 / 41.70 with. The
+  // whole yard is laid out from that rect, so measuring first and adding the
+  // eave group after meant settleShellAnchors saw the anchors move and rebuilt
+  // the entire yard a second time (13-15 s of main thread, plus a second
+  // first-draw compile). Its lights must also exist before compileAsync, which
+  // this satisfies too (fixed light count — see roomlights.js pool rule).
+  initEaveLights();
   setEnvironmentData(house);
   // The driveway car is a library model looked up by NAME (environment.js
   // CAR_MODEL_NAME), so the yard needs the model list — which GET /api/house
@@ -438,7 +452,6 @@ async function main() {
   initYardEditor();
   initUndo({ defaultRefresh: reloadHouse });
   initRoomLights();
-  initEaveLights(); // its lights must exist before compileAsync too (fixed count)
   // Order-free: buildObjects above already registered every window through
   // objects.js, and this only hangs the per-frame follow on scene.js.
   initWindowLight();
@@ -467,8 +480,18 @@ async function main() {
   // Shaders for a few hundred fresh GLB materials compile on the first DRAW,
   // not on load — that hitch belongs behind the curtain. compileAsync is newer
   // than the pinned three, so fall back to the synchronous compile.
-  if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
-  else renderer.compile(scene, camera);
+  try {
+    if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
+    else renderer.compile(scene, camera);
+  } finally {
+    setRenderPaused(false);
+  }
+  // One real draw behind the curtain: compileAsync covers the materials, but
+  // the shadow-map pass (depth/distance program per caster variant) and the
+  // lake/porch reflection passes only compile on an actual frame — ~50
+  // programs here, which used to land as a hitch on the first frame after the
+  // reveal now that nothing was drawn during the load.
+  renderView();
   window.__cutaway?.settle();     // jump wall fades to target, don't fade them in
   settleDaylight();               // and don't fade day->night after the reveal
   settleRoomLights();             // nor ramp a dozen lamps up once it lifts
@@ -514,6 +537,7 @@ async function main() {
 }
 
 main().catch((e) => {
+  setRenderPaused(false); // a failure mid-load must not leave the canvas frozen
   finishBoot(); // the banner is behind the curtain — lift it first, always
   showBanner(`App failed to start: ${e.message}`);
   console.error(e);

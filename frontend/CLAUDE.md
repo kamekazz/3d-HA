@@ -54,6 +54,32 @@ it are not readable from the code:
   `setEnvironmentData` measures a shell that already exists, so the yard is planted correctly once
   instead of being built and replanted on the shell's `levelChanged`. `houseShellReady()` resolves
   immediately when there is no shell or it failed, so a 404 shell cannot hang the boot.
+  **And `initEaveLights()` runs before `setEnvironmentData()`, which is load-bearing**: the eave
+  lights hang their group (LED strips, siding wash, lit window) *inside* the shell, and
+  `house.js getBuildingBox()` counts those meshes as roof — the roof rect is z −25.43 / 41.36 without
+  them and −25.77 / 41.70 with. The whole yard is laid out from that rect, so with the old order
+  `settleShellAnchors` saw the anchors move on every boot and rebuilt the entire yard a second time
+  (a 13-15 s main-thread block, plus a second first-draw compile). That was the long-mysterious
+  "rect a frame later" note in `environment.js`; it was never the shell settling.
+- **Draws are paused from the furniture stage until `compileAsync` resolves** (`scene.js
+  setRenderPaused`). Every fresh material compiles its shader synchronously on its first draw, and
+  with the loop drawing behind the curtain that was the yard's ~40 unique programs in one 12 s frame
+  plus a 0.8-3 s hitch per furniture GLB as it landed. Held until `compileAsync`, they all compile
+  there in parallel (KHR_parallel_shader_compile; ~0.5-2 s for the whole scene). Only `renderView()`
+  is skipped — frame callbacks, controls and optics keep ticking — and the pose solve never needed a
+  draw (it inverts the camera matrices by hand). `main().catch` un-pauses before it banners.
+- **The yard build is instrumented**: `window.__environment.timings()` prints where the last
+  `buildYard` spent its time per builder (and inside the lake, per phase). Measured after the
+  fixes above: ~11.5 s at boot on this machine (~7 s in a warm rebuild), of which the lake
+  woodland's 2.2 M leaves are ~5 s and merging the buckets ~1.3 s; boot went 96-130 s → 16-18 s.
+  The leaf generator is scalar and allocation-free into typed accumulators (`F32Buf`), copying
+  three r160's `applyQuaternion`/`normalize`/`setFromEuler('XYZ')` arithmetic verbatim so it is
+  bit-identical to the Vector3-per-leaf version it replaced — it ran at 3.1 µs/leaf in situ through
+  the THREE methods (vs 0.9 µs in isolation; the gap is major GCs triggered by the ~1 GB of
+  external typed-array growth, on a large heap). Verify any further change by hashing the position
+  buffers (`rear-distant-oak-leaves` `914aad08`, `rear-scanned-oak-leaves` `4ac95656`). The next
+  real step, if boot still matters, is generating that woodland off the main thread or reducing the
+  far bank's leaf count — that 19.8 M-vertex mesh is a background at 100+ ft.
   (`settleLoaders` alone was never sufficient for this: `getInstance` drops its in-flight count in a
   `finally`, so `modelsIdle()` can resolve a microtask *before* `loadHouseShell`'s continuation has
   added, masked and framed anything.)
@@ -71,8 +97,9 @@ it are not readable from the code:
   computed `transition-duration`, since transitionend never fires under `prefers-reduced-motion` or
   in a backgrounded tab) before adding `body.booted`.
 
-The render loop keeps running behind the curtain **on purpose**: `snapshots.js` captures the room
-cards off the live canvas, and `scene.js`'s pose solve needs real renders. Because the shell now
+The render loop keeps running behind the curtain **on purpose** (draws excepted during the
+furniture stage, see `setRenderPaused` above): `snapshots.js` captures the room
+cards off the live canvas after the resume, and `scene.js`'s pose solve runs on every tick. Because the shell now
 lands before the user can touch the camera, `refitStage({onlyIfUntouched: true})` always wins and the
 opening shot is the shell-measured one. `reloadHouse` (planner close, undo, sync) gets no curtain —
 models are already cached.
@@ -451,9 +478,17 @@ entrance), plus a fake-AO contact shadow. Plants anchor to the house-shell GLB's
 footprint when one is loaded — re-measured on `levelChanged` since the shell loads async, with flat
 hardscape meshes (<3 ft tall, e.g. the driveway) excluded from the bounds — and never grow on a
 room rect (`onPad`). `setEnvironmentData(house)` re-runs on every `reloadHouse`, and re-measures the
-shell a few times over the first half second before trusting it (`settleShellAnchors` — the rect the
-boot build sees is not the rect a frame later, and the whole yard hangs off it; see "Editing the
-outside" in the root CLAUDE.md). The yard also carries per-piece identity so the **Outside editor**
+shell a few times over the first half second as a safety net (`settleShellAnchors`; it used to fire
+on every boot because the eave-light group was added to the shell *after* the yard measured it —
+see the boot section above — and is a no-op now that `initEaveLights` runs first). The **back lawn is
+the front lawn's material**: `addRearGroundDetail` keeps its own turf geometry (lowered grade,
+undulation, the ramp up to the lake apron) but paints it with `grassMat`'s colour, tile, UV
+convention and mono vertex noise, registered in `yardGrassMats` for the weather tint — it is
+deliberately *not* pushed into the `lawns` bucket, because a bucket geometry becomes a clickable
+"piece" in the Outside editor and a lot-sized turf would swallow every click behind the house. (The
+`backyard4k` experiment's photo-textured turf, its 160 k shadow-casting blade tufts, clover and the
+4× sun / 2% ambient / ×1.425 blue override on them are gone: they read as a different, blue-grey lawn
+and cost ~10 s of every yard build.) The yard also carries per-piece identity so the **Outside editor**
 (`yard.js`) can move, scale, erase and duplicate individual trees, beds, slabs and props — the
 generated yard is never stored, only the deltas against it, and it is drawn per-item only while that
 editor is open, and `yardkit.js` adds new ones from the shared bottom tray (`addkit.js`, which the

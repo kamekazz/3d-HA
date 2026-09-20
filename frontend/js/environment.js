@@ -41,6 +41,54 @@ let center = { x: 13, z: 13 };
 export function getEnvironmentCenter() { return center; }
 export function getEnvironmentRoot() { return root; } // snapshots.js hides the yard while capturing
 
+// Procedural canvases that take no inputs and paint from their own fixed seed
+// are painted once per page and reused by every yard rebuild. Only the
+// <canvas> is cached — callers still wrap it in a fresh CanvasTexture per
+// build, so the yard's own texture disposal is unchanged.
+const canvasMemo = new Map();
+function memoCanvas(key, paint) {
+  let c = canvasMemo.get(key);
+  if (!c) { c = paint(); canvasMemo.set(key, c); }
+  return c;
+}
+
+// A growable Float32Array with a push interface. The lake woodland writes
+// ~26 M vertices per build; pushing them through JS number arrays and then
+// copying into Float32Arrays was most of addRearLakeDetail's 14 s. Writing
+// the float32 directly rounds each double exactly as the copy did, so the
+// buffers are bit-identical to the array path (see leafCloud).
+class F32Buf {
+  constructor(cap = 1 << 18) { this.a = new Float32Array(cap); this.n = 0; }
+  get length() { return this.n; }
+  grow(min) {
+    let c = this.a.length * 2; while (c < min) c *= 2;
+    const b = new Float32Array(c); b.set(this.a.subarray(0, this.n)); this.a = b;
+  }
+  push3(x, y, z) {
+    const n = this.n; if (n + 3 > this.a.length) this.grow(n + 3);
+    const a = this.a; a[n] = x; a[n + 1] = y; a[n + 2] = z; this.n = n + 3;
+  }
+  push2(u, v) {
+    const n = this.n; if (n + 2 > this.a.length) this.grow(n + 2);
+    const a = this.a; a[n] = u; a[n + 1] = v; this.n = n + 2;
+  }
+  reset() { this.n = 0; }
+  // a compact copy the BufferAttribute owns; the accumulator is reused after
+  attr(itemSize) { return new THREE.BufferAttribute(this.a.slice(0, this.n), itemSize); }
+}
+// position / colour / normal / uv accumulators for one leaf geometry
+function leafStore() { return { pos: new F32Buf(), col: new F32Buf(), nrm: new F32Buf(), uv: new F32Buf(1 << 17) }; }
+
+// Where a yard build spends its time, per builder, for the last build:
+// window.__environment.timings(). Wall-clock, main thread, ms. yardLap(label)
+// records the time since the previous lap; builders may call it for sub-steps.
+let yardTimings = [], yardLapT = 0;
+function yardLap(label) {
+  const t = performance.now();
+  yardTimings.push([label, +(t - yardLapT).toFixed(1)]);
+  yardLapT = t;
+}
+
 // deterministic layout — same seed, same yard, every load
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -203,6 +251,11 @@ export function initEnvironment() {
   grass.position.y = -0.05; // below edit ground (-0.02); the two never co-show
   grass.receiveShadow = true; // the lawn catches the house-shell's sun shadow
   root.add(grass);
+
+  // debug handle (console): where the last yard build spent its time
+  window.__environment = {
+    timings: () => { console.table(yardTimings.map(([stage, ms]) => ({ stage, ms }))); return yardTimings; },
+  };
 
   // yard shows only in view mode on the whole-house level — edit mode shows
   // the grid, single-floor view shows floorview.js's studio backdrop
@@ -2828,6 +2881,7 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
     const apron = ribbon(nearX0, nearX1, x => lawnEdge(x) + 2.6, lawnEdge,
       L.lo + 0.012, bedY - 0.035, 120);
     lawns.push(apron);
+    yardLap('    lake: gravel + apron');
     const soil = ribbon(lakeX0, lakeX1, x => shore(x) + 2.7, shore,
       bedY - 0.08, waterY + 0.012, 160);
     paintNoisy(soil, color(0x514d3b), rng, 0.45); beds.push(soil);
@@ -2877,6 +2931,7 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
   };
   waterMat.customProgramCacheKey = () => 'rear-lake-water-v3';
   const water = new THREE.Mesh(waterGeo, waterMat);
+  yardLap('    lake: water');
   water.name = 'rear-lake-surface';
   water.userData.ownGeometry = true;
   water.userData.rearLake = true;
@@ -2953,38 +3008,84 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
   // Individual scanned oak leaves curve along their central vein. These are
   // four-triangle surfaces, not whole-crown billboards; the photograph's alpha
   // supplies the natural lobes while its normal map supplies the small veins.
-  const leafCloud = (cx, cy, cz, rx, ry, rz, count, positions, colors, scale = 1) => {
+  // ~2.2 M leaves per build (26 M vertices), so this loop is the yard's single
+  // biggest CPU cost. It is scalar on purpose: the SAME arithmetic three's
+  // Vector3.applyQuaternion / normalize (multiply by 1/length) / addScaledVector
+  // and Quaternion.setFromEuler('XYZ') perform, in the SAME order, so the output
+  // is bit-identical to the object-per-leaf version it replaced (verified by
+  // hashing the position buffers: rear-distant-oak-leaves 914aad08,
+  // rear-scanned-oak-leaves 4ac95656) — measured 3.1 µs/leaf through the
+  // Vector3/Quaternion methods in situ, ~1 µs/leaf here. Keep the rng() call
+  // order exactly as it is: every later plant in the lake draws from the same
+  // stream, and the r160 formulas are copied verbatim because a mathematically
+  // equal rearrangement rounds differently.
+  const _lcUV=[0,0,1,0,0,.5,1,.5,0,1,1,1], _lcIndices=[0,1,2,1,3,2,2,3,4,3,5,4];
+  const _lcVX=new Float64Array(6),_lcVY=new Float64Array(6),_lcVZ=new Float64Array(6);
+  const _lcNX=new Float64Array(6),_lcNY=new Float64Array(6),_lcNZ=new Float64Array(6);
+  let leafCloudMs = 0, leafCloudLeaves = 0;   // reported into yardTimings below
+  const leafCloud = (cx, cy, cz, rx, ry, rz, count, store, scale = 1) => {
+    const lcT0 = performance.now();
     if(scale<=1)count=Math.ceil(count*1.45);
-    const clusterCount=Math.ceil(count/28); positions.leafNormals ||= [];positions.leafUVs ||= [];
-    const indices=[0,1,2,1,3,2,2,3,4,3,5,4];
+    leafCloudLeaves += count;
+    const clusterCount=Math.ceil(count/28);
+    const positions=store.pos, colors=store.col, normals=store.nrm, uvs=store.uv;
+    const VX=_lcVX,VY=_lcVY,VZ=_lcVZ,NX=_lcNX,NY=_lcNY,NZ=_lcNZ;
     for(let cl=0;cl<clusterCount;cl++) {
       let dx,dy,dz;do {dx=rng()*2-1;dy=rng()*2-1;dz=rng()*2-1;}while(dx*dx+dy*dy+dz*dz>1);
-      const center=new THREE.Vector3(cx+dx*rx,cy+dy*ry,cz+dz*rz);
+      const ccx=cx+dx*rx, ccy=cy+dy*ry, ccz=cz+dz*rz;
       const depth=Math.sqrt(dx*dx+dy*dy+dz*dz);
       const shade=.42+depth*.26+rng()*.19;
-      const axis=new THREE.Vector3(rng()-.5,.2+rng()*.4,rng()-.5).normalize();
+      // Vector3.set(...).normalize(): divideScalar(length || 1) is multiplyScalar(1/len)
+      let ax=rng()-.5, ay=.2+rng()*.4, az=rng()-.5;
+      { const inv=1/(Math.sqrt(ax*ax+ay*ay+az*az)||1); ax*=inv; ay*=inv; az*=inv; }
       for(let n=0;n<28&&cl*28+n<count;n++) {
-        const c=center.clone().addScaledVector(axis,(rng()-.5)*1.6);
-        c.add(new THREE.Vector3((rng()-.5)*1.15,(rng()-.5)*.8,(rng()-.5)*1.15));
+        // c = center.addScaledVector(axis, s)  then  c.add(jitter)
+        const s1=(rng()-.5)*1.6;
+        let px=ccx+ax*s1, py=ccy+ay*s1, pz=ccz+az*s1;
+        const jx=(rng()-.5)*1.15, jy=(rng()-.5)*.8, jz=(rng()-.5)*1.15;
+        px+=jx; py+=jy; pz+=jz;
         const halfLength=(.19+rng()*.115)*scale,halfWidth=halfLength*.586;
         const bend=halfLength*(.11+rng()*.17);
-        const q=new THREE.Quaternion().setFromEuler(new THREE.Euler((rng()-.5)*2.1,rng()*6.28,(rng()-.5)*1.9));
-        const local=[[-halfLength,0,-halfWidth],[-halfLength,0,halfWidth],
-          [0,bend,-halfWidth],[0,bend,halfWidth],[halfLength,-bend*.35,-halfWidth],[halfLength,-bend*.35,halfWidth]];
-        const verts=local.map(v=>new THREE.Vector3(...v).applyQuaternion(q).add(c));
-        const normals=local.map(v=>new THREE.Vector3(v[0]/halfLength*.24,1,v[2]/halfWidth*.1).normalize().applyQuaternion(q));
-        const uvs=[[0,0],[1,0],[0,.5],[1,.5],[0,1],[1,1]];
+        // Quaternion.setFromEuler(Euler(x, y, z, 'XYZ'))
+        const ex=(rng()-.5)*2.1, ey=rng()*6.28, ez=(rng()-.5)*1.9;
+        const c1=Math.cos(ex/2), c2=Math.cos(ey/2), c3=Math.cos(ez/2);
+        const s1e=Math.sin(ex/2), s2=Math.sin(ey/2), s3=Math.sin(ez/2);
+        const qx=s1e*c2*c3+c1*s2*s3, qy=c1*s2*c3-s1e*c2*s3, qz=c1*c2*s3+s1e*s2*c3, qw=c1*c2*c3-s1e*s2*s3;
+        for(let i=0;i<6;i++){
+          // the six local corners: (-L,0,-W) (-L,0,W) (0,b,-W) (0,b,W) (L,-.35b,-W) (L,-.35b,W)
+          const lx=i<2?-halfLength:i<4?0:halfLength;
+          const ly=i<2?0:i<4?bend:-bend*.35;
+          const lz=(i&1)?halfWidth:-halfWidth;
+          // Vector3.applyQuaternion (r160): t = 2 cross(q.xyz, v); v + w t + cross(q.xyz, t)
+          {
+            const tx=2*(qy*lz-qz*ly), ty=2*(qz*lx-qx*lz), tz=2*(qx*ly-qy*lx);
+            VX[i]=(lx+qw*tx+qy*tz-qz*ty)+px;
+            VY[i]=(ly+qw*ty+qz*tx-qx*tz)+py;
+            VZ[i]=(lz+qw*tz+qx*ty-qy*tx)+pz;
+          }
+          // normal: set(lx/L*.24, 1, lz/W*.1).normalize().applyQuaternion(q)
+          {
+            let nx=lx/halfLength*.24, ny=1, nz=lz/halfWidth*.1;
+            const inv=1/(Math.sqrt(nx*nx+ny*ny+nz*nz)||1); nx*=inv; ny*=inv; nz*=inv;
+            const tx=2*(qy*nz-qz*ny), ty=2*(qz*nx-qx*nz), tz=2*(qx*ny-qy*nx);
+            NX[i]=nx+qw*tx+qy*tz-qz*ty;
+            NY[i]=ny+qw*ty+qz*tx-qx*tz;
+            NZ[i]=nz+qw*tz+qx*ty-qy*tx;
+          }
+        }
         const brightness=shade*(.9+rng()*.2),warm=.96+rng()*.08;
-        for(const k of indices) {
-          positions.leafNormals.push(...normals[k].toArray());positions.push(...verts[k].toArray());
-          positions.leafUVs.push(...uvs[k]);colors.push(brightness*warm,brightness,brightness*(.96+rng()*.035));
+        for(let j=0;j<12;j++) {
+          const k=_lcIndices[j];
+          normals.push3(NX[k],NY[k],NZ[k]);positions.push3(VX[k],VY[k],VZ[k]);
+          uvs.push2(_lcUV[k*2],_lcUV[k*2+1]);colors.push3(brightness*warm,brightness,brightness*(.96+rng()*.035));
         }
       }
     }
+    leafCloudMs += performance.now() - lcT0;
   };
   const matureTree = (x, z, radius, height, lean, authoredPivot) => localItem('tree', 'Rear mature broadleaf', () => {
     items[curItem].authoredPivot=authoredPivot;
-    const y=bedY-.20,pos=[],col=[],phase=rng()*6.28;
+    const y=bedY-.20,store=leafStore(),phase=rng()*6.28;
     const spine=Array.from({length:7},(_,i)=>[x+lean*i/6+Math.sin(i*1.25+phase)*radius*.30,y+height*i/6,z+Math.sin(i*.85)*radius*.5]);
     spine[0]=[x,y,z];branch(spine,radius,radius*.045,masses);
     for(let i=0;i<5;i++) {
@@ -3004,7 +3105,7 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
         const from=origin.map((v,i)=>v+(tip[i]-v)*j);
         const end=[from[0]+Math.cos(ta)*(2+rng()*3),from[1]+.7+rng()*2.7,from[2]+Math.sin(ta)*(2+rng()*3)];
         branch([from,[(from[0]+end[0])*.5,from[1]+.35,(from[2]+end[2])*.5],end],.075,.009,masses);
-        leafCloud(...end,2.3+rng(),1.4+rng(),2.2+rng(),280,pos,col,.95);
+        leafCloud(...end,2.3+rng(),1.4+rng(),2.2+rng(),280,store,.95);
       }
     }
     // Interlocking crown tiers enclose the site from ground and aerial views.
@@ -3014,7 +3115,7 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
       const end=[x+lean+Math.cos(a)*reach,y+height*(.77+rng()*.20),z+Math.sin(a)*reach];
       const from=[x+lean*.65,y+height*.61,z];
       branch([from,[(from[0]+end[0])*.5,end[1]-3,(z+end[2])*.5],end],radius*.26,.025,masses);
-      leafCloud(...end,4.6+rng()*1.8,3.5+rng()*1.4,4.4+rng()*1.4,1650,pos,col,1);
+      leafCloud(...end,4.6+rng()*1.8,3.5+rng()*1.4,4.4+rng()*1.4,1650,store,1);
     }
     // North-reaching secondary boughs create several depths at the water
     // window, with drooping tips below the main crown's higher scallops.
@@ -3022,7 +3123,7 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
       const end=[x+(b?1:-1)*(4+rng()*3),y+8.3+rng()*2.6,z-6-rng()*4];
       const origin=[x+lean*.4,y+height*.40,z];
       branch([origin,[(x+end[0])*.5,end[1]+3.5,z-4],end],radius*.26,.018,masses);
-      leafCloud(...end,4.4,3.3,3.5,1700,pos,col,.86);
+      leafCloud(...end,4.4,3.3,3.5,1700,store,.86);
     }
     // The western side has low branches and a thick shaded understory; the
     // center/eastern water window remains below the spreading upper branches.
@@ -3030,18 +3131,18 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
       const end=[x+(b-1)*4.8+(rng()-.5)*3,y+9+rng()*5,z-1+(rng()-.5)*5];
       const origin=[x+lean*.27,y+height*(.20+rng()*.10),z];
       branch([origin,[(origin[0]+end[0])*.5,end[1]+1,(z+end[2])*.5],end],radius*.22,.025,masses);
-      leafCloud(...end,4.6+rng(),2.5+rng(),3.4+rng(),1300,pos,col,.9);
+      leafCloud(...end,4.6+rng(),2.5+rng(),3.4+rng(),1300,store,.9);
     }
     if(x<mid-9)for(let b=0;b<3;b++) {
       const end=[x-2+rng()*5,y+3+rng()*4,z-1-rng()*4];
       branch([[x,y+height*.27,z],[x-1,y+7,z-3],end],radius*.16,.012,masses);
-      leafCloud(...end,3.7,2.6,3,1000,pos,col,.8);
+      leafCloud(...end,3.7,2.6,3,1000,store,.8);
     }
     const g=new THREE.BufferGeometry();
-    g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-    g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
-    g.setAttribute('uv',new THREE.Float32BufferAttribute(pos.leafUVs,2));
-    g.setAttribute('normal',new THREE.Float32BufferAttribute(pos.leafNormals,3));
+    g.setAttribute('position',store.pos.attr(3));
+    g.setAttribute('color',store.col.attr(3));
+    g.setAttribute('uv',store.uv.attr(2));
+    g.setAttribute('normal',store.nrm.attr(3));
     g.userData.rearFoliage=true;g.userData.rearOakLeaf=true;g.userData.rearSingleLeafSurface=true;props.push(g);
   });
   // Unequal gaps, diameters, lean and bank offsets follow the multiple reference
@@ -3070,6 +3171,7 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
       [31,.75,34,-.8,.4],[44,.7,31,.4,-2]]) {
     const x=mid+offset;matureTree(x,shore(x)+2.5+dz,r,h,lean,rearTreePivots[treeOrdinal++]);
   }
+  yardLap('    lake: mature trees');
 
   // Visible daytime housings and the hanging feeder in reference 11. They
   // introduce no light source and do not override HA fixture state.
@@ -3108,19 +3210,20 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
     bank.computeVertexNormals();paintNoisy(bank,color(0x939277),rng,.29);beds.push(bank);
     const terrain = ribbon(lakeX0, lakeX1, x=>far(x)-10, x=>far(x)-95,L.lo+1.5,L.lo+3,200);
     lawns.push(terrain);
-    const farPos=[], farCol=[];
+    yardLap('    lake: trees + bank + terrain');
+    const farStore=leafStore();
     // Release temporary JS Number arrays after each plant. Typed geometry
     // chunks preserve exact vertex order and are merged by the existing bucket;
     // one huge forest accumulator otherwise exceeds the browser's memory peak.
     const flushFarLeaves=()=>{
-      if(!farPos.length)return;
+      if(!farStore.pos.length)return;
       const woodland = new THREE.BufferGeometry();
-      woodland.setAttribute('position',new THREE.Float32BufferAttribute(farPos,3));
-      woodland.setAttribute('color',new THREE.Float32BufferAttribute(farCol,3));
-      woodland.setAttribute('uv',new THREE.Float32BufferAttribute(farPos.leafUVs,2));
-      woodland.setAttribute('normal',new THREE.Float32BufferAttribute(farPos.leafNormals,3));
+      woodland.setAttribute('position',farStore.pos.attr(3));
+      woodland.setAttribute('color',farStore.col.attr(3));
+      woodland.setAttribute('uv',farStore.uv.attr(2));
+      woodland.setAttribute('normal',farStore.nrm.attr(3));
       woodland.userData.rearFoliage=true;woodland.userData.rearOakLeaf=true;woodland.userData.rearFarLeaf=true;woodland.userData.rearSingleLeafSurface=true;props.push(woodland);
-      farPos.length=0;farCol.length=0;farPos.leafUVs.length=0;farPos.leafNormals.length=0;
+      farStore.pos.reset();farStore.col.reset();farStore.uv.reset();farStore.nrm.reset();
     };
     // Low, broken water-edge scrub hides the bank in places and leaves mud,
     // reeds and short grass visible between clusters. Nothing forms a rail.
@@ -3129,7 +3232,7 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
       const z=far(x)-1.4-rng()*4,height=1.2+rng()*4.3;
       if(rng()<.67) {
         branch([[x,waterY,z],[x+.3,height*.7+L.lo,z-.4],[x-.5,height+L.lo,z-.7]],.05,.009,masses);
-        leafCloud(x,L.lo+height*.70,z,2.1+rng()*1.7,height*.5,1.8+rng(),1100,farPos,farCol,.95);
+        leafCloud(x,L.lo+height*.70,z,2.1+rng()*1.7,height*.5,1.8+rng(),1100,farStore,.95);
       }
       for(let j=0;j<8;j++) {
         const xx=x+(rng()-.5)*3,zz=far(xx)-rng()*2.2,h=.4+rng()*1.5;
@@ -3137,14 +3240,16 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
         paint(g,color(rng()<.4?0x898367:0x707b53));leaves.push(g);
       }
     }
+    yardLap('    lake: bank scrub');
     for(let x=lakeX0;x<lakeX1;x+=4+rng()*5) {
       flushFarLeaves();
       const z=far(x)-8-rng()*16,h=3+rng()*6;
       branch([[x,L.lo+1,z],[x-.3,L.lo+h*.6,z-1],[x+1,L.lo+h,z-.4]],.07,.01,masses);
-      leafCloud(x,L.lo+h*.62,z,3.4+rng()*2,h*.6,3+rng()*2,1400,farPos,farCol,1.1);
+      leafCloud(x,L.lo+h*.62,z,3.4+rng()*2,h*.6,3+rng()*2,1400,farStore,1.1);
     }
     // Three unequal ranks overlap in depth: low pioneer trees on the bank,
     // broad middle crowns and taller crowns receding behind those gaps.
+    yardLap('    lake: mid trees');
     for(let rank=0;rank<3;rank++)for(let x=lakeX0-12;x<lakeX1+12;x+=7+rng()*7) {
       flushFarLeaves();
       const xx=x+(rng()-.5)*5,z=far(xx)-8-rank*20-rng()*13;
@@ -3156,10 +3261,12 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
         const tip=[xx+lean+Math.cos(a)*r,L.lo+height*(.50+b*.115),z+Math.sin(a)*r];
         branch([[xx+lean*.4,L.lo+height*.4,z],[(xx+tip[0])*.5,tip[1]-1.7,(z+tip[2])*.5],tip],.095,.012,masses);
         const crownY=2.8+rank+rng()*2;
-        leafCloud(...tip,width*.64,crownY,width*.58,rank===0?1600:2400,farPos,farCol,rank===0?1.0:1.3);
+        leafCloud(...tip,width*.64,crownY,width*.58,rank===0?1600:2400,farStore,rank===0?1.0:1.3);
       }
     }
     flushFarLeaves();
+    yardLap('    lake: far ranks');
+    yardTimings.push([`    (of which leafCloud, ${leafCloudLeaves} leaves)`, +leafCloudMs.toFixed(1)]);
   });
 }
 
@@ -3182,15 +3289,20 @@ function addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
 
   // Photo 03/08/09/10: clipped evergreen specimens frame the porch; the
   // central lawn is open. The rear-only detail builder owns its fixed RNG.
+  yardLap('  back: beds + flagstones');
   addRearPlantingDetail(L, leaves, beds, props);
+  yardLap('  back: addRearPlantingDetail');
 
   // The reference lake replaces the old opaque boundary ranks and north houses.
   // Keep the rear lawn spacious: the shoreline and its trees stand another
   // 20 feet north of the imported site-pad boundary. Front anchors stay fixed.
   const rearSite = { ...L, yardN: L.yardN - 20 };
   addRearLakeDetail(rearSite, leaves, beds, props, lawns, trunks, masses);
+  yardLap('  back: addRearLakeDetail');
   lowerRearShellPad();
+  yardLap('  back: lowerRearShellPad');
   addRearGroundDetail(rearSite, { lowGrade: true });
+  yardLap('  back: addRearGroundDetail');
 }
 
 // The shell GLB ships an outdoor lounge set — a brown sofa, two armchairs, an
@@ -3533,19 +3645,19 @@ export function setEnvironmentData(house) {
   settleShellAnchors();
 }
 
-// The shell has not finished settling the moment main() hands us the house.
-// Measured on this machine: the roofRect this build sees is z0 -25.43 / z1
-// 41.36, and one frame later the same measurement gives -25.77 / 41.70. The
-// entire yard is laid out from that rect, so the yard drawn at boot was NOT the
-// yard any later rebuild produced -- open the planner, hit undo, or sync, and
-// the whole exterior quietly shifted and reshuffled. Nothing noticed while the
-// yard was anonymous geometry; the Outside editor made it visible, because a
-// piece has to still be the same piece across a rebuild to be editable at all.
-//
-// So: re-measure a few times over the first half second and rebuild only if the
-// anchors really moved. The guard is the one levelChanged has always used, and
-// a settled shell makes every check after the first a no-op. setTimeout rather
-// than requestAnimationFrame on purpose -- rAF is paused in a backgrounded or
+// A safety net for the anchors moving under the first build. It used to fire
+// on EVERY boot: the roofRect the boot build saw was z0 -25.43 / z1 41.36 and
+// "one frame later" it was -25.77 / 41.70, so the whole yard (13-15 s of main
+// thread) was built twice. The cause was never a settling shell -- it was
+// eavelights.js adding its group (LED strips, siding wash, lit window) INTO
+// the shell after the yard had measured it, and house.js getBuildingBox()
+// counting those meshes as roof. main.js now runs initEaveLights() before
+// setEnvironmentData(), so the first measurement is the final one and these
+// ticks are no-ops. Kept because anything else that grows the shell later
+// would otherwise leave the yard silently offset from every later rebuild
+// (which is what made saved yard edits drift: a piece has to be the same
+// piece across rebuilds to be editable at all). setTimeout rather than
+// requestAnimationFrame on purpose -- rAF is paused in a backgrounded or
 // occluded tab, and the yard must settle whether or not anyone is watching.
 const ANCHOR_SETTLE_MS = [0, 120, 500];
 
@@ -3692,14 +3804,17 @@ function buildYard() {
   // landmarks/addGroundCover/addFrontYard/addBackYard). Anchored to the shell's
   // roof outline, so it only runs when a shell is loaded — the
   // generated-geometry fallback keeps its own bushes above.
+  const buildT0 = performance.now();
+  yardTimings = [];
+  yardLapT = buildT0;
   if (roofRect) {
     const L = landmarks(roofRect);
-    addGroundCover(L, lawns);
-    addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses);
-    addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses);
-    addRearPorchDetail(L, props, masses);
-    addRearDeckDetail(L, props, masses);
-    addRearSidingDetail();
+    addGroundCover(L, lawns); yardLap('addGroundCover');
+    addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses); yardLap('addFrontYard');
+    addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses); yardLap('addBackYard');
+    addRearPorchDetail(L, props, masses); yardLap('addRearPorchDetail');
+    addRearDeckDetail(L, props, masses); yardLap('addRearDeckDetail');
+    addRearSidingDetail(); yardLap('addRearSidingDetail');
     hideShellPatioProps();
   }
 
@@ -4058,11 +4173,14 @@ function buildYard() {
   shadow.position.set((bx0 + bx1) / 2, -0.03, (bz0 + bz1) / 2);
   yard.add(shadow);
 
+  yardLap('resolve items + merge');
   addRearLightDetail(buckets);
   addRearAtmosphereDetail();
   configureRearDeckInstances();
   syncCar();
   addYardModels(modelItems);
+  yardLap('rear light/atmosphere/deck/car');
+  yardTimings.push(['TOTAL', +(performance.now() - buildT0).toFixed(1)]);
 
   // yard.js holds references into the groups this build just replaced, and
   // undo/redo and a house reload both land here without going through it.
@@ -4718,16 +4836,6 @@ function configureRearDeckInstances() {
 // lowGrade is enabled only once the imported raised rear site pad is clipped.
 function addRearGroundDetail(L, { lowGrade = false } = {}) {
   const rng = mulberry32(0x47524f55);
-  // Mower passes change the lay of real blades; the colour field is botanical
-  // variation and never encodes a tree shadow or depends on the camera.
-  const mowing = (x,z) => Math.sin((x*.80+z*.60)*Math.PI/2.7
-    + (worldNoise(x+140,z-490,11)-.5)*.65);
-  const sward = (x,z) => {
-    const broad=worldNoise(x+217,z-517,8.6),patch=worldNoise(x-611,z+306,1.8);
-    const pale=smooth((broad-.32)/.45),dry=smooth((worldNoise(x-79,z+901,4.2)-.52)/.35);
-    const f=.91+(broad-.5)*.18+(patch-.5)*.10;
-    return [f+pale*.045+dry*.055,f+pale*.055+dry*.025,f+pale*.065-dry*.025];
-  };
   const mid = (L.padW + L.padE) / 2;
   const edge = x => L.yardN + 6.8 + 2.8 * Math.sin((x - mid) / 13)
     + 1.6 * Math.cos((x - mid) / 6.8);
@@ -4747,77 +4855,23 @@ function addRearGroundDetail(L, { lowGrade = false } = {}) {
       + 0.018 * Math.sin(x * 0.8 + z * 0.47) * Math.sin(z * 0.69 - x * 0.37);
   };
 
-  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-  const pixels = ctx.createImageData(512, 512);
-  for (let i = 0; i < 512 * 512; i++) {
-    const v = 164 + (rng() - 0.5) * 56;
-    pixels.data[i * 4] = v; pixels.data[i * 4 + 1] = v;
-    pixels.data[i * 4 + 2] = v; pixels.data[i * 4 + 3] = 255;
-  }
-  ctx.putImageData(pixels, 0, 0);
-  // Fine tapered blades fill a six-foot tile. Tile edges wrap every stroke.
-  for (let i = 0; i < 24000; i++) {
-    const x = rng() * 512, y = rng() * 512, len = 2 + rng() * 6;
-    const angle = -0.65 + (rng()-.5)*1.6;
-    const dx = Math.cos(angle) * len, dy = Math.sin(angle) * len;
-    const v = Math.round(93 + rng() * 143);
-    ctx.strokeStyle = `rgba(${v},${v},${v},${0.35 + rng() * 0.4})`;
-    ctx.lineWidth = 0.45 + rng() * 0.8;
-    for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) {
-      if (x + ox < -8 || x + ox > 520 || y + oy < -8 || y + oy > 520) continue;
-      ctx.beginPath(); ctx.moveTo(x + ox, y + oy);
-      ctx.lineTo(x + dx + ox, y + dy + oy); ctx.stroke();
-    }
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  // The legacy procedural fallback keeps its original six-foot stroke scale.
-  texture.repeat.setScalar(1.8/6);
-  texture.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
-  // Grass01 includes yellow moss; this species tint removes that cast and
-  // brings its sunlit reflectance into the reference lawn's cooler range.
-  const fallbackBase=new THREE.Color(0x638753), base=new THREE.Color(0xa4abd9).multiplyScalar(.60);
-  const mat = new THREE.MeshStandardMaterial({ color: base.clone(), map: texture,
-    bumpMap: texture, bumpScale: .021,
-    roughness: 1, vertexColors: true, transparent: true, depthWrite: false });
-  // CC0 Grass01 albedo is already coloured, with its full variation retained.
-  // Both loads use DefaultLoadingManager synchronously during yard assembly,
-  // so the boot curtain's existing texture/model gate waits for them.
-  const owner=yard, loader=new THREE.TextureLoader(), loadedMaps=[];
-  let disposed=false, hasAlbedo=false;
-  const rearSnow={value:snowF}, rearSnowColor={value:GRASS_SNOW};
-  mat.onBeforeCompile=shader=>{
-    shader.uniforms.rearSnow=rearSnow;shader.uniforms.rearSnowColor=rearSnowColor;
-    shader.fragmentShader='uniform float rearSnow;\nuniform vec3 rearSnowColor;\n'+shader.fragmentShader;
-    shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',
-      '#include <color_fragment>\nfloat rearSnowDetail = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));\n'
-      +'diffuseColor.rgb = mix(diffuseColor.rgb, rearSnowColor * (0.92 + 0.08 * rearSnowDetail), rearSnow);');
-  };
-  mat.customProgramCacheKey=()=> 'rear-turf-cc0-snow-v1';
-  const loadMap=(url,isNormal)=>{
-    const map=loader.load(url,loaded=>{
-      if(disposed||yard!==owner){loaded.dispose();return;}
-      if(isNormal){mat.normalMap=loaded;mat.bumpMap=null;}
-      else{mat.map=loaded;hasAlbedo=true;}
-      mat.needsUpdate=true;
-    },undefined,()=>{
-      if(!disposed&&yard===owner)mat.userData[isNormal?'normalLoadFailed':'albedoLoadFailed']=true;
-    });
-    map.wrapS=map.wrapT=THREE.RepeatWrapping;
-    map.anisotropy=texture.anisotropy;
-    map.colorSpace=isNormal?THREE.NoColorSpace:THREE.SRGBColorSpace;
-    loadedMaps.push(map);
-  };
-  mat.normalScale.set(.38,-.38); // supplied map uses DirectX's negative green axis
-  loadMap('/textures/backyard/grass-albedo.webp',false);
-  loadMap('/textures/backyard/grass-normal-dx.webp',true);
-  mat.addEventListener('dispose',()=>{
-    disposed=true;texture.dispose();for(const map of loadedMaps)map.dispose();
-  });
-  // Registered with the existing weather lifecycle; the render hook composes
-  // those same wet/snow factors from this rear-only base instead of the front's.
+  // The rear turf is the FRONT lawn's material, deliberately: the same base
+  // colour, the same procedural near-white tile at the same 8.57 ft repeat,
+  // the same three-octave mono vertex noise the lawn buckets get (see the
+  // colour pass in buildYard), and the same wet/snow tint through
+  // repaintGrass(). Only the geometry is rear-specific: the lowered grade, the
+  // gentle undulation and the ramp up to the lake apron. It used to be its own
+  // photo-textured system -- a CC0 albedo + normal map, a lavender base under
+  // a 4x sun / 2% ambient / x1.425 blue override, 160,000 shadow-casting blade
+  // tufts and 2,400 clover -- which read as a different, blue-grey lawn behind
+  // the house and cost ~10 s of every yard build. Not pushed into the lawns
+  // bucket on purpose: a bucket geometry becomes a grabbable "piece" item in
+  // the Outside editor, and a lot-sized clickable turf would swallow every
+  // click behind the house (the reason SURFACE_KINDS excludes the lawn).
+  const owner = yard, loader = new THREE.TextureLoader();
+  const anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
+  const mat = new THREE.MeshStandardMaterial({
+    color: grassMat.color.clone(), map: grassMat.map, roughness: 1, vertexColors: true });
   yardGrassMats.push(mat);
   const pos = [], uv = [], col = [];
   const x0 = L.padW - 29, x1 = L.padE + 29;
@@ -4827,12 +4881,13 @@ function addRearGroundDetail(L, { lowGrade = false } = {}) {
   zs.push(L.padN, L.padN - 2.6, -32.4, -30.6); xs.sort((a,b)=>a-b); zs.sort((a,b)=>a-b);
   const vertex = (x,z) => {
     z = Math.max(z, edge(x) + 0.1 + 0.06 * Math.sin(x * 7));
-    pos.push(x,height(x,z),z); uv.push(x / 1.8, -z / 1.8);
-    const tone=sward(x,z),lay=mowing(x,z)*.018;
-    const shore = 1 - smooth((z-edge(x))/3.7);
-    const alpha = smooth((x - x0) / 4.5) * smooth((x1 - x) / 4.5)
-      * smooth((L.wingN - z) / 4.5);
-    col.push(tone[0]+shore*.025+lay,tone[1]+lay,tone[2]-shore*.015+lay,alpha);
+    pos.push(x, height(x,z), z);
+    // the lawn tile's UV convention: world feet over the 2400 ft disc
+    uv.push(x / 2400 + 0.5, -z / 2400 + 0.5);
+    const f = 1 + (worldNoise(x, z, 54) - 0.5) * 0.14
+                + (worldNoise(x + 313, z + 129, 19) - 0.5) * 0.19
+                + (worldNoise(x + 91, z - 47, 7) - 0.5) * 0.11;
+    col.push(f, f, f);
   };
   for (let ix=0;ix<xs.length-1;ix++) for(let iz=0;iz<zs.length-1;iz++) {
     const a=xs[ix],b=xs[ix+1],c=zs[iz],d=zs[iz+1];
@@ -4842,148 +4897,10 @@ function addRearGroundDetail(L, { lowGrade = false } = {}) {
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
   geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
-  geo.setAttribute('color',new THREE.Float32BufferAttribute(col,4)); geo.computeVertexNormals();
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3)); geo.computeVertexNormals();
   const turf=new THREE.Mesh(geo,mat); turf.name='rear-mown-turf';
   turf.userData.ownGeometry=true; turf.receiveShadow=true;
-  turf.onBeforeRender=()=>{
-    mat.color.copy(hasAlbedo?base:fallbackBase).multiplyScalar(1-.3*wetF);
-    mat.roughness=1-.16*wetF;rearSnow.value=snowF;
-  };
   yard.add(turf);
-
-  // Actual short sward above the albedo surface, independent of the camera.
-  // Eleven short blades spend 33 triangles per tuft on dense fine coverage.
-  // Their distributed roots overlap neighbouring tufts instead of forming combs.
-  // Small broadleaf clover patches interrupt the mown grass species naturally.
-  const tuftRng=mulberry32(0x53574152), bladePositions=[], bladeColors=[],bladeNormals=[];
-  const bladeTriangle=(a,b,c)=>{
-    [a,b,c].forEach(p=>{bladePositions.push(...p.pos);bladeNormals.push(...p.normal);
-      bladeColors.push(p.tone,p.tone,p.tone);});
-  };
-  for(let i=0;i<11;i++) {
-    const angle=Math.sin(i*2.39996)*1.02, sx=Math.cos(angle),sz=Math.sin(angle);
-    const radius=.17*Math.sqrt((i+.5)/11);
-    const ox=Math.sin(i*2.39996)*radius,oz=Math.cos(i*2.39996)*radius;
-    const w=.0065+(i%3)*.001,h=.18+((i*3)%7)*.010,bend=.12+(i%3)*.023;
-    const stations=[0,.60],pairs=[];
-    // A smooth centreline, gradually rolling cross-section and continuous
-    // vertex normals avoid hard diagonal facets across each narrow leaf.
-    const point=(t,side,width,tone)=>{
-      const roll=(i%2?-.18:.22)+Math.sin(t*2.4+i)*.22;
-      const along=bend*t*t, y=h*(1.85*t-1.18*t*t);
-      const cross=new THREE.Vector3(-sz,roll,sx).normalize();
-      const tangent=new THREE.Vector3(sx*2*bend*t,h*(1.85-2.36*t),sz*2*bend*t).normalize();
-      const normal=new THREE.Vector3().crossVectors(cross,tangent).normalize();
-      return {pos:[ox+sx*along+cross.x*side*width,y+cross.y*side*width,
-        oz+sz*along+cross.z*side*width],normal:normal.toArray(),tone};
-    };
-    const widths=[1,.62],shade=[.35,.78];
-    stations.forEach((t,j)=>pairs.push([point(t,-1,w*widths[j],shade[j]*.86),
-      point(t,1,w*widths[j],shade[j]*1.08)]));
-    for(let j=0;j<1;j++){
-      bladeTriangle(pairs[j][0],pairs[j][1],pairs[j+1][1]);
-      bladeTriangle(pairs[j][0],pairs[j+1][1],pairs[j+1][0]);
-    }
-    bladeTriangle(pairs[1][0],pairs[1][1],point(1,0,0,.98));
-  }
-  const bladeGeo=new THREE.BufferGeometry();
-  bladeGeo.setAttribute('position',new THREE.Float32BufferAttribute(bladePositions,3));
-  bladeGeo.setAttribute('color',new THREE.Float32BufferAttribute(bladeColors,3));
-  bladeGeo.setAttribute('normal',new THREE.Float32BufferAttribute(bladeNormals,3));
-  // Retain the lawn's mean reflectance after accounting for the buried roots;
-  // the exposed blade faces carry the brighter part of that same range.
-  const bladeBase=new THREE.Color(0x6e8252).multiplyScalar(1.80);
-  const bladeMat=new THREE.MeshStandardMaterial({color:bladeBase.clone(),vertexColors:true,
-    roughness:1,side:THREE.DoubleSide});
-  // A thin translucent blade scatters light through both faces. Bias its
-  // shading normal toward the tuft's aggregate upward normal to approximate
-  // that response without an emissive term or a fixed illumination texture.
-  bladeMat.onBeforeCompile=shader=>{
-    shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>',
-      '#include <normal_fragment_maps>\nnormal = normalize(normal + normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz) * 0.8);');
-  };
-  bladeMat.customProgramCacheKey=()=> 'rear-grass-thin-blade-v2';
-  yardGrassMats.push(bladeMat);
-  const tuftCount=160000,tufts=new THREE.InstancedMesh(bladeGeo,bladeMat,tuftCount);
-  const transform=new THREE.Object3D(),tint=new THREE.Color();
-  // Match the two curved rear planting beds; grass must not grow through
-  // the widened gravel under the mature clipped specimens.
-  const plantingBedOutlines=[
-    [[15.7,-43.3],[42.5,-43.3],[42.8,-31],[46.8,-22],[46.8,-13],
-     [54.5,-12.9],[55,-28],[59,-38],[58.5,-45],[51,-49.3],[25,-48.4],[16.5,-47.2]],
-    [[-7.8,-25],[-.3,-25],[1.3,-33.8],[2.2,-41.5],[5,-44.4],
-     [4.4,-47.7],[-3,-48],[-11.5,-45.7],[-12,-36.5]],
-  ].map(points=>{
-    const curve=new THREE.CatmullRomCurve3(points.map(([x,z])=>new THREE.Vector3(x,0,z)),true,'centripetal');
-    const outline=curve.getPoints(60).map(p=>[p.x,p.z]);
-    return {outline,x0:Math.min(...outline.map(p=>p[0])),x1:Math.max(...outline.map(p=>p[0])),
-      z0:Math.min(...outline.map(p=>p[1])),z1:Math.max(...outline.map(p=>p[1]))};
-  });
-  const inPlantingBed=(x,z)=>plantingBedOutlines.some(b=>{
-    if(x<b.x0||x>b.x1||z<b.z0||z>b.z1)return false;
-    let inside=false;
-    for(let i=0,j=b.outline.length-1;i<b.outline.length;j=i++){
-      const a=b.outline[i],q=b.outline[j];
-      if((a[1]>z)!==(q[1]>z)&&x<(q[0]-a[0])*(z-a[1])/(q[1]-a[1])+a[0])inside=!inside;
-    }
-    return inside;
-  });
-  const vegetationOK=(x,z)=>{
-    if(z<edge(x)+.42||z>L.wingN-.4)return false;
-    const feather=smooth((x-x0)/4.5)*smooth((x1-x)/4.5)*smooth((L.wingN-z)/4.5);
-    if(tuftRng()>feather)return false;
-    // Existing deck, its four-step landing, and the two gravel returns.
-    if(x>2.7&&x<20.7&&z> -42.4&&z< -24.1)return false;
-    if(x>20.5&&x<42.4&&z> -42.4&&z<L.wingN+.1)return false;
-    if(x>42.0&&x<46.7&&z> -19.3&&z< -14.1)return false;
-    if(x>7.8&&x<12.9&&z> -46.6&&z< -42)return false;
-    if(x>L.padW-2&&x<L.padW+3.2&&z> -46.5&&z<L.wingN-5.7)return false;
-    if(inPlantingBed(x,z))return false;
-    if(x>-9&&x<20.7&&z> -24.55)return false;
-    return true;
-  };
-  for(let i=0;i<tuftCount;i++) {
-    let x,z;do{x=x0+tuftRng()*(x1-x0);z=L.yardN+tuftRng()*(L.wingN-L.yardN);}while(!vegetationOK(x,z)||tuftRng()>.70+worldNoise(x+391,z-205,1.15)*.30);
-    const patch=worldNoise(x+421,z-738,1.30),tone=sward(x,z),lay=mowing(x,z);
-    const h=.80+tuftRng()*.20+patch*.30;
-    // Neighbouring tufts share a bent orientation with small local disorder;
-    // alternate lay is softened by the uncut, disordered blades between passes.
-    const angle=-.64+lay*.48+(tuftRng()-.5)*.95+(patch-.5)*2.1;
-    transform.position.set(x,height(x,z)-.005,z);transform.rotation.set((tuftRng()-.5)*.14,angle,(tuftRng()-.5)*.14);
-    transform.scale.set(.80+tuftRng()*.70,h,.80+tuftRng()*.70);transform.updateMatrix();
-    tufts.setMatrixAt(i,transform.matrix);
-    const individual=.79+tuftRng()*.38;
-    tint.setRGB(tone[0]*individual,tone[1]*individual,tone[2]*individual);
-    tufts.setColorAt(i,tint);
-  }
-  tufts.name='rear-short-grass-tufts';tufts.userData.ownGeometry=true;
-  bladeMat.addEventListener('dispose',()=>tufts.dispose());
-  tufts.castShadow=true;tufts.receiveShadow=true;
-  tufts.onBeforeRender=()=>bladeMat.color.copy(bladeBase).multiplyScalar(1-.3*wetF).lerp(GRASS_SNOW,snowF);
-  tufts.instanceMatrix.needsUpdate=true;tufts.instanceColor.needsUpdate=true;
-  tufts.computeBoundingBox();tufts.computeBoundingSphere();yard.add(tufts);
-
-  const cloverPositions=[],cloverColors=[];
-  for(let leaf=0;leaf<3;leaf++) {
-    const a=leaf*Math.PI*2/3,cx=Math.cos(a)*.045,cz=Math.sin(a)*.045;
-    const points=Array.from({length:7},(_,j)=>{const t=j*Math.PI*2/7;return[cx+Math.cos(t)*.044,.058+Math.sin(t+a)*.010,cz+Math.sin(t)*.039];});
-    for(let j=0;j<7;j++) for(const [p,f] of [[[cx,.070,cz],.90],[points[j],.68],[points[(j+1)%7],.76]]) {
-      cloverPositions.push(...p);cloverColors.push(f,f,f);
-    }
-  }
-  const cloverGeo=new THREE.BufferGeometry();cloverGeo.setAttribute('position',new THREE.Float32BufferAttribute(cloverPositions,3));
-  cloverGeo.setAttribute('color',new THREE.Float32BufferAttribute(cloverColors,3));cloverGeo.computeVertexNormals();
-  const cloverBase=new THREE.Color(0x58703e),cloverMat=new THREE.MeshStandardMaterial({color:cloverBase.clone(),vertexColors:true,roughness:1,side:THREE.DoubleSide});
-  yardGrassMats.push(cloverMat);
-  const clover=new THREE.InstancedMesh(cloverGeo,cloverMat,2400);
-  for(let i=0;i<2400;i++) {
-    let x,z;do{x=x0+tuftRng()*(x1-x0);z=L.yardN+tuftRng()*(L.wingN-L.yardN);}while(!vegetationOK(x,z)||worldNoise(x+801,z-103,3.6)<.57);
-    transform.position.set(x,height(x,z),z);transform.rotation.set(0,tuftRng()*Math.PI*2,0);transform.scale.setScalar(.7+tuftRng()*.85);transform.updateMatrix();clover.setMatrixAt(i,transform.matrix);
-  }
-  clover.name='rear-mown-clover';clover.userData.ownGeometry=true;clover.castShadow=true;clover.receiveShadow=true;
-  cloverMat.addEventListener('dispose',()=>clover.dispose());
-  clover.onBeforeRender=()=>cloverMat.color.copy(cloverBase).multiplyScalar(1-.3*wetF).lerp(GRASS_SNOW,snowF);
-  clover.instanceMatrix.needsUpdate=true;clover.computeBoundingBox();clover.computeBoundingSphere();yard.add(clover);
 
   // Scanned oak contours and veins on individually curved eight-triangle leaves.
   // Their autumn pigments, burial and curl vary independently of the camera.
@@ -5030,7 +4947,7 @@ function addRearGroundDetail(L, { lowGrade = false } = {}) {
       if(litterDisposed||yard!==owner){loaded.dispose();return;}
       if(isNormal)leafMat.normalMap=loaded;else leafMat.map=loaded;leafMat.needsUpdate=true;
     },undefined,()=>{if(!litterDisposed)leafMat.userData[isNormal?'normalLoadFailed':'albedoLoadFailed']=true;});
-    map.colorSpace=isNormal?THREE.NoColorSpace:THREE.SRGBColorSpace;map.anisotropy=texture.anisotropy;litterMaps.push(map);
+    map.colorSpace=isNormal?THREE.NoColorSpace:THREE.SRGBColorSpace;map.anisotropy=anisotropy;litterMaps.push(map);
   }
   leafMat.addEventListener('dispose',()=>{litterDisposed=true;leafFallback.dispose();for(const map of litterMaps)map.dispose();});
   const fallen=new THREE.Mesh(leafGeo,leafMat);fallen.name='rear-fallen-leaves';
@@ -5571,23 +5488,30 @@ function addMeasuredRearRoofFinish(shell,group) {
   if(!positions.length)return;
   // Mineral granules and low-contrast irregular shingle courses, in feet.
   // This is a material tile, generated independently of the reference photo.
-  const size=1024,canvas=document.createElement('canvas');canvas.width=canvas.height=size;
-  const ctx=canvas.getContext('2d'),data=ctx.createImageData(size,size),rng=mulberry32(0x524f4f46);
-  const rows=18,cols=12,tones=Array.from({length:rows},()=>Array.from({length:cols},()=>rng()));
-  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-    const row=Math.floor(y/size*rows),fy=(y/size*rows)%1;
-    const shift=(row%2)*.5+.14*Math.sin(row*1.79),u=x/size*cols+shift;
-    const col=((Math.floor(u)%cols)+cols)%cols,fx=u-Math.floor(u);
-    // Asphalt aggregates vary at several scales, independently of tab joints.
-    const mottling=12*(worldNoise(x+74,y+281,51)-.5)+
-      8*(worldNoise(x+391,y+71,17)-.5)+4*Math.sin(x*.021+y*.011);
-    const granules=(rng()-.5)*27;
-    const lap=fy>.90?(fy-.90)/.10*7:0;
-    const joint=fx>.980&&fy>.15?3.5:0;
-    const tone=70+(tones[row][col]-.5)*21+mottling+granules-lap-joint,k=(y*size+x)*4;
-    data.data[k]=tone*.97;data.data[k+1]=tone;data.data[k+2]=tone*1.035;data.data[k+3]=255;
-  }
-  ctx.putImageData(data,0,0);
+  // Painted ONCE per page (memoCanvas): a million pixels × two worldNoise calls
+  // each, from a fixed seed with no inputs, so every rebuild used to repaint
+  // the identical tile. The CanvasTexture is still made fresh per build so the
+  // dispose listener below keeps its meaning.
+  const canvas=memoCanvas('rear-roof-shingles',()=>{
+    const size=1024,canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+    const ctx=canvas.getContext('2d'),data=ctx.createImageData(size,size),rng=mulberry32(0x524f4f46);
+    const rows=18,cols=12,tones=Array.from({length:rows},()=>Array.from({length:cols},()=>rng()));
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+      const row=Math.floor(y/size*rows),fy=(y/size*rows)%1;
+      const shift=(row%2)*.5+.14*Math.sin(row*1.79),u=x/size*cols+shift;
+      const col=((Math.floor(u)%cols)+cols)%cols,fx=u-Math.floor(u);
+      // Asphalt aggregates vary at several scales, independently of tab joints.
+      const mottling=12*(worldNoise(x+74,y+281,51)-.5)+
+        8*(worldNoise(x+391,y+71,17)-.5)+4*Math.sin(x*.021+y*.011);
+      const granules=(rng()-.5)*27;
+      const lap=fy>.90?(fy-.90)/.10*7:0;
+      const joint=fx>.980&&fy>.15?3.5:0;
+      const tone=70+(tones[row][col]-.5)*21+mottling+granules-lap-joint,k=(y*size+x)*4;
+      data.data[k]=tone*.97;data.data[k+1]=tone;data.data[k+2]=tone*1.035;data.data[k+3]=255;
+    }
+    ctx.putImageData(data,0,0);
+    return canvas;
+  });
   const map=new THREE.CanvasTexture(canvas);map.wrapS=map.wrapT=THREE.RepeatWrapping;
   map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=8;
   const material=new THREE.MeshStandardMaterial({map,color:0xffffff,roughness:.96,metalness:0,bumpMap:map,bumpScale:.007});
@@ -5836,50 +5760,5 @@ if(vRearContactWorld.z < -0.01 && vRearContactWorld.y < 8.0){
     owner.userData.rearLightDetail.deckMeshes=meshes;
   };
   settle(120);
-
-  // Rear ground needs a stronger direct-to-environment ratio than the global
-  // indoor fill. These measured material coefficients still follow the actual
-  // sun, weather, shadows and HA lights; they do not encode a camera or shadow.
-  // Litter shares the light response but keeps its authored autumn pigment.
-  const groundNames = ['rear-mown-turf', 'rear-short-grass-tufts',
-    'rear-mown-clover', 'rear-fallen-leaves'];
-  const directionalChunk = THREE.ShaderChunk.lights_fragment_begin;
-  const directionalMarker = 'getDirectionalLightInfo( directionalLight, directLight );';
-  const responseMaterials = [];
-  for (const name of groundNames) {
-    const mesh = owner.getObjectByName(name);
-    const material = mesh?.material;
-    if (!material?.isMeshStandardMaterial) continue;
-    const beforeCompile = material.onBeforeCompile;
-    const previousKey = material.customProgramCacheKey();
-    const beforeRender = mesh.onBeforeRender;
-    material.onBeforeCompile = function(shader, activeRenderer) {
-      beforeCompile.call(this, shader, activeRenderer);
-      shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_begin>',
-        directionalChunk.replace(directionalMarker,
-          directionalMarker + '\ndirectLight.color *= 4.0;'));
-      if (name === 'rear-mown-turf') {
-        // Correct uncovered pigment after computing the snow-detail luminance.
-        const snowMix = 'diffuseColor.rgb = mix(diffuseColor.rgb, rearSnowColor';
-        shader.fragmentShader = shader.fragmentShader.replace(snowMix,
-          'diffuseColor.b *= 1.425;\n' + snowMix);
-      }
-    };
-    material.customProgramCacheKey = () => previousKey + '|rear-ground-light-response-v1';
-    material.needsUpdate = true;
-    mesh.onBeforeRender = function(...args) {
-      beforeRender.apply(this, args);
-      material.envMapIntensity = getEnvIntensity() * 0.02;
-      if (name === 'rear-short-grass-tufts' || name === 'rear-mown-clover') {
-        // Existing hooks reset the color and interpolate snow on every render.
-        material.color.b += (material.color.b - GRASS_SNOW.b * snowF) * 0.425;
-      }
-    };
-    responseMaterials.push(name);
-  }
-  owner.userData.rearLightDetail.groundResponse = {
-    directionalScale: 4, environmentScale: 0.02, livingBlueScale: 1.425,
-    materials: responseMaterials,
-  };
 }
 

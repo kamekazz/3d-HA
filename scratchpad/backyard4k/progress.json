@@ -1,17 +1,17 @@
 {
-  "status": "Capturing ground_critic_r10",
-  "details": "photo12 · native 3840 × 2880 · rear daylight",
-  "updated": "2026-09-12T17:46:59.306Z",
+  "status": "Render capture complete",
+  "details": "ground_critic_r10 · 1 camera views",
+  "updated": "2026-09-12T17:48:22.352Z",
   "renders": {
     "lawn_spacing": "renders/light-r5-native/lawn_spacing.png",
     "rear_site": "renders/woodland-r5-final/rear_site.png",
     "photo14": "renders/deck-r7-orientation/photo14.png",
     "photo02": "renders/deck-layout2/photo02.png",
     "photo09": "renders/light_critic_r5/photo09.png",
-    "photo12": "renders/light_critic_r5/photo12.png",
+    "photo12": "renders/ground_critic_r10/photo12.png",
     "photo11": "renders/sky-r4-final/photo11.png"
   },
-  "round": "deck-r7-orientation",
+  "round": "ground_critic_r10",
   "references": {
     "photo03": "references/03.png",
     "photo12": "references/12.png",
@@ -95,7 +95,7 @@
     "photo14": "renders/deck-r7-orientation/photo14-progress.jpg",
     "photo02": "renders/deck-layout2/photo02-progress.jpg",
     "photo09": "renders/light_critic_r5/photo09-progress.jpg",
-    "photo12": "renders/light_critic_r5/photo12-progress.jpg",
+    "photo12": "renders/ground_critic_r10/photo12-progress.jpg",
     "photo11": "renders/sky-r4-final/photo11-progress.jpg",
     "lawn_spacing": "renders/light-r5-native/lawn_spacing-progress.jpg"
   }

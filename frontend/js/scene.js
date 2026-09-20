@@ -31,6 +31,17 @@ let poseGoal = null; // {position, target} being flown to; suspends the zoom eas
 const frameCallbacks = new Set();
 export function onFrame(fn) { frameCallbacks.add(fn); }
 
+// Boot-only: skip the DRAW while the scene is still assembling, keep every
+// frame callback ticking. Every fresh material compiles its shader on its
+// first draw, synchronously — the yard's ~40 unique programs did so in ONE
+// 12 s frame, and each furniture GLB landed as its own 0.8-3 s hitch, all
+// behind the curtain but all on the main thread. With draws held until
+// main.js's compileAsync, those programs compile there instead, in parallel
+// (KHR_parallel_shader_compile). The pose solve needs no draw (it inverts the
+// camera matrices by hand) and the room-card snapshots run after the resume.
+let renderPaused = false;
+export function setRenderPaused(on) { renderPaused = !!on; }
+
 export function initScene(container) {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x10141a);
@@ -214,7 +225,7 @@ export function initScene(container) {
       controls.update();
     }
     tickOptics(dt);
-    renderView();
+    if (!renderPaused) renderView();
   });
 
   // debug handle (console): inspect the scene / renderer stats
