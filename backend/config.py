@@ -12,6 +12,12 @@ HA_TOKEN = os.getenv("HA_TOKEN", "")
 APP_SECRET = os.getenv("APP_SECRET", "dev-secret-change-me")
 DB_PATH = os.getenv("DB_PATH", str(BACKEND_DIR / "house.db"))
 
+# Where the dev server listens. 0.0.0.0 on purpose: the app has to open on a
+# phone on the same Wi-Fi, and 127.0.0.1 is reachable only from this machine.
+# Set HOST=127.0.0.1 to keep it local; PORT for a second instance.
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", "5000"))
+
 FRONTEND_DIR = BACKEND_DIR.parent / "frontend"
 
 

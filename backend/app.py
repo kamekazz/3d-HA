@@ -5,6 +5,8 @@ house geometry store, and relays HA state changes to browsers via SocketIO.
 """
 import logging
 import mimetypes
+import socket
+import sys
 
 from flask import Flask, request, send_from_directory
 
@@ -88,9 +90,38 @@ def create_app():
     return app
 
 
+def lan_addresses():
+    """IPv4 addresses a phone on the same network could reach this box at."""
+    addrs = set()
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = info[4][0]
+            if not ip.startswith("127."):
+                addrs.add(ip)
+    except OSError:
+        pass
+    return sorted(addrs)
+
+
 if __name__ == "__main__":
+    # `python app.py [--host H] [--port N]` overrides the .env / defaults, so a
+    # second instance (see .claude/launch.json) needs no extra script.
+    host, port = config.HOST, config.PORT
+    argv = sys.argv[1:]
+    for i, arg in enumerate(argv):
+        if arg == "--host" and i + 1 < len(argv):
+            host = argv[i + 1]
+        elif arg == "--port" and i + 1 < len(argv):
+            port = int(argv[i + 1])
+
     app = create_app()
+    log.info("Open on this machine: http://127.0.0.1:%d", port)
+    if host == "0.0.0.0":
+        for ip in lan_addresses():
+            log.info("Open on a phone (same Wi-Fi): http://%s:%d", ip, port)
+        log.info("If the phone cannot connect, allow python.exe through Windows "
+                 "Firewall for private networks (port %d).", port)
     # debug/reloader off: the HA websocket thread must only start once.
     # Werkzeug is fine for local/LAN use; put a real server in front if hosted.
-    socketio.run(app, host="127.0.0.1", port=5000, debug=False,
+    socketio.run(app, host=host, port=port, debug=False,
                  allow_unsafe_werkzeug=True)

@@ -400,9 +400,8 @@ async function main() {
   //    files in vendor/draco/gltf/) is only requested once GLTFLoader has
   //    parsed the shell and met the extension. Issued after buildObjects, that
   //    request queues behind ~271 furniture fetches on a 6-connection pool;
-  //  - setEnvironmentData below then measures a shell that already exists, so
-  //    the yard is planted correctly once instead of being built and replanted
-  //    when the shell's setLevel fires levelChanged.
+  //  - setEnvironmentData below then measures a shell that already exists
+  //    (the house centre weather.js rains on, and the terrace props to hide).
   //
   // The band is set BEFORE the await on purpose: the shell's loader callbacks
   // must paint into the house band, not into whatever came before it.
@@ -426,22 +425,23 @@ async function main() {
   buildObjects(house);
   setCutawayData(house); // wall meshes + furniture are new objects after a rebuild
   buildLabels(house);
-  // BEFORE the yard, and this order is load-bearing. The eave lights hang a
-  // group (LED strips, siding wash, lit window) INSIDE the shell, and
+  // BEFORE the environment, and this order still matters. The eave lights
+  // hang a group (LED strips, siding wash, lit window) INSIDE the shell, and
   // house.js getBuildingBox() measures those meshes along with the roof: the
   // roof rect is z −25.43 / 41.36 without them and −25.77 / 41.70 with. The
-  // whole yard is laid out from that rect, so measuring first and adding the
-  // eave group after meant settleShellAnchors saw the anchors move and rebuilt
-  // the entire yard a second time (13-15 s of main thread, plus a second
-  // first-draw compile). Its lights must also exist before compileAsync, which
-  // this satisfies too (fixed light count — see roomlights.js pool rule).
+  // yard (built only when the Outside editor opens now) is laid out from that
+  // rect, so the shell's measurement has to be final before it is taken. The
+  // lights must also exist before compileAsync (fixed light count — see
+  // roomlights.js pool rule).
   initEaveLights();
+  // No yard is built here any more: the viewer shows the shell on scene.js's
+  // dark ground and nothing else. This records the house and the yard edits,
+  // measures the shell and hides its terrace props.
   setEnvironmentData(house);
   // The driveway car is a library model looked up by NAME (environment.js
   // CAR_MODEL_NAME), so the yard needs the model list — which GET /api/house
-  // does not carry, only its version map. Deliberately not awaited: the yard is
-  // already planted with the primitive car by the line above, and syncCar()
-  // swaps it in place when this lands. A failure just leaves the primitive.
+  // does not carry, only its version map. Deliberately not awaited; it is only
+  // consumed when the Outside editor builds the yard.
   api.getModels().then(setYardModels).catch(() => {});
   initFocus();
   initDrag();

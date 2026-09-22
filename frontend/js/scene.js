@@ -61,7 +61,8 @@ export function initScene(container) {
   // shadows would recompile every MeshStandard shader
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
-  // Real sun shadows: only the opaque house-shell GLB casts and only the lawn
+  // Real sun shadows: only the opaque house-shell GLB casts, and the ground
+  // plane below (plus the yard's lawn while the Outside editor is open)
   // receives (see house.js / environment.js) — the FrontSide dollhouse walls
   // never opt in, so the "broken translucent walls" reason shadows were off no
   // longer applies. Enabling here folds the shadow shader variants into the
@@ -168,23 +169,27 @@ export function initScene(container) {
   grid.position.y = -0.01;
   scene.add(grid);
 
+  // The ground the house stands on, in BOTH modes: the viewer draws no yard
+  // (environment.js builds one only while the Outside editor is open), so
+  // this dark plane is the whole exterior -- the shell GLB brings its own pale
+  // site pad and driveway. 3000 ft so its edges sit past fog far (1000) from
+  // any allowed camera position (MAX_ZOOM 300); at 2000 the edge midpoints
+  // were ~700 ft out and only half-fogged, a faint seam on the horizon. It
+  // receives the shell's sun shadow, the one exterior depth cue left.
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(2000, 2000),
+    new THREE.PlaneGeometry(3000, 3000),
     new THREE.MeshStandardMaterial({ color: 0x141a22, roughness: 1, transparent: true, opacity: 0.8 }));
-  ground.name = 'editGround';
+  ground.name = 'ground';   // named so snapshots.js can hide it during captures
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.02;
+  ground.receiveShadow = true;
   scene.add(ground);
-  
-  // App mode toggle listener
+
+  // Only the 1 ft grid is an edit affordance.
   window.addEventListener('appModeChanged', (e) => {
-    const isEdit = e.detail.mode === 'edit';
-    grid.visible = isEdit;
-    ground.visible = isEdit;
+    grid.visible = e.detail.mode === 'edit';
   });
-  // Initial state for view mode
-  grid.visible = false;
-  ground.visible = false;
+  grid.visible = false;   // initial state for view mode
 
   // Layout is the resize signal, not the window: stage.js observes an invisible
   // CSS-inset probe, so a rotation, a breakpoint flip, a safe-area change, an

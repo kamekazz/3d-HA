@@ -127,7 +127,7 @@ function captureRoom(roomId) {
   setVis(getEnvironmentRoot(), false);
   setVis(getWeatherRoot(), false);
   setVis(scene.getObjectByName('editGrid'), false);
-  setVis(scene.getObjectByName('editGround'), false);
+  setVis(scene.getObjectByName('ground'), false);
 
   const savedBg = scene.background, savedFog = scene.fog;
   backdropTex = backdropTex || makeBackdrop();

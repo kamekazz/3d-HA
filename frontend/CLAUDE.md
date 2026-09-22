@@ -51,8 +51,8 @@ it are not readable from the code:
   sharing: it is DRACO-compressed, and the decoder (763 KB over three files in `vendor/draco/gltf/`)
   is only requested once GLTFLoader has parsed the shell and met the extension, so issued after the
   furniture it queues behind all of it on a 6-connection pool. Doing it first also means
-  `setEnvironmentData` measures a shell that already exists, so the yard is planted correctly once
-  instead of being built and replanted on the shell's `levelChanged`. `houseShellReady()` resolves
+  `setEnvironmentData` measures a shell that already exists (the house centre weather.js rains on,
+  and the terrace props it hides). `houseShellReady()` resolves
   immediately when there is no shell or it failed, so a 404 shell cannot hang the boot.
   **And `initEaveLights()` runs before `setEnvironmentData()`, which is load-bearing**: the eave
   lights hang their group (LED strips, siding wash, lit window) *inside* the shell, and
@@ -60,7 +60,9 @@ it are not readable from the code:
   them and −25.77 / 41.70 with. The whole yard is laid out from that rect, so with the old order
   `settleShellAnchors` saw the anchors move on every boot and rebuilt the entire yard a second time
   (a 13-15 s main-thread block, plus a second first-draw compile). That was the long-mysterious
-  "rect a frame later" note in `environment.js`; it was never the shell settling.
+  "rect a frame later" note in `environment.js`; it was never the shell settling. (Since
+  2026-09-21 the viewer builds no yard at all — see below — but the order still decides what the
+  Outside editor measures when it opens.)
 - **Draws are paused from the furniture stage until `compileAsync` resolves** (`scene.js
   setRenderPaused`). Every fresh material compiles its shader synchronously on its first draw, and
   with the loop drawing behind the curtain that was the yard's ~40 unique programs in one 12 s frame
@@ -68,9 +70,14 @@ it are not readable from the code:
   there in parallel (KHR_parallel_shader_compile; ~0.5-2 s for the whole scene). Only `renderView()`
   is skipped — frame callbacks, controls and optics keep ticking — and the pose solve never needed a
   draw (it inverts the camera matrices by hand). `main().catch` un-pauses before it banners.
+- **The yard is no longer on the boot path.** Since 2026-09-21 the viewer draws no exterior
+  (house shell on `scene.js`'s dark `ground` plane); `buildYard` runs only when the Outside editor
+  opens (`setYardEditing(true)`, behind a "Building the outside…" banner) and `teardownYard` disposes
+  it on close. The furniture stage went ~11.5 s → ~0.35 s. Everything below about the build's cost
+  is now the cost of pressing Outside.
 - **The yard build is instrumented**: `window.__environment.timings()` prints where the last
   `buildYard` spent its time per builder (and inside the lake, per phase). Measured after the
-  fixes above: ~11.5 s at boot on this machine (~7 s in a warm rebuild), of which the lake
+  fixes above: ~11.5 s cold on this machine (~7 s warm), of which the lake
   woodland's 2.2 M leaves are ~5 s and merging the buckets ~1.3 s; boot went 96-130 s → 16-18 s.
   The leaf generator is scalar and allocation-free into typed accumulators (`F32Buf`), copying
   three r160's `applyQuaternion`/`normalize`/`setFromEuler('XYZ')` arithmetic verbatim so it is
@@ -470,7 +477,12 @@ negative past the pivot, while **rotation must be read off the quaternion, never
 XYZ Euler decomposition expresses a 180° yaw as `(π, 0, π)`, so `rotation.y` reads exactly 0 and
 every half-turn-or-more was silently thrown away on save.
 
-**Outdoor environment & weather** (frontend-only): `frontend/js/environment.js` builds the yard —
+**Outdoor environment & weather** (frontend-only). **The viewer shows no yard**: the house shell
+(with the pad and driveway baked into the GLB) stands on `scene.js`'s dark `ground` plane
+(3000 ft, `receiveShadow`, named so `snapshots.js` can hide it; the 1 ft `editGrid` is the only
+edit-mode affordance). `environment.js`'s `root` (grass disc + yard) is visible only while the
+Outside editor is open on the House level (`root.visible = yardEditing && onHouseLevel`), and the
+yard is built on open / disposed on close. What follows describes that build. It makes
 a grass disc reaching past fog-far, merged low-poly trees/bushes (two draw calls, vertex-colored
 foliage, seeded RNG so the yard never reshuffles) laid out to mirror the real property's satellite
 view (dense west treeline, treeline across the back, open east lawn, shrubs flanking the driveway
@@ -528,9 +540,10 @@ lightning as `renderer.toneMappingExposure` flashes (never add/remove lights —
 and eased wet/whitened lawn tinting via `setGroundWet/Snow`. It follows daylight.js's resolved
 sun+weather through `onDaylightChanged`, so the mode button and `__daylight.simulate({condition})`
 drive it too; `window.__weather.step(secs)` advances the easing manually for testing (rAF pauses in
-hidden tabs, so nothing eases while the tab is backgrounded). Both hide in edit mode
-(`appModeChanged`), where the grid/dark ground shows instead, and in single-floor view (below) — the
-one exception being the yard while the Outside editor is open, since that is what is being edited.
+hidden tabs, so nothing eases while the tab is backgrounded). Weather hides in edit mode
+(`appModeChanged`) and in single-floor view (below); the yard exists only while the Outside editor
+is open, since that is what is being edited. The dark ground and, in edit mode, the grid are what
+the house stands on otherwise.
 
 **The dollhouse cutaway** (`frontend/js/cutaway.js`): the walls between you and a room fade out, so
 every room reads like a Sims-4 build-mode shot — two far walls, no near walls, no ceiling. This used

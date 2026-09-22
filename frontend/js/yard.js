@@ -102,13 +102,20 @@ export function openYardEditor() {
   exitFocus({ flyBack: false });
   setLevel('all');            // the exterior only exists in the whole-house view
   setActiveLevelBtn('all');
-  setYardEditing(true);       // environment.js rebuilds one mesh per piece
-  setGizmoMode('translate');
   $('btn-yard').classList.add('active');
   $('yard-bar').classList.remove('hidden');
-  paintErasedList();
-  showBanner('Outside: click a tree, shrub, slab or prop to move, scale or erase it '
-             + '— or hit Add to drop a new one in.', 4500);
+  // The viewer has no yard: opening the editor is what BUILDS it, a ~10 s
+  // synchronous cold build. Say so first and give the banner a frame to paint
+  // before the main thread goes away.
+  showBanner('Building the outside…', 20000);
+  setTimeout(() => {
+    if (!open) return;        // closed again before the build started
+    setYardEditing(true);     // environment.js builds one mesh per piece
+    setGizmoMode('translate');
+    paintErasedList();
+    showBanner('Outside: click a tree, shrub, slab or prop to move, scale or erase it '
+               + '— or hit Add to drop a new one in.', 4500);
+  }, 60);
 }
 
 export function closeYardEditor() {

@@ -18,6 +18,14 @@ Opens on http://127.0.0.1:5000.
 no `.env.example` in the repo, and the app boots without `.env` at all — you can build rooms, but
 there's no HA data or live states until it's configured.
 
+The server binds `0.0.0.0` by default (`HOST`/`PORT` in `.env`, or `python app.py --host H --port N`)
+because **opening on an Android phone is a minimum requirement**: it prints the LAN URL at boot
+(`Open on a phone (same Wi-Fi): http://192.168.x.x:5000`). There is no app login, so this is
+LAN-only until phase 9's login lands. If the phone can't connect, it is Windows Firewall blocking
+python.exe on private networks, not the app. The phone layout is the portrait dock in `style.css`
+(rail lies down below 1024px, coarse-pointer hit boxes); verified in the Browser pane's mobile
+preset (375×812, Android UA) — real-device GPU memory is the thing that emulation does *not* prove.
+
 There is no test suite, linter, or build step in this repo. Verify changes by running the app and
 exercising the flow in a browser (see the `run` and `verify` skills).
 
@@ -174,9 +182,24 @@ levels they connect (`userData.levels`). In the planner they appear on both floo
 "▼ down"), drawn with "+ Stairs" (they connect the active floor down to the one below), moved/
 resized as rects, direction set in the side panel. Endpoints: `POST/PATCH/DELETE /api/house/stairs*`.
 
+**The viewer renders nothing outside the house.** On `/` (view mode, House level) the scene is
+the house shell GLB — which ships its own pale site pad and driveway — standing on `scene.js`'s
+dark ground plane (`ground`, 3000 ft, receives the shell's sun shadow), exactly the way edit mode
+looks minus the 1 ft `editGrid`. No grass disc, no trees, beds, lake, props, car or library yard
+models: the generated yard (below) exists **only while the Outside editor is open** —
+`setYardEditing(true)` builds it and `setYardEditing(false)` disposes it (`teardownYard`). That took
+the ~11 s yard build off the boot path (the phone requirement above) and is the user's explicit
+choice (2026-09-21). Two things the build did to the *shell* still have to happen in the viewer and
+are handled outside it: `hideShellPatioProps` (the GLB's own terrace lounge set; the placed Backyard
+objects are the real furniture) runs on `houseShellLoaded` and from `setEnvironmentData`, and the
+rear-pad cut (`lowerRearShellPad`) is put back by `restoreRearShellPad` on teardown. `measureHouse`
+also runs on every `setEnvironmentData` so `getEnvironmentCenter()` is right for weather.js without a
+build. Accepted difference: in the viewer the back deck and its furniture render at their saved
+placements, not the yard's re-layout (`configureRearDeckInstances` only runs while editing).
+
 **Editing the outside** ("Outside" topbar button, `frontend/js/yard.js`) — the exterior is *generated*,
 not stored: `environment.js` draws every tree, shrub, bed, slab, prop, neighbour and the street from
-one fixed seed, identically on every load, and merges the lot into six meshes. So editing works by
+one fixed seed, identically on every build. So editing works by
 **delta**, and the only thing persisted is what the user changed. While the yard builds, each
 geometry is filed under an *item* — one tree, one shrub, one slab of driveway — and the item is keyed
 by its kind plus the position the builder gave it (`kind:x*10:z*10`, e.g. `tree:-230:280`; ordinals
@@ -197,8 +220,9 @@ wrapped by **reassigning their function declarations** (`installItemScopes`), so
   item and push nothing — 108 of them. An item with no geometry measures at the origin, so every one
   keyed to `0,0` and took a collision suffix: 106 keys whose identity would shift the day either flag
   moved.
-- **The yard is drawn per-item only while the editor is open**, and as the same six merged meshes
-  otherwise (`setYardEditing`). A piece's group sits at its own pivot — footprint centre at its lowest
+- **The yard is drawn one group per item** (`setYardEditing`); the six-merged-meshes viewer path
+  in `buildYard` is unreachable now and kept only as the cheap draw should a "show the yard in the
+  viewer" toggle ever return. A piece's group sits at its own pivot — footprint centre at its lowest
   point, so a tree turns about its trunk and grows up from the ground — with its geometry re-centred
   there, which is what lets `drag.js` move it with the normal gizmo and read the gesture straight back
   out as the delta to save (`kind: 'yard'`, subtracting `userData.pivot`).
@@ -232,8 +256,8 @@ The one semantic difference is that **dx/dy/dz are a world position, not an offs
 generated piece underneath to be offset from — so its item's pivot is the origin and `drag.js` needs
 no special case. `restore_snapshot` drops a yard row whose model has since been deleted (the guard has
 to test `model_id is not None` first, unlike `objects`, because a procedural delta carries none).
-In 3D these are the one yard piece that is its own object in **both** draw modes — a .glb cannot be
-merged into the six bucket meshes — built by `addYardModels` in `environment.js`, whose async load
+In 3D these are the one yard piece that owns no bucket geometry — a .glb cannot be
+merged into the bucket meshes — built by `addYardModels` in `environment.js`, whose async load
 fires `yardRebuilt` a second time so `yard.js` can select a piece that did not exist when the build
 finished (`desiredKey`). Two things fell out of putting library geometry in the yard: the build's
 teardown had to stop disposing geometry unconditionally (`getInstance` SHARES BufferGeometry with the
@@ -270,7 +294,8 @@ duplicate come back as the same `clone:<id>`. Endpoints: `GET /api/house/yard`, 
 `setEnvironmentData` needs them at build time.
 
 **The shell's measurement is not final when the yard first measures it**
-(`settleShellAnchors` in `environment.js`). Measured here: the `roofRect` the boot build sees is
+(`settleShellAnchors` in `environment.js`; runs only while the editor is open now, since that is the
+only time a yard exists to re-lay). Measured here: the `roofRect` the boot build sees is
 z0 −25.43 / z1 41.36, and a frame later the same measurement gives −25.77 / 41.70. The whole yard is
 laid out from that rect, so the yard drawn at boot was **not** the yard any later rebuild produced —
 open the planner, hit undo, or sync, and the exterior quietly shifted and reshuffled (187 items

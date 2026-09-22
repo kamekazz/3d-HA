@@ -1,10 +1,15 @@
-// Outdoor environment: grass lawn, scattered low-poly trees, foundation
-// bushes hugging the house, and a soft contact shadow that grounds it on the
-// lawn. All trees/bushes merge into two meshes (one trunk draw call, one
-// vertex-colored foliage draw call); placement uses a seeded RNG so the yard
-// never reshuffles across rebuilds. Rebuilt from the house bbox on every
-// reloadHouse. Visible in view mode on the House level only — edit mode shows
-// the grid, single-floor view shows a dark backdrop (floorview.js) instead.
+// Outdoor environment: the generated yard (lawn, beds, trees, props, the
+// rear lake) around the house shell. It exists ONLY while the Outside editor
+// is open: setYardEditing(true) builds it (one group per piece, ~10 s cold)
+// and setYardEditing(false) disposes it again. The viewer draws no exterior at
+// all -- the house shell (which ships its own pale site pad and driveway)
+// stands on scene.js's dark ground plane, the way edit mode always looked --
+// so the ~11 s yard build is off the boot path and nothing outside the house
+// is rendered. Placement uses a seeded RNG so the yard never reshuffles
+// across builds, which is what lets yard_edits address a piece by position.
+// Two things the build does to the SHELL are needed in the viewer too and are
+// handled outside the build: hideShellPatioProps (on houseShellLoaded) and the
+// rear-pad cut (restored on teardown).
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene } from './scene.js';
@@ -255,31 +260,36 @@ export function initEnvironment() {
   // debug handle (console): where the last yard build spent its time
   window.__environment = {
     timings: () => { console.table(yardTimings.map(([stage, ms]) => ({ stage, ms }))); return yardTimings; },
+    // every item of the last build (empty unless the Outside editor is open)
+    items: () => items.map((i) => ({ key: i.key, kind: i.kind, label: i.label,
+      pivot: i.pivot, deleted: !!i.edit?.deleted })),
   };
 
-  // yard shows only in view mode on the whole-house level — edit mode shows
-  // the grid, single-floor view shows floorview.js's studio backdrop
-  let inViewMode = true;
+  // The exterior shows only while the Outside editor is open, and only on the
+  // whole-house level (single-floor view shows floorview.js's studio backdrop).
+  // yard.js closes the editor on leaving edit mode, so no appModeChanged
+  // listener is needed here.
   let onHouseLevel = true;
-  // ...except while the Outside editor is open, which is the one time edit
-  // mode needs to see the yard: it IS what is being edited.
   const applyVisibility = () => {
-    root.visible = (inViewMode || yardEditing) && onHouseLevel;
+    root.visible = yardEditing && onHouseLevel;
   };
   applyYardVisibility = applyVisibility;
-  window.addEventListener('appModeChanged', (e) => {
-    inViewMode = e.detail.mode === 'view';
-    applyVisibility();
-  });
+  applyVisibility();   // root holds the grass disc: hidden until the editor opens
 
   // The whole-house shell GLB loads async and its real footprint is far
   // bigger than the traced room rects; setLevel fires levelChanged once it
-  // lands — measure it and replant the yard around the true bounds.
+  // lands — while editing, measure it and replant the yard around the true bounds.
   window.addEventListener('levelChanged', (e) => {
     onHouseLevel = e.detail.level === 'all';
     applyVisibility();
-    if (lastHouse && remeasureShell()) buildYard();
+    if (yardEditing && lastHouse && remeasureShell()) buildYard();
   });
+
+  // The shell's own terrace lounge set is hidden for every shell instance
+  // (boot and every reloadHouse hands out a fresh clone with all meshes
+  // visible). This used to happen inside the yard build, which the viewer no
+  // longer runs; the placed Backyard objects are the real furniture.
+  window.addEventListener('houseShellLoaded', () => hideShellPatioProps());
 }
 
 // Union of the shell's tall meshes only — the GLB ships flat hardscape
@@ -3545,14 +3555,20 @@ export function getYardEdits() {
   return yardEdits;
 }
 
-// The editor draws the yard one mesh per item so each piece can be picked and
-// dragged; the viewer keeps the six merged meshes. Returns true if the mode
-// actually changed, so callers know whether a rebuild is owed.
+// Opening the editor is what BUILDS the yard (one mesh per item so each piece
+// can be picked and dragged); closing it disposes the yard again. The viewer
+// never has one. Returns true if the mode actually changed.
 export function setYardEditing(on) {
   if (yardEditing === !!on) return false;
   yardEditing = !!on;
   applyYardVisibility();
-  buildYard();
+  if (yardEditing) {
+    remeasureShell();
+    buildYard();
+    settleShellAnchors();
+  } else {
+    teardownYard();
+  }
   return true;
 }
 
@@ -3576,7 +3592,7 @@ export function getYardItem(key) {
 // a reset-everything); a move/turn/scale is live on the group already and an
 // erase is a visibility flip, so neither pays for this.
 export function rebuildYard() {
-  buildYard();
+  if (yardEditing) buildYard();
 }
 
 // Fold one saved override into the local copy of the edits, so the next
@@ -3641,8 +3657,13 @@ export function setEnvironmentData(house) {
   lastHouse = house;
   setYardEdits(house?.yard);   // overrides on the generated exterior
   remeasureShell();
-  buildYard();
-  settleShellAnchors();
+  measureHouse(house);         // keeps getEnvironmentCenter() right for weather.js
+  hideShellPatioProps();       // idempotent; the shell is already loaded at boot
+  // The yard itself is built only while the Outside editor is open.
+  if (yardEditing) {
+    buildYard();
+    settleShellAnchors();
+  }
 }
 
 // A safety net for the anchors moving under the first build. It used to fire
@@ -3663,14 +3684,16 @@ const ANCHOR_SETTLE_MS = [0, 120, 500];
 
 function settleShellAnchors() {
   for (const ms of ANCHOR_SETTLE_MS) {
-    setTimeout(() => { if (lastHouse && remeasureShell()) buildYard(); }, ms);
+    setTimeout(() => { if (yardEditing && lastHouse && remeasureShell()) buildYard(); }, ms);
   }
 }
 
-function buildYard() {
-  const house = lastHouse;
-  // building bbox excludes outdoor pseudo-rooms (Frontyard/Backyard = porch
-  // and deck rects) — plants anchor to the building but must dodge every pad
+// The house's traced footprint: the building bbox (excluding the outdoor
+// pseudo-rooms, Frontyard/Backyard = porch and deck rects — plants anchor to
+// the building but must dodge every pad), every room rect, and the garage.
+// Also writes `center`, which weather.js reads every tick to place rain, snow
+// and clouds — so this runs on every setEnvironmentData, yard or no yard.
+function measureHouse(house) {
   let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
   const pads = []; // every room rect (incl. outdoor) — nothing grows on one
   let garage = null;
@@ -3688,25 +3711,28 @@ function buildYard() {
   }
   if (!Number.isFinite(minX)) { minX = 0; minZ = 0; maxX = 26; maxZ = 26; }
   center = { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2 };
+  return { minX, minZ, maxX, maxZ, pads, garage };
+}
 
-  // the shell GLB's measured footprint wins over the traced room rects —
-  // trees anchor to what the eye sees, and nothing may grow inside it
-  if (shellRect) pads.push(shellRect);
-  const bx0 = shellRect ? shellRect.x0 : minX;
-  const bz0 = shellRect ? shellRect.z0 : minZ;
-  const bx1 = shellRect ? shellRect.x1 : maxX;
-  const bz1 = shellRect ? shellRect.z1 : maxZ;
-
-  // Before the teardown sweep below, not after: see disposeCar().
+// Remove and dispose the yard, and undo everything the build did OUTSIDE the
+// yard group: the deck re-parenting, the car, the retry timers, and the cut
+// in the shell's rear pad. Run at the top of every build and when the Outside
+// editor closes -- after this the scene holds no exterior at all.
+function teardownYard() {
+  if (rearDeckInstanceTimer) { clearTimeout(rearDeckInstanceTimer); rearDeckInstanceTimer = null; }
+  if (rearLightTimer) { clearTimeout(rearLightTimer); rearLightTimer = null; }
+  // Before the dispose sweep below, not after: see disposeCar().
   if (rearDeckInstanceCleanup) {
     rearDeckInstanceCleanup();
     rearDeckInstanceCleanup = null;
   }
   disposeCar();
+  carSpot = null;
+  restoreRearShellPad();
   if (yard) {
     root.remove(yard);
     // ownGeometry per MESH, the same rule disposeCar uses and for the same
-    // reason: the yard now mixes geometry it authored itself (the buckets, the
+    // reason: the yard mixes geometry it authored itself (the buckets, the
     // contact blob) with library models, whose getInstance does
     // `scene.clone(true)` and SHARES BufferGeometry with the model cache.
     // Disposing that would blank out every later instance of the .glb -- in the
@@ -3718,12 +3744,29 @@ function buildYard() {
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) m.dispose();
     });
     yardGrassMats.length = 0; // those materials were just disposed with the yard
+    yard = null;
   }
+  items = [];
+  itemsByKey = new Map();
+}
+
+function buildYard() {
+  const house = lastHouse;
+  const { minX, minZ, maxX, maxZ, pads, garage } = measureHouse(house);
+
+  // the shell GLB's measured footprint wins over the traced room rects —
+  // trees anchor to what the eye sees, and nothing may grow inside it
+  if (shellRect) pads.push(shellRect);
+  const bx0 = shellRect ? shellRect.x0 : minX;
+  const bz0 = shellRect ? shellRect.z0 : minZ;
+  const bx1 = shellRect ? shellRect.x1 : maxX;
+  const bz1 = shellRect ? shellRect.z1 : maxZ;
+
+  teardownYard();
   yard = new THREE.Group();
   root.add(yard);
 
   const rng = mulberry32(1337);
-  carSpot = null;       // re-recorded by addFrontYard, if there is a shell
   // Recording buckets, not plain arrays: they file every geometry under the
   // item that pushed it, which is what makes an individual tree editable
   // afterwards. The builders below only ever .push() and read .length, so
@@ -4142,9 +4185,11 @@ function buildYard() {
       yard.add(group);
     }
   } else {
-    // VIEWER: the original six merged meshes. Deleted items drop out and every
-    // other item's delta is baked into its geometry here, so the merged path
-    // costs exactly what it always did.
+    // MERGED: the original six merged meshes. Unreachable since the viewer
+    // stopped building the yard (buildYard only runs while yardEditing), kept
+    // as the cheap draw path should a "show the yard in the viewer" toggle
+    // ever come back. Deleted items drop out and every other item's delta is
+    // baked into its geometry here.
     for (const [name, bucket] of Object.entries(buckets)) {
       const keep = [];
       for (let i = 0; i < bucket.geos.length; i++) {
@@ -5271,7 +5316,7 @@ let rearPadPatch = null;
 function lowerRearShellPad() {
   const shell = getShellRoot();
   if (!shell || rearPadPatch?.shell === shell) return;
-  if (rearPadPatch) { rearPadPatch.geometry.dispose(); rearPadPatch = null; }
+  if (rearPadPatch) restoreRearShellPad();
   shell.updateWorldMatrix(true, true);
   let mesh = null;
   shell.traverse(o => { if(o.isMesh && o.name==='Root_Node' && o.material?.name==='PaletteMaterial001') mesh=o; });
@@ -5326,7 +5371,20 @@ function lowerRearShellPad() {
   const legacyRemnants=clearMeasuredRearPadRemnants(geo,mesh.matrixWorld);
   mesh.geometry=geo;
   mesh.userData.rearPadCut={sourceTriangles:index.count/3,resultTriangles:geo.index.count/3,candidates:changed,legacyRemnants};
-  rearPadPatch={shell,geometry:geo};
+  rearPadPatch={shell,mesh,source,geometry:geo};
+}
+
+// Put the shell's original rear pad back. The cut only makes sense under the
+// yard's lowered turf; with the yard gone (editor closed) it is a hole in the
+// pad. `source` is the model cache's geometry, shared with every other
+// instance of the shell, so it is never disposed here -- only our clipped copy.
+function restoreRearShellPad() {
+  if (!rearPadPatch) return;
+  const { mesh, source, geometry } = rearPadPatch;
+  if (mesh.geometry === geometry) mesh.geometry = source;
+  delete mesh.userData.rearPadCut;
+  geometry.dispose();
+  rearPadPatch = null;
 }
 
 // North elevation finish. The measured backing triangles carry their real
