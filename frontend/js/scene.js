@@ -40,6 +40,15 @@ export function onFrame(fn) { frameCallbacks.add(fn); }
 // (KHR_parallel_shader_compile). The pose solve needs no draw (it inverts the
 // camera matrices by hand) and the room-card snapshots run after the resume.
 let renderPaused = false;
+
+// The resting tone-mapping exposure. weather.js flashes lightning on top of it
+// and snaps back to it; yardgrade.js raises it while the Outside editor is
+// open and puts 1.15 back on close. One owner so those two never fight.
+export let exposureBase = 1.15;
+export function setExposureBase(v) {
+  exposureBase = v;
+  if (renderer) renderer.toneMappingExposure = v;
+}
 export function setRenderPaused(on) { renderPaused = !!on; }
 
 export function initScene(container) {
@@ -60,9 +69,9 @@ export function initScene(container) {
   // (outside-facing faces culled) would cast broken shadows, and enabling
   // shadows would recompile every MeshStandard shader
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = exposureBase;
   // Real sun shadows: only the opaque house-shell GLB casts, and the ground
-  // plane below (plus the yard's lawn while the Outside editor is open)
+  // plane below (plus the yard's lawn once the deferred yard has landed)
   // receives (see house.js / environment.js) — the FrontSide dollhouse walls
   // never opt in, so the "broken translucent walls" reason shadows were off no
   // longer applies. Enabling here folds the shadow shader variants into the
@@ -169,10 +178,11 @@ export function initScene(container) {
   grid.position.y = -0.01;
   scene.add(grid);
 
-  // The ground the house stands on, in BOTH modes: the viewer draws no yard
-  // (environment.js builds one only while the Outside editor is open), so
-  // this dark plane is the whole exterior -- the shell GLB brings its own pale
-  // site pad and driveway. 3000 ft so its edges sit past fog far (1000) from
+  // The ground the house stands on, in BOTH modes, until the deferred yard
+  // build lands after boot (2026-10-11: environment.js startYard) and
+  // whenever the yard is hidden (single floor, room focus) -- yardgrade.js
+  // hides this plane through its material while the yard is shown. The shell
+  // GLB brings its own pale site pad and driveway. 3000 ft so its edges sit past fog far (1000) from
   // any allowed camera position (MAX_ZOOM 300); at 2000 the edge midpoints
   // were ~700 ft out and only half-fogged, a faint seam on the horizon. It
   // receives the shell's sun shadow, the one exterior depth cue left.

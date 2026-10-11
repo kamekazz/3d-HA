@@ -60,9 +60,9 @@ it are not readable from the code:
   them and −25.77 / 41.70 with. The whole yard is laid out from that rect, so with the old order
   `settleShellAnchors` saw the anchors move on every boot and rebuilt the entire yard a second time
   (a 13-15 s main-thread block, plus a second first-draw compile). That was the long-mysterious
-  "rect a frame later" note in `environment.js`; it was never the shell settling. (Since
-  2026-09-21 the viewer builds no yard at all — see below — but the order still decides what the
-  Outside editor measures when it opens.)
+  "rect a frame later" note in `environment.js`; it was never the shell settling. (The
+  yard is built after the curtain now — see below — but the order still decides what that deferred
+  build measures.)
 - **Draws are paused from the furniture stage until `compileAsync` resolves** (`scene.js
   setRenderPaused`). Every fresh material compiles its shader synchronously on its first draw, and
   with the loop drawing behind the curtain that was the yard's ~40 unique programs in one 12 s frame
@@ -70,11 +70,21 @@ it are not readable from the code:
   there in parallel (KHR_parallel_shader_compile; ~0.5-2 s for the whole scene). Only `renderView()`
   is skipped — frame callbacks, controls and optics keep ticking — and the pose solve never needed a
   draw (it inverts the camera matrices by hand). `main().catch` un-pauses before it banners.
-- **The yard is no longer on the boot path.** Since 2026-09-21 the viewer draws no exterior
-  (house shell on `scene.js`'s dark `ground` plane); `buildYard` runs only when the Outside editor
-  opens (`setYardEditing(true)`, behind a "Building the outside…" banner) and `teardownYard` disposes
-  it on close. The furniture stage went ~11.5 s → ~0.35 s. Everything below about the build's cost
-  is now the cost of pressing Outside.
+- **The yard is not on the boot path.** Since 2026-09-21 no yard is built behind the curtain (the
+  furniture stage went ~11.5 s → ~0.35 s). Since 2026-10-11 the viewer shows it anyway: `main.js`
+  calls `environment.js startYard()` off `boot.js bootRevealed()` (resolves when the curtain has
+  faded and been removed), and the build runs chunked — `yardYield` between phases, a time-sliced
+  per-item emit loop — so nothing behind or during the curtain changes. The first yard is then
+  swapped in **hidden** and shown only after `warmYardPrograms` has compiled its first frame's
+  programs one at a time (the yard's own, the grade's `CustomToneMapping` variant, and the
+  render-target variant the lake/porch reflections and the cabinet cube probe draw the whole scene
+  with). Not `compileAsync`: Chrome's GPU process compiles the queue serially even with
+  KHR_parallel_shader_compile advertised, so the next sync GL query waits for all of it — that is
+  what the 23 s first-yard-frame block measured here was, and it is ~0.85 s warmed. Measured on this
+  desktop (`__environment.chunks()` / `.warm()` / `.timings()`): build ~4.6 s in 27 chunks, longest
+  ~1.4 s (the lake's far-bank woodland, one item); warm ~40 s for ~106 programs with no block over
+  ~10 ms; yard visible ~46 s after the curtain lifts. The other curve warms in the background after
+  the reveal so dawn/dusk is a program switch too.
 - **The yard build is instrumented**: `window.__environment.timings()` prints where the last
   `buildYard` spent its time per builder (and inside the lake, per phase). Measured after the
   fixes above: ~11.5 s cold on this machine (~7 s warm), of which the lake
@@ -477,12 +487,15 @@ negative past the pivot, while **rotation must be read off the quaternion, never
 XYZ Euler decomposition expresses a 180° yaw as `(π, 0, π)`, so `rotation.y` reads exactly 0 and
 every half-turn-or-more was silently thrown away on save.
 
-**Outdoor environment & weather** (frontend-only). **The viewer shows no yard**: the house shell
-(with the pad and driveway baked into the GLB) stands on `scene.js`'s dark `ground` plane
-(3000 ft, `receiveShadow`, named so `snapshots.js` can hide it; the 1 ft `editGrid` is the only
-edit-mode affordance). `environment.js`'s `root` (grass disc + yard) is visible only while the
-Outside editor is open on the House level (`root.visible = yardEditing && onHouseLevel`), and the
-yard is built on open / disposed on close. What follows describes that build. It makes
+**Outdoor environment & weather** (frontend-only). **The viewer shows the yard** (2026-10-11,
+reversing 2026-09-21's "no yard in the viewer"): `environment.js`'s `root` (grass disc + yard +
+the grade's sky dome) is visible on the House level in view and edit mode once a yard is standing
+and its programs are warm (`yardWanted && shownYard && yardWarm && onHouseLevel`), and
+`yardgrade.js`'s "Sims day" grade is switched on and off with exactly that visibility — it hides
+`scene.js`'s dark `ground` plane and the `editGrid` through their materials, so a single floor or
+room focus gets both back untouched. The yard is built after boot (see the boot section), stands for
+the life of the page, and is rebuilt only when `yardInputs()` (footprints, measured shell rects,
+yard edits) change or the editor changes the item set. What follows describes that build. It makes
 a grass disc reaching past fog-far, merged low-poly trees/bushes (two draw calls, vertex-colored
 foliage, seeded RNG so the yard never reshuffles) laid out to mirror the real property's satellite
 view (dense west treeline, treeline across the back, open east lawn, shrubs flanking the driveway
@@ -502,8 +515,9 @@ deliberately *not* pushed into the `lawns` bucket, because a bucket geometry bec
 4× sun / 2% ambient / ×1.425 blue override on them are gone: they read as a different, blue-grey lawn
 and cost ~10 s of every yard build.) The yard also carries per-piece identity so the **Outside editor**
 (`yard.js`) can move, scale, erase and duplicate individual trees, beds, slabs and props — the
-generated yard is never stored, only the deltas against it, and it is drawn per-item only while that
-editor is open, and `yardkit.js` adds new ones from the shared bottom tray (`addkit.js`, which the
+generated yard is never stored, only the deltas against it, and it is drawn per-item always (so
+opening the editor reuses the standing yard; `getYardPickables` is empty outside the editor and
+while a rebuild is in flight), and `yardkit.js` adds new ones from the shared bottom tray (`addkit.js`, which the
 room editor's "Add furniture…" fills with the model library instead) — the yard's own pieces, whose
 catalogue and thumbnails are both read straight off those per-item groups, and the whole .glb library,
 which `addYardModels` instances into the yard in BOTH draw modes (a model cannot be merged into the six
@@ -541,9 +555,9 @@ and eased wet/whitened lawn tinting via `setGroundWet/Snow`. It follows daylight
 sun+weather through `onDaylightChanged`, so the mode button and `__daylight.simulate({condition})`
 drive it too; `window.__weather.step(secs)` advances the easing manually for testing (rAF pauses in
 hidden tabs, so nothing eases while the tab is backgrounded). Weather hides in edit mode
-(`appModeChanged`) and in single-floor view (below); the yard exists only while the Outside editor
-is open, since that is what is being edited. The dark ground and, in edit mode, the grid are what
-the house stands on otherwise.
+(`appModeChanged`) and in single-floor view (below). The yard shows on the House level in both
+modes; the dark ground and, in edit mode, the grid are what the house stands on before the yard
+has landed after boot (and are what the grade hides once it has).
 
 **The dollhouse cutaway** (`frontend/js/cutaway.js`): the walls between you and a room fade out, so
 every room reads like a Sims-4 build-mode shot — two far walls, no near walls, no ceiling. This used

@@ -21,7 +21,7 @@ import { initPlanner } from './planner.js';
 import { initYardEditor, isYardEditorOpen, yardPickTargets, selectYardPiece } from './yard.js';
 import { initAddKit } from './addkit.js';
 import { initDaylight, settleDaylight } from './daylight.js';
-import { initEnvironment, setEnvironmentData, setYardModels } from './environment.js';
+import { initEnvironment, setEnvironmentData, setYardModels, startYard } from './environment.js';
 import { initWeather } from './weather.js';
 import { initRoomLights, setRoomLightsData, repaintFixture, settleRoomLights } from './roomlights.js';
 import { initEaveLights } from './eavelights.js';
@@ -34,7 +34,7 @@ import { initCameras } from './cameras.js';
 import { initRoomCards, setRoomCardsData, cardImagesReady } from './roomcards.js';
 import { requestSnapshots, snapshotsIdle } from './snapshots.js';
 import { startBoot, bootStage, bootProgress, settleLoaders, orTimeout, finishBoot,
-  bootHouseBuilt } from './boot.js';
+  bootHouseBuilt, bootRevealed } from './boot.js';
 import { initAppShell } from './appshell.js';
 
 let structure = null;
@@ -152,7 +152,7 @@ function setupPicking() {
     // device markers + objects first so they win over the room that contains
     // them (recursive: GLB groups only register through their children).
     // Yard pieces join them while the Outside editor is open, and only then --
-    // in the viewer the yard is six merged meshes with nothing to hit.
+    // the viewer draws the same per-piece groups but never picks the yard.
     const priorityHits = raycaster.intersectObjects(
       [...markers.values(), ...objects3d.values(), ...yardPickTargets()], true);
     for (const hit of priorityHits) {
@@ -434,14 +434,15 @@ async function main() {
   // lights must also exist before compileAsync (fixed light count — see
   // roomlights.js pool rule).
   initEaveLights();
-  // No yard is built here any more: the viewer shows the shell on scene.js's
-  // dark ground and nothing else. This records the house and the yard edits,
-  // measures the shell and hides its terrace props.
+  // No yard is built here: this records the house and the yard edits and
+  // hides the shell's terrace props. The yard itself is built after the boot
+  // curtain lifts (startYard, at the end of main()).
   setEnvironmentData(house);
   // The driveway car is a library model looked up by NAME (environment.js
   // CAR_MODEL_NAME), so the yard needs the model list — which GET /api/house
   // does not carry, only its version map. Deliberately not awaited; it is only
-  // consumed when the Outside editor builds the yard.
+  // consumed by the deferred yard build (and syncCar swaps the car in if it
+  // lands later).
   api.getModels().then(setYardModels).catch(() => {});
   initFocus();
   initDrag();
@@ -516,6 +517,14 @@ async function main() {
   await calendarReady(2000);
 
   finishBoot();
+
+  // The yard (lawn, planting, lake, backdrop) and its "Sims day" grade show in
+  // the viewer since 2026-10-11, but they stay OFF the boot path: the build
+  // starts once the curtain has lifted and runs in chunks that yield to the
+  // event loop (environment.js buildYard), so the house still appears as fast
+  // as before and the outside lands a few seconds later. The short pause lets
+  // the first interactive frames and any room-card stragglers go first.
+  bootRevealed().then(() => setTimeout(startYard, 250));
 
   // if structure failed at boot (HA still connecting), retry in the background —
   // but only when the backend actually has HA configured

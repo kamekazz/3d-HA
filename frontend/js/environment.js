@@ -1,26 +1,29 @@
 // Outdoor environment: the generated yard (lawn, beds, trees, props, the
-// rear lake) around the house shell. It exists ONLY while the Outside editor
-// is open: setYardEditing(true) builds it (one group per piece, ~10 s cold)
-// and setYardEditing(false) disposes it again. The viewer draws no exterior at
-// all -- the house shell (which ships its own pale site pad and driveway)
-// stands on scene.js's dark ground plane, the way edit mode always looked --
-// so the ~11 s yard build is off the boot path and nothing outside the house
-// is rendered. Placement uses a seeded RNG so the yard never reshuffles
-// across builds, which is what lets yard_edits address a piece by position.
-// Two things the build does to the SHELL are needed in the viewer too and are
-// handled outside the build: hideShellPatioProps (on houseShellLoaded) and the
-// rear-pad cut (restored on teardown).
+// rear lake, the backdrop) around the house shell. Since 2026-10-11 it shows
+// in the VIEWER too (House level, view and edit mode), with yardgrade.js's
+// "Sims day" grade -- but it is still off the boot path: main.js calls
+// startYard() once the boot curtain has lifted, and the build runs in chunks
+// that yield to the event loop between phases (yardYield), so the house
+// appears exactly as fast as before and the yard lands a few seconds later
+// without one multi-second freeze. One group per piece, always, so the Outside
+// editor reuses the standing yard instead of rebuilding it. A build replaces
+// the standing yard only when it finishes (it is built detached and swapped
+// in), and a rebuild happens only when its inputs change (yardInputs).
+// Placement uses a seeded RNG so the yard never reshuffles across builds,
+// which is what lets yard_edits address a piece by position.
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene } from './scene.js';
-import { getShellRoot, isOutdoorRoom, getBuildingBox } from './house.js';
+import { getShellRoot, isOutdoorRoom, getBuildingBox, houseShellReady } from './house.js';
 import { getInstance } from './models.js';
-import { renderer, getEnvIntensity, onFrame } from './scene.js';   // onFrame: the car's sky tick
-import { getNightFactor, getDaylight } from './daylight.js';   // car sky and rear atmosphere
+import { renderer, getEnvIntensity, onFrame, camera } from './scene.js';   // onFrame: the car's sky tick
+import { getNightFactor, getDaylight, getGradeWeight } from './daylight.js';   // car sky and rear atmosphere
+import { setYardGrade, predictGradeCurve } from './yardgrade.js';   // the "Sims day" look whenever the yard is shown
 import { objects3d } from './objects.js'; // locate the deferred rear deck instance
 
 let root = null;     // whole environment (grass + yard)
-let yard = null;     // house-dependent part, rebuilt by setEnvironmentData
+let yard = null;     // the group the builders write into (the in-flight build's, else the standing one)
+let shownYard = null; // the yard group attached to root (the standing yard), or null
 let grassMat = null;
 let lastHouse = null;
 let shellRect = null; // {x0,z0,x1,z1} of the loaded shell GLB, if any
@@ -38,7 +41,13 @@ let applyYardVisibility = () => {};   // set by initEnvironment
 // axis, which is most of what made the front read as flat paint. Solved by
 // inverting the render's own response (measured, not assumed) rather than by
 // picking a prettier hex.
-const GRASS_BASE = new THREE.Color(0x67716a);
+//
+// SIMS ROUND (lawn piece): the photo-metered hazy turf lost every blind
+// comparison against Sims 4 lots, whose lawns are a saturated, slightly
+// yellow emerald (~#4caf3a-#5cbf3f on screen). The base is now authored for
+// that read; the yard only exists while the Outside editor is open, so the
+// viewer is unaffected.
+const GRASS_BASE = new THREE.Color(0x578a35);
 const GRASS_SNOW = new THREE.Color(0xe9edf2);
 let snowF = 0, wetF = 0; // weather.js drives these (eased on its side)
 
@@ -83,6 +92,165 @@ class F32Buf {
 }
 // position / colour / normal / uv accumulators for one leaf geometry
 function leafStore() { return { pos: new F32Buf(), col: new F32Buf(), nrm: new F32Buf(), uv: new F32Buf(1 << 17) }; }
+
+// ------------------------------------------------------ stylised foliage
+// ONE leaf language for every tree the yard draws (Sims gauntlet, trees r2).
+// A Sims canopy is a few chunky, soft-shaded leaf masses with ragged,
+// partly see-through edges -- neither a smooth ball nor a photo-noise cloud.
+// Every clump here is an opaque ellipsoid heart plus alpha-tested
+// leaf-cluster cards scattered over its skin, and EVERY vertex (heart and
+// cards alike) carries the ellipsoid's normal, not its own: lit as one mass,
+// so the sun side is one bright lobe and the shade side one soft one, while
+// the cards still break the silhouette. The scanned oaks get the same normal
+// treatment in leafCloud, and share simsLeafShader, so both read as one style.
+let _simsClumpTex = null;
+function simsClumpTexture() {
+  // module-lifetime (512 x 256, never disposed): every build reuses it.
+  // LEFT half (u 0..0.5): the alpha-cut leaf-cluster card, with a solid disc
+  // at its centre (u 0.25, v 0.5) for trunks and limbs. RIGHT half (u
+  // 0.5..1): an OPAQUE leafy patch the clump hearts are mapped into, so a
+  // heart reads as foliage rather than a smooth plastic ball.
+  if (_simsClumpTex) return _simsClumpTex;
+  const N = 256, cv = document.createElement('canvas'); cv.width = 2 * N; cv.height = N;
+  const ctx = cv.getContext('2d'), r = mulberry32(0x434c554d);
+  // solid heart of the card: what trunks and limbs sample, at uv (0.25, 0.5)
+  ctx.fillStyle = 'rgb(226,226,226)';
+  ctx.beginPath(); ctx.arc(N / 2, N / 2, 36, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 150; i++) {
+    const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 96;
+    const x = N / 2 + Math.cos(a) * d, y = N / 2 + Math.sin(a) * d * 0.92;
+    const s = 10 + r() * 12, v = 178 + r() * 77;
+    const g = ctx.createLinearGradient(0, y - s, 0, y + s);
+    g.addColorStop(0, `rgb(${v | 0},${v | 0},${v | 0})`);
+    g.addColorStop(1, `rgb(${v * 0.72 | 0},${v * 0.72 | 0},${v * 0.72 | 0})`);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(x, y, s, s * 0.55, r() * Math.PI, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.save(); ctx.beginPath(); ctx.rect(N + 2, 2, N - 4, N - 4); ctx.clip();
+  ctx.fillStyle = 'rgb(118,118,118)'; ctx.fillRect(N, 0, N, N);
+  for (let i = 0; i < 420; i++) {
+    const x = N + r() * N, y = r() * N, s = 7 + r() * 9, v = 170 + r() * 85;
+    const g = ctx.createLinearGradient(0, y - s, 0, y + s);
+    g.addColorStop(0, `rgb(${v | 0},${v | 0},${v | 0})`);
+    g.addColorStop(1, `rgb(${v * 0.7 | 0},${v * 0.7 | 0},${v * 0.7 | 0})`);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(x, y, s, s * 0.55, r() * Math.PI, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4;
+  _simsClumpTex = t;
+  return t;
+}
+// Shared fragment edits: (1) a card's shading normal is its clump's on BOTH
+// faces (DoubleSide would otherwise flip it on every back-facing card and
+// re-speckle the mass); (2) the shade side is lifted the way thin foliage is
+// -- sun through the leaf from behind, and a share of the sky on the far
+// side. No added lights, no emissive.
+function simsLeafShader(shader) {
+  shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>',
+    THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0'));
+  const marker = 'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );';
+  shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_pars_fragment>',
+    THREE.ShaderChunk.lights_physical_pars_fragment.replace(marker, marker
+      + '\nreflectedLight.directDiffuse += max(-dot(geometryNormal,directLight.direction),0.0) * directLight.color * BRDF_Lambert(material.diffuseColor) * 0.26;'));
+  shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_end>',
+    '#include <lights_fragment_end>\n#if NUM_HEMI_LIGHTS > 0\nvec3 simsBack = vec3(0.0);\n'
+    + '#pragma unroll_loop_start\nfor ( int i = 0; i < NUM_HEMI_LIGHTS; i ++ ) { simsBack += getHemisphereLightIrradiance( hemisphereLights[ i ], -geometryNormal ); }\n#pragma unroll_loop_end\n'
+    + 'reflectedLight.indirectDiffuse += simsBack * BRDF_Lambert( material.diffuseColor ) * 0.24;\n#endif');
+}
+function simsLeafMaterial() {
+  const m = new THREE.MeshStandardMaterial({
+    vertexColors: true, map: simsClumpTexture(), alphaTest: 0.5, side: THREE.DoubleSide,
+    roughness: 1, metalness: 0, envMapIntensity: 0.55 });
+  m.onBeforeCompile = simsLeafShader;
+  m.customProgramCacheKey = () => 'sims-leaf-v2';
+  return m;
+}
+const _simsIco = new Map();
+function simsUnitIco(detail) {
+  if (!_simsIco.has(detail)) {
+    const g = new THREE.IcosahedronGeometry(1, detail);
+    _simsIco.set(detail, g.attributes.position.array.slice());
+    g.dispose();
+  }
+  return _simsIco.get(detail);
+}
+const _scC = new THREE.Color();
+// One clump into a leafStore. lo/hi: shaded and sunlit colour (linear
+// THREE.Color); gy/gr: the whole crown's centre height and half-height, for
+// the top-lit ramp; cards: leaf-cluster cards of half-size `size`.
+function simsClump(st, rng, cx, cy, cz, rx, ry, rz, cards, size, lo, hi, gy, gr, detail = 1) {
+  const ix = 1 / (rx * rx), iy = 1 / (ry * ry), iz = 1 / (rz * rz);
+  const vert = (x, y, z, u, v, k) => {
+    let nx = (x - cx) * ix, ny = (y - cy) * iy, nz = (z - cz) * iz;
+    const l = 1 / (Math.hypot(nx, ny, nz) || 1); nx *= l; ny *= l; nz *= l;
+    let t = 0.5 + 0.30 * ny + 0.30 * (y - gy) / gr;
+    t = t < 0 ? 0 : t > 1 ? 1 : t; t = t * t * (3 - 2 * t);
+    t *= t;   // most of the mass sits toward `lo`; `hi` is the sunlit highlight
+    _scC.copy(lo).lerp(hi, t);
+    st.pos.push3(x, y, z); st.nrm.push3(nx, ny, nz); st.uv.push2(u, v);
+    st.col.push3(_scC.r * k, _scC.g * k, _scC.b * k);
+  };
+  const ico = simsUnitIco(detail);
+  // Box-projected, per triangle, into the opaque leafy half of the texture:
+  // each face takes the two axes its own facing leaves free, so nothing is
+  // stretched into stripes (a single planar projection was).
+  for (let t = 0; t < ico.length; t += 9) {
+    const fx = Math.abs(ico[t] + ico[t + 3] + ico[t + 6]), fy = Math.abs(ico[t + 1] + ico[t + 4] + ico[t + 7]);
+    const fz = Math.abs(ico[t + 2] + ico[t + 5] + ico[t + 8]);
+    for (let i = t; i < t + 9; i += 3) {
+      const X = ico[i] * rx * 0.8, Y = ico[i + 1] * ry * 0.8, Z = ico[i + 2] * rz * 0.8;
+      let a, b;
+      if (fy >= fx && fy >= fz) { a = X; b = Z; } else if (fx >= fz) { a = Z; b = Y; } else { a = X; b = Y; }
+      const k = 0.16;   // ~6 ft of leaf patch per texture half
+      const hu = 0.52 + 0.46 * (0.5 + 0.5 * Math.sin(a * k * 2.2)), hv = 0.03 + 0.94 * (0.5 + 0.5 * Math.sin(b * k * 2.2));
+      vert(cx + X, cy + Y, cz + Z, hu, hv, 0.92);
+    }
+  }
+  for (let c = 0; c < cards; c++) {
+    let dx, dy, dz;
+    do { dx = rng() * 2 - 1; dy = rng() * 2 - 1; dz = rng() * 2 - 1; } while (dx * dx + dy * dy + dz * dz > 1 || dx * dx + dy * dy + dz * dz < 0.05);
+    const dl = 1 / Math.hypot(dx, dy, dz), k = 0.8 + rng() * 0.3;
+    const px = cx + dx * dl * rx * k, py = cy + dy * dl * ry * k, pz = cz + dz * dl * rz * k;
+    // card plane: a random orientation (its lighting comes from the clump)
+    let mx = rng() - 0.5, my = rng() - 0.5, mz = rng() - 0.5;
+    let ml = 1 / (Math.hypot(mx, my, mz) || 1); mx *= ml; my *= ml; mz *= ml;
+    let ax = my, ay = -mx, az = 0;                  // m x z-ish tangent
+    if (Math.abs(mz) > 0.9) { ax = 0; ay = mz; az = -my; }
+    ml = 1 / (Math.hypot(ax, ay, az) || 1); ax *= ml; ay *= ml; az *= ml;
+    const bx = my * az - mz * ay, by = mz * ax - mx * az, bz = mx * ay - my * ax;
+    const s = size * (0.75 + rng() * 0.5), j = 0.94 + rng() * 0.12;
+    const P = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]];
+    for (const q of [0, 1, 2, 0, 2, 3]) {
+      const [a, b, u, v] = P[q];
+      vert(px + (ax * a + bx * b) * s, py + (ay * a + by * b) * s, pz + (az * a + bz * b) * s, u * 0.5, v, j);
+    }
+  }
+}
+// A tapered wooden limb a -> b into a leafStore (opaque heart texel).
+function simsLimb(st, a, b, r0, r1, col) {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const g = new THREE.CylinderGeometry(r1, r0, len, 6, 1, true).toNonIndexed();
+  g.translate(0, len / 2, 0);
+  _scQ.setFromUnitVectors(_scUp, _scV.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]).normalize());
+  g.applyQuaternion(_scQ); g.translate(a[0], a[1], a[2]);
+  const p = g.attributes.position.array, n = g.attributes.normal.array;
+  for (let i = 0; i < p.length; i += 3) {
+    st.pos.push3(p[i], p[i + 1], p[i + 2]); st.nrm.push3(n[i], n[i + 1], n[i + 2]);
+    st.uv.push2(0.25, 0.5); st.col.push3(col.r, col.g, col.b);
+  }
+  g.dispose();
+}
+const _scQ = new THREE.Quaternion(), _scUp = new THREE.Vector3(0, 1, 0), _scV = new THREE.Vector3();
+function simsStoreGeometry(st) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', st.pos.attr(3));
+  g.setAttribute('normal', st.nrm.attr(3));
+  g.setAttribute('color', st.col.attr(3));
+  g.setAttribute('uv', st.uv.attr(2));
+  return g;
+}
 
 // Where a yard build spends its time, per builder, for the last build:
 // window.__environment.timings(). Wall-clock, main thread, ms. yardLap(label)
@@ -164,7 +332,11 @@ function valueNoise(rnd, cells) {
 // makes the tile's own period readable at this scale, which is a worse
 // artefact than the flat paint it was meant to fix. Large-scale lawn
 // variation has to come from somewhere other than a repeating tile.
-const LAWN_MEAN = 194, LAWN_GRAIN = 50, LAWN_CLUMP = 13;
+// SIMS ROUND: Sims turf is smooth -- no visible blade grain at lot scale --
+// so the grain is cut to a whisper and the clump term softened. The tile is
+// kept (it still breaks up flat paint up close); the soft large-scale mottle
+// is lawnTint's job.
+const LAWN_MEAN = 214, LAWN_GRAIN = 20, LAWN_CLUMP = 16;
 function makeGrassTexture() {
   const N = 128;
   const c = document.createElement('canvas');
@@ -182,9 +354,9 @@ function makeGrassTexture() {
       vv = Math.max(40, Math.min(255, vv));
       const i = (y * N + x) * 4;
       // a touch of per-texel hue drift: real turf is not one colour scaled
-      img.data[i] = Math.min(255, vv - 6 + (rnd() - 0.5) * 14);
+      img.data[i] = Math.min(255, vv - 2 + (rnd() - 0.5) * 6);
       img.data[i + 1] = vv;
-      img.data[i + 2] = Math.max(0, vv - 10 + (rnd() - 0.5) * 14);
+      img.data[i + 2] = Math.max(0, vv - 6 + (rnd() - 0.5) * 6);
       img.data[i + 3] = 255;
     }
   }
@@ -234,6 +406,46 @@ function makeShadowTexture() {
   return new THREE.CanvasTexture(c);
 }
 
+// The 1200 ft lawn disc as a polar grid, so it can carry vertex colour: the
+// same soft mottle the yard patches get near the lot (the yard's 45 ft base
+// sheet covers the centre anyway), easing into a slightly deeper, cooler green
+// with distance. A Sims lot's surroundings recede instead of running to the
+// horizon as one flat neon plate. Built flat in XZ with the CircleGeometry's
+// UV convention (u = x/2400+.5, v = -z/2400+.5) so the tile repeat is unchanged.
+function makeGrassDisc(R) {
+  const radii = [0, 30, 60, 90, 120, 160, 210, 270, 340, 430, 540, 680, 850, 1020, R];
+  const SEG = 96;
+  const pos = [], uv = [], col = [], idx = [];
+  for (let r = 0; r < radii.length; r++) {
+    const rad = radii[r], n = r === 0 ? 1 : SEG;
+    for (let s = 0; s < n; s++) {
+      const a = s / SEG * Math.PI * 2;
+      const x = Math.cos(a) * rad, z = Math.sin(a) * rad;
+      pos.push(x, 0, z);
+      uv.push(x / (2 * R) + 0.5, -z / (2 * R) + 0.5);
+      const t = lawnTint(x, z);
+      const far = THREE.MathUtils.smoothstep(rad, 110, 700);
+      const k = 1 - 0.05 * far;
+      col.push(t[0] * k * (1 - 0.05 * far), t[1] * k, t[2] * k * (1 + 0.10 * far));
+    }
+  }
+  const ring = (r, s) => (r === 0 ? 0 : 1 + (r - 1) * SEG + (s % SEG));
+  for (let s = 0; s < SEG; s++) idx.push(0, ring(1, s + 1), ring(1, s));
+  for (let r = 1; r < radii.length - 1; r++) {
+    for (let s = 0; s < SEG; s++) {
+      const a = ring(r, s), b = ring(r, s + 1), c = ring(r + 1, s), d = ring(r + 1, s + 1);
+      idx.push(a, b, d, a, d, c);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
 // NO night floor on the lawn. The night exterior round tried an emissive
 // floor here (a dim green-grey scaled by daylight.js's night factor) so the
 // unlit lawn would not render as #000000, and the blind critic named it the
@@ -249,10 +461,9 @@ export function initEnvironment() {
   scene.add(root);
 
   grassMat = new THREE.MeshStandardMaterial({
-    color: GRASS_BASE.clone(), map: makeGrassTexture(), roughness: 1 });
+    color: GRASS_BASE.clone(), map: makeGrassTexture(), roughness: 1, vertexColors: true });
   // radius past fog far (1000) so the lawn fades into the horizon seamlessly
-  const grass = new THREE.Mesh(new THREE.CircleGeometry(1200, 48), grassMat);
-  grass.rotation.x = -Math.PI / 2;
+  const grass = new THREE.Mesh(makeGrassDisc(1200), grassMat);
   grass.position.y = -0.05; // below edit ground (-0.02); the two never co-show
   grass.receiveShadow = true; // the lawn catches the house-shell's sun shadow
   root.add(grass);
@@ -260,36 +471,182 @@ export function initEnvironment() {
   // debug handle (console): where the last yard build spent its time
   window.__environment = {
     timings: () => { console.table(yardTimings.map(([stage, ms]) => ({ stage, ms }))); return yardTimings; },
-    // every item of the last build (empty unless the Outside editor is open)
+    // every item of the standing yard
     items: () => items.map((i) => ({ key: i.key, kind: i.kind, label: i.label,
       pivot: i.pivot, deleted: !!i.edit?.deleted })),
+    // verification: build without the event-loop yields (the chunked build
+    // must produce the same keys and geometry as the synchronous one)
+    buildSync: (on) => { yardSyncBuild = !!on; },
+    rebuild: () => refreshYard(true),
+    whenReady: () => whenYardReady(),
+    chunks: () => yardChunks,
+    warm: () => warmLog,
+    state: () => ({ wanted: yardWanted, building: !!yardBuild, standing: !!shownYard,
+      shown: root.visible, graded: yardGraded, gen: yardGen }),
   };
 
-  // The exterior shows only while the Outside editor is open, and only on the
-  // whole-house level (single-floor view shows floorview.js's studio backdrop).
-  // yard.js closes the editor on leaving edit mode, so no appModeChanged
-  // listener is needed here.
+  // The exterior shows on the whole-house level (single-floor view and room
+  // focus show floorview.js's studio backdrop instead), in view AND edit mode,
+  // once a yard is standing. Since 2026-10-11 that is the viewer too, not only
+  // the Outside editor. The "Sims day" grade follows the yard exactly: on
+  // whenever the yard is drawn, fully restored whenever it is not, so floor
+  // views and interiors render as they always have.
   let onHouseLevel = true;
   const applyVisibility = () => {
-    root.visible = yardEditing && onHouseLevel;
+    const show = yardWanted && !!shownYard && yardWarm && onHouseLevel;
+    root.visible = show;
+    setYardGradeShown(show);
   };
   applyYardVisibility = applyVisibility;
-  applyVisibility();   // root holds the grass disc: hidden until the editor opens
+  applyVisibility();   // root holds the grass disc: hidden until the yard stands
 
   // The whole-house shell GLB loads async and its real footprint is far
   // bigger than the traced room rects; setLevel fires levelChanged once it
-  // lands — while editing, measure it and replant the yard around the true bounds.
+  // lands — measure it and replant the yard around the true bounds (a no-op
+  // unless the measurement or the yard's other inputs actually moved).
   window.addEventListener('levelChanged', (e) => {
     onHouseLevel = e.detail.level === 'all';
     applyVisibility();
-    if (yardEditing && lastHouse && remeasureShell()) buildYard();
+    refreshYard();
   });
 
   // The shell's own terrace lounge set is hidden for every shell instance
   // (boot and every reloadHouse hands out a fresh clone with all meshes
-  // visible). This used to happen inside the yard build, which the viewer no
-  // longer runs; the placed Backyard objects are the real furniture.
-  window.addEventListener('houseShellLoaded', () => hideShellPatioProps());
+  // visible); the placed Backyard objects are the real furniture. A fresh
+  // shell also needs the rear-pad cut again while a yard stands on it --
+  // lowerRearShellPad is a no-op for the shell it already cut.
+  window.addEventListener('houseShellLoaded', () => {
+    hideShellPatioProps();
+    if (shownYard || yardBuild) lowerRearShellPad();
+  });
+}
+
+// The grade's tone curve swaps renderer.toneMapping, which changes every
+// visible material's program key. Flipped only on a real visibility change;
+// the programs for both curves are warmed before the yard is first shown
+// (warmYardPrograms) and a material keeps every program it has compiled, so a
+// flip between the House level and a floor is a program SWITCH, not a compile.
+let yardGraded = false;
+function setYardGradeShown(on) {
+  if (on === yardGraded) return;
+  yardGraded = on;
+  setYardGrade(on, root);
+}
+
+// Measured on a desktop GPU (ANGLE/D3D11): the first frame that showed the
+// yard took 23 s on the main thread. Not the yard's geometry (~1.4 GB of
+// vertex buffers uploads in ~1.5 s) -- shader programs nothing had compiled
+// yet: the yard's own, every material's CustomToneMapping variant (the grade's
+// curve), and every material's render-target variant (no tone mapping, linear
+// output), which the lake and porch-glass reflections and the cabinet's cube
+// probe draw the WHOLE scene with. Before 2026-09-21 the boot curtain hid that
+// frame; now it would land in front of the user a few seconds after boot.
+//
+// So they are compiled before the yard becomes visible, ONE NEW PROGRAM AT A
+// TIME, with the house drawing normally in between. Not all at once through
+// compileAsync: KHR_parallel_shader_compile is advertised here, but Chrome's
+// GPU process still compiles the queue serially, and the first synchronous GL
+// query behind it (three's isReady poll, or simply the next draw) waits for
+// the WHOLE queue -- measured, a 17.5 s block, the same freeze moved. Issuing
+// one program, letting a frame through, then waiting for just that one keeps
+// every main-thread block at roughly one program's compile time.
+//
+// Only what the yard-on frame will actually draw: one VISIBLE mesh per
+// material (House level -- interiors and hidden rooms are never drawn under
+// the grade's curve or into the reflections), for the live curve, the grade's
+// curve and the render-target variant. A material holds one program per key,
+// so compiling a variant never evicts the one the live frame is using.
+let yardWarm = false;
+const WARM_WAIT_CAP_MS = 8000;   // per program: stop waiting on the driver after this
+const warmLog = [];              // window.__environment.warm()
+
+// One visible drawable per material, with the yard counted as shown.
+function warmTargets() {
+  const reps = new Map();
+  const wasVisible = root.visible;
+  root.visible = true;
+  scene.traverseVisible((o) => {
+    if (!o.material || !(o.isMesh || o.isPoints || o.isLine || o.isSprite)) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (m.visible && !reps.has(m)) reps.set(m, o);
+    }
+  });
+  root.visible = wasVisible;
+  return [...new Set(reps.values())];
+}
+
+function macrotask(ms = 0) {
+  if (ms) return new Promise((r) => setTimeout(r, ms));
+  return new Promise((r) => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => { ch.port1.close(); r(); };
+    ch.port2.postMessage(0);
+  });
+}
+
+// `curves`: the tone curves to compile the screen variant for; `withRT`: also
+// the render-target variant. The first call (before the reveal) does the curve
+// the grade will pick right now plus the RT variant; the other curve follows in
+// the background after the reveal, so a dawn/dusk flip finds it ready too.
+async function warmYardPrograms(curves, withRT) {
+  const t0 = performance.now();
+  // the library car lands async after the swap and is ~30 programs of its own
+  if (carPending) await Promise.race([carPending, macrotask(15000)]);
+  const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
+  const passes = curves.map((c) => [c, null]);
+  if (withRT) passes.push([renderer.toneMapping, rt]);
+  const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
+  const targets = warmTargets();
+  const programs0 = renderer.info.programs.length;
+  let calls = 0, maxBlock = 0, maxCompile = 0, sliceT = performance.now();
+  try {
+    for (const [tm, target] of passes) {
+      for (const obj of targets) {
+        // per call, not per warm: the level can change while this runs
+        const prevTm = renderer.toneMapping, prevRt = renderer.getRenderTarget();
+        const wasVisible = root.visible;
+        const before = renderer.info.programs.length;
+        const b0 = performance.now();
+        // compile gathers LIGHTS from visible objects only, so the yard
+        // counts as shown, as it will be
+        root.visible = true;
+        renderer.toneMapping = tm;
+        if (target) renderer.setRenderTarget(target);
+        try { renderer.compile(obj, camera, scene); } finally {
+          renderer.toneMapping = prevTm;
+          if (target) renderer.setRenderTarget(prevRt);
+          root.visible = wasVisible;
+        }
+        calls++;
+        maxCompile = Math.max(maxCompile, performance.now() - b0);
+        const fresh = renderer.info.programs.slice(before);
+        if (fresh.length) {
+          await macrotask();   // a frame goes through before we wait on the driver
+          const w0 = performance.now();
+          for (const p of fresh) {
+            if (typeof p.isReady !== 'function') continue;
+            while (parallel && performance.now() - w0 < WARM_WAIT_CAP_MS) {
+              const q0 = performance.now();
+              const ready = p.isReady();   // may block until the GPU process gets to it
+              maxBlock = Math.max(maxBlock, performance.now() - q0);
+              if (ready) break;
+              await macrotask(16);
+            }
+          }
+          sliceT = performance.now();
+        } else if (performance.now() - sliceT > 8) {
+          await macrotask();
+          sliceT = performance.now();
+        }
+      }
+    }
+  } finally {
+    rt.dispose();
+  }
+  warmLog.programsAtWarm = new Set(renderer.info.programs);
+  warmLog.push({ targets: targets.length, calls, newPrograms: renderer.info.programs.length - programs0,
+    maxQueryBlock: Math.round(maxBlock), maxCompileCall: Math.round(maxCompile),
+    totalMs: Math.round(performance.now() - t0), parallel });
 }
 
 // Union of the shell's tall meshes only — the GLB ships flat hardscape
@@ -338,6 +695,211 @@ function repaintGrass() {
     .lerp(GRASS_SNOW, snowF);
   grassMat.color.copy(c);
   for (const m of yardGrassMats) m.color.copy(c);
+}
+
+// Soft darker band where the lawn meets anything standing on or cutting into
+// it -- beds, paving, edging, the house walls and the pad's faces -- the way
+// a Sims lot shades its turf into every border instead of razor-cutting it.
+// Rasterises the ground-level footprint of every beds-bucket geometry (and
+// the shell's near-vertical faces near grade) into a 0.5 ft occupancy grid,
+// runs a chamfer distance transform, and returns k(x, z) = 1 - A e^(-d/W).
+// Small loose geometry (leaf flecks, single stones) is skipped so the band
+// follows bed outlines, not every pebble. Runs once per yard build.
+const EDGE_AO_A = 0.10, EDGE_AO_W = 2.5, EDGE_CELL = 0.5;
+function makeLawnEdgeAO(lawnGeos, bedGeos, extraGeo) {
+  const box = new THREE.Box3(), gb = new THREE.Box3();
+  for (const g of lawnGeos) { g.computeBoundingBox(); box.union(g.boundingBox); }
+  if (extraGeo) { extraGeo.computeBoundingBox(); box.union(extraGeo.boundingBox); }
+  if (box.isEmpty()) return () => 1;
+  const C = EDGE_CELL, x0 = box.min.x - 2, z0 = box.min.z - 2;
+  const nx = Math.ceil((box.max.x + 2 - x0) / C), nz = Math.ceil((box.max.z + 2 - z0) / C);
+  const INF = 1e9, d = new Float32Array(nx * nz).fill(INF);
+  const mark = (x, z) => {
+    const i = Math.floor((x - x0) / C), j = Math.floor((z - z0) / C);
+    if (i >= 0 && j >= 0 && i < nx && j < nz) d[j * nx + i] = 0;
+  };
+  const seg = (ax, az, bx, bz) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / (C * 0.5)));
+    for (let s = 0; s <= n; s++) mark(ax + (bx - ax) * s / n, az + (bz - az) * s / n);
+  };
+  const tri = (ax, az, bx, bz, cx, cz) => {
+    seg(ax, az, bx, bz); seg(bx, bz, cx, cz); seg(cx, cz, ax, az);
+    const area = (bx - ax) * (cz - az) - (cx - ax) * (bz - az);
+    if (Math.abs(area) < C * C) return;
+    const i0 = Math.max(0, Math.floor((Math.min(ax, bx, cx) - x0) / C));
+    const i1 = Math.min(nx - 1, Math.floor((Math.max(ax, bx, cx) - x0) / C));
+    const j0 = Math.max(0, Math.floor((Math.min(az, bz, cz) - z0) / C));
+    const j1 = Math.min(nz - 1, Math.floor((Math.max(az, bz, cz) - z0) / C));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const px = x0 + (i + 0.5) * C, pz = z0 + (j + 0.5) * C;
+      const w0 = ((bx - px) * (cz - pz) - (cx - px) * (bz - pz)) / area;
+      const w1 = ((cx - px) * (az - pz) - (ax - px) * (cz - pz)) / area;
+      if (w0 >= 0 && w1 >= 0 && w0 + w1 <= 1) d[j * nx + i] = 0;
+    }
+  };
+  const v = new THREE.Vector3();
+  const eachTri = (geo, matrix, fn) => {
+    const p = geo.attributes.position, idx = geo.index;
+    const n = idx ? idx.count : p.count;
+    const P = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    for (let t = 0; t + 2 < n; t += 3) {
+      for (let k = 0; k < 3; k++) {
+        const vi = idx ? idx.getX(t + k) : t + k;
+        v.fromBufferAttribute(p, vi); if (matrix) v.applyMatrix4(matrix);
+        P[k][0] = v.x; P[k][1] = v.y; P[k][2] = v.z;
+      }
+      fn(P);
+    }
+  };
+  for (const g of bedGeos) {
+    if (!g.boundingBox) g.computeBoundingBox();
+    gb.copy(g.boundingBox);
+    if (Math.max(gb.max.x - gb.min.x, gb.max.z - gb.min.z) < 0.9) continue;   // flecks, pebbles
+    if (gb.min.y > 3.2 || !gb.intersectsBox(box)) continue;
+    eachTri(g, null, (P) => {
+      if (Math.min(P[0][1], P[1][1], P[2][1]) > 3.2) return;
+      tri(P[0][0], P[0][2], P[1][0], P[1][2], P[2][0], P[2][2]);
+    });
+  }
+  const shell = getShellRoot();
+  if (shell) {
+    shell.updateWorldMatrix(true, true);
+    const e1 = new THREE.Vector3(), e2 = new THREE.Vector3();
+    shell.traverse((o) => {
+      if (!o.isMesh || !o.geometry?.attributes?.position) return;
+      gb.setFromObject(o);
+      if (gb.min.y > 3.2 || !gb.intersectsBox(box)) return;
+      eachTri(o.geometry, o.matrixWorld, (P) => {
+        const lo = Math.min(P[0][1], P[1][1], P[2][1]);
+        if (lo > 3.0 || Math.max(P[0][1], P[1][1], P[2][1]) < 0.3) return;
+        e1.set(P[1][0] - P[0][0], P[1][1] - P[0][1], P[1][2] - P[0][2]);
+        e2.set(P[2][0] - P[0][0], P[2][1] - P[0][1], P[2][2] - P[0][2]);
+        e1.cross(e2);
+        const len = e1.length();
+        if (!len || Math.abs(e1.y) / len > 0.35) return;   // walls and faces only
+        tri(P[0][0], P[0][2], P[1][0], P[1][2], P[2][0], P[2][2]);
+      });
+    });
+  }
+  // two-pass chamfer distance (in feet)
+  const D1 = C, D2 = C * Math.SQRT2;
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+    const k = j * nx + i; let m = d[k];
+    if (i > 0) m = Math.min(m, d[k - 1] + D1);
+    if (j > 0) {
+      m = Math.min(m, d[k - nx] + D1);
+      if (i > 0) m = Math.min(m, d[k - nx - 1] + D2);
+      if (i < nx - 1) m = Math.min(m, d[k - nx + 1] + D2);
+    }
+    d[k] = m;
+  }
+  for (let j = nz - 1; j >= 0; j--) for (let i = nx - 1; i >= 0; i--) {
+    const k = j * nx + i; let m = d[k];
+    if (i < nx - 1) m = Math.min(m, d[k + 1] + D1);
+    if (j < nz - 1) {
+      m = Math.min(m, d[k + nx] + D1);
+      if (i < nx - 1) m = Math.min(m, d[k + nx + 1] + D2);
+      if (i > 0) m = Math.min(m, d[k + nx - 1] + D2);
+    }
+    d[k] = m;
+  }
+  const ao = (x, z) => {
+    const fx = (x - x0) / C - 0.5, fz = (z - z0) / C - 0.5;
+    const i = Math.max(0, Math.min(nx - 2, Math.floor(fx))), j = Math.max(0, Math.min(nz - 2, Math.floor(fz)));
+    const tx = Math.max(0, Math.min(1, fx - i)), tz = Math.max(0, Math.min(1, fz - j));
+    const k = j * nx + i;
+    const dd = (d[k] * (1 - tx) + d[k + 1] * tx) * (1 - tz) + (d[k + nx] * (1 - tx) + d[k + nx + 1] * tx) * tz;
+    const e = Math.min(dd, 50);
+    // broad soft band + a tight contact shadow, so a sliver of turf between
+    // a wall and the paving reads as shade rather than a bright green seam
+    return (1 - EDGE_AO_A * Math.exp(-e / EDGE_AO_W)) * (1 - 0.10 * Math.exp(-e / 0.5));
+  };
+
+  // The turf-side FRINGE (lawn round 4): a thin run of taller, darker grass
+  // blades along every edge the occupancy grid found, so turf meets gravel,
+  // paving and walls with a soft ragged lip instead of a boolean cut. It needs
+  // the turf's own height per cell: rasterise the lawn surfaces, top-most wins.
+  ao.buildFringe = () => {
+    const h = new Float32Array(nx * nz).fill(-INF);
+    const hTri = (P) => {
+      const [ax, ay, az] = P[0], [bx, by, bz] = P[1], [cx, cy, cz] = P[2];
+      const area = (bx - ax) * (cz - az) - (cx - ax) * (bz - az);
+      if (Math.abs(area) < 1e-4) return;
+      const i0 = Math.max(0, Math.floor((Math.min(ax, bx, cx) - x0) / C));
+      const i1 = Math.min(nx - 1, Math.floor((Math.max(ax, bx, cx) - x0) / C));
+      const j0 = Math.max(0, Math.floor((Math.min(az, bz, cz) - z0) / C));
+      const j1 = Math.min(nz - 1, Math.floor((Math.max(az, bz, cz) - z0) / C));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const px = x0 + (i + 0.5) * C, pz = z0 + (j + 0.5) * C;
+        const w0 = ((bx - px) * (cz - pz) - (cx - px) * (bz - pz)) / area;
+        const w1 = ((cx - px) * (az - pz) - (ax - px) * (cz - pz)) / area;
+        const w2 = 1 - w0 - w1;
+        if (w0 < -1e-6 || w1 < -1e-6 || w2 < -1e-6) continue;
+        const y = w0 * ay + w1 * by + w2 * cy, k = j * nx + i;
+        if (y > h[k]) h[k] = y;
+      }
+    };
+    for (const g of lawnGeos) eachTri(g, null, hTri);
+    if (extraGeo) eachTri(extraGeo, null, hTri);
+    const rnd = mulberry32(0x6672696e);
+    const pos = [], col = [], nrm = [];
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
+      const k = j * nx + i, dk = d[k];
+      if (dk <= 0 || dk > 0.8 || h[k] < -1e8) continue;
+      const nb = 2 + Math.floor(rnd() * 3);           // blades per cell
+      for (let b = 0; b < nb; b++) {
+        const x = x0 + (i + rnd()) * C, z = z0 + (j + rnd()) * C, y = h[k] - 0.02;
+        const tall = (0.16 + rnd() * 0.16) * (1.15 - dk * 0.4);
+        const a = rnd() * Math.PI * 2, w = 0.035 + rnd() * 0.03;
+        const lx = Math.cos(a + 1.3) * tall * 0.35, lz = Math.sin(a + 1.3) * tall * 0.35;   // lean
+        const t = lawnTint(x, z), dark = 0.88 + rnd() * 0.12;
+        const ca = Math.cos(a) * w, sa = Math.sin(a) * w;
+        pos.push(x - ca, y, z - sa, x + ca, y, z + sa, x + lx, y + tall, z + lz);
+        for (let v = 0; v < 3; v++) {
+          const tip = v === 2 ? 1.12 : 1;               // tips catch a little more light
+          col.push(t[0] * dark * tip * 1.04, t[1] * dark * tip, t[2] * dark * tip * 0.9);
+          nrm.push(0, 1, 0);                             // lit like the turf it grows from
+        }
+      }
+    }
+    if (!pos.length) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    return g;
+  };
+  return ao;
+}
+
+// Sims-style lawn mottling, in world feet so it never tiles: two soft octaves
+// of brightness (38 / 14 ft) and a slow warm/cool drift (yellow-green vs deep
+// emerald patches), plus a gentle darkening where the turf meets the
+// building, the way a Sims lot shades its grass against walls. Returns RGB
+// multipliers averaging ~1, so the 1200 ft disc (no vertex colours) still
+// matches the yard patches at their seam.
+function lawnTint(x, z) {
+  // Round 3: measured against the Sims bar, our lawn's value spread was a
+  // third of theirs. Value noise rarely leaves 0.3..0.7, so these amplitudes
+  // land a typical +-15-20% broad swing, not +-35%.
+  // Round 4: the 14 / 6 ft octaves read as smudged paint ("dirty smudges"),
+  // so the variation now lives only in two LARGE, gradual octaves (90 / 40 ft)
+  // and the mowing stripes carry the close-range texture.
+  const broad = (worldNoise(x, z, 90) - 0.5) * 0.65 + (worldNoise(x + 313, z + 129, 40) - 0.5) * 0.35;
+  let f = 1 + broad * 0.45;   // round 5: gentle -- every darker setting read as dirt
+  f = Math.max(0.85, f);   // vertex colour multiplies LINEAR light: +-x here is ~+-x/2.2 on screen
+  // Sunlit patches warm toward the Sims sunlit sample (~[120,165,45], R/G
+  // 0.73 -- yellower AND less chromatic than our acid lime); dim ones deepen.
+  const warm = Math.max(-1, Math.min(1, (worldNoise(x - 211, z + 77, 70) - 0.5) * 1.2 + broad * 2.2));
+  if (roofRect) {
+    const dx = Math.max(roofRect.x0 - x, 0, x - roofRect.x1);
+    const dz = Math.max(roofRect.z0 - z, 0, z - roofRect.z1);
+    f *= 1 - 0.06 * Math.exp(-Math.hypot(dx, dz) / 6);   // broad; the tight band is makeLawnEdgeAO
+    // faint wide mowing stripes on the front lawn (5 ft passes running
+    // street-ward), soft-edged so they read as mown nap, not paint
+    if (z > roofRect.z1 - 2) f *= 1 + 0.12 * Math.tanh(2.2 * Math.sin(x * Math.PI / 6));
+  }
+  return [f * (1 + 0.15 * warm), f, f * (1 + 0.10 * warm)];
 }
 export function setGroundSnow(f) {
   if (Math.abs(f - snowF) < 1e-3) return;
@@ -1042,6 +1604,490 @@ function addPhotinia(rng, x, z, r, y, leaves) {
   leaves.push(g);
 }
 
+// ===========================================================================
+// SIMS ROUND (piece 3: shrubs, beds & flowers)
+//
+// Blind critics on the Sims-4 comparison: "turf butts straight against wide
+// grey gravel aprons", "hedge mass crushes to near-black", "the giant boulder
+// shrub reads as a smooth green egg", "dark olive shrubs near black-green".
+// Sims lots frame every lawn edge with chunky, cheerful planting: rounded
+// shrubs with sunlit tops, flower borders, tidy pale stone edging.
+//
+// The factories above are kept VERBATIM and still run first, as a "legacy
+// pass": restyle() calls each with a recording rng and throwaway buckets, so
+// (a) the shared yard rng advances by exactly the draws it always took --
+// every later item is untouched -- and (b) the union of the geometry it WOULD
+// have drawn becomes the item's pivot box, so its key `kind:x:z` cannot move.
+// The fresh builder then draws the restyled piece, replaying the recorded
+// draws (and a private seeded rng past the end of them); everything it pushes
+// is flagged noPivot so measureItem ignores it in favour of that box.
+// ===========================================================================
+let legacyPass = false;
+function restyle(legacy, fresh) {
+  return function (...args) {
+    if (legacyPass || curItem < 0) return legacy.apply(this, args);
+    const real = args[0], tape = [];
+    const largs = args.slice();
+    largs[0] = () => { const v = real(); tape.push(v); return v; };
+    const legacyGeos = [];
+    for (let i = 1; i < args.length; i++) {
+      if (!(args[i] instanceof Bucket)) continue;
+      const slot = i;
+      largs[i] = {
+        push: (...gs) => { for (const g of gs) legacyGeos.push({ slot, g }); return legacyGeos.length; },
+        get length() { return legacyGeos.length; },
+      };
+    }
+    legacyPass = true;
+    let ret;
+    try { ret = legacy.apply(this, largs); } finally { legacyPass = false; }
+    if (!legacyGeos.length) return ret;     // drew nothing: stays an empty (dropped) item
+    const box = new THREE.Box3();
+    for (const { g } of legacyGeos) { g.computeBoundingBox(); box.union(g.boundingBox); g.boundingBox = null; }
+    const it = items[curItem];
+    (it.pivotBoxes || (it.pivotBoxes = [])).push(box);
+    let k = 0;
+    const local = mulberry32((Math.floor((tape[0] ?? 0.5) * 4294967296) ^ 0x5eed5) >>> 0);
+    const replay = () => (k < tape.length ? tape[k++] : local());
+    const fargs = args.slice();
+    fargs[0] = replay;
+    for (let i = 1; i < args.length; i++) if (args[i] instanceof Bucket) fargs[i] = noPivotBucket(args[i]);
+    fresh.call(this, { legacy: legacyGeos, local, tape, box }, ...fargs);
+    return ret;
+  };
+}
+function noPivotBucket(b) {
+  return {
+    push(...gs) {
+      for (const g of gs) {
+        b.push(g);
+        const it = items[b.own[b.own.length - 1]];
+        it.geos[it.geos.length - 1].noPivot = true;
+      }
+      return b.length;
+    },
+    get length() { return b.length; },
+  };
+}
+
+const srgb = (h, s, l) => new THREE.Color().setHSL(h, s, l, THREE.SRGBColorSpace);
+const smooth01 = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+
+// Stylised foliage colour: a value ramp from a lifted base (never below
+// `floor` x albedo, so no near-black undersides) to a warm, yellower sunlit
+// crown, with a light per-vertex leaf mottle.
+// `tip` (optional {c, from}) blends random crown vertices toward a second
+// colour -- photinia's bronze-red new growth. The normals are jittered per
+// vertex, which on the smooth leaf material breaks every lobe into a leafy
+// scatter of lit and shaded facets instead of a plastic balloon.
+function shadeFoliage(g, base, lr, y0, y1, noise = 0.30, floor = 0.60, tip = null, jitter = 0.55) {
+  const p = g.attributes.position, n = p.count, col = new Float32Array(n * 3);
+  const nr = g.attributes.normal;
+  const span = Math.max(0.05, y1 - y0);
+  for (let i = 0; i < n; i++) {
+    const t = smooth01((p.getY(i) - y0) / span);
+    const f = (floor + (1.22 - floor) * t) * (1 + (lr() - 0.5) * noise);
+    const w = t * t;
+    let cr = base.r, cg = base.g, cb = base.b;
+    if (tip && t > tip.from) {
+      const m = smooth01((t - tip.from) / (1 - tip.from)) * (tip.k ?? 1) * (0.7 + lr() * 0.6);
+      cr += (tip.c.r - cr) * m; cg += (tip.c.g - cg) * m; cb += (tip.c.b - cb) * m;
+    }
+    col[i * 3] = cr * f * (1 + 0.12 * w);
+    col[i * 3 + 1] = cg * f * (1 + 0.07 * w);
+    col[i * 3 + 2] = cb * f * (1 - 0.22 * w);
+    if (nr && jitter) {
+      const x = nr.getX(i) + (lr() - 0.5) * jitter, y = nr.getY(i) + (lr() - 0.5) * jitter,
+            z = nr.getZ(i) + (lr() - 0.5) * jitter, l = Math.hypot(x, y, z) || 1;
+      nr.setXYZ(i, x / l, y / l, z / l);
+    }
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return g;
+}
+function leafy(g) { g.userData.rearFoliage = true; return g; }   // smooth, shadowed leaf material
+
+function inPoly(pts) {
+  return (x, z) => {
+    let c = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, zi] = pts[i], [xj, zj] = pts[j];
+      if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) c = !c;
+    }
+    return c;
+  };
+}
+
+// River rock, stylised: pale, clean, a few tones -- light grey, warm tan,
+// cool blue-grey and the odd near-white -- never the dark raw gravel.
+const ROCK_SIMS = () => srgb(0.09, 0.07, 0.64);
+function simsStoneColor(lr) {
+  const u = lr();
+  if (u < 0.14) return srgb(0.10, 0.06, 0.88 + lr() * 0.06);
+  if (u < 0.50) return srgb(0.08 + lr() * 0.03, 0.14, 0.60 + lr() * 0.18);
+  return srgb(0.58, 0.06, 0.58 + lr() * 0.20);
+}
+// One chunky river stone lying at grade.
+function simsStone(lr, x, z, y, r) {
+  const s = new THREE.IcosahedronGeometry(r, 0);
+  s.scale(1.15 + lr() * 0.3, 0.55 + lr() * 0.15, 1.0 + lr() * 0.3);
+  s.rotateY(lr() * 6.283);
+  s.translate(x, y + r * 0.12, z);
+  paint(s, simsStoneColor(lr));
+  return s;
+}
+// Rebuild a bed's stone field from the legacy stones' positions: every third
+// one survives, half again as big, recoloured pale -- chunky stones on a clean
+// pale bed instead of a dense field of dark grit.
+function simsStoneField(ctx, lr, from, to, y, out, sizeK = 1) {
+  const c = new THREE.Vector3();
+  for (let j = from; j < to; j++) {
+    const g = ctx.legacy[j].g;
+    if (j % 3 === 0) {
+      g.computeBoundingBox(); g.boundingBox.getCenter(c);
+      out.push(simsStone(lr, c.x, c.z, y, (0.15 + lr() * lr() * 0.22) * sizeK));
+    }
+    g.dispose();
+  }
+}
+// The clean edge strip: an evenly spaced, touching run of rounded pale
+// cobbles -- neat edging, not a ragged scatter.
+function simsEdging(lr, pts, y, out, r0 = 0.27) {
+  for (let k = 0; k < pts.length - 1; k++) {
+    const [ax, az] = pts[k], [bx, bz] = pts[k + 1];
+    const L = Math.hypot(bx - ax, bz - az);
+    if (L < 0.05) continue;
+    const ang = Math.atan2(-(bz - az), bx - ax);
+    const n = Math.max(1, Math.round(L / (r0 * 2.05)));
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n, r = r0 * (0.9 + lr() * 0.2);
+      const s = new THREE.IcosahedronGeometry(r, 1);
+      s.scale(1.2, 0.56, 1.0);
+      s.rotateY(ang + (lr() - 0.5) * 0.3);
+      s.translate(ax + (bx - ax) * t, y + r * 0.16, az + (bz - az) * t);
+      paint(s, srgb(0.09, 0.06, 0.72 + lr() * 0.12));
+      out.push(s);
+    }
+  }
+}
+
+// Ornamental grass: fresh green fountain; the November-dormant ones carry
+// cream plumes instead of reading as dead straw.
+const _gx = new THREE.Vector3(1, 0, 0), _gz = new THREE.Vector3(0, 0, 1);
+function simsGrass(ctx, rng, x, z, y, leaves, dormant = false) {
+  const lr = ctx.local, h = 2.2 + rng() * 1.2;
+  const blades = dormant ? 11 : 9;
+  for (let i = 0; i < blades; i++) {
+    const a = lr() * 6.283, len = h * (0.7 + lr() * 0.45);
+    const ax = (lr() - 0.5) * 0.9, az = (lr() - 0.5) * 0.9;
+    const g = new THREE.ConeGeometry(0.17, len, 4);
+    g.translate(0, len / 2, 0);
+    g.rotateX(ax); g.rotateZ(az);
+    const bx = x + Math.cos(a) * 0.35 * lr(), bz = z + Math.sin(a) * 0.35 * lr();
+    g.translate(bx, y, bz);
+    leaves.push(leafy(shadeFoliage(g, srgb(0.22, 0.50, 0.40), lr, y, y + h, 0.10, 0.60)));
+    if (dormant) {
+      const tip = new THREE.Vector3(0, len, 0).applyAxisAngle(_gx, ax).applyAxisAngle(_gz, az);
+      const p = new THREE.IcosahedronGeometry(0.16, 0);
+      p.scale(1, 2.4, 1);
+      p.translate(bx + tip.x, y + tip.y, bz + tip.z);
+      paint(p, srgb(0.10 + lr() * 0.02, 0.40, 0.84 + lr() * 0.06));
+      leaves.push(leafy(p));
+    }
+  }
+  for (const { g } of ctx.legacy) g.dispose();
+}
+
+// Mulch: rich dark-chocolate shredded bark, the Sims bed colour.
+function simsMulch(ctx, rng, x0, z0, x1, z1, y, h, beds) {
+  for (const { g } of ctx.legacy) { speckle(g, srgb(0.06, 0.40, 0.21), ctx.local, 0.30); beds.push(g); }
+}
+
+function simsCobbleRun(ctx, rng, pts, y, beds, sc = 1) {
+  simsEdging(ctx.local, pts, y, beds, sc < 0.6 ? 0.25 : 0.29);
+  for (const { g } of ctx.legacy) g.dispose();
+}
+function simsCobbleRim(ctx, rng, x0, z0, x1, z1, y, beds) {
+  simsEdging(ctx.local, [[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]], y, beds);
+  for (const { g } of ctx.legacy) g.dispose();
+}
+// Dry-stacked edge: same courses, re-dressed as a tidy pale-stone wall.
+function simsStoneEdge(ctx, rng, pts, y, h, beds) {
+  const lr = ctx.local;
+  for (const { g } of ctx.legacy) {
+    paint(g, srgb(0.08 + lr() * 0.03, 0.07, 0.54 + lr() * 0.16));
+    beds.push(g);
+  }
+}
+
+// ---- round 2: leaf-card planting ------------------------------------------
+// Round-1 critic: "smooth low-poly faceted spheres, too many fused into one
+// blob; beds are pale gravel with evenly scattered confetti flowers; flat
+// teal lily pads". So every plant is now built from the trees' stylised
+// foliage (simsClump: an opaque heart plus alpha-tested leaf-cluster cards,
+// lit as one mass, drawn with simsLeafMaterial), each shrub is ONE distinct
+// clipped form, and beds are planted in layers: a continuous low flowering
+// ribbon along the edge (one species per drift), a mid row of single-species
+// drifts behind it, and mounded fillers inside, the mid and inner layers
+// sitting on dark mulch. Pale river rock shows only between the white stone
+// edging and the ribbon.
+let _plantSt = null;
+function plantStore() {   // one reusable accumulator; flushed by plantGeo
+  if (!_plantSt) _plantSt = leafStore();
+  _plantSt.pos.reset(); _plantSt.col.reset(); _plantSt.nrm.reset(); _plantSt.uv.reset();
+  return _plantSt;
+}
+function plantGeo(st) {
+  const g = simsStoreGeometry(st);
+  g.userData.simsFoliage = true;
+  return g;
+}
+const PLANT_PAL = {     // [shaded, sunlit] sRGB
+  boxwood: [0x1f4519, 0x5a8f30], euonymus: [0x33571c, 0x8cb03e], juniper: [0x1d4529, 0x568a40],
+  yew: [0x183f1c, 0x4c7f2e], leaf: [0x264d1f, 0x6c9e36], hedge: [0x1c4119, 0x588a2e],
+  white: [0x9a9c92, 0xfbfaf2], pink: [0x96385f, 0xf6a2c6], purple: [0x433585, 0xa48ce4],
+  yellow: [0x9c7418, 0xffdc48], coral: [0x9c3a2a, 0xff9670], lavender: [0x5b4a8e, 0xc6b4f0],
+  maple: [0x4a1730, 0xb8405e],
+  hydCream: [0xa8a28a, 0xfffbea], hydLime: [0x8c9a58, 0xe8f4b0], hydPink: [0x9a4670, 0xffb4d4],
+};
+const pal = (k, v = 1) => {
+  const [a, b] = PLANT_PAL[k] || PLANT_PAL.leaf;
+  return [new THREE.Color(a).multiplyScalar(v), new THREE.Color(b).multiplyScalar(v)];
+};
+function plantClump(st, lr, x, cy, z, rx, ry, rz, p, gy = cy, gr = ry, size = null, dens = 1.35) {
+  const s = size ?? Math.min(0.95, Math.min(rx, rz) * 0.40 + 0.14);
+  const area = rx * rz + ry * (rx + rz);
+  const cards = Math.min(420, Math.max(6, Math.round(area / (s * s) * dens)));
+  simsClump(st, lr, x, cy, z, rx, ry, rz, cards, s, p[0], p[1], gy, gr, Math.min(rx, rz) > 2.8 ? 1 : 0);
+}
+// ONE distinct clipped form, seated on y: small, densely packed leaf cards,
+// so the clipped surface reads full and leafy rather than ragged
+function clippedShrub(st, lr, x, z, y, rx, ry, rz, p) {
+  const cy = y + ry * 0.92;
+  plantClump(st, lr, x, cy, z, rx, ry, rz, p, cy, ry, Math.min(0.62, Math.min(rx, rz) * 0.28 + 0.12), 3.2);
+  return cy;
+}
+// a flowering plant: leafy base with a blossom cap of its own species
+function bloomPlant(st, lr, x, z, y, r, h, bloom, leaf = null) {
+  plantClump(st, lr, x, y + h * 0.40, z, r, h * 0.42, r, leaf || pal('leaf'), y + h * 0.5, h * 0.5);
+  plantClump(st, lr, x, y + h * 0.70, z, r * 0.86, h * 0.32, r * 0.86, bloom, y + h * 0.55, h * 0.5,
+             Math.min(0.42, r * 0.5));
+}
+function mulchDisc(out, lr, x, z, y, r) {
+  const g = new THREE.CircleGeometry(r, 9);
+  g.rotateX(-Math.PI / 2);
+  g.translate(x, y + 0.015 + lr() * 0.012, z);
+  paint(g, srgb(0.065, 0.36, 0.14 + lr() * 0.03));
+  out.push(g);
+}
+// call fn(x, z, s) every `spacing` ft along the loop, `inset` ft inside it
+function walkLoop(loop, inside, inset, spacing, fn) {
+  let s = 0, next = spacing * 0.5;
+  for (let k = 0; k < loop.length; k++) {
+    const [ax, az] = loop[k], [bx, bz] = loop[(k + 1) % loop.length];
+    const L = Math.hypot(bx - ax, bz - az);
+    if (L < 0.01) continue;
+    const ux = (bx - ax) / L, uz = (bz - az) / L;
+    let nx = -uz, nz = ux;
+    if (!inside((ax + bx) / 2 + nx * inset, (az + bz) / 2 + nz * inset)) { nx = -nx; nz = -nz; }
+    while (next < s + L) {
+      const d = next - s;
+      fn(ax + ux * d + nx * inset, az + uz * d + nz * inset, next);
+      next += spacing;
+    }
+    s += L;
+  }
+}
+function polyEdgeDist(pts) {
+  return (x, z) => {
+    let d = Infinity;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, zi] = pts[i], [xj, zj] = pts[j];
+      const dx = xj - xi, dz = zj - zi, L2 = dx * dx + dz * dz || 1;
+      const t = Math.max(0, Math.min(1, ((x - xi) * dx + (z - zi) * dz) / L2));
+      d = Math.min(d, Math.hypot(x - xi - dx * t, z - zi - dz * t));
+    }
+    return d;
+  };
+}
+const RIBBON = ['white', 'pink', 'purple', 'yellow', 'coral', 'lavender'];
+const MIDROW = ['purple', 'pink', 'white', 'lavender', 'yellow'];
+const FILLER = ['boxwood', 'leaf', 'euonymus', 'boxwood', 'yew'];
+// Layered planting for one bed: ribbon + mid drifts + mounded fillers.
+function planBed(lr, beds, loop, inside, edgeDist, y, skip, narrow) {
+  const st = plantStore();
+  const ok = (x, z) => inside(x, z) && !(skip && skip(x, z));
+  const r0 = Math.floor(lr() * RIBBON.length), m0 = Math.floor(lr() * MIDROW.length);
+  const drift = 7 + lr() * 5;
+  walkLoop(loop, inside, 0.78, 0.68, (x, z, s) => {
+    if (!ok(x, z) || edgeDist(x, z) < 0.55) return;
+    const sp = RIBBON[(r0 + Math.floor(s / drift)) % RIBBON.length];
+    bloomPlant(st, lr, x + (lr() - 0.5) * 0.15, z + (lr() - 0.5) * 0.15, y,
+               0.44 + lr() * 0.10, 0.60 + lr() * 0.14, pal(sp));
+  });
+  if (!narrow) {
+    walkLoop(loop, inside, 1.9, 1.15, (x, z, s) => {
+      if (!ok(x, z) || edgeDist(x, z) < 1.5) return;
+      const k = Math.floor(s / (drift * 0.8));
+      if ((k * 7 + Math.floor(s)) % 11 === 0) return;      // the odd gap between drifts
+      mulchDisc(beds, lr, x, z, y, 1.05);
+      bloomPlant(st, lr, x, z, y, 0.62 + lr() * 0.12, 1.05 + lr() * 0.3, pal(MIDROW[(m0 + k) % MIDROW.length]));
+    });
+    let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+    for (const [x, z] of loop) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+    for (let gx = x0 + 1; gx < x1; gx += 2.2) {
+      for (let gz = z0 + 1; gz < z1; gz += 2.2) {
+        const x = gx + (lr() - 0.5) * 1.2, z = gz + (lr() - 0.5) * 1.2;
+        if (!ok(x, z) || edgeDist(x, z) < 2.9 || lr() > 0.72) continue;
+        const r = 0.8 + lr() * 0.35;
+        mulchDisc(beds, lr, x, z, y, r * 1.55);
+        const cy = clippedShrub(st, lr, x, z, y, r, r * (0.72 + lr() * 0.15), r * 0.95,
+                                pal(FILLER[Math.floor(lr() * FILLER.length)], 0.95 + lr() * 0.1));
+        if (lr() < 0.25) {
+          plantClump(st, lr, x, cy + r * 0.55, z, r * 0.7, r * 0.3, r * 0.7, pal(lr() < 0.5 ? 'white' : 'pink'),
+                     cy, r, 0.3);
+        }
+      }
+    }
+  }
+  if (st.pos.length) beds.push(plantGeo(st));
+}
+
+function simsBush2(ctx, rng, x, z, leaves) {
+  const lr = ctx.local, r = 1.1 + rng() * 1.2;
+  const st = plantStore();
+  clippedShrub(st, lr, x, z, -0.1, r, r * 0.8, r * 0.95, pal(lr() < 0.5 ? 'boxwood' : 'leaf'));
+  leaves.push(plantGeo(st));
+  for (const { g } of ctx.legacy) g.dispose();
+}
+function simsBoxwood2(ctx, rng, x, z, r, y, leaves, sp = 'boxwood', lumpy = false) {
+  const lr = ctx.local;
+  const [, , , sq, sd] = SPECIES[sp] || SPECIES.boxwood;
+  r *= 1.12;
+  const st = plantStore();
+  // juniper no longer squashes to a flat teal pad ("lily pads")
+  if (sp === 'juniper') clippedShrub(st, lr, x, z, y, r * 1.2, r * 0.72, r * 1.1, pal('juniper'));
+  else clippedShrub(st, lr, x, z, y, r * sd, r * Math.max(0.8, sq) * 0.95, r * sd * 0.95,
+                    pal(sp, 0.95 + lr() * 0.1));
+  leaves.push(plantGeo(st));
+  for (const { g } of ctx.legacy) g.dispose();
+}
+function simsPerennial2(ctx, rng, x, z, y, leaves, n = 3, spread = 1.6) {
+  const lr = ctx.local, t = ctx.tape;
+  const u = lr();
+  const kind = u < 0.40 ? 'purple' : u < 0.60 ? 'pink' : u < 0.78 ? 'white' : 'yellow';
+  const st = plantStore();
+  for (let i = 0; i < n; i++) {
+    const o = i * 245;
+    const r = 0.38 + (t[o] ?? lr()) * 0.26;
+    const px = x + ((t[o + 1] ?? lr()) - 0.5) * spread, pz = z + ((t[o + 2] ?? lr()) - 0.5) * spread * 0.82;
+    bloomPlant(st, lr, px, pz, y, r * 1.35, 1.1 + lr() * 0.35, pal(kind));
+  }
+  leaves.push(plantGeo(st));
+  for (const { g } of ctx.legacy) g.dispose();
+}
+function simsMum2(ctx, rng, x, z, r, y, leaves, hue = 0.07, sat = 0.60, light = 0.40) {
+  const lr = ctx.local, st = plantStore();
+  const bloom = [srgb(hue, sat, light * 0.55).clone(), srgb(hue + 0.015, Math.min(0.9, sat + 0.22), Math.min(0.68, light + 0.24)).clone()];
+  plantClump(st, lr, x, y + r * 0.35, z, r, r * 0.38, r, pal('leaf'), y + r * 0.4, r * 0.5);
+  plantClump(st, lr, x, y + r * 0.58, z, r * 0.95, r * 0.42, r * 0.95, bloom, y + r * 0.5, r * 0.5, Math.min(0.4, r * 0.4));
+  leaves.push(plantGeo(st));
+  for (const { g } of ctx.legacy) g.dispose();
+}
+const HYD = { cream: 'hydCream', straw: 'hydLime', rust: 'hydPink' };
+function simsDried2(ctx, rng, x, z, r, y, leaves, kind = 'straw') {
+  const lr = ctx.local, st = plantStore();
+  const cy = clippedShrub(st, lr, x, z, y, r * 1.05, r * 0.72, r, pal('leaf'));
+  const head = pal(HYD[kind] || 'hydLime');
+  const n = 4 + Math.round(r * 2);
+  for (let i = 0; i < n; i++) {
+    const a = i * 2.39996 + lr(), rad = 0.2 + lr() * 0.55, hh = Math.sqrt(1 - rad * rad);
+    const s = r * (0.30 + lr() * 0.08);
+    plantClump(st, lr, x + Math.cos(a) * rad * r, cy + hh * r * 0.66, z + Math.sin(a) * rad * r,
+               s, s * 0.85, s, head, cy, r * 0.8, Math.min(0.3, s * 0.6));
+  }
+  leaves.push(plantGeo(st));
+  for (const { g } of ctx.legacy) g.dispose();
+}
+function simsGroundCover2(ctx, rng, x, z, rx, rz, y, leaves) {
+  const lr = ctx.local, st = plantStore();
+  const n = Math.max(3, Math.round(rx * rz * 0.9));
+  const bloom = pal(lr() < 0.5 ? 'white' : 'yellow');
+  for (let i = 0; i < n; i++) {
+    const r = 0.6 + lr() * 0.35, a = lr() * 6.283, d = Math.sqrt(lr());
+    const px = x + Math.cos(a) * d * rx, pz = z + Math.sin(a) * d * rz;
+    if (lr() < 0.5) bloomPlant(st, lr, px, pz, y, r, 0.7, bloom);
+    else clippedShrub(st, lr, px, pz, y, r, r * 0.5, r, pal('leaf'));
+  }
+  leaves.push(plantGeo(st));
+  for (const { g } of ctx.legacy) g.dispose();
+}
+// Hedge: a row of DISTINCT clipped balls with daylight between them.
+function simsHedge2(ctx, rng, [[ax, az], [bx, bz]], h, leaves) {
+  const lr = ctx.local, st = plantStore();
+  const L = Math.hypot(bx - ax, bz - az), n = Math.max(2, Math.round(L / (h * 0.6)));
+  const r = Math.min(h / 2 * 0.8, (L / n) * 0.56);
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, rr = r * (0.9 + lr() * 0.18);
+    clippedShrub(st, lr, ax + (bx - ax) * t, az + (bz - az) * t, 0, rr, rr * 1.05, rr,
+                 pal(i % 2 ? 'hedge' : 'boxwood', 0.95 + lr() * 0.1));
+  }
+  leaves.push(plantGeo(st));
+  for (const { g } of ctx.legacy) g.dispose();
+}
+function simsUndergrowth2(ctx, rng, pts, leaves) {
+  const lr = ctx.local, st = plantStore();
+  for (const [x, z, r] of pts) {
+    const rr = r * 0.6;
+    clippedShrub(st, lr, x, z, -0.1, rr, rr * 0.85, rr * 0.95, pal(lr() < 0.5 ? 'yew' : 'boxwood'));
+  }
+  leaves.push(plantGeo(st));
+  for (const { g } of ctx.legacy) g.dispose();
+}
+function simsBed2(ctx, rng, x0, z0, x1, z1, y, beds, dens = BED_DENSITY, edge = true, rmax = 0.40) {
+  const lr = ctx.local;
+  const slabG = ctx.legacy[0].g;
+  speckle(slabG, ROCK_SIMS(), lr, 0.22);
+  beds.push(slabG);
+  const n = Math.round((x1 - x0) * (z1 - z0) * dens);
+  simsStoneField(ctx, lr, 1, Math.min(ctx.legacy.length, n + 1), y, beds);
+  for (let j = n + 1; j < ctx.legacy.length; j++) ctx.legacy[j].g.dispose();
+  const loop = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+  if (edge) simsEdging(lr, [...loop, loop[0]], y, beds);
+  planBed(lr, beds, loop, (x, z) => x > x0 && x < x1 && z > z0 && z < z1,
+          (x, z) => Math.min(x - x0, x1 - x, z - z0, z1 - z), y, null, Math.min(x1 - x0, z1 - z0) < 4.5);
+}
+function simsBedPoly2(ctx, rng, pts, y, beds, dens = BED_DENSITY, avoid = [], rmax = 0.22, pale = false) {
+  const lr = ctx.local;
+  const base = ctx.legacy[0].g;
+  speckle(base, ROCK_SIMS(), lr, 0.22);
+  beds.push(base);
+  simsStoneField(ctx, lr, 1, ctx.legacy.length, y, beds, 0.85);
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % pts.length];
+    area += ax * bz - bx * az;
+  }
+  const skip = (x, z) => avoid.some(([ax, az, ar]) => Math.hypot(x - ax, z - az) < ar + 0.45);
+  planBed(lr, beds, pts, inPoly(pts), polyEdgeDist(pts), y, skip, Math.abs(area) / 2 < 60);
+}
+
+addBush = restyle(addBush, simsBush2);
+addBoxwood = restyle(addBoxwood, simsBoxwood2);
+addPerennial = restyle(addPerennial, simsPerennial2);
+addMum = restyle(addMum, simsMum2);
+addDriedClump = restyle(addDriedClump, simsDried2);
+addGrassClump = restyle(addGrassClump, simsGrass);
+addGroundCoverMass = restyle(addGroundCoverMass, simsGroundCover2);
+addHedgeMass = restyle(addHedgeMass, simsHedge2);
+addUndergrowth = restyle(addUndergrowth, simsUndergrowth2);
+addMulchBed = restyle(addMulchBed, simsMulch);
+addBed = restyle(addBed, simsBed2);
+addBedPoly = restyle(addBedPoly, simsBedPoly2);
+addCobbleRun = restyle(addCobbleRun, simsCobbleRun);
+addCobbleRim = restyle(addCobbleRim, simsCobbleRim);
+addStoneEdge = restyle(addStoneEdge, simsStoneEdge);
+
 // Weeping / layered specimen tree: a slim trunk carrying three or four broad
 // flattened tiers. "Backyard v3 7" has one standing free on the lawn beyond
 // the deck and "v3 5" shows a second by the boundary — they are the only
@@ -1171,10 +2217,13 @@ function addLeafLitter(rng, drifts, keep, y, beds) {
     const x = cx + Math.cos(a) * dd, z = cz + Math.sin(a) * dd * 0.8;
     if (!keep(x, z)) continue;
     const w = 0.22 + rng() * 0.3, d = 0.18 + rng() * 0.25;
-    const g = slab(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y);
+    // SIMS ROUND 3: read as dirt/render-error blotches on a clean Sims lawn,
+    // so they are laid 0.6 ft UNDER the turf. The call, its rng draws and
+    // each fleck's x/z are unchanged, so the item and its key are too.
+    const g = slab(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y - 0.6);
     // muted straw and dead-leaf tones: bright enough to catch spill, not
     // confetti by day
-    paint(g, hsl(0.08 + rng() * 0.06, 0.16 + rng() * 0.16, 0.34 + rng() * 0.20));
+    paint(g, hsl(0.30 + rng() * 0.04, 0.30 + rng() * 0.10, 0.22 + rng() * 0.06));   // SIMS ROUND: soft clover-dark flecks, not brown litter (same rng draws)
     beds.push(g);
     placed++;
   }
@@ -1427,6 +2476,7 @@ const CAR_MODEL_RY = Math.PI;
 let carModelId = null;
 let carSpot = null;       // { x, y, z, ry } — set while the front yard is built
 let carGroup = null;      // whichever of the two is in the yard right now
+let carPending = null;    // the in-flight library-car load, if any (syncCar)
 
 // main.js hands the model library over once at boot. Fire-and-forget: until it
 // lands (or if it never does) the primitive stands on the drive.
@@ -2165,7 +3215,10 @@ function syncCar() {
     return;
   }
   const forYard = yard;
-  getInstance(carModelId, 'bottom').then((pivot) => {
+  // kept so warmYardPrograms can compile the car's ~30 programs along with
+  // the rest before the yard is first shown (the .catch below ends the chain,
+  // so this settles either way)
+  carPending = getInstance(carModelId, 'bottom').then((pivot) => {
     if (forYard !== yard) return;   // a rebuild beat us to it
     disposeCar();
     const g = new THREE.Group();
@@ -2351,8 +3404,10 @@ function addGroundCover(L, lawns) {
   // none of it reached the screen.
   const g = (x0, z0, x1, z1, y) => lawns.push(slab(
     x0, z0, x1, z1, y,
-    Math.min(90, Math.max(2, Math.round((x1 - x0) / 3.5))),
-    Math.min(90, Math.max(2, Math.round((z1 - z0) / 3.5)))));
+    // 1.5 ft (was 3.5) so the soft edge band (makeLawnEdgeAO) is sampled
+    // finely enough to hug bed and paving outlines
+    Math.min(160, Math.max(2, Math.round((x1 - x0) / 1.5))),
+    Math.min(160, Math.max(2, Math.round((z1 - z0) / 1.5)))));
   // --- ONE base sheet at the low grade, covering the whole site pad and 8 ft
   //     past every edge of it. Round 1 patched the pad region by region and
   //     left slivers of the GLB's pale slab showing wherever a patch stopped
@@ -2378,7 +3433,10 @@ function addGroundCover(L, lawns) {
   //     sliver of the GLB's slab is left to read as a kerb across the lawn.
   g(L.padW - 9, L.padF, L.driveL + 0.4, L.street + 1.0, L.lo);
   g(L.driveR - 0.4, L.houseF - 1, L.padE + 9, L.street + 1.0, L.lo);
-  g(L.porchE, L.houseF, L.driveL, L.padF, L.hi);
+  // (The 0.5 ft raised strip porchE..driveL that used to be laid here only
+  // ever showed as a neon green seam along the porch's east skirt; the
+  // shell's own pale pad there now reads as part of the porch/drive. Removing
+  // it does not move the lawn item's key: the base sheet sets its footprint.)
   // The front pad transition remains at its original grade.
   lawns.push(quadAt([L.padW, L.hi, L.padF], [L.driveL, L.hi, L.padF],
                     [L.driveL, L.lo, L.padF + 2.2], [L.padW, L.lo, L.padF + 2.2]));
@@ -2823,7 +3881,7 @@ function addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
 // North is -Z. Its private seed never advances the front yard's generator.
 // Water is an opaque surface over submerged ground, with an actual rising bank;
 // no photograph, camera-facing plane or global lighting adjustment is involved.
-function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
+async function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {   // async: one yield, after the mature trees
   const rng = mulberry32(0x4c414b45);
   const mid = (L.padW + L.padE) * 0.5;
   const waterY = L.lo + 0.018;
@@ -2903,8 +3961,13 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
   // charge of its diffuse term. No emissive floor and no additional lights.
   const waterGeo = ribbon(lakeX0, lakeX1, shore, far, waterY, waterY, 200);
   const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x69786a, roughness: 0.24, metalness: 0.08,
+    // SIMS ROUND: a clear Sims-blue lake instead of grey-green slate
+    color: 0x3f86b4, roughness: 0.24, metalness: 0.08,
     side: THREE.DoubleSide,
+    // The lawn's 45 ft base sheet (addGroundCover, y L.lo) runs under the
+    // lake only 0.018 ft below the surface; at lake distances that z-fought
+    // into lawn-coloured blotches across the water. Bias the water forward.
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
   });
   const waterUniforms = {
     rearLakeSky: { value: new THREE.Color(0x9aaeb5) },
@@ -2934,12 +3997,12 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
       + 'reflectedTrees+=(texture2D(rearLakeReflection,reflectedUV+vec2(roughFootprint.x,0.0)).rgb+texture2D(rearLakeReflection,reflectedUV-vec2(roughFootprint.x,0.0)).rgb)*.20;\n'
       + 'reflectedTrees+=(texture2D(rearLakeReflection,reflectedUV+roughFootprint).rgb+texture2D(rearLakeReflection,reflectedUV-roughFootprint).rgb)*.10;\n'
       + 'float reflectedLuma=dot(reflectedTrees,vec3(.2126,.7152,.0722));\n'
-      + 'reflectedTrees=mix(reflectedTrees,vec3(reflectedLuma),lakeRoughness*.22);\n'
-      + 'float reflectAmount=(.27+lakeFresnel*.34)*(1.0-lakeRoughness*.25);\n'
+      + 'reflectedTrees=mix(reflectedTrees,vec3(reflectedLuma)*vec3(.62,.86,1.25),.55+lakeRoughness*.2);\n'
+      + 'float reflectAmount=(.20+lakeFresnel*.32)*(1.0-lakeRoughness*.25);\n'
       + 'outgoingLight=mix(outgoingLight,reflectedTrees*(.85+lakeCrossWave*.026),reflectAmount);\n'
       + '#include <opaque_fragment>');
   };
-  waterMat.customProgramCacheKey = () => 'rear-lake-water-v3';
+  waterMat.customProgramCacheKey = () => 'rear-lake-water-v4';
   const water = new THREE.Mesh(waterGeo, waterMat);
   yardLap('    lake: water');
   water.name = 'rear-lake-surface';
@@ -3082,6 +4145,16 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
             NY[i]=ny+qw*ty+qz*tx-qx*tz;
             NZ[i]=nz+qw*tz+qx*ty-qy*tx;
           }
+          // SIMS: shade the leaf as part of its cloud's ellipsoid (see
+          // "stylised foliage"), keeping 15% of its own facing. Normals
+          // only -- the position hashes and the rng stream are unchanged.
+          {
+            let sx=(VX[i]-cx)/(rx*rx), sy=(VY[i]-cy)/(ry*ry), sz=(VZ[i]-cz)/(rz*rz);
+            const il=.85/(Math.sqrt(sx*sx+sy*sy+sz*sz)||1);
+            sx=sx*il+NX[i]*.15; sy=sy*il+NY[i]*.15; sz=sz*il+NZ[i]*.15;
+            const jl=1/(Math.sqrt(sx*sx+sy*sy+sz*sz)||1);
+            NX[i]=sx*jl; NY[i]=sy*jl; NZ[i]=sz*jl;
+          }
         }
         const brightness=shade*(.9+rng()*.2),warm=.96+rng()*.08;
         for(let j=0;j<12;j++) {
@@ -3182,6 +4255,7 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
     const x=mid+offset;matureTree(x,shore(x)+2.5+dz,r,h,lean,rearTreePivots[treeOrdinal++]);
   }
   yardLap('    lake: mature trees');
+  await yardYield();   // phase boundary (buildYard is chunked); top level, no item open
 
   // Visible daytime housings and the hanging feeder in reference 11. They
   // introduce no light source and do not override HA fixture state.
@@ -3280,7 +4354,7 @@ function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) {
   });
 }
 
-function addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
+async function addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   const yN = L.padN;            // where the raised lawn ends
   // The rear deck has adjacent upper and lower platforms: x3..20.6,
   // z-42.2..-24.43 and x20.6..42.2,z-42.2..-10.91. Its north stair
@@ -3302,13 +4376,15 @@ function addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses) {
   yardLap('  back: beds + flagstones');
   addRearPlantingDetail(L, leaves, beds, props);
   yardLap('  back: addRearPlantingDetail');
+  await yardYield();   // phase boundary (buildYard is chunked)
 
   // The reference lake replaces the old opaque boundary ranks and north houses.
   // Keep the rear lawn spacious: the shoreline and its trees stand another
   // 20 feet north of the imported site-pad boundary. Front anchors stay fixed.
   const rearSite = { ...L, yardN: L.yardN - 20 };
-  addRearLakeDetail(rearSite, leaves, beds, props, lawns, trunks, masses);
+  await addRearLakeDetail(rearSite, leaves, beds, props, lawns, trunks, masses);
   yardLap('  back: addRearLakeDetail');
+  await yardYield();
   lowerRearShellPad();
   yardLap('  back: lowerRearShellPad');
   addRearGroundDetail(rearSite, { lowGrade: true });
@@ -3531,11 +4607,13 @@ const _ivec = new THREE.Vector3();
 function measureItem(item, buckets) {
   if(item.authoredPivot)return item.authoredPivot.slice();
   _ibox.makeEmpty();
-  for (const { bucket, i } of item.geos) {
+  for (const { bucket, i, noPivot } of item.geos) {
+    if (noPivot) continue;   // restyled geometry: its legacy footprint is in pivotBoxes
     const g = buckets[bucket].geos[i];
     if (!g.boundingBox) g.computeBoundingBox();
     _ibox.union(g.boundingBox);
   }
+  if (item.pivotBoxes) for (const b of item.pivotBoxes) _ibox.union(b);
   if (_ibox.isEmpty()) return [0, 0, 0];
   _ibox.getCenter(_ivec);
   return [_ivec.x, _ibox.min.y, _ivec.z];
@@ -3555,26 +4633,161 @@ export function getYardEdits() {
   return yardEdits;
 }
 
-// Opening the editor is what BUILDS the yard (one mesh per item so each piece
-// can be picked and dragged); closing it disposes the yard again. The viewer
-// never has one. Returns true if the mode actually changed.
+// The Outside editor opening or closing. Since 2026-10-11 the yard is part of
+// the viewer, so this neither builds nor disposes anything when a yard is
+// already standing: the editor picks the same per-item groups the viewer
+// draws. Opening before the deferred boot build has run (or finished) just
+// makes sure one is on its way -- whenYardReady() says when it lands, and
+// `yardRebuilt` fires as always. Returns true if the mode actually changed.
 export function setYardEditing(on) {
   if (yardEditing === !!on) return false;
   yardEditing = !!on;
-  applyYardVisibility();
-  if (yardEditing) {
-    remeasureShell();
-    buildYard();
-    settleShellAnchors();
-  } else {
-    teardownYard();
-  }
+  if (yardEditing) startYard();
   return true;
 }
 
 export function isYardEditing() {
   return yardEditing;
 }
+
+// ---- the yard's lifecycle ----------------------------------------------------
+//
+// yardWanted  -- the yard is part of the scene; main.js sets it (startYard)
+//                once the boot curtain has lifted, the editor sets it on open.
+// yardGen     -- bumped by every build start. A build checks it at each yield
+//                (yardYield), so a build overtaken by a newer one stops at its
+//                next phase boundary and never touches shared state again.
+// yardBuiltSig-- the inputs the standing / in-flight yard was built from; a
+//                refresh with the same inputs costs nothing (reloadHouse runs
+//                on every room edit, and the yard depends on none of them
+//                unless a footprint, the shell or the yard edits moved).
+let yardWanted = false;
+let yardGen = 0;
+let yardBuild = null;
+let yardBuiltSig = null;
+let yardSyncBuild = false;
+let yardReadyWaiters = [];
+const YARD_PER_ITEM = true;   // draw one group per piece (see buildYard's emit)
+const YARD_SLICE_MS = 24;     // per-item emit loop: yield after this much work
+// main-thread blocks of the last build, ms (each run between two yields):
+// window.__environment.chunks()
+let yardChunks = [], yardChunkT = 0;
+
+class YardBuildAborted extends Error {}
+
+// One macrotask, via MessageChannel: not setTimeout (clamped to 4 ms after
+// nesting, and to >= 1 s in a background tab) and not requestAnimationFrame
+// (paused in a background tab) -- the build must finish whether or not anyone
+// is watching. The generation is captured when the yield is REQUESTED, which
+// is always synchronously inside the build that asked, so a build that has been
+// overtaken rejects here and unwinds without touching anything.
+function yardYield() {
+  const gen = yardGen;
+  if (yardSyncBuild) return Promise.resolve();
+  yardChunks.push(+(performance.now() - yardChunkT).toFixed(1));
+  return new Promise((resolve, reject) => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => {
+      ch.port1.close();
+      yardChunkT = performance.now();
+      if (gen === yardGen) resolve(); else reject(new YardBuildAborted());
+    };
+    ch.port2.postMessage(0);
+  });
+}
+
+// main.js: the boot curtain is up and the app is interactive -- build the yard.
+export function startYard() {
+  if (yardWanted) { if (!shownYard && !yardBuild) refreshYard(); return; }
+  yardWanted = true;
+  refreshYard();
+  settleShellAnchors();
+}
+
+export function isYardReady() {
+  return !!shownYard && !yardBuild && yardWarm;
+}
+
+// Resolves once a yard stands and no build is in flight (yardshot.py and the
+// editor's first open wait on this).
+export function whenYardReady() {
+  if (isYardReady()) return Promise.resolve();
+  return new Promise((r) => yardReadyWaiters.push(r));
+}
+
+// What the yard is laid out from. Edits are normalised so a server row and the
+// local copy applyYardEdit keeps of it compare equal.
+function yardInputs() {
+  const m = measureHouse(lastHouse);
+  const edits = yardEdits.map((e) => [e.key, e.src || null, e.model_id ?? null,
+    +e.dx || 0, +e.dy || 0, +e.dz || 0, +e.rot_y || 0, +(e.scale ?? 1), e.deleted ? 1 : 0]);
+  return JSON.stringify([m.minX, m.minZ, m.maxX, m.maxZ, m.pads, m.garage, shellRect, roofRect, edits]);
+}
+
+// Build if the yard's inputs moved (or `force`, when the item SET changed),
+// otherwise keep the standing yard and only re-point what a house reload
+// replaced underneath it.
+function refreshYard(force = false) {
+  if (!yardWanted || !lastHouse) return;
+  // A configured shell that has not landed yet (every reloadHouse hands out a
+  // fresh one): measuring now would lay the yard out with no building in it.
+  // levelChanged re-runs this when it lands; a failed shell resolves the
+  // promise too, and then the yard is built around the traced rooms.
+  if (lastHouse.house_shell?.model_id && !getShellRoot() && !shellWaitDone) {
+    const forHouse = lastHouse;
+    houseShellReady().then(() => {
+      if (lastHouse !== forHouse || getShellRoot()) return;
+      shellWaitDone = true;
+      refreshYard(force);
+      shellWaitDone = false;
+    });
+    return;
+  }
+  remeasureShell();
+  const sig = yardInputs();
+  if (!force && sig === yardBuiltSig && (shownYard || yardBuild)) {
+    if (!yardBuild) {
+      // the rows are new objects after a reload; the groups are not
+      for (const item of items) item.edit = yardEdits.find((e) => e.key === item.key) || null;
+      configureRearDeckInstances();   // buildObjects made fresh deck instances
+    }
+    return;
+  }
+  yardBuiltSig = sig;
+  const gen = ++yardGen;
+  yardChunks = []; yardChunkT = performance.now();
+  yardBuild = buildYard().then(async () => {
+    if (gen !== yardGen) return;
+    yardChunks.push(+(performance.now() - yardChunkT).toFixed(1));
+    // The first yard is swapped in hidden; it is shown once its programs are
+    // compiled (see warmYardPrograms). Later rebuilds reuse those programs.
+    let warmOther = null;
+    if (!yardWarm) {
+      const curve = predictGradeCurve();
+      await warmYardPrograms([curve], true);
+      if (gen !== yardGen) return;   // overtaken: the newer build warms instead
+      yardWarm = true;
+      warmOther = curve === THREE.CustomToneMapping
+        ? THREE.ACESFilmicToneMapping : THREE.CustomToneMapping;
+    }
+    yardBuild = null;
+    applyYardVisibility();
+    const waiters = yardReadyWaiters; yardReadyWaiters = [];
+    for (const r of waiters) r();
+    // yard.js holds references into the groups this build just replaced, and
+    // undo/redo and a house reload both land here without going through it.
+    window.dispatchEvent(new CustomEvent('yardRebuilt'));
+    // the other curve, in the background, so dawn/dusk is a switch too
+    if (warmOther != null) {
+      setTimeout(() => warmYardPrograms([warmOther], false).catch(() => {}), 1500);
+    }
+  }, (err) => {
+    if (err instanceof YardBuildAborted) return;   // a newer build owns the yard now
+    if (gen === yardGen) { yardBuild = null; yardBuiltSig = null; yard = shownYard; }
+    console.error('yard build failed', err);
+  });
+}
+let shellWaitDone = false;
 
 // Every item in the yard as it currently stands, for the editor's list and
 // for restoring erased pieces.
@@ -3586,13 +4799,18 @@ export function getYardItem(key) {
   return itemsByKey.get(key) || null;
 }
 
-// The per-item groups the editor raycasts against. Empty unless the editor is
-// open — in view mode there are no per-item meshes to hit.
 // Re-run the whole build. Needed only when the item SET changes (a duplicate,
 // a reset-everything); a move/turn/scale is live on the group already and an
 // erase is a visibility flip, so neither pays for this.
 export function rebuildYard() {
-  if (yardEditing) buildYard();
+  refreshYard(true);
+}
+
+// A move/erase is already live on its group, so the standing yard now matches
+// the edited rows: record that, or the next house reload would see "changed
+// inputs" and rebuild the whole yard for nothing.
+function yardEditsFolded() {
+  if (shownYard && !yardBuild && lastHouse) yardBuiltSig = yardInputs();
 }
 
 // Fold one saved override into the local copy of the edits, so the next
@@ -3603,12 +4821,14 @@ export function applyYardEdit(key, patch) {
   else yardEdits.push({ key, ...IDENTITY_EDIT, ...patch });
   const item = itemsByKey.get(key);
   if (item) item.edit = yardEdits.find((e) => e.key === key);
+  yardEditsFolded();
 }
 
 export function dropYardEdit(key) {
   yardEdits = yardEdits.filter((e) => e.key !== key);
   const item = itemsByKey.get(key);
   if (item) item.edit = null;
+  yardEditsFolded();
 }
 
 // Kinds that are GROUND rather than something standing on it. The lawn is one
@@ -3619,11 +4839,12 @@ export function dropYardEdit(key) {
 // click on the yard means.
 const SURFACE_KINDS = new Set(['lawn']);
 
-// Every per-item group in the yard. Empty unless the editor is open -- in view
-// mode the yard is six merged meshes and there is nothing per-piece to hit.
+// Every per-item group in the standing yard. Empty unless the editor is open
+// (the viewer never picks the yard), and empty while a rebuild is in flight:
+// the item table already belongs to the build, not to the groups on screen.
 export function getYardPickables() {
-  if (!yardEditing || !yard) return [];
-  return yard.children.filter((o) => o.userData?.kind === 'yard');
+  if (!yardEditing || !shownYard || yardBuild) return [];
+  return shownYard.children.filter((o) => o.userData?.kind === 'yard');
 }
 
 // What a CLICK may land on: the pickables minus the ground.
@@ -3656,14 +4877,13 @@ function editMatrix(pivot, edit) {
 export function setEnvironmentData(house) {
   lastHouse = house;
   setYardEdits(house?.yard);   // overrides on the generated exterior
-  remeasureShell();
   measureHouse(house);         // keeps getEnvironmentCenter() right for weather.js
   hideShellPatioProps();       // idempotent; the shell is already loaded at boot
-  // The yard itself is built only while the Outside editor is open.
-  if (yardEditing) {
-    buildYard();
-    settleShellAnchors();
-  }
+  // Rebuilds only if a footprint, the shell or the yard edits moved (and not
+  // before main.js has called startYard). The shell is re-measured in there,
+  // never here: reloadHouse calls this while its fresh shell is still loading,
+  // and measuring "no shell" would hand an in-flight build a null roofRect.
+  refreshYard();
 }
 
 // A safety net for the anchors moving under the first build. It used to fire
@@ -3684,7 +4904,7 @@ const ANCHOR_SETTLE_MS = [0, 120, 500];
 
 function settleShellAnchors() {
   for (const ms of ANCHOR_SETTLE_MS) {
-    setTimeout(() => { if (yardEditing && lastHouse && remeasureShell()) buildYard(); }, ms);
+    setTimeout(() => refreshYard(), ms);   // no-op unless the anchors really moved
   }
 }
 
@@ -3714,43 +4934,38 @@ function measureHouse(house) {
   return { minX, minZ, maxX, maxZ, pads, garage };
 }
 
-// Remove and dispose the yard, and undo everything the build did OUTSIDE the
-// yard group: the deck re-parenting, the car, the retry timers, and the cut
-// in the shell's rear pad. Run at the top of every build and when the Outside
-// editor closes -- after this the scene holds no exterior at all.
-function teardownYard() {
-  if (rearDeckInstanceTimer) { clearTimeout(rearDeckInstanceTimer); rearDeckInstanceTimer = null; }
-  if (rearLightTimer) { clearTimeout(rearLightTimer); rearLightTimer = null; }
-  // Before the dispose sweep below, not after: see disposeCar().
-  if (rearDeckInstanceCleanup) {
-    rearDeckInstanceCleanup();
-    rearDeckInstanceCleanup = null;
-  }
-  disposeCar();
-  carSpot = null;
-  restoreRearShellPad();
-  if (yard) {
-    root.remove(yard);
-    // ownGeometry per MESH, the same rule disposeCar uses and for the same
-    // reason: the yard mixes geometry it authored itself (the buckets, the
-    // contact blob) with library models, whose getInstance does
-    // `scene.clone(true)` and SHARES BufferGeometry with the model cache.
-    // Disposing that would blank out every later instance of the .glb -- in the
-    // yard, in the rooms, everywhere. Materials are cloned per instance, so
-    // those are always ours to release.
-    yard.traverse((o) => {
-      if (!o.isMesh) return;
-      if (o.userData.ownGeometry === true) o.geometry.dispose();
-      for (const m of Array.isArray(o.material) ? o.material : [o.material]) m.dispose();
-    });
-    yardGrassMats.length = 0; // those materials were just disposed with the yard
-    yard = null;
-  }
-  items = [];
-  itemsByKey = new Map();
+// Dispose a yard group that has just been replaced. Only the group: the car,
+// the deck re-parenting and the rear-pad cut are handed over to the new yard
+// by syncCar / configureRearDeckInstances / lowerRearShellPad, each of which
+// undoes its predecessor first. (There is no "no yard" state to go back to any
+// more -- once built, a yard stands for the life of the page.)
+function disposeYardGroup(group) {
+  root.remove(group);
+  // ownGeometry per MESH, the same rule disposeCar uses and for the same
+  // reason: the yard mixes geometry it authored itself (the buckets, the
+  // contact blob) with library models, whose getInstance does
+  // `scene.clone(true)` and SHARES BufferGeometry with the model cache.
+  // Disposing that would blank out every later instance of the .glb -- in the
+  // yard, in the rooms, everywhere. Materials are cloned per instance, so
+  // those are always ours to release.
+  const gone = new Set();
+  group.traverse((o) => {
+    if (!o.isMesh) return;
+    if (o.userData.ownGeometry === true) o.geometry.dispose();
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) { m.dispose(); gone.add(m); }
+  });
+  // those materials were just disposed with the yard
+  for (let i = yardGrassMats.length - 1; i >= 0; i--) if (gone.has(yardGrassMats[i])) yardGrassMats.splice(i, 1);
 }
 
-function buildYard() {
+// The build, in phases that yield to the event loop (yardYield) so a phone's
+// main thread is never gone for the whole ~5 s (desktop) at once. It writes
+// into a DETACHED group -- the standing yard stays on screen until the last
+// synchronous block swaps the new one in -- and the yields never sit inside an
+// item factory or between two pushes of one loose run, so the order of every
+// rng draw and every push, and therefore every key and every vertex, is the
+// synchronous build's (verify: __environment.buildSync(true)).
+async function buildYard() {
   const house = lastHouse;
   const { minX, minZ, maxX, maxZ, pads, garage } = measureHouse(house);
 
@@ -3762,9 +4977,12 @@ function buildYard() {
   const bx1 = shellRect ? shellRect.x1 : maxX;
   const bz1 = shellRect ? shellRect.z1 : maxZ;
 
-  teardownYard();
-  yard = new THREE.Group();
-  root.add(yard);
+  // The previous yard's retry timers belong to a yard that is on its way out.
+  if (rearDeckInstanceTimer) { clearTimeout(rearDeckInstanceTimer); rearDeckInstanceTimer = null; }
+  if (rearLightTimer) { clearTimeout(rearLightTimer); rearLightTimer = null; }
+  yard = new THREE.Group();   // detached until the swap at the end
+  itemsByKey = new Map();
+  carSpot = null;             // addFrontYard sets it again
 
   const rng = mulberry32(1337);
   // Recording buckets, not plain arrays: they file every geometry under the
@@ -3854,11 +5072,15 @@ function buildYard() {
     const L = landmarks(roofRect);
     addGroundCover(L, lawns); yardLap('addGroundCover');
     addFrontYard(L, rng, leaves, beds, props, lawns, trunks, masses); yardLap('addFrontYard');
-    addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses); yardLap('addBackYard');
+    await yardYield();
+    // async: it yields between its own phases (planting / lake / ground)
+    await addBackYard(L, rng, leaves, beds, props, lawns, trunks, masses); yardLap('addBackYard');
+    await yardYield();
     addRearPorchDetail(L, props, masses); yardLap('addRearPorchDetail');
     addRearDeckDetail(L, props, masses); yardLap('addRearDeckDetail');
     addRearSidingDetail(); yardLap('addRearSidingDetail');
     hideShellPatioProps();
+    await yardYield();
   }
 
   // ---- resolve items, apply the stored edits, emit ------------------------
@@ -3866,9 +5088,9 @@ function buildYard() {
   // Everything above pushed geometry in WORLD coordinates and, along the way,
   // told each Bucket which item it belonged to. Now the items get their
   // identity (a key derived from where the builder put them), the user's saved
-  // deltas are laid on top, and the result is drawn — six merged meshes for the
-  // viewer, one mesh per item while the Outside editor is open so each piece
-  // can be picked and dragged.
+  // deltas are laid on top, and the result is drawn — one group per item (in
+  // the viewer too, since 2026-10-11) so the Outside editor can pick and drag
+  // each piece of the standing yard without a rebuild.
   const buckets = { lawns, beds, props, masses, trunks, leaves };
 
   // Drop the items that drew nothing, BEFORE keys are handed out. A factory
@@ -3952,21 +5174,32 @@ function buildYard() {
   // across slabs of very different sizes. Read from the position the BUILDER
   // gave the geometry, so an untouched yard is pixel-identical to before and a
   // moved slab carries its own grain with it.
+  yardLap('resolve: keys + clones');
+  await yardYield();
+  const rearTurf = yard.getObjectByName('rear-mown-turf');
+  const edgeAO = makeLawnEdgeAO(lawns.geos, beds.geos, rearTurf?.geometry);
+  if (rearTurf) {   // the rear turf painted its own mottle; add the edge band
+    const p = rearTurf.geometry.attributes.position, c = rearTurf.geometry.attributes.color;
+    for (let i = 0; i < p.count; i++) {
+      const k = edgeAO(p.getX(i), p.getZ(i));
+      c.setXYZ(i, c.getX(i) * k, c.getY(i) * k, c.getZ(i) * k);
+    }
+    c.needsUpdate = true;
+  }
   for (const g of lawns.geos) {
     const pos = g.attributes.position, uv = g.attributes.uv;
     const col = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
       uv.setXY(i, x / 2400 + 0.5, -z / 2400 + 0.5);
-      const f = 1 + (worldNoise(x, z, 54) - 0.5) * 0.14
-                  + (worldNoise(x + 313, z + 129, 19) - 0.5) * 0.19
-                  + (worldNoise(x + 91, z - 47, 7) - 0.5) * 0.11;
-      col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = f;
+      const t = lawnTint(x, z), k = edgeAO(x, z);
+      col[i * 3] = t[0] * k; col[i * 3 + 1] = t[1] * k; col[i * 3 + 2] = t[2] * k;
     }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
     uv.needsUpdate = true;
   }
   for (const g of beds.geos) {
+    if (g.userData?.simsFoliage) continue;   // bed planting: keeps its leaf-card UVs
     const pos = g.attributes.position, uv = g.attributes.uv;
     for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / 6, -pos.getZ(i) / 6);
     uv.needsUpdate = true;
@@ -3983,6 +5216,21 @@ function buildYard() {
   // skipped when there is no lawn, or the list would collect a material no
   // mesh owns and the rebuild teardown would never dispose it
   if (lawns.length) yardGrassMats.push(lawnMat);
+  // Turf-side edge fringe (see makeLawnEdgeAO). Not a bucket geometry, so it
+  // is no editor piece and never takes a click; tinted with the lawn for
+  // weather, disposed with the yard like the rear turf.
+  const fringeGeo = edgeAO.buildFringe?.();
+  if (fringeGeo) {
+    const fringeMat = new THREE.MeshStandardMaterial({
+      color: grassMat.color.clone(), roughness: 1, vertexColors: true, side: THREE.DoubleSide });
+    yardGrassMats.push(fringeMat);
+    const fringe = new THREE.Mesh(fringeGeo, fringeMat);
+    fringe.name = 'lawn-edge-fringe';
+    fringe.userData.ownGeometry = true;
+    // no shadow receive: near-vertical slivers self-shadow into black stubble
+    fringe.receiveShadow = false;
+    yard.add(fringe);
+  }
   const MATS = {
     lawns: lawnMat,
     // Fine grain on the hardscape. Vertex colours alone gave the driveway
@@ -4014,9 +5262,41 @@ function buildYard() {
   // (icosahedron) geometry — normalize everything to non-indexed first
   const flat = (geos) => geos.map((g) => (g.index ? g.toNonIndexed() : g));
   let rearFoliageMat = null, rearBarkMat = null, rearOakLeafMat = null, rearFarOakMat = null, rearConiferSprayMat = null;
+  // SIMS ROUND (trees): the scanned oak leaves rendered as a noisy, murky
+  // photo-card mass beside the stylised backdrop. Their normals now carry
+  // each leaf cloud's ellipsoid normal (leafCloud), and the fragment side
+  // matches simsLeafShader's language: (1) the photograph's per-leaf texel
+  // noise is flattened 70% toward its own median green (alpha kept, so the
+  // ragged silhouettes stay); (2) the vertex-colour interior darkening is
+  // pulled most of the way to a constant; (3) the result is pushed to the
+  // Sims warm yellow-green; (4) simsLeafShader's two-sided clump normal and
+  // lifted shade side. The near/far split and the far atmosphere are kept.
+  const simsOakLeaf = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
+      '#ifdef USE_MAP\nvec4 sampledDiffuseColor = texture2D( map, vMapUv );\n'
+      + 'sampledDiffuseColor.rgb = mix( sampledDiffuseColor.rgb, vec3( 0.055, 0.135, 0.045 ), 0.7 );\n'
+      + 'diffuseColor *= sampledDiffuseColor;\n#endif');
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>',
+      '#if defined( USE_COLOR )\ndiffuseColor.rgb *= mix(vColor, vec3(0.74), 0.65);\n#endif\n'
+      + 'float simsLeafL = dot(diffuseColor.rgb, vec3(.2126,.7152,.0722));\n'
+      + 'diffuseColor.rgb = max(mix(vec3(simsLeafL), diffuseColor.rgb, 1.15), 0.0) * vec3(1.18, 1.22, 0.78);');
+    simsLeafShader(shader);
+  };
 
+  let simsFoliageMat = null;
   function bucketMesh(name, geos) {
     if (!geos.length) return null;
+    // Stylised clumps (simsClump) carry their own normals, UVs into the
+    // shared clump texture, and the shared two-sided leaf shader.
+    if ((name === 'props' || name === 'leaves' || name === 'beds') && geos.some(g => g.userData?.simsFoliage)) {
+      const group = new THREE.Group(), ordinary = geos.filter(g => !g.userData?.simsFoliage);
+      if (ordinary.length) group.add(bucketMesh(name, ordinary));
+      if (!simsFoliageMat) simsFoliageMat = simsLeafMaterial();
+      const m = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(flat(geos.filter(g => g.userData?.simsFoliage)), false), simsFoliageMat);
+      m.castShadow = m.receiveShadow = true; m.userData.ownGeometry = true;
+      group.add(m);
+      return group;
+    }
     // Only the new rear bark uses the photographed CC0 oak PBR material.
     // Split within the buckets so every tree retains its existing edit group.
     if(name==='masses'&&geos.some(g=>g.userData?.rearBark)) {
@@ -4043,9 +5323,11 @@ function buildYard() {
         const loader=new THREE.TextureLoader(),map=loader.load('/textures/backyard/oak-leaf-albedo.webp');
         const normal=loader.load('/textures/backyard/oak-leaf-normal-dx.webp');
         map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=8;normal.anisotropy=8;
-        rearOakLeafMat=new THREE.MeshStandardMaterial({map,normalMap:normal,normalScale:new THREE.Vector2(.4,-.4),
+        rearOakLeafMat=new THREE.MeshStandardMaterial({map,normalMap:normal,normalScale:new THREE.Vector2(.08,-.08),
           vertexColors:true,alphaTest:.45,side:THREE.DoubleSide,roughness:.91,metalness:0});
         rearOakLeafMat.addEventListener('dispose',()=>{map.dispose();normal.dispose();});
+        rearOakLeafMat.onBeforeCompile=simsOakLeaf;
+        rearOakLeafMat.customProgramCacheKey=()=> 'rear-oak-sims-v3';
       }
       for(const distant of [false,true]) {
         const selected=geos.filter(g=>g.userData?.rearOakLeaf&&!!g.userData?.rearFarLeaf===distant);
@@ -4059,15 +5341,24 @@ function buildYard() {
           rearFarOakMat.userData.rearAtmosphere=atmosphere;
           rearFarOakMat.onBeforeCompile=shader=>{
             Object.assign(shader.uniforms,atmosphere);
+            // r3: the far bank read as one flat pale band of copy-paste
+            // trees. Stands ~20-40 ft wide now differ in value and hue (cool
+            // blue-green / dark / warm), hashed from world x.
+            shader.vertexShader='varying float vFarStand;\n'+shader.vertexShader.replace('#include <begin_vertex>',
+              '#include <begin_vertex>\nvec3 farW=(modelMatrix*vec4(transformed,1.0)).xyz;\nvFarStand=farW.x/27.0+sin(farW.x*.05)*1.3;');
+            shader.fragmentShader='varying float vFarStand;\n'+shader.fragmentShader.replace('#include <color_fragment>',
+              '#include <color_fragment>\nfloat farId=floor(vFarStand);\nfloat farH=fract(sin(farId*12.9898)*43758.5453),farH2=fract(sin(farId*78.233)*12345.678);\n'
+              +'diffuseColor.rgb*=(0.62+0.5*farH)*mix(vec3(0.78,0.95,1.12),vec3(1.1,1.02,0.7),farH2);');
+            simsOakLeaf(shader);   // after: it re-emits color_fragment, keeping the line above
             shader.fragmentShader='uniform vec3 rearFarSky;\nuniform float rearFarDay;\n'+shader.fragmentShader;
             shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',
-              '#include <color_fragment>\nfloat farLeafLuma=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));\ndiffuseColor.rgb=mix(vec3(farLeafLuma),diffuseColor.rgb,.40)*1.23;');
+              '#include <color_fragment>\nfloat farLeafLuma=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));\ndiffuseColor.rgb=mix(vec3(farLeafLuma),diffuseColor.rgb,.92)*1.02;');
             shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',
-              'float farAir=clamp(1.0-exp(-length(vViewPosition)*.00050),0.0,.24);\n'+
+              'float farAir=clamp(1.0-exp(-length(vViewPosition)*.00050),0.0,.12);\n'+
               'vec3 farAirColor=mix(rearFarSky,vec3(dot(rearFarSky,vec3(.2126,.7152,.0722))),.36);\n'+
               'outgoingLight=mix(outgoingLight,farAirColor*(1.0+rearFarDay*.08),farAir);\n#include <opaque_fragment>');
           };
-          rearFarOakMat.customProgramCacheKey=()=> 'rear-distant-oak-atmosphere-v1';
+          rearFarOakMat.customProgramCacheKey=()=> 'rear-distant-oak-atmosphere-v5';
         }
         const mat=distant?rearFarOakMat:rearOakLeafMat;
         const leafMesh=new THREE.Mesh(BufferGeometryUtils.mergeGeometries(flat(selected),false),mat);
@@ -4106,7 +5397,10 @@ function buildYard() {
     }
     // Rear leaf surfaces keep normal per-item editing but use a matte material.
     // The front's original props and their material pass through unchanged.
-    if (name === 'props' && geos.some(g => g.userData?.rearFoliage)) {
+    // SIMS ROUND (planting): the restyled front shrubs/flowers in `leaves` are
+    // tagged rearFoliage too, so they get this smooth, shadowed leaf material
+    // instead of the flat-shaded one.
+    if ((name === 'props' || name === 'leaves') && geos.some(g => g.userData?.rearFoliage)) {
       const group = new THREE.Group();
       const ordinary = geos.filter(g => !g.userData?.rearFoliage);
       const foliage = geos.filter(g => g.userData?.rearFoliage);
@@ -4142,11 +5436,21 @@ function buildYard() {
     return m;
   }
 
-  if (yardEditing) {
-    // EDITOR: one group per item, sitting at its own pivot with its geometry
+  yardLap('resolve: lawn tint + edge AO');
+  await yardYield();
+  if (YARD_PER_ITEM) {
+    // One group per item, sitting at its own pivot with its geometry
     // re-centred there, so TransformControls can move/turn/scale it directly
-    // and the gesture reads straight back out as the delta to save.
+    // and the gesture reads straight back out as the delta to save. Always
+    // this path since 2026-10-11: the viewer draws the same groups the Outside
+    // editor picks, so opening the editor never rebuilds. Time-sliced: ~140
+    // items x a merge each is the longest stretch of the build.
+    let sliceT = performance.now();
     for (const item of items) {
+      if (performance.now() - sliceT > YARD_SLICE_MS) {
+        await yardYield();
+        sliceT = performance.now();
+      }
       // A library model owns no bucket geometry -- addYardModels below builds
       // its group from the .glb instead. Without this it also gets an EMPTY
       // group here, under the same yardKey, and that phantom is what
@@ -4185,11 +5489,11 @@ function buildYard() {
       yard.add(group);
     }
   } else {
-    // MERGED: the original six merged meshes. Unreachable since the viewer
-    // stopped building the yard (buildYard only runs while yardEditing), kept
-    // as the cheap draw path should a "show the yard in the viewer" toggle
-    // ever come back. Deleted items drop out and every other item's delta is
-    // baked into its geometry here.
+    // MERGED: the original six merged meshes (YARD_PER_ITEM false). Unused:
+    // the viewer draws the per-item groups so the editor can reuse them. Kept
+    // as the cheap draw path should a phone ever need fewer draw calls -- the
+    // editor would then have to rebuild per-item on open. Deleted items drop
+    // out and every other item's delta is baked into its geometry here.
     for (const [name, bucket] of Object.entries(buckets)) {
       const keep = [];
       for (let i = 0; i < bucket.geos.length; i++) {
@@ -4219,17 +5523,325 @@ function buildYard() {
   yard.add(shadow);
 
   yardLap('resolve items + merge');
+  await yardYield();
   addRearLightDetail(buckets);
   addRearAtmosphereDetail();
+  yardLap('rear light/atmosphere');
+  await yardYield();
+  if (roofRect) addBackdrop(landmarks(roofRect));
+  await yardYield();
+
+  // ---- the swap: one synchronous block from here, no yields. The car and
+  // the deck re-parenting hand over from the old yard themselves (syncCar and
+  // configureRearDeckInstances each undo their predecessor first).
+  const old = shownYard;
   configureRearDeckInstances();
   syncCar();
   addYardModels(modelItems);
-  yardLap('rear light/atmosphere/deck/car');
+  root.add(yard);
+  shownYard = yard;
+  if (old && old !== yard) disposeYardGroup(old);
+  yardLap('deck/car/swap');
   yardTimings.push(['TOTAL', +(performance.now() - buildT0).toFixed(1)]);
+  // refreshYard's continuation shows it (applyYardVisibility) and fires
+  // `yardRebuilt`, once it has checked this build is still the current one.
+}
 
-  // yard.js holds references into the groups this build just replaced, and
-  // undo/redo and a house reload both land here without going through it.
-  window.dispatchEvent(new CustomEvent('yardRebuilt'));
+// ---------------------------------------------------------------- backdrop
+// The surroundings beyond the lot (Sims gauntlet, 2026-10-11). Every Sims lot
+// shot is framed by a living neighbourhood -- groves of mixed trees (broad
+// oaks, round maples, a weeping willow, columnar poplars, firs, a few
+// flowering trees), fenced lots, lamp-lit streets and low hills fading into
+// the haze -- where ours stood on an empty green plain to the horizon.
+//
+// This is SCENERY, not yard. It never touches a Bucket, so it opens no item,
+// takes no key and cannot move any saved edit; it draws from its own seed, so
+// it consumes nothing from the yard's rng; and it is two merged meshes (the
+// trees in the shared stylised-leaf material, everything man-made in one
+// flat-shaded one) -- two draw calls, no shadows. It is not pickable
+// (getYardPickables only returns item groups).
+//
+// It stays OFF the lot: the owner's 2026-09-01 "no trees anywhere on the lot"
+// (see PLANT_TREES) is about the lot. The same note asked for no neighbouring
+// houses on the horizon, so BACKDROP_HOUSES stays false: the neighbours' lots
+// are fenced lawns and trees, and the only buildings are none.
+const BACKDROP_TREES = true;
+const BACKDROP_HOUSES = false;   // owner 2026-09-01: no neighbouring houses on the horizon
+
+function addBackdrop(L) {
+  if (!yard) return;
+  const t0 = performance.now();
+  const rng = mulberry32(0x53494d53);
+  const mid = (L.padW + L.padE) / 2;
+  const leaves = leafStore(), built = [];
+  const tmp = new THREE.Color(), lo = new THREE.Color(), hi = new THREE.Color();
+  const bark = new THREE.Color(0x5a4432);
+  let verts = 0;
+  const norm = (g) => {
+    const n = g.index ? g.toNonIndexed() : g;
+    if (n !== g) g.dispose();
+    if (n.attributes.uv) n.deleteAttribute('uv');
+    verts += n.attributes.position.count;
+    return n;
+  };
+  const solid = (g, hex, k = 1) => {
+    g = norm(g);
+    const n = g.attributes.position.count, a = new Float32Array(n * 3);
+    tmp.setHex(hex).multiplyScalar(k);
+    for (let i = 0; i < n; i++) { a[i * 3] = tmp.r; a[i * 3 + 1] = tmp.g; a[i * 3 + 2] = tmp.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+    built.push(g);
+  };
+  const box = (w, h, d, x, y, z) => { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y + h / 2, z); return g; };
+  const flat = (x0, z0, x1, z1, y, hex) => {
+    const g = new THREE.PlaneGeometry(Math.abs(x1 - x0), Math.abs(z1 - z0));
+    g.rotateX(-Math.PI / 2); g.translate((x0 + x1) / 2, y, (z0 + z1) / 2);
+    solid(g, hex);
+  };
+
+  // ---- trees. [shaded, sunlit] in sRGB, a palette per species: cool, dark
+  // blue-green interiors and undersides everywhere, lime only as the sunlit
+  // highlight (simsClump biases the ramp toward the shade colour), a deep
+  // blue-green for the big shade trees, darker evergreens, blossom accents.
+  const MAPLE = [[0x1d3b22, 0x7fae3c], [0x1a3826, 0x72a83e], [0x223f20, 0x8ab441]];
+  const OAK = [[0x173628, 0x5f9446], [0x1a3a2a, 0x699a48]];
+  const HERO = [[0x132f25, 0x5a9044]];
+  const WILLOW = [[0x2d4a25, 0x9fc055]];
+  const POPLAR = [[0x183a22, 0x6a9e3a]];
+  const FIR = [[0x0d2a20, 0x386c44], [0x10301f, 0x427649]];
+  const BLOOM = [[0x7a3f68, 0xf0b7d4], [0x4c3d80, 0xbfa8ea], [0x84506e, 0xf3c4da]];
+  const pick = (a) => a[Math.floor(rng() * a.length)];
+  const setPal = ([d, l], v = 1) => { lo.setHex(d).multiplyScalar(v); hi.setHex(l).multiplyScalar(v); };
+  // Phone budget (<= 1 M verts for the whole backdrop): FEW, BIG, overlapping
+  // masses per tree -- a connected canopy, not floating balls -- each a
+  // heart plus a handful of large rim cards for the ragged edge.
+  let lod = 1;   // 1 near, 0 far
+  const clump = (x, y, z, rx, ry, rz, gy, gr, detail = lod) => {
+    // cards about a quarter of the clump across: big enough to break the
+    // silhouette, small enough not to read as paper flaps (r3a's did)
+    const size = Math.min(rx, rz) * 0.24 + 0.55;
+    const area = rx * rz + ry * (rx + rz);
+    const cards = Math.max(5, Math.min(lod ? 70 : 18, Math.round(area / (size * size) * (lod ? 0.55 : 0.2))));
+    simsClump(leaves, rng, x, y, z, rx, ry, rz, cards, size, lo, hi, gy, gr, detail);
+  };
+  const limb = (a, b, r0, r1) => simsLimb(leaves, a, b, r0, r1, bark);
+  // round maple: 3-4 big overlapping masses on a visible trunk
+  const maple = (x, z, s, pal = pick(MAPLE)) => {
+    setPal(pal, 0.9 + rng() * 0.2);
+    const th = (6 + rng() * 3) * s, R = (7.5 + rng() * 2.5) * s, cy = th + R * 0.8;
+    limb([x, 0, z], [x, cy - R * 0.2, z], 0.95 * s, 0.6 * s);
+    clump(x, cy, z, R * 0.78, R * 0.66, R * 0.78, cy, R);
+    const n = 2 + Math.floor(rng() * 2);
+    for (let i = 0; i < n; i++) {
+      const a = rng() * Math.PI * 2, d = R * (0.3 + rng() * 0.15);
+      const r = R * (0.5 + rng() * 0.12);
+      clump(x + Math.cos(a) * d, cy + (rng() - 0.3) * R * 0.4, z + Math.sin(a) * d, r, r * 0.82, r, cy, R);
+    }
+  };
+  // broad spreading oak: a short thick bole, wide limbs, a flat wide crown of
+  // 5-6 overlapping flattened masses
+  const oak = (x, z, s, pal = pick(OAK), detail = lod) => {
+    setPal(pal, 0.9 + rng() * 0.2);
+    const th = (5 + rng() * 2) * s, R = (12 + rng() * 3) * s, cy = th + 7.5 * s;
+    limb([x, 0, z], [x, th, z], 1.15 * s, 0.85 * s);
+    clump(x, cy + 1.5 * s, z, R * 0.55, 5.5 * s, R * 0.55, cy, 7 * s, detail);
+    const n = 4 + Math.floor(rng() * 2);
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 + (rng() - 0.5) * 0.7, d = R * (0.42 + rng() * 0.18);
+      const px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d, py = cy - d * 0.08 + (rng() - 0.5) * 2 * s;
+      limb([x, th * 0.92, z], [x + (px - x) * 0.7, py - 2.5 * s, z + (pz - z) * 0.7], 0.75 * s, 0.3 * s);
+      const r = (5.2 + rng() * 1.8) * s;
+      clump(px, py, pz, r, r * 0.62, r, cy, 7 * s, detail);
+    }
+  };
+  // weeping willow: a dome and a curtain of hanging strands
+  const willow = (x, z, s) => {
+    setPal(WILLOW[0], 0.9 + rng() * 0.16);
+    const th = (8 + rng() * 2) * s, R = (10 + rng() * 2) * s, cy = th + 6 * s;
+    limb([x, 0, z], [x, th + 4 * s, z], 1.1 * s, 0.6 * s);
+    clump(x, cy + 2 * s, z, R * 0.7, 5 * s, R * 0.7, cy, R);
+    const n = 9 + Math.floor(rng() * 3);
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 + (rng() - 0.5) * 0.3, d = R * (0.66 + rng() * 0.18);
+      const hang = (6 + rng() * 3) * s;
+      clump(x + Math.cos(a) * d, cy + 1.5 * s - hang * 0.5, z + Math.sin(a) * d, 2.4 * s, hang * 0.62, 2.4 * s, cy, R);
+    }
+  };
+  // columnar poplar: tall, narrow, one continuous column
+  const poplar = (x, z, s) => {
+    setPal(pick(POPLAR), 0.9 + rng() * 0.2);
+    const H = (30 + rng() * 12) * s;
+    limb([x, 0, z], [x, H * 0.5, z], 0.7 * s, 0.4 * s);
+    clump(x, H * 0.45, z, 4.4 * s, H * 0.3, 4.4 * s, H * 0.55, H * 0.4);
+    clump(x + (rng() - 0.5) * s, H * 0.72, z + (rng() - 0.5) * s, 3.3 * s, H * 0.2, 3.3 * s, H * 0.55, H * 0.4);
+  };
+  // fir: four stacked, flattened tiers
+  const fir = (x, z, s) => {
+    setPal(pick(FIR), 0.9 + rng() * 0.2);
+    const H = (28 + rng() * 16) * s, R = H * (0.21 + rng() * 0.05);
+    limb([x, 0, z], [x, H * 0.4, z], 0.6 * s, 0.35 * s);
+    for (let i = 0; i < 4; i++) {
+      const f = i / 3, y = H * (0.22 + f * 0.62), r = R * (1.0 - f * 0.72) + 0.8 * s;
+      clump(x, y, z, r, H * 0.13, r, H * 0.55, H * 0.45);
+    }
+  };
+  const flowering = (x, z, s) => maple(x, z, s * 0.75, pick(BLOOM));
+  // the 2-3x hero shade tree: a big oak in the deep blue-green
+  const hero = (x, z, s) => oak(x, z, s, HERO[0], 1);
+  const SPECIES = { maple, oak, willow, poplar, fir, flowering, hero };
+  const MIX = ['maple', 'maple', 'maple', 'oak', 'oak', 'fir', 'fir', 'poplar', 'willow', 'flowering'];
+
+  // ---- where nothing may stand
+  const lakeX0 = mid - 258, lakeX1 = mid + 258;
+  const blocked = [];
+  const block = (x0, z0, x1, z1) => blocked.push(
+    [Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1)]);
+  block(L.padW - 30, L.yardN - 30, L.padE + 38, L.street + 36);   // our lot + the street in front
+  block(lakeX0, L.yardN + 4, lakeX1, L.yardN - 345);              // the lake and its woodland
+  block(-2000, L.street - 14, 2000, L.street + 36);               // the street, both walks
+  // the yardshot / fly-to camera stations: never plant on top of a camera
+  const CAMS = [[22, 130], [100, 125], [36, 92], [14, -82], [10, -72], [85, -125]];
+  const free = (x, z, m = 0) =>
+    !blocked.some(([a, b, c, d]) => x > a - m && x < c + m && z > b - m && z < d + m)
+    && !CAMS.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 42);
+  const pts = [];   // planted trunks, for spacing
+  const reach = { oak: 13, hero: 13, willow: 11, poplar: 5, fir: 7, maple: 8, flowering: 6 };
+  const roomFor = (x, z, r) => !pts.some(([px, pz, pr]) => Math.hypot(x - px, z - pz) < (r + pr) * 0.55);
+  let planted = 0;
+  const plant = (kind, x, z, s) => {
+    const r = reach[kind] * s;
+    if (!free(x, z, 4) || !roomFor(x, z, r)) return false;
+    pts.push([x, z, r]); SPECIES[kind](x, z, s); planted++; return true;
+  };
+  // varied scale: mostly modest, a long tail of big ones
+  const scale = () => 0.55 + Math.pow(rng(), 2) * 1.25;
+
+  if (BACKDROP_TREES) {
+    const cz0 = (L.yardN + L.street) / 2;
+    lod = 1;
+    // Three hero shade trees on the neighbours' side of our lot lines --
+    // trunks outside the lot, canopies overhanging its edges, the way the big
+    // front shade tree in frontyard_1/2 overhangs this lawn.
+    plant('hero', L.padW - 47, L.houseF + 18, 2.6);
+    plant('hero', L.padE + 58, L.yardN + 16, 2.3);
+    plant('hero', L.padW - 50, L.yardN + 6, 2.1);
+    // then irregular mixed clusters around them, not a row
+    for (const [gx, gz, sp] of [[L.padW - 58, L.houseF - 28, 24], [L.padE + 60, L.houseF - 18, 26],
+                                [L.padE + 52, L.houseF + 14, 16]]) {
+      for (let i = 0; i < 5; i++) plant(MIX[Math.floor(rng() * MIX.length)], gx + (rng() - 0.5) * 2 * sp, gz + (rng() - 0.5) * 2 * sp, scale());
+    }
+    // groves through the ring
+    let groves = 0;
+    for (let i = 0; i < 8000 && groves < 210; i++) {
+      const u = rng(), r = 130 + 520 * Math.pow(u, 1.4), a = rng() * Math.PI * 2;
+      const gx = mid + Math.cos(a) * r * 1.15, gz = cz0 + Math.sin(a) * r;
+      if (!free(gx, gz, 10)) continue;
+      groves++;
+      lod = r < 300 ? 1 : 0;
+      const dom = MIX[Math.floor(rng() * MIX.length)];
+      const n = 2 + Math.floor(rng() * 6), spread = 14 + rng() * 26;
+      for (let t = 0; t < n; t++) {
+        const kind = rng() < 0.65 ? dom : MIX[Math.floor(rng() * MIX.length)];
+        const s = scale() * (1 + Math.max(0, r - 300) / 900);
+        plant(kind, gx + (rng() - 0.5) * 2 * spread, gz + (rng() - 0.5) * 2 * spread, s);
+      }
+      // now and then a big one standing over the grove
+      if (rng() < 0.18) plant('oak', gx + (rng() - 0.5) * spread, gz + (rng() - 0.5) * spread, 1.7 + rng() * 0.7);
+    }
+    // the lake's far side, behind the scanned woodland: uneven stands with a
+    // broken skyline (big oaks and firs among small trees), not a band
+    lod = 0;
+    for (let x = lakeX0 - 40; x < lakeX1 + 40; x += 26 + rng() * 50) {
+      const z = L.yardN - 350 - rng() * 50;
+      const big = rng() < 0.35;
+      plant(big ? (rng() < 0.5 ? 'oak' : 'fir') : MIX[Math.floor(rng() * MIX.length)],
+            x, z, big ? 1.8 + rng() * 0.8 : 0.8 + rng() * 0.6);
+      if (rng() < 0.6) plant(MIX[Math.floor(rng() * MIX.length)], x + (rng() - 0.5) * 30, z - rng() * 30, 0.9 + rng() * 0.7);
+    }
+  }
+
+  // ---- the man-made context: street, walks, fences, lamp posts, hills
+  // the road, kerbs and walks run on past addStreet's x driveL-190..driveR+150
+  const sx0 = L.driveL - 190, sx1 = L.driveR + 150;
+  for (const [a, b] of [[-2400, sx0], [sx1, 2400]]) {
+    flat(a, L.street + 1.5, b, L.street + 27.6, 0.0, 0x4c4b49);
+    for (let cx = Math.ceil(a / 16) * 16; cx < b - 8; cx += 16) flat(cx, L.street + 13.8, cx + 8, L.street + 14.2, 0.02, 0x9a9280);
+    solid(box(b - a, 0.9, 0.34, (a + b) / 2, 0, L.street + 1.05), 0x9a9893);
+    solid(box(b - a, 0.9, 0.34, (a + b) / 2, 0, L.street + 27.2), 0x9a9893);
+  }
+  flat(-2400, L.street - 12, sx0 + 40, L.street - 7.6, 0.24, 0xc4c1b8);
+  flat(sx1 - 30, L.street - 12, 2400, L.street - 7.6, 0.24, 0xc4c1b8);
+  flat(-2400, L.street + 31, 2400, L.street + 35.4, 0.24, 0xc4c1b8);
+  // White picket fences on the neighbours' lot lines, every ~80 ft: what
+  // tells the eye this is a street of lots, not a park. Ours is unfenced (no
+  // photograph shows a fence), so the nearest line stands on the neighbour's
+  // side of each boundary.
+  const picket = (x, z0, z1) => {
+    const len = z1 - z0;
+    solid(box(0.18, 0.28, len, x, 1.0, (z0 + z1) / 2), 0xf3f3ee);
+    solid(box(0.18, 0.28, len, x, 2.6, (z0 + z1) / 2), 0xf3f3ee);
+    for (let z = z0; z <= z1; z += 8) solid(box(0.45, 4.0, 0.45, x, 0, z), 0xf6f6f2);
+    for (let z = z0 + 0.3; z < z1; z += 0.62) solid(box(0.12, 3.5, 0.34, x + 0.15, 0, z), 0xf6f6f2, 0.97);
+  };
+  // r3: the lines adjacent to ours read as fencing OUR lot (no photograph
+  // shows a fence), so the nearest fenced line is one lot-width further out,
+  // and nothing straight across the street from our frontage.
+  for (let k = 1; k < 4; k++) {
+    picket(L.padW - 36 - 80 * k, L.yardN + 2, L.street - 16);
+    picket(L.padE + 44 + 80 * k, L.yardN + 2, L.street - 16);
+  }
+  for (let k = -4; k <= 4; k++) {
+    const fx = mid - 40 + 80 * k;
+    if (Math.abs(fx - mid) > 100) picket(fx, L.street + 38, L.street + 128);
+  }
+  // lamp posts along both verges (our own frontage already has one)
+  const lamp = (x, z) => {
+    solid(box(0.38, 11.5, 0.38, x, 0, z), 0x23272a);
+    solid(box(1.2, 0.3, 1.2, x, 11.3, z), 0x23272a);
+    solid(box(0.95, 1.2, 0.95, x, 11.6, z), 0xf1e9c6);
+    solid(box(1.3, 0.35, 1.3, x, 12.8, z), 0x23272a);
+  };
+  for (let x = -640; x <= 680; x += 110) {
+    if (x < L.padW - 34 || x > L.padE + 44) lamp(x, L.street - 3.5);
+    lamp(x + 55, L.street + 30);
+  }
+  // Low hills on the horizon, two ranks (720 / 860 ft): the fog takes most of
+  // their colour, which is the point -- a soft skyline instead of a green
+  // plain meeting the sky. Trees stop short of them (ring radius <= ~650).
+  for (const [R0, H0, hex] of [[720, 46, 0x5f8048], [860, 90, 0x6a8a5a]]) {
+    const pos = [], SEG = 240, ph = rng() * 6.28;
+    const top = (a) => H0 * (0.55 + 0.30 * Math.sin(a * 3 + ph) + 0.15 * Math.sin(a * 7.3 + ph * 2) + 0.10 * Math.sin(a * 13.1));
+    for (let i = 0; i < SEG; i++) {
+      const a0 = i / SEG * Math.PI * 2, a1 = (i + 1) / SEG * Math.PI * 2;
+      const P = (a, r, y) => [mid + Math.cos(a) * r * 1.15, y, (L.yardN + L.street) / 2 + Math.sin(a) * r];
+      const b0 = P(a0, R0, -1), b1 = P(a1, R0, -1), t0 = P(a0, R0 + 120, top(a0)), t1 = P(a1, R0 + 120, top(a1));
+      pos.push(...b0, ...t0, ...b1, ...b1, ...t0, ...t1);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+    g.computeVertexNormals();
+    solid(g, hex);
+  }
+
+  // ---- emit
+  if (leaves.pos.length) {
+    const g = simsStoreGeometry(leaves);
+    verts += g.attributes.position.count;
+    const m = new THREE.Mesh(g, simsLeafMaterial());
+    m.name = 'backdrop-trees'; m.userData.ownGeometry = true;
+    m.matrixAutoUpdate = false; m.updateMatrix();
+    yard.add(m);
+  }
+  if (built.length) {
+    const m = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(built, false),
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0, flatShading: true,
+        side: THREE.DoubleSide }));
+    for (const g of built) g.dispose();
+    m.name = 'backdrop-street'; m.userData.ownGeometry = true;
+    m.matrixAutoUpdate = false; m.updateMatrix();
+    yard.add(m);
+  }
+  yardTimings.push([`backdrop (${verts} verts)`, +(performance.now() - t0).toFixed(1)]);
 }
 
 // One group per library model in the yard, in BOTH draw modes -- a .glb cannot
@@ -4805,7 +6417,7 @@ function configureRearDeckInstances() {
   const porchItem=items.find(item=>item.label==='Rear porch detail'&&!item.isClone);
   if(porchItem)for(const name of ['rear-porch-glazing','rear-porch-stainless-cabinet']){
     const detail=owner.getObjectByName(name);if(!detail)continue;
-    const itemGroup=yardEditing&&owner.children.find(o=>o.userData.yardKey===porchItem.key);
+    const itemGroup=YARD_PER_ITEM&&owner.children.find(o=>o.userData.yardKey===porchItem.key);
     if(itemGroup){itemGroup.add(detail);detail.position.set(...porchItem.pivot.map(v=>-v));}
     else{detail.matrixAutoUpdate=false;detail.matrix.copy(editMatrix(porchItem.pivot,porchItem.edit)||new THREE.Matrix4());detail.visible=!porchItem.edit?.deleted;}
   }
@@ -4929,10 +6541,7 @@ function addRearGroundDetail(L, { lowGrade = false } = {}) {
     pos.push(x, height(x,z), z);
     // the lawn tile's UV convention: world feet over the 2400 ft disc
     uv.push(x / 2400 + 0.5, -z / 2400 + 0.5);
-    const f = 1 + (worldNoise(x, z, 54) - 0.5) * 0.14
-                + (worldNoise(x + 313, z + 129, 19) - 0.5) * 0.19
-                + (worldNoise(x + 91, z - 47, 7) - 0.5) * 0.11;
-    col.push(f, f, f);
+    col.push(...lawnTint(x, z));
   };
   for (let ix=0;ix<xs.length-1;ix++) for(let iz=0;iz<zs.length-1;iz++) {
     const a=xs[ix],b=xs[ix+1],c=zs[iz],d=zs[iz+1];
@@ -4951,8 +6560,10 @@ function addRearGroundDetail(L, { lowGrade = false } = {}) {
   // Their autumn pigments, burial and curl vary independently of the camera.
   const lp=[],lc=[],luv=[];
   const palette=[0x9c7644,0xb59058,0x8b704a,0xbba575,0x746344];
-  for(let i=0;i<1350;i++) {
-    const x=x0+rng()*(x1-x0), z=edge(x)+0.55+Math.pow(rng(),1.75)*24;
+  // SIMS ROUND: a clean lot. The litter is kept as a thin drift along the
+  // woodland edge instead of a field of flecks across the mown lawn.
+  for(let i=0;i<240;i++) {
+    const x=x0+rng()*(x1-x0), z=edge(x)+0.55+Math.pow(rng(),1.75)*7;
     if(z>L.padN-1)continue;
     const length=.35+rng()*.34,width=length*(.48+rng()*.17),angle=rng()*Math.PI*2,ca=Math.cos(angle),sa=Math.sin(angle);
     const y=height(x,z)+.065+rng()*.15, tone=new THREE.Color(palette[Math.floor(rng()*palette.length)]);
@@ -5093,6 +6704,46 @@ function addRearPlantingDetail(L, leaves, beds, props) {
   };
   const specimen = scoped('shrub','Clipped evergreen', (x,z,rx,ry,rz,y,form='round',tint=null) => {
     items[curItem].authoredPivot=specimenPivots[specimenIndex++];
+    {
+      // SIMS ROUND (planting): chunky clipped topiary with a sunlit crown in
+      // place of the ~1-inch leaf shell (which read as "a smooth green egg").
+      // Keys are authored above and nothing after this draws from `rng`.
+      const lr=mulberry32(0x5175+Math.round(x*97+z*31));
+      // Round 2: leaf-card clumps (the trees' simsClump), each specimen ONE
+      // clipped form; the two big ones brought down to photo scale
+      // (backyard_1/2/7: big, but one clipped ball, not a 15 ft cauliflower).
+      const st=plantStore();
+      if(form==='spreading'){
+        const k=specimenIndex%2;
+        clippedShrub(st,lr,x,z,y,rx*0.85,ry*0.9,rz*0.9,pal(k?'boxwood':'euonymus'));
+        if(k) plantClump(st,lr,x,y+ry*1.55,z,rx*0.55,ry*0.3,rz*0.55,pal('hydCream'),y+ry,ry,0.3);
+      } else if(form==='upright'){
+        clippedShrub(st,lr,x,z,y,rx,ry*1.05,rz,pal('yew'));
+      } else if(rx>5){
+        const s=rx>7?0.58:0.62;
+        clippedShrub(st,lr,x,z,y,rx*s,ry*s*1.15,rz*s,pal(rx>7?'boxwood':'yew',1.05));
+      } else if(rx<2&&x<-4.5){
+        // the low Japanese maple of photos 07/08 beside the west topiary: a
+        // short multi-stem trunk carrying a wide, layered red-purple canopy
+        const mx=-8.6,mz=-44.8,bark=new THREE.Color(0x4a3328);
+        const tips=[];
+        for(let j=0;j<5;j++){
+          const a=j*1.257+.3,d=1.5+lr()*.7,h=2.3+lr()*.8;
+          const tip=[mx+Math.cos(a)*d,y+h,mz+Math.sin(a)*d*.9];
+          simsLimb(st,[mx,y,mz],tip,.16,.06,bark); tips.push(tip);
+        }
+        const gy=y+3.2,mp=pal('maple');
+        for(const [tx,ty,tz] of tips) plantClump(st,lr,tx,ty+.35,tz,1.7+lr()*.4,.62,1.5+lr()*.3,mp,gy,1.4,.45);
+        plantClump(st,lr,mx,y+3.6,mz,1.6,.7,1.5,mp,gy,1.4,.45);
+        clippedShrub(st,lr,x,z,y,rx*0.8,ry*1.2,rz*0.8,pal('boxwood'));
+      } else if(rx<2){
+        bloomPlant(st,lr,x,z,y,rx*0.75,1.2,pal('lavender'));
+      } else {
+        clippedShrub(st,lr,x,z,y,rx*0.9,ry,rz*0.9,pal('leaf'));
+      }
+      props.push(plantGeo(st));
+      return;
+    }
     if(form==='spreading'){
       spreadingShrub(x,z,rx,ry,rz,y,tint);
       // Keep the shared generator at its previous position, so later accents
@@ -5248,6 +6899,11 @@ function addRearLayeredConifer(L, props) {
     // missing sectors avoid a rotationally symmetric tiered-cone silhouette.
     const shelves=[{h:6.7,r:5.6,n:5,a:.3},{h:8.3,r:8.0,n:7,a:.86},
       {h:9.9,r:6.9,n:6,a:.04},{h:11.4,r:3.8,n:4,a:1.13}];
+    // SIMS ROUND (trees): each branch ends in a cloud-pruned pad -- a
+    // flattened stylised clump -- instead of needle sprays and needle
+    // triangles, which read as a lone fern/palm cutout among the stylised
+    // trees. The branch skeleton, the item and its pivot are unchanged.
+    const pads=leafStore(),padLo=new THREE.Color(0x2c4f26),padHi=new THREE.Color(0x86ab4a);
     for(const [level,shelf] of shelves.entries())for(let b=0;b<shelf.n;b++){
       const angle=shelf.a+b*Math.PI*2/shelf.n+(rng()-.5)*.37;
       const radius=shelf.r*(.79+rng()*.26);
@@ -5256,8 +6912,12 @@ function addRearLayeredConifer(L, props) {
       const elbow=start.clone().add(new THREE.Vector3(dx*radius*.47,-.35+rng()*.2,dz*radius*.40));
       const tip=start.clone().add(new THREE.Vector3(dx*radius,.12+rng()*.55,dz*radius*.72));
       twig(start,elbow,.085-level*.012);twig(elbow,tip,.045);
+      {
+        const pr=1.35+rng()*.55;
+        simsClump(pads,rng,tip.x,tip.y+.15,tip.z,pr,.62+rng()*.18,pr*(.85+rng()*.2),12,.75,padLo,padHi,y+9,4);
+      }
       const tone=new THREE.Color(palette[(b+level)%palette.length]);
-      for(let shoot=0;shoot<6;shoot++){
+      for(let shoot=0;shoot<0;shoot++){
         const t=.22+shoot*.135;
         const base=elbow.clone().lerp(tip,t);
         const sign=shoot%2?1:-1;
@@ -5305,7 +6965,10 @@ function addRearLayeredConifer(L, props) {
     sprays.setAttribute('color',new THREE.Float32BufferAttribute(sprayColors,3));
     sprays.setAttribute('uv',new THREE.Float32BufferAttribute(sprayUVs,2));
     sprays.computeVertexNormals();sprays.userData.rearFoliage=true;sprays.userData.rearConiferSprays=true;
-    props.push(sprays);
+    if(sprayPositions.length)props.push(sprays);
+    // crown pad over the leader, then the pads
+    simsClump(pads,rng,x+.3,y+12.2,z,1.6,.9,1.5,12,.75,padLo,padHi,y+9,4);
+    const padGeo=simsStoreGeometry(pads);padGeo.userData.simsFoliage=true;props.push(padGeo);
   })();
 }
 
@@ -5672,7 +7335,8 @@ function addRearAtmosphereDetail() {
       const daylight=getDaylight();
       const clear=clearWeather[daylight.condition] || 0;
       const highSun=THREE.MathUtils.smoothstep(daylight.elevation,6,26);
-      uniforms.cloudDay.value=scene.background?.isColor?day*day*clear*highSun:0;
+      // yardgrade.js's sky dome carries the clouds while the grade is on
+      uniforms.cloudDay.value=scene.background?.isColor?day*day*clear*highSun*(1-getGradeWeight()):0;
       uniforms.cloudWet.value=wetF;
       if(scene.background?.isColor) {
         uniforms.cloudColor.value.copy(scene.background).lerp(daylightWhite,0.93*day);
@@ -5712,7 +7376,7 @@ export function addRearLightDetail(buckets) {
     if(box.isEmpty())continue;
     const point=box.getCenter(new THREE.Vector3());point.y=box.min.y;
     const radius=box.getSize(new THREE.Vector3()).multiplyScalar(.5);
-    const group=yardEditing?yard.children.find(o=>o.userData.yardKey===item.key):null;
+    const group=YARD_PER_ITEM?yard.children.find(o=>o.userData.yardKey===item.key):null;
     if(group)point.sub(new THREE.Vector3(...item.pivot));
     contacts.push({item,point,radius,group});
     centers.push(new THREE.Vector4());radii.push(new THREE.Vector4());

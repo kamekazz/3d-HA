@@ -15,6 +15,7 @@ import { setSelected, getSelected, onDragMoved, setGizmoMode } from './drag.js';
 import {
   setYardEditing, isYardEditing, getYardItems, getYardItem, getYardPickables,
   getYardClickTargets, rebuildYard, applyYardEdit, dropYardEdit,
+  isYardReady, whenYardReady,
 } from './environment.js';
 import { setLevel, getBuildingBox } from './house.js';
 import { exitFocus } from './focus.js';
@@ -104,18 +105,23 @@ export function openYardEditor() {
   setActiveLevelBtn('all');
   $('btn-yard').classList.add('active');
   $('yard-bar').classList.remove('hidden');
-  // The viewer has no yard: opening the editor is what BUILDS it, a ~10 s
-  // synchronous cold build. Say so first and give the banner a frame to paint
-  // before the main thread goes away.
-  showBanner('Building the outside…', 20000);
-  setTimeout(() => {
-    if (!open) return;        // closed again before the build started
-    setYardEditing(true);     // environment.js builds one mesh per piece
-    setGizmoMode('translate');
+  // The viewer already shows the yard (built after boot, one group per piece),
+  // so the editor normally just starts picking it. Only if the deferred boot
+  // build has not landed yet is there anything to wait for -- it is chunked,
+  // so the page stays responsive meanwhile.
+  setYardEditing(true);
+  setGizmoMode('translate');
+  const ready = () => {
+    if (!open) return;        // closed again before the yard landed
     paintErasedList();
     showBanner('Outside: click a tree, shrub, slab or prop to move, scale or erase it '
                + '— or hit Add to drop a new one in.', 4500);
-  }, 60);
+  };
+  if (isYardReady()) ready();
+  else {
+    showBanner('Building the outside…', 60000);
+    whenYardReady().then(ready);
+  }
 }
 
 export function closeYardEditor() {
@@ -123,7 +129,7 @@ export function closeYardEditor() {
   open = false;
   selectYardPiece(null);
   closeYardKit();
-  setYardEditing(false);      // back to the six merged meshes
+  setYardEditing(false);      // the yard stays: the viewer draws it too
   $('btn-yard').classList.remove('active');
   $('yard-bar').classList.add('hidden');
   $('yard-panel').classList.add('hidden');

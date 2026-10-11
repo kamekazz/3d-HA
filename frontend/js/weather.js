@@ -8,7 +8,7 @@
 // modulate renderer.toneMappingExposure instead.
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import { scene, renderer, onFrame } from './scene.js';
+import { scene, renderer, onFrame, exposureBase } from './scene.js';
 import { onDaylightChanged, getDaylight } from './daylight.js';
 import { getEnvironmentCenter, setGroundSnow, setGroundWet } from './environment.js';
 
@@ -37,7 +37,6 @@ const N_CLOUDS = 9;
 const CLOUD_WRAP = 280;
 const CLOUD_Y_BASE = 55;    // lowered so clouds drift into the re-centered view
 const CLOUD_Y_SPREAD = 30;
-const EXPOSURE_BASE = 1.15; // must match scene.js
 
 let weatherRoot;
 let target = { rain: 0, snow: 0, cloud: 0, grey: 0, wind: 0, wet: 0, snowGround: 0, lightning: false };
@@ -211,9 +210,9 @@ function tick(dt) {
   }
   if (flash > 0.001) {
     flash *= Math.exp(-dt / 0.12);
-    renderer.toneMappingExposure = EXPOSURE_BASE * (1 + flash * 1.4);
-  } else if (renderer.toneMappingExposure !== EXPOSURE_BASE) {
-    renderer.toneMappingExposure = EXPOSURE_BASE;
+    renderer.toneMappingExposure = exposureBase * (1 + flash * 1.4);
+  } else if (renderer.toneMappingExposure !== exposureBase) {
+    renderer.toneMappingExposure = exposureBase;
   }
 }
 

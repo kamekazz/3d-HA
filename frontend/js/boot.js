@@ -47,6 +47,13 @@ let houseBuilt = false;
 /** main() calls this the moment buildHouse has put geometry in the scene. */
 export function bootHouseBuilt() { houseBuilt = true; }
 
+// Resolves once the curtain has finished lifting (faded out and removed, or
+// the watchdog revealed). main.js starts the deferred yard build off this, so
+// that work never competes with the fade or with anything behind the curtain.
+let revealed;
+const revealedP = new Promise((r) => { revealed = r; });
+export function bootRevealed() { return revealedP; }
+
 // ------------------------------------------------------------------ progress
 
 function paint(fraction) {
@@ -267,7 +274,7 @@ export function finishBoot() {
     + ` (${mgrLoaded}/${mgrTotal} loaded) — __boot.timeline() for the breakdown`);
   paint(1);
   const screen = $('boot-screen');
-  if (!screen) return;
+  if (!screen) { revealed(); return; }
   // Let the bar actually ARRIVE at 100% before the fade starts. #boot-fill
   // animates its width over 0.3s, so lifting the curtain one frame after
   // paint(1) cut that animation off around 90% - the bar visibly never
@@ -276,7 +283,7 @@ export function finishBoot() {
   // the curtain at all.
   barFull().then(nextFrame).then(() => {
     document.body.classList.add('booted');
-    const drop = () => screen.remove();
+    const drop = () => { screen.remove(); revealed(); };
     screen.addEventListener('transitionend', drop, { once: true });
     setTimeout(drop, 1000); // belt and braces: reduced motion has no transition
   });

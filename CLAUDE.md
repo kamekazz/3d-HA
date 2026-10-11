@@ -182,20 +182,39 @@ levels they connect (`userData.levels`). In the planner they appear on both floo
 "▼ down"), drawn with "+ Stairs" (they connect the active floor down to the one below), moved/
 resized as rects, direction set in the side panel. Endpoints: `POST/PATCH/DELETE /api/house/stairs*`.
 
-**The viewer renders nothing outside the house.** On `/` (view mode, House level) the scene is
-the house shell GLB — which ships its own pale site pad and driveway — standing on `scene.js`'s
-dark ground plane (`ground`, 3000 ft, receives the shell's sun shadow), exactly the way edit mode
-looks minus the 1 ft `editGrid`. No grass disc, no trees, beds, lake, props, car or library yard
-models: the generated yard (below) exists **only while the Outside editor is open** —
-`setYardEditing(true)` builds it and `setYardEditing(false)` disposes it (`teardownYard`). That took
-the ~11 s yard build off the boot path (the phone requirement above) and is the user's explicit
-choice (2026-09-21). Two things the build did to the *shell* still have to happen in the viewer and
-are handled outside it: `hideShellPatioProps` (the GLB's own terrace lounge set; the placed Backyard
-objects are the real furniture) runs on `houseShellLoaded` and from `setEnvironmentData`, and the
-rear-pad cut (`lowerRearShellPad`) is put back by `restoreRearShellPad` on teardown. `measureHouse`
-also runs on every `setEnvironmentData` so `getEnvironmentCenter()` is right for weather.js without a
-build. Accepted difference: in the viewer the back deck and its furniture render at their saved
-placements, not the yard's re-layout (`configureRearDeckInstances` only runs while editing).
+**The viewer shows the generated yard, built after boot.** The user's decision of 2026-10-11
+(overriding 2026-09-21's "viewer renders nothing outside the house"): the Sims-style outside — the
+generated yard (below), the backdrop trees, and `yardgrade.js`'s "Sims day" grade — shows in the
+main view on the House level, in view **and** edit mode, not only while the Outside editor is open.
+It stays **off the boot path**: the house appears exactly as fast as before; `main.js` calls
+`startYard()` once the curtain has lifted (`boot.js bootRevealed()`), and `buildYard` runs in chunks
+that yield to the event loop between phases (`yardYield`, a `MessageChannel` macrotask — not rAF,
+which a background tab pauses, and not `setTimeout`, which it throttles). The yields sit only at
+phase boundaries outside any item factory, so rng order, keys and geometry are the synchronous
+build's (verified in one page: same 141 keys, same 30,985,551 verts and position hash —
+`__environment.buildSync(true)` turns the yields off to compare). Longest main-thread block is the
+lake's far-bank woodland item (~1.4 s here), which cannot be split without touching the factory.
+The first yard is swapped in hidden and shown only once `warmYardPrograms` has compiled the shader
+programs its first frame needs — the yard's own, the grade's `CustomToneMapping` variant, and the
+render-target variant the lake/porch reflections draw the whole scene with — **one new program at a
+time** with frames in between. That frame used to be a 23 s main-thread block on this desktop
+(ANGLE/D3D11 compiles serially in the GPU process, so `compileAsync` just moves the freeze to the
+first sync GL query); warmed, it is ~0.85 s (the ~1.4 GB vertex upload). The cost is latency: the
+yard appears ~45 s after boot here (≈5 s build + ≈40 s compile), with no freeze.
+
+A built yard stands for the life of the page: the Outside editor reuses it (one group per piece,
+always) and closing the editor no longer tears it down. A rebuild happens only when its inputs
+change (`yardInputs`: footprints, the shell's measured rects, the yard edits) — `reloadHouse` runs
+on every room edit and costs the yard nothing unless one of those moved — or when the editor
+changes the item *set* (duplicate/add/reset → `rebuildYard`). A rebuild builds detached and swaps
+in at the end, so the old yard stays on screen; a newer build overtakes an older one at its next
+yield (generation counter). Visibility is `yardWanted && standing && warmed && level === 'all'`, and
+the grade follows it exactly (`applyVisibility` → `setYardGrade`), so single floors and room focus
+render exactly as before. `snapshots.js` brackets room-card captures with `yardgrade.js
+suspendYardGrade()` (a negative exposure selects plain ACES inside the custom curve, no program
+swap). The rear-pad cut stays applied while the yard exists and is re-cut on each fresh shell
+(`houseShellLoaded`); `configureRearDeckInstances` now runs in the viewer too, so the back deck shows
+the yard's re-layout there as well.
 
 **Editing the outside** ("Outside" topbar button, `frontend/js/yard.js`) — the exterior is *generated*,
 not stored: `environment.js` draws every tree, shrub, bed, slab, prop, neighbour and the street from
@@ -220,9 +239,10 @@ wrapped by **reassigning their function declarations** (`installItemScopes`), so
   item and push nothing — 108 of them. An item with no geometry measures at the origin, so every one
   keyed to `0,0` and took a collision suffix: 106 keys whose identity would shift the day either flag
   moved.
-- **The yard is drawn one group per item** (`setYardEditing`); the six-merged-meshes viewer path
-  in `buildYard` is unreachable now and kept only as the cheap draw should a "show the yard in the
-  viewer" toggle ever return. A piece's group sits at its own pivot — footprint centre at its lowest
+- **The yard is drawn one group per item**, in the viewer too (`YARD_PER_ITEM`), so the editor
+  can pick the standing yard without rebuilding; the six-merged-meshes path in `buildYard` is
+  unused and kept only as the cheap draw should a phone ever need fewer draw calls (the editor would
+  then have to rebuild per-item on open). A piece's group sits at its own pivot — footprint centre at its lowest
   point, so a tree turns about its trunk and grows up from the ground — with its geometry re-centred
   there, which is what lets `drag.js` move it with the normal gizmo and read the gesture straight back
   out as the delta to save (`kind: 'yard'`, subtracting `userData.pivot`).
@@ -294,8 +314,8 @@ duplicate come back as the same `clone:<id>`. Endpoints: `GET /api/house/yard`, 
 `setEnvironmentData` needs them at build time.
 
 **The shell's measurement is not final when the yard first measures it**
-(`settleShellAnchors` in `environment.js`; runs only while the editor is open now, since that is the
-only time a yard exists to re-lay). Measured here: the `roofRect` the boot build sees is
+(`settleShellAnchors` in `environment.js`; runs from `startYard`, and each tick is a `refreshYard()`
+that rebuilds only if the measured inputs really moved). Measured here: the `roofRect` the boot build sees is
 z0 −25.43 / z1 41.36, and a frame later the same measurement gives −25.77 / 41.70. The whole yard is
 laid out from that rect, so the yard drawn at boot was **not** the yard any later rebuild produced —
 open the planner, hit undo, or sync, and the exterior quietly shifted and reshuffled (187 items

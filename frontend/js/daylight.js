@@ -90,6 +90,11 @@ const current = makeLightState();
 let weatherId = null;      // discovered weather.* entity
 let simOverride = null;    // console override via __daylight.simulate()
 let mode = 'auto';         // 'auto' | 'day' | 'night'
+// An optional look laid over the resolved target (yardgrade.js: the "Sims day"
+// while the Outside editor is open). It mutates `target` in place after the
+// ramp + weather have been applied and returns how strongly it applied (0..1).
+let grade = null;
+let gradeWeight = 0;
 
 export function getNightFactor() {
   return current.nightFactor;
@@ -196,6 +201,9 @@ function recomputeTarget() {
   // produced the glowing trim and hard-edged wall washes critics rejected.
   target.envIntensity =
     THREE.MathUtils.lerp(1.15, 0.02, target.nightFactor) * w.hemiX;
+
+  if (grade) gradeWeight = grade(target, { elevation, sunX, w });
+  else gradeWeight = 0;
 
   lastDaylight = {
     elevation,
@@ -306,6 +314,15 @@ export function initDaylight() {
     state() { return { current, target, weatherEntityId: weatherId, mode }; },
   };
 }
+
+// Install (fn) or remove (null) the grade, and snap to the result: opening or
+// closing the editor should not fade the sky over a second and a half.
+export function setDaylightGrade(fn) {
+  grade = fn || null;
+  recomputeTarget();
+  syncCurrentToTarget();
+}
+export function getGradeWeight() { return gradeWeight; }
 
 // floorview.js calls this after giving the background/fog back: tick()
 // early-returns once converged, so a sky that changed while the floor
