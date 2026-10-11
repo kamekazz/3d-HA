@@ -61,30 +61,31 @@ it are not readable from the code:
   `settleShellAnchors` saw the anchors move on every boot and rebuilt the entire yard a second time
   (a 13-15 s main-thread block, plus a second first-draw compile). That was the long-mysterious
   "rect a frame later" note in `environment.js`; it was never the shell settling. (The
-  yard is built after the curtain now — see below — but the order still decides what that deferred
-  build measures.)
-- **Draws are paused from the furniture stage until `compileAsync` resolves** (`scene.js
-  setRenderPaused`). Every fresh material compiles its shader synchronously on its first draw, and
+  yard is a boot stage again — see below — and this order is what makes its one measurement final.)
+- **Draws are paused from `buildHouse` until `compileAsync` resolves** (`scene.js
+  setRenderPaused`; it used to start at the furniture stage, which let the shell compile through
+  plain ACES before the yard stage switched the grade's curve on). Every fresh material compiles its shader synchronously on its first draw, and
   with the loop drawing behind the curtain that was the yard's ~40 unique programs in one 12 s frame
   plus a 0.8-3 s hitch per furniture GLB as it landed. Held until `compileAsync`, they all compile
   there in parallel (KHR_parallel_shader_compile; ~0.5-2 s for the whole scene). Only `renderView()`
   is skipped — frame callbacks, controls and optics keep ticking — and the pose solve never needed a
   draw (it inverts the camera matrices by hand). `main().catch` un-pauses before it banners.
-- **The yard is not on the boot path.** Since 2026-09-21 no yard is built behind the curtain (the
-  furniture stage went ~11.5 s → ~0.35 s). Since 2026-10-11 the viewer shows it anyway: `main.js`
-  calls `environment.js startYard()` off `boot.js bootRevealed()` (resolves when the curtain has
-  faded and been removed), and the build runs chunked — `yardYield` between phases, a time-sliced
-  per-item emit loop — so nothing behind or during the curtain changes. The first yard is then
-  swapped in **hidden** and shown only after `warmYardPrograms` has compiled its first frame's
-  programs one at a time (the yard's own, the grade's `CustomToneMapping` variant, and the
-  render-target variant the lake/porch reflections and the cabinet cube probe draw the whole scene
-  with). Not `compileAsync`: Chrome's GPU process compiles the queue serially even with
-  KHR_parallel_shader_compile advertised, so the next sync GL query waits for all of it — that is
-  what the 23 s first-yard-frame block measured here was, and it is ~0.85 s warmed. Measured on this
-  desktop (`__environment.chunks()` / `.warm()` / `.timings()`): build ~4.6 s in 27 chunks, longest
-  ~1.4 s (the lake's far-bank woodland, one item); warm ~40 s for ~106 programs with no block over
-  ~10 ms; yard visible ~46 s after the curtain lifts. The other curve warms in the background after
-  the reveal so dawn/dusk is a program switch too.
+- **The yard is a boot stage again (2026-10-11, "no pop-in").** On the House level `main.js` runs
+  "Planting the yard…" (`environment.js prepareYardForBoot`: the chunked build, the swap, the grade
+  switched on, the library car and yard models awaited) and then "Preparing the view…" (the one
+  `compileAsync`, which now covers the yard through the curve the grade actually picked), so the
+  curtain lifts on the complete, graded scene. Both stages are wrapped in `boot.js bootHold()`: they
+  fire no loader callbacks, and a main-thread block can outlast `STALL_MS`, after which the
+  watchdog's own timer would run first and reveal a half-built stage (`bootStage`/`bootProgress` also
+  count as progress now; the build reports per chunk). The room-card stage is held the same way — on
+  a cold profile it is ~25 captures with nothing else moving. Measured cold on this desktop: reveal
+  ~14 s (was 9 s plus ~46 s of yard pop-in), ~85 programs (was 174), longest block ~1.4 s (the lake's
+  far-bank woodland item); phone-lite in the mobile preset ~9.7 s. The root `CLAUDE.md` lists what
+  cut the compile (reflections sharing the screen's programs, draws paused from `buildHouse`, the
+  house's programs issued during the build, fogged card captures). A route that opens off the House
+  level builds the yard after the reveal instead (`startYard`, shown once `warmYardPrograms` has
+  compiled it one program at a time — `compileAsync` there would stall: Chrome's GPU process compiles
+  serially, so the next sync GL query waits for the whole queue; measured 17.5-23 s).
 - **The yard build is instrumented**: `window.__environment.timings()` prints where the last
   `buildYard` spent its time per builder (and inside the lake, per phase). Measured after the
   fixes above: ~11.5 s cold on this machine (~7 s warm), of which the lake
@@ -493,7 +494,8 @@ the grade's sky dome) is visible on the House level in view and edit mode once a
 and its programs are warm (`yardWanted && shownYard && yardWarm && onHouseLevel`), and
 `yardgrade.js`'s "Sims day" grade is switched on and off with exactly that visibility — it hides
 `scene.js`'s dark `ground` plane and the `editGrid` through their materials, so a single floor or
-room focus gets both back untouched. The yard is built after boot (see the boot section), stands for
+room focus gets both back untouched. The yard is built behind the boot curtain (see the boot section; phone-lite and the
+reflections' shared programs are in the root `CLAUDE.md`), stands for
 the life of the page, and is rebuilt only when `yardInputs()` (footprints, measured shell rects,
 yard edits) change or the editor changes the item set. What follows describes that build. It makes
 a grass disc reaching past fog-far, merged low-poly trees/bushes (two draw calls, vertex-colored
@@ -556,8 +558,8 @@ sun+weather through `onDaylightChanged`, so the mode button and `__daylight.simu
 drive it too; `window.__weather.step(secs)` advances the easing manually for testing (rAF pauses in
 hidden tabs, so nothing eases while the tab is backgrounded). Weather hides in edit mode
 (`appModeChanged`) and in single-floor view (below). The yard shows on the House level in both
-modes; the dark ground and, in edit mode, the grid are what the house stands on before the yard
-has landed after boot (and are what the grade hides once it has).
+modes; the dark ground and, in edit mode, the grid are what the house stands on wherever the yard is
+not shown (and are what the grade hides where it is).
 
 **The dollhouse cutaway** (`frontend/js/cutaway.js`): the walls between you and a room fade out, so
 every room reads like a Sims-4 build-mode shot — two far walls, no near walls, no ceiling. This used

@@ -21,6 +21,12 @@ def snapshot(entity_id):
         return err
     try:
         content, ctype = rest.get_camera_image(entity_id)
+    except requests.HTTPError:
+        # HA answered, but this camera has no frame to give (sleeping battery
+        # cams answer camera_proxy with a 500 -- 22 of 28 here, measured). Not
+        # an outage: 204 makes the <img> fail quietly (cameras.js onerror marks
+        # the tile) instead of Chrome logging a console error per tile per poll.
+        return Response(status=204, headers={"Cache-Control": "no-store"})
     except requests.RequestException as exc:
         return jsonify({"error": "snapshot failed", "detail": str(exc)}), 502
     return Response(content, mimetype=ctype,

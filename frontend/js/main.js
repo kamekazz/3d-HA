@@ -21,7 +21,8 @@ import { initPlanner } from './planner.js';
 import { initYardEditor, isYardEditorOpen, yardPickTargets, selectYardPiece } from './yard.js';
 import { initAddKit } from './addkit.js';
 import { initDaylight, settleDaylight } from './daylight.js';
-import { initEnvironment, setEnvironmentData, setYardModels, startYard } from './environment.js';
+import { initEnvironment, setEnvironmentData, setYardModels, startYard,
+  prepareYardForBoot, warmOtherCurveLater, compileForBoot } from './environment.js';
 import { initWeather } from './weather.js';
 import { initRoomLights, setRoomLightsData, repaintFixture, settleRoomLights } from './roomlights.js';
 import { initEaveLights } from './eavelights.js';
@@ -34,7 +35,7 @@ import { initCameras } from './cameras.js';
 import { initRoomCards, setRoomCardsData, cardImagesReady } from './roomcards.js';
 import { requestSnapshots, snapshotsIdle } from './snapshots.js';
 import { startBoot, bootStage, bootProgress, settleLoaders, orTimeout, finishBoot,
-  bootHouseBuilt, bootRevealed } from './boot.js';
+  bootHouseBuilt, bootRevealed, bootHold } from './boot.js';
 import { initAppShell } from './appshell.js';
 
 let structure = null;
@@ -406,6 +407,12 @@ async function main() {
   // The band is set BEFORE the await on purpose: the shell's loader callbacks
   // must paint into the house band, not into whatever came before it.
   bootStage('Loading the house…', 0.15, 0.45);
+  // No draws from here until compileAsync below (it used to start at the
+  // furniture stage). A draw now would compile the shell's ~17 programs
+  // through plain ACES, only for the yard stage to switch the grade's curve
+  // on and compile them all again -- under the curtain nothing is shown, and
+  // the shell framing never needed a frame (scene.js solves the pose by hand).
+  setRenderPaused(true);
   buildHouse(house);
   bootHouseBuilt();   // there is a stage to reveal now; the watchdog may fire
   // Resolves when the shell is added, masked, framed and levelled — or at once
@@ -440,10 +447,10 @@ async function main() {
   setEnvironmentData(house);
   // The driveway car is a library model looked up by NAME (environment.js
   // CAR_MODEL_NAME), so the yard needs the model list — which GET /api/house
-  // does not carry, only its version map. Deliberately not awaited; it is only
-  // consumed by the deferred yard build (and syncCar swaps the car in if it
-  // lands later).
-  api.getModels().then(setYardModels).catch(() => {});
+  // does not carry, only its version map. Not awaited here; the yard stage
+  // below awaits it, so the car the curtain reveals is the library car and
+  // not the primitive stand-in swapped out a moment later.
+  const yardModelsP = api.getModels().then(setYardModels).catch(() => {});
   initFocus();
   initDrag();
   initAddKit();      // the add tray, shared by the room editor and the yard's
@@ -477,12 +484,27 @@ async function main() {
   // shell needs no separate await here — it landed before the furniture band.
   await settleLoaders();          // every GLB and texture
 
-  bootStage('Preparing the scene…', 0.85, 0.92);
+  // The yard, BEHIND the curtain (2026-10-11: "make sure the whole page loads
+  // first, and then show the house"). Built chunked (the curtain keeps
+  // animating and the bar moves), swapped in, the grade switched on and the
+  // library car landed -- all before the one compile below, so that compile
+  // covers every program the first revealed frame needs, through the tone
+  // curve actually in use. Only on the House level: a route that opens on a
+  // floor never shows the yard, and builds it after the reveal instead.
+  const yardAtBoot = getLevel() === 'all';
+  if (yardAtBoot) {
+    bootStage('Planting the yard…', 0.85, 0.9);
+    await orTimeout(yardModelsP, 5000);
+    await bootHold(prepareYardForBoot({ onProgress: bootProgress }));
+  }
+
+  bootStage('Preparing the view…', 0.9, 0.94);
   // Shaders for a few hundred fresh GLB materials compile on the first DRAW,
   // not on load — that hitch belongs behind the curtain. compileAsync is newer
   // than the pinned three, so fall back to the synchronous compile.
   try {
-    if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
+    // compileForBoot: also the night optics composer's render-target variant
+    if (renderer.compileAsync) await bootHold(compileForBoot());
     else renderer.compile(scene, camera);
   } finally {
     setRenderPaused(false);
@@ -497,7 +519,7 @@ async function main() {
   settleDaylight();               // and don't fade day->night after the reveal
   settleRoomLights();             // nor ramp a dozen lamps up once it lifts
 
-  bootStage('Rendering room previews…', 0.92, 0.99);
+  bootStage('Rendering room previews…', 0.94, 0.99);
   // immediate: settleLoaders() has resolved, so the 1.5s/6.5s guesswork the
   // timers exist for is answered — nothing is still streaming in.
   requestSnapshots(house, { immediate: true });
@@ -510,7 +532,9 @@ async function main() {
   // visible but uncomposited window). Generous now that the watchdog reveals on
   // a stall rather than a clock: these two ARE the room cards, and cutting them
   // short is what put the rail's thumbnails on screen after the curtain lifted.
-  if (!document.hidden) await orTimeout(snapshotsIdle(), 20000);
+  // bootHold: the pump has no loader callbacks, so without it a cold start
+  // (no cached cards) looks like a stall to the watchdog
+  if (!document.hidden) await bootHold(orTimeout(snapshotsIdle(), 20000));
   await orTimeout(cardImagesReady(8000), 10000);
   // The calendar stays on a short leash by contrast: it is one dock tile, HA's
   // calendar API can be slow, and it is not worth holding the whole app for.
@@ -518,13 +542,11 @@ async function main() {
 
   finishBoot();
 
-  // The yard (lawn, planting, lake, backdrop) and its "Sims day" grade show in
-  // the viewer since 2026-10-11, but they stay OFF the boot path: the build
-  // starts once the curtain has lifted and runs in chunks that yield to the
-  // event loop (environment.js buildYard), so the house still appears as fast
-  // as before and the outside lands a few seconds later. The short pause lets
-  // the first interactive frames and any room-card stragglers go first.
-  bootRevealed().then(() => setTimeout(startYard, 250));
+  // After the reveal: the other tone curve's programs, one at a time (a floor
+  // view or dawn then switches programs instead of compiling them) -- or, on
+  // a route that opened off the House level, the whole deferred yard.
+  if (yardAtBoot) warmOtherCurveLater();
+  else bootRevealed().then(() => setTimeout(startYard, 250));
 
   // if structure failed at boot (HA still connecting), retry in the background —
   // but only when the backend actually has HA configured

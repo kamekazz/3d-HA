@@ -1,11 +1,11 @@
 // Outdoor environment: the generated yard (lawn, beds, trees, props, the
 // rear lake, the backdrop) around the house shell. Since 2026-10-11 it shows
 // in the VIEWER too (House level, view and edit mode), with yardgrade.js's
-// "Sims day" grade -- but it is still off the boot path: main.js calls
-// startYard() once the boot curtain has lifted, and the build runs in chunks
-// that yield to the event loop between phases (yardYield), so the house
-// appears exactly as fast as before and the yard lands a few seconds later
-// without one multi-second freeze. One group per piece, always, so the Outside
+// "Sims day" grade, and the boot curtain waits for it (no pop-in): main.js
+// runs prepareYardForBoot as a boot stage before its one compileAsync. The
+// build runs in chunks that yield to the event loop between phases
+// (yardYield), so the curtain keeps animating. Phone-lite: see YARD_LITE.
+// One group per piece, always, so the Outside
 // editor reuses the standing yard instead of rebuilding it. A build replaces
 // the standing yard only when it finishes (it is built detached and swapped
 // in), and a rebuild happens only when its inputs change (yardInputs).
@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene } from './scene.js';
 import { getShellRoot, isOutdoorRoom, getBuildingBox, houseShellReady } from './house.js';
-import { getInstance } from './models.js';
+import { getInstance, getModelSize } from './models.js';
 import { renderer, getEnvIntensity, onFrame, camera } from './scene.js';   // onFrame: the car's sky tick
 import { getNightFactor, getDaylight, getGradeWeight } from './daylight.js';   // car sky and rear atmosphere
 import { setYardGrade, predictGradeCurve } from './yardgrade.js';   // the "Sims day" look whenever the yard is shown
@@ -34,6 +34,24 @@ let roofRect = null;  // {x0,z0,x1,z1} of the shell's roof masses = the building
 let yardGrassMats = [];
 let applyYardVisibility = () => {};   // set by initEnvironment
 
+// PHONE-LITE (user's choice, 2026-10-11): phones and small touch screens get
+// the same Sims yard, but the lake's scanned-oak woodland (~29 M verts, ~1.3 GB
+// of vertex buffers -- more than a phone's GPU will hold) is drawn as stylised
+// simsClump crowns instead; see leafCloudLite in addRearLakeDetail. Same
+// detection as the phone layout (style.css: coarse pointer, < 1024 px), taken
+// on the SCREEN, not the window, so rotating or resizing never flips it (the
+// keys of the lite-only crowns' items must stay put for the page's life).
+// ?yard=lite / ?yard=full overrides, for testing.
+const YARD_LITE = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('yard');
+    if (q === 'lite') return true;
+    if (q === 'full') return false;
+    return matchMedia('(pointer: coarse)').matches
+      && Math.min(screen.width, screen.height) < 1024;
+  } catch { return false; }
+})();
+
 // Metered off "Front of the house.jpg", not chosen by eye. The photographed
 // lawn is a HAZY summer turf: clean patches read RGB 116-123 / 128-136 /
 // 122-130, i.e. G-R only +11..+14 and G-B around +8. The old 0x53703c
@@ -47,7 +65,7 @@ let applyYardVisibility = () => {};   // set by initEnvironment
 // yellow emerald (~#4caf3a-#5cbf3f on screen). The base is now authored for
 // that read; the yard only exists while the Outside editor is open, so the
 // viewer is unaffected.
-const GRASS_BASE = new THREE.Color(0x578a35);
+const GRASS_BASE = new THREE.Color(0x3c7406);
 const GRASS_SNOW = new THREE.Color(0xe9edf2);
 let snowF = 0, wetF = 0; // weather.js drives these (eased on its side)
 
@@ -111,30 +129,44 @@ function simsClumpTexture() {
   // 0.5..1): an OPAQUE leafy patch the clump hearts are mapped into, so a
   // heart reads as foliage rather than a smooth plastic ball.
   if (_simsClumpTex) return _simsClumpTex;
-  const N = 256, cv = document.createElement('canvas'); cv.width = 2 * N; cv.height = N;
+  const N = 512, cv = document.createElement('canvas'); cv.width = 2 * N; cv.height = N;
   const ctx = cv.getContext('2d'), r = mulberry32(0x434c554d);
-  // solid heart of the card: what trunks and limbs sample, at uv (0.25, 0.5)
-  ctx.fillStyle = 'rgb(226,226,226)';
-  ctx.beginPath(); ctx.arc(N / 2, N / 2, 36, 0, Math.PI * 2); ctx.fill();
-  for (let i = 0; i < 150; i++) {
-    const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 96;
-    const x = N / 2 + Math.cos(a) * d, y = N / 2 + Math.sin(a) * d * 0.92;
-    const s = 10 + r() * 12, v = 178 + r() * 77;
-    const g = ctx.createLinearGradient(0, y - s, 0, y + s);
-    g.addColorStop(0, `rgb(${v | 0},${v | 0},${v | 0})`);
-    g.addColorStop(1, `rgb(${v * 0.72 | 0},${v * 0.72 | 0},${v * 0.72 | 0})`);
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.ellipse(x, y, s, s * 0.55, r() * Math.PI, 0, Math.PI * 2); ctx.fill();
+  // r9: between r7 (lush, but ~150 tiny leaves that mipped to a blur) and r8
+  // (one crisp scallop that read as balloons): ~24 MID-SIZE leaves per card,
+  // big enough to stay crisp at mid distance, laid over a darker occlusion
+  // layer of leaves so the gaps between them read as interior shadow. Each
+  // leaf is two-tone (shaded body, sun-lit upper edge). The centre (u 0.25,
+  // v 0.5) carries a small solid disc for trunks and limbs.
+  {
+    const cx = N / 2, cy = N / 2;
+    const leaf = (x, y, s, rot, body, lit) => {
+      ctx.fillStyle = `rgb(${body},${body},${body})`;
+      ctx.beginPath(); ctx.ellipse(x, y, s, s * 0.58, rot, 0, Math.PI * 2); ctx.fill();
+      if (lit) {
+        ctx.fillStyle = `rgb(${lit},${lit},${lit})`;
+        ctx.beginPath(); ctx.ellipse(x, y - s * 0.2, s * 0.8, s * 0.36, rot, 0, Math.PI * 2); ctx.fill();
+      }
+    };
+    for (let i = 0; i < 26; i++) {                       // occlusion layer
+      const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 165;
+      leaf(cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.9 + 12, 62 + r() * 26, r() * Math.PI, 84 + (r() * 22 | 0), 0);
+    }
+    for (let i = 0; i < 24; i++) {                       // lit leaves on top
+      const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 170, v = 176 + r() * 70;
+      leaf(cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.9 - 6, 46 + r() * 22, r() * Math.PI, v * 0.78 | 0, v | 0);
+    }
+    ctx.fillStyle = 'rgb(200,200,200)';
+    ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.fill();
   }
+  // the hearts' patch: the same leaves, smaller, over a shaded ground
   ctx.save(); ctx.beginPath(); ctx.rect(N + 2, 2, N - 4, N - 4); ctx.clip();
-  ctx.fillStyle = 'rgb(118,118,118)'; ctx.fillRect(N, 0, N, N);
-  for (let i = 0; i < 420; i++) {
-    const x = N + r() * N, y = r() * N, s = 7 + r() * 9, v = 170 + r() * 85;
-    const g = ctx.createLinearGradient(0, y - s, 0, y + s);
-    g.addColorStop(0, `rgb(${v | 0},${v | 0},${v | 0})`);
-    g.addColorStop(1, `rgb(${v * 0.7 | 0},${v * 0.7 | 0},${v * 0.7 | 0})`);
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.ellipse(x, y, s, s * 0.55, r() * Math.PI, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgb(104,104,104)'; ctx.fillRect(N, 0, N, N);
+  for (let i = 0; i < 520; i++) {
+    const x = N + r() * N, y = r() * N, sz = 16 + r() * 12, v = 168 + r() * 70, a = r() * Math.PI;
+    ctx.fillStyle = `rgb(${v * 0.76 | 0},${v * 0.76 | 0},${v * 0.76 | 0})`;
+    ctx.beginPath(); ctx.ellipse(x, y, sz, sz * 0.58, a, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `rgb(${v | 0},${v | 0},${v | 0})`;
+    ctx.beginPath(); ctx.ellipse(x, y - sz * 0.2, sz * 0.8, sz * 0.36, a, 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
   const t = new THREE.CanvasTexture(cv);
@@ -148,23 +180,29 @@ function simsClumpTexture() {
 // -- sun through the leaf from behind, and a share of the sky on the far
 // side. No added lights, no emissive.
 function simsLeafShader(shader) {
+  // OPAQUE would pin alpha to 1 and give coverage nothing to work with;
+  // blending stays off (transparent: false), so alpha only drives coverage.
+  shader.fragmentShader = '#undef OPAQUE\n' + shader.fragmentShader.replace('#include <alphatest_fragment>',
+    '#ifdef USE_ALPHATEST\nfloat simsA2C = max( fwidth( diffuseColor.a ), 1e-4 );\n'
+    + 'diffuseColor.a = clamp( ( diffuseColor.a - alphaTest ) / simsA2C + 0.5, 0.0, 1.0 );\n'
+    + 'if ( diffuseColor.a <= 0.0 ) discard;\n#endif');
   shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>',
     THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0'));
   const marker = 'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );';
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_pars_fragment>',
     THREE.ShaderChunk.lights_physical_pars_fragment.replace(marker, marker
-      + '\nreflectedLight.directDiffuse += max(-dot(geometryNormal,directLight.direction),0.0) * directLight.color * BRDF_Lambert(material.diffuseColor) * 0.26;'));
+      + '\nreflectedLight.directDiffuse += max(-dot(geometryNormal,directLight.direction),0.0) * directLight.color * BRDF_Lambert(material.diffuseColor) * 0.32;'));
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_end>',
     '#include <lights_fragment_end>\n#if NUM_HEMI_LIGHTS > 0\nvec3 simsBack = vec3(0.0);\n'
     + '#pragma unroll_loop_start\nfor ( int i = 0; i < NUM_HEMI_LIGHTS; i ++ ) { simsBack += getHemisphereLightIrradiance( hemisphereLights[ i ], -geometryNormal ); }\n#pragma unroll_loop_end\n'
-    + 'reflectedLight.indirectDiffuse += simsBack * BRDF_Lambert( material.diffuseColor ) * 0.24;\n#endif');
+    + 'reflectedLight.indirectDiffuse += simsBack * BRDF_Lambert( material.diffuseColor ) * 0.55;\n#endif');
 }
 function simsLeafMaterial() {
   const m = new THREE.MeshStandardMaterial({
     vertexColors: true, map: simsClumpTexture(), alphaTest: 0.5, side: THREE.DoubleSide,
-    roughness: 1, metalness: 0, envMapIntensity: 0.55 });
+    roughness: 1, metalness: 0, envMapIntensity: 0.8, alphaToCoverage: true });
   m.onBeforeCompile = simsLeafShader;
-  m.customProgramCacheKey = () => 'sims-leaf-v2';
+  m.customProgramCacheKey = () => 'sims-leaf-v7';
   return m;
 }
 const _simsIco = new Map();
@@ -176,19 +214,42 @@ function simsUnitIco(detail) {
   }
   return _simsIco.get(detail);
 }
-const _scC = new THREE.Color();
+const _scC = new THREE.Color(), _scLo = new THREE.Color(), _scHi = new THREE.Color();
 // One clump into a leafStore. lo/hi: shaded and sunlit colour (linear
 // THREE.Color); gy/gr: the whole crown's centre height and half-height, for
 // the top-lit ramp; cards: leaf-cluster cards of half-size `size`.
 function simsClump(st, rng, cx, cy, cz, rx, ry, rz, cards, size, lo, hi, gy, gr, detail = 1) {
   const ix = 1 / (rx * rx), iy = 1 / (ry * ry), iz = 1 / (rz * rz);
+  // r4: an IRREGULAR outline. Each clump's heart and card shell are pushed
+  // in and out by a smooth lobe field over direction, phased from the
+  // clump's own position (never from rng: the plants builder passes its own
+  // stream, and an extra draw would shift its items' keys).
+  const p1 = cx * 0.37 + cz * 0.11, p2 = cz * 0.29 - cy * 0.17, p3 = cx * 0.13 + cy * 0.31;
+  // (a tall narrow mass -- fir, poplar, willow strand -- gets a third of the
+  // lobing, or its silhouette turns into a lumpy figure)
+  // (and a coarse detail-0 heart: 12 vertices cannot carry the lobes)
+  // r5: subtle only -- r4's full lobing read as melted lumps; the breakup
+  // now comes from many small sub-clumps (addBackdrop's clump)
+  const la = (ry > 1.5 * Math.max(rx, rz) ? 0.35 : 1) * (detail ? 0.3 : 0.15);
+  const lobe = (ux, uy, uz) => 1 + la * (0.17 * Math.sin(ux * 3.1 + p1) * Math.sin(uz * 2.7 + p2)
+    + 0.10 * Math.sin(uy * 4.3 + ux * 2.2 + p3) + 0.06 * Math.sin((ux + uz) * 6.1 + p2));
+  // r7: the darkest foliage is a COOL MID-GREEN, never black -- the shade end
+  // is lifted a third of the way to the sunlit colour and pushed blue-green;
+  // the sun end is warmed toward yellow-green and brightened.
+  // r9: deeper, less lime -- a gentler lift and warm-up than r7/r8
+  _scLo.copy(lo).lerp(hi, 0.22); _scLo.r *= 0.85; _scLo.b *= 1.22;
+  _scHi.copy(hi); _scHi.r *= 1.08; _scHi.g *= 1.04; _scHi.b *= 0.86;
   const vert = (x, y, z, u, v, k) => {
     let nx = (x - cx) * ix, ny = (y - cy) * iy, nz = (z - cz) * iz;
     const l = 1 / (Math.hypot(nx, ny, nz) || 1); nx *= l; ny *= l; nz *= l;
-    let t = 0.5 + 0.30 * ny + 0.30 * (y - gy) / gr;
+    // lit top -> shaded underside, by facing AND height in the whole crown
+    let t = 0.46 + 0.42 * ny + 0.36 * (y - gy) / gr;
     t = t < 0 ? 0 : t > 1 ? 1 : t; t = t * t * (3 - 2 * t);
-    t *= t;   // most of the mass sits toward `lo`; `hi` is the sunlit highlight
-    _scC.copy(lo).lerp(hi, t);
+    t = Math.pow(t, 1.25);
+    // dappling: soft light/dark patches across the crown, in world feet
+    const d = 0.92 + 0.08 * Math.sin(x * 0.41 + z * 0.19) * Math.sin(z * 0.33 - y * 0.29);   // r9: moderate
+    k *= d;
+    _scC.copy(_scLo).lerp(_scHi, t);
     st.pos.push3(x, y, z); st.nrm.push3(nx, ny, nz); st.uv.push2(u, v);
     st.col.push3(_scC.r * k, _scC.g * k, _scC.b * k);
   };
@@ -200,27 +261,40 @@ function simsClump(st, rng, cx, cy, cz, rx, ry, rz, cards, size, lo, hi, gy, gr,
     const fx = Math.abs(ico[t] + ico[t + 3] + ico[t + 6]), fy = Math.abs(ico[t + 1] + ico[t + 4] + ico[t + 7]);
     const fz = Math.abs(ico[t + 2] + ico[t + 5] + ico[t + 8]);
     for (let i = t; i < t + 9; i += 3) {
-      const X = ico[i] * rx * 0.8, Y = ico[i + 1] * ry * 0.8, Z = ico[i + 2] * rz * 0.8;
+      const g = 0.64 * lobe(ico[i], ico[i + 1], ico[i + 2]);   // r7: a smaller opaque heart -- open crowns
+      const X = ico[i] * rx * g, Y = ico[i + 1] * ry * g, Z = ico[i + 2] * rz * g;
       let a, b;
       if (fy >= fx && fy >= fz) { a = X; b = Z; } else if (fx >= fz) { a = Z; b = Y; } else { a = X; b = Y; }
-      const k = 0.16;   // ~6 ft of leaf patch per texture half
+      const k = 0.22;   // ~4.5 ft of leaf patch per texture half (r5: crisper)
       const hu = 0.52 + 0.46 * (0.5 + 0.5 * Math.sin(a * k * 2.2)), hv = 0.03 + 0.94 * (0.5 + 0.5 * Math.sin(b * k * 2.2));
-      vert(cx + X, cy + Y, cz + Z, hu, hv, 0.92);
+      vert(cx + X, cy + Y, cz + Z, hu, hv, 0.68);   // the heart is the shaded interior; the cards carry the lit leaves
     }
   }
-  for (let c = 0; c < cards; c++) {
+  // the caller's cards on its own stream, then a ragged fringe at the
+  // silhouette from a LOCAL stream (see above)
+  const fringeRng = mulberry32((Math.round(cx * 97) ^ Math.round(cz * 131) * 7 ^ Math.round(cy * 53) * 13) >>> 0);
+  const fringe = Math.round(cards * 0.45);
+  for (let c = 0; c < cards + fringe; c++) {
+    const R = c < cards ? rng : fringeRng;
     let dx, dy, dz;
-    do { dx = rng() * 2 - 1; dy = rng() * 2 - 1; dz = rng() * 2 - 1; } while (dx * dx + dy * dy + dz * dz > 1 || dx * dx + dy * dy + dz * dz < 0.05);
-    const dl = 1 / Math.hypot(dx, dy, dz), k = 0.8 + rng() * 0.3;
+    do { dx = R() * 2 - 1; dy = R() * 2 - 1; dz = R() * 2 - 1; } while (dx * dx + dy * dy + dz * dz > 1 || dx * dx + dy * dy + dz * dz < 0.05);
+    const dl = 1 / Math.hypot(dx, dy, dz);
+    // (inside ~1.2x the heart: further out a card floats free of its mass)
+    // r6: straddling the heart's skin (0.8): half of each card breaks the
+    // silhouette (ragged, see-through), half sits on the surface
+    // r7: the body cards fill between the heart (0.64) and the skin; the
+    // fringe cards sit ON the skin and break the outline
+    const k = (c < cards ? 0.62 + R() * 0.34 : 0.84 + R() * 0.14) * lobe(dx * dl, dy * dl, dz * dl);
     const px = cx + dx * dl * rx * k, py = cy + dy * dl * ry * k, pz = cz + dz * dl * rz * k;
     // card plane: a random orientation (its lighting comes from the clump)
-    let mx = rng() - 0.5, my = rng() - 0.5, mz = rng() - 0.5;
+    let mx = R() - 0.5, my = R() - 0.5, mz = R() - 0.5;
     let ml = 1 / (Math.hypot(mx, my, mz) || 1); mx *= ml; my *= ml; mz *= ml;
     let ax = my, ay = -mx, az = 0;                  // m x z-ish tangent
     if (Math.abs(mz) > 0.9) { ax = 0; ay = mz; az = -my; }
     ml = 1 / (Math.hypot(ax, ay, az) || 1); ax *= ml; ay *= ml; az *= ml;
     const bx = my * az - mz * ay, by = mz * ax - mx * az, bz = mx * ay - my * ax;
-    const s = size * (0.75 + rng() * 0.5), j = 0.94 + rng() * 0.12;
+    // per-card variation (same draws), darker deep in the crown, sun-lit at the rim
+    const s = size * (0.75 + R() * 0.5), j = (0.88 + R() * 0.24) * (c < cards ? 0.74 + 0.6 * (k - 0.62) : 1.06);
     const P = [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]];
     for (const q of [0, 1, 2, 0, 2, 3]) {
       const [a, b, u, v] = P[q];
@@ -336,7 +410,7 @@ function valueNoise(rnd, cells) {
 // so the grain is cut to a whisper and the clump term softened. The tile is
 // kept (it still breaks up flat paint up close); the soft large-scale mottle
 // is lawnTint's job.
-const LAWN_MEAN = 214, LAWN_GRAIN = 20, LAWN_CLUMP = 16;
+const LAWN_MEAN = 214, LAWN_GRAIN = 9, LAWN_CLUMP = 7;   // round 8: quieter -- critics read 13/12 as noisy mottle
 function makeGrassTexture() {
   const N = 128;
   const c = document.createElement('canvas');
@@ -363,8 +437,8 @@ function makeGrassTexture() {
   g.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(280, 280);
-  tex.anisotropy = 8;   // clamped to the device max by WebGLTextures
+  tex.repeat.set(170, 170);   // ~14 ft tile (was 8.6): calmer at lot scale
+  tex.anisotropy = 16;   // clamped to the device max by WebGLTextures
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
@@ -556,16 +630,32 @@ function setYardGradeShown(on) {
 // the grade's curve or into the reflections), for the live curve, the grade's
 // curve and the render-target variant. A material holds one program per key,
 // so compiling a variant never evicts the one the live frame is using.
+// The lake and porch-glass reflections and the cabinet's cube probe draw the
+// WHOLE visible scene into a render target, and three keys a render-target
+// pass as its own program variant (no tone mapping, linear output) -- 60 extra
+// programs here, a third of everything the yard frame compiled. Flagged the
+// way three flags an XR target, the pass gets the screen's tone mapping and
+// output colour space and therefore the screen's programs, byte for byte; the
+// target then holds display-encoded colour, and each consumer decodes its
+// samples back to linear (pow 2.2). The flag changes nothing else for a
+// single-sample target (three r160 reads isXRRenderTarget only for those two
+// program parameters and the multisample renderbuffer format).
+function shareScreenPrograms(rt) {
+  rt.isXRRenderTarget = true;
+  rt.texture.colorSpace = renderer.outputColorSpace;
+  return rt;
+}
+
 let yardWarm = false;
 const WARM_WAIT_CAP_MS = 8000;   // per program: stop waiting on the driver after this
 const warmLog = [];              // window.__environment.warm()
 
 // One visible drawable per material, with the yard counted as shown.
-function warmTargets() {
+function warmTargets(all = false) {
   const reps = new Map();
   const wasVisible = root.visible;
   root.visible = true;
-  scene.traverseVisible((o) => {
+  scene[all ? 'traverse' : 'traverseVisible']((o) => {
     if (!o.material || !(o.isMesh || o.isPoints || o.isLine || o.isSprite)) return;
     for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
       if (m.visible && !reps.has(m)) reps.set(m, o);
@@ -584,37 +674,37 @@ function macrotask(ms = 0) {
   });
 }
 
-// `curves`: the tone curves to compile the screen variant for; `withRT`: also
-// the render-target variant. The first call (before the reveal) does the curve
-// the grade will pick right now plus the RT variant; the other curve follows in
-// the background after the reveal, so a dawn/dusk flip finds it ready too.
-async function warmYardPrograms(curves, withRT) {
+// `passes`: [{ tm, fog }] -- the tone curve, and whether the scene's fog is on
+// (floorview.js nulls the fog on a single floor, and fog is a program define,
+// so a floor view of the interiors is its own variant). `all`: every material
+// in the scene, not just what the House level shows. The reflections need no
+// pass of their own any more (shareScreenPrograms).
+async function warmYardPrograms(passes, all = false) {
   const t0 = performance.now();
   // the library car lands async after the swap and is ~30 programs of its own
   if (carPending) await Promise.race([carPending, macrotask(15000)]);
-  const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
-  const passes = curves.map((c) => [c, null]);
-  if (withRT) passes.push([renderer.toneMapping, rt]);
   const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
-  const targets = warmTargets();
+  const targets = warmTargets(all);
   const programs0 = renderer.info.programs.length;
   let calls = 0, maxBlock = 0, maxCompile = 0, sliceT = performance.now();
-  try {
-    for (const [tm, target] of passes) {
+  {
+    for (const { tm, fog, rt } of passes) {
       for (const obj of targets) {
         // per call, not per warm: the level can change while this runs
-        const prevTm = renderer.toneMapping, prevRt = renderer.getRenderTarget();
+        const prevTm = renderer.toneMapping, prevFog = scene.fog, prevRt = renderer.getRenderTarget();
         const wasVisible = root.visible;
         const before = renderer.info.programs.length;
         const b0 = performance.now();
         // compile gathers LIGHTS from visible objects only, so the yard
         // counts as shown, as it will be
         root.visible = true;
-        renderer.toneMapping = tm;
-        if (target) renderer.setRenderTarget(target);
+        if (tm != null) renderer.toneMapping = tm;
+        if (!fog) scene.fog = null;
+        if (rt) renderer.setRenderTarget(warmTarget());
         try { renderer.compile(obj, camera, scene); } finally {
           renderer.toneMapping = prevTm;
-          if (target) renderer.setRenderTarget(prevRt);
+          scene.fog = prevFog;
+          if (rt) renderer.setRenderTarget(prevRt);
           root.visible = wasVisible;
         }
         calls++;
@@ -640,8 +730,6 @@ async function warmYardPrograms(curves, withRT) {
         }
       }
     }
-  } finally {
-    rt.dispose();
   }
   warmLog.programsAtWarm = new Set(renderer.info.programs);
   warmLog.push({ targets: targets.length, calls, newPrograms: renderer.info.programs.length - programs0,
@@ -714,9 +802,13 @@ function makeLawnEdgeAO(lawnGeos, bedGeos, extraGeo) {
   const C = EDGE_CELL, x0 = box.min.x - 2, z0 = box.min.z - 2;
   const nx = Math.ceil((box.max.x + 2 - x0) / C), nz = Math.ceil((box.max.z + 2 - z0) / C);
   const INF = 1e9, d = new Float32Array(nx * nz).fill(INF);
+  // w: distance to the HOUSE walls and the deck only, for a soft wide
+  // contact shade (round 7) that beds and paving do not get
+  const w = new Float32Array(nx * nz).fill(INF);
+  let wallMode = false;
   const mark = (x, z) => {
     const i = Math.floor((x - x0) / C), j = Math.floor((z - z0) / C);
-    if (i >= 0 && j >= 0 && i < nx && j < nz) d[j * nx + i] = 0;
+    if (i >= 0 && j >= 0 && i < nx && j < nz) { d[j * nx + i] = 0; if (wallMode) w[j * nx + i] = 0; }
   };
   const seg = (ax, az, bx, bz) => {
     const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / (C * 0.5)));
@@ -734,7 +826,7 @@ function makeLawnEdgeAO(lawnGeos, bedGeos, extraGeo) {
       const px = x0 + (i + 0.5) * C, pz = z0 + (j + 0.5) * C;
       const w0 = ((bx - px) * (cz - pz) - (cx - px) * (bz - pz)) / area;
       const w1 = ((cx - px) * (az - pz) - (ax - px) * (cz - pz)) / area;
-      if (w0 >= 0 && w1 >= 0 && w0 + w1 <= 1) d[j * nx + i] = 0;
+      if (w0 >= 0 && w1 >= 0 && w0 + w1 <= 1) { d[j * nx + i] = 0; if (wallMode) w[j * nx + i] = 0; }
     }
   };
   const v = new THREE.Vector3();
@@ -761,6 +853,21 @@ function makeLawnEdgeAO(lawnGeos, bedGeos, extraGeo) {
       tri(P[0][0], P[0][2], P[1][0], P[1][2], P[2][0], P[2][2]);
     });
   }
+  wallMode = true;
+  // the placed rear deck (a library object): its skirt, posts and steps
+  const deck = [...objects3d.values()].find(o => o.userData.name === 'Backyard Deck' && o.userData.outdoor);
+  if (deck && deck.visible !== false) {
+    deck.updateWorldMatrix(true, true);
+    deck.traverse((o) => {
+      if (!o.isMesh || !o.geometry?.attributes?.position) return;
+      gb.setFromObject(o);
+      if (gb.min.y > 4.0 || !gb.intersectsBox(box)) return;
+      eachTri(o.geometry, o.matrixWorld, (P) => {
+        if (Math.min(P[0][1], P[1][1], P[2][1]) > 4.0) return;
+        tri(P[0][0], P[0][2], P[1][0], P[1][2], P[2][0], P[2][2]);
+      });
+    });
+  }
   const shell = getShellRoot();
   if (shell) {
     shell.updateWorldMatrix(true, true);
@@ -781,8 +888,11 @@ function makeLawnEdgeAO(lawnGeos, bedGeos, extraGeo) {
       });
     });
   }
-  // two-pass chamfer distance (in feet)
+  wallMode = false;
+  // two-pass chamfer distance (in feet), on both fields
   const D1 = C, D2 = C * Math.SQRT2;
+  const d0 = d;
+  for (const d of [w, d0]) {
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
     const k = j * nx + i; let m = d[k];
     if (i > 0) m = Math.min(m, d[k - 1] + D1);
@@ -803,6 +913,7 @@ function makeLawnEdgeAO(lawnGeos, bedGeos, extraGeo) {
     }
     d[k] = m;
   }
+  }
   const ao = (x, z) => {
     const fx = (x - x0) / C - 0.5, fz = (z - z0) / C - 0.5;
     const i = Math.max(0, Math.min(nx - 2, Math.floor(fx))), j = Math.max(0, Math.min(nz - 2, Math.floor(fz)));
@@ -810,9 +921,38 @@ function makeLawnEdgeAO(lawnGeos, bedGeos, extraGeo) {
     const k = j * nx + i;
     const dd = (d[k] * (1 - tx) + d[k + 1] * tx) * (1 - tz) + (d[k + nx] * (1 - tx) + d[k + nx + 1] * tx) * tz;
     const e = Math.min(dd, 50);
+    const dw = Math.min(50, (w[k] * (1 - tx) + w[k + 1] * tx) * (1 - tz) + (w[k + nx] * (1 - tx) + w[k + nx + 1] * tx) * tz);
     // broad soft band + a tight contact shadow, so a sliver of turf between
-    // a wall and the paving reads as shade rather than a bright green seam
-    return (1 - EDGE_AO_A * Math.exp(-e / EDGE_AO_W)) * (1 - 0.10 * Math.exp(-e / 0.5));
+    // a wall and the paving reads as shade rather than a bright green seam;
+    // plus a soft WIDE contact shade against the house walls and the deck
+    ao.e = e; ao.dw = dw;   // read back by ao.rgb, same sample
+    return (1 - EDGE_AO_A * Math.exp(-e / EDGE_AO_W)) * (1 - 0.14 * Math.exp(-e / 0.6))
+         * (1 - 0.08 * Math.exp(-dw / 3.5));   // round 9: wall/deck shade eased again so shade stays green, not olive
+  };
+  // Round 9: everything the colour pass multiplies into a turf vertex.
+  //  - the edge term above, plus a thin DEEPER-GREEN band (red pulled out
+  //    over the last ~0.8 ft) so turf tucks into beds and paving instead of
+  //    stopping like a sheet laid underneath;
+  //  - mowing stripes, low contrast (+-0.06 linear, was 0.17), 4 ft passes,
+  //    faded to nothing within ~5 ft of any bed, paving, wall or the deck
+  //    and beyond ~70 ft of the house, so they never run under anything;
+  //  - a soft low-frequency warm/cool drift that breaks the stripes up, and
+  //    a fine low-contrast mottle (5 ft) that reads as turf.
+  ao.rgb = (x, z) => {
+    const k = ao(x, z), e = ao.e, dw = ao.dw;
+    const near = Math.min(e, dw);
+    let fade = THREE.MathUtils.smoothstep(near, 1.0, 5.0);
+    if (roofRect) {
+      const hx = Math.max(roofRect.x0 - x, 0, x - roofRect.x1);
+      const hz = Math.max(roofRect.z0 - z, 0, z - roofRect.z1);
+      fade *= 1 - THREE.MathUtils.smoothstep(Math.hypot(hx, hz), 55, 80);
+    }
+    const drift = (worldNoise(x + 977, z - 331, 34) - 0.5) * 2;           // -1..1, slow
+    const stripe = 1 + 0.035 * fade * (1 + 0.5 * drift) * Math.tanh(1.6 * Math.sin(x * Math.PI / 4));
+    const mottle = 1 + (worldNoise(x - 401, z + 157, 5) - 0.5) * 0.10;
+    const band = Math.exp(-e / 0.8);                                        // 1 at the edge
+    const f = k * stripe * mottle * (1 - 0.12 * band);   // round 10: thin darker band too
+    return [f * (1 + 0.06 * drift) * (1 - 0.22 * band), f, f * (1 - 0.05 * drift) * (1 - 0.10 * band)];
   };
 
   // The turf-side FRINGE (lawn round 4): a thin run of taller, darker grass
@@ -842,23 +982,36 @@ function makeLawnEdgeAO(lawnGeos, bedGeos, extraGeo) {
     for (const g of lawnGeos) eachTri(g, null, hTri);
     if (extraGeo) eachTri(extraGeo, null, hTri);
     const rnd = mulberry32(0x6672696e);
-    const pos = [], col = [], nrm = [];
+    const pos = [], col = [], nrm = [], uv = [];
     for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
       const k = j * nx + i, dk = d[k];
-      if (dk <= 0 || dk > 0.8 || h[k] < -1e8) continue;
-      const nb = 2 + Math.floor(rnd() * 3);           // blades per cell
+      if (dk > 0.8 || h[k] < -1e8) continue;
+      // round 7: also the first occupied cell past the turf (paving/bed side,
+      // never a wall or the deck) -- the turf's lip overhangs the edge a touch
+      // instead of stopping on a razor line. Blades rise from the turf level
+      // under the paving, so only their tips clear it.
+      if (dk <= 0 && (w[k] < 0.6 || !((i > 0 && d[k - 1] > 0) || (i < nx - 1 && d[k + 1] > 0)
+          || (j > 0 && d[k - nx] > 0) || (j < nz - 1 && d[k + nx] > 0)))) continue;
+      const nb = 4 + Math.floor(rnd() * 3);           // blades per cell
       for (let b = 0; b < nb; b++) {
-        const x = x0 + (i + rnd()) * C, z = z0 + (j + rnd()) * C, y = h[k] - 0.02;
-        const tall = (0.16 + rnd() * 0.16) * (1.15 - dk * 0.4);
-        const a = rnd() * Math.PI * 2, w = 0.035 + rnd() * 0.03;
+        const x = x0 + (i - 0.5 + rnd() * 2) * C, z = z0 + (j - 0.5 + rnd() * 2) * C, y = h[k] - 0.02;   // jitter past the cell: no 0.5 ft staircase
+        const tall = (0.40 + rnd() * 0.30) * (1.15 - dk * 0.4);
+        const a = rnd() * Math.PI * 2, bw = 0.06 + rnd() * 0.05;
         const lx = Math.cos(a + 1.3) * tall * 0.35, lz = Math.sin(a + 1.3) * tall * 0.35;   // lean
-        const t = lawnTint(x, z), dark = 0.88 + rnd() * 0.12;
-        const ca = Math.cos(a) * w, sa = Math.sin(a) * w;
-        pos.push(x - ca, y, z - sa, x + ca, y, z + sa, x + lx, y + tall, z + lz);
-        for (let v = 0; v < 3; v++) {
-          const tip = v === 2 ? 1.12 : 1;               // tips catch a little more light
-          col.push(t[0] * dark * tip * 1.04, t[1] * dark * tip, t[2] * dark * tip * 0.9);
-          nrm.push(0, 1, 0);                             // lit like the turf it grows from
+        const t = lawnTint(x, z), dark = 0.70 + rnd() * 0.14;   // a touch darker than the turf: a soft lip
+        const ca = Math.cos(a) * bw, sa = Math.sin(a) * bw;
+        // Both windings, FrontSide, every normal UP: a DoubleSide blade flips
+        // its normal on the back face and rendered as a black speck -- that
+        // was the "hard dark jagged line" along the driveway (round 5).
+        const A = [x - ca, y, z - sa], B = [x + ca, y, z + sa], T = [x + lx, y + tall, z + lz];
+        for (const tri3 of [[A, B, T], [B, A, T]]) {
+          for (const p of tri3) {
+            pos.push(p[0], p[1], p[2]);
+            uv.push(p[0] / 2400 + 0.5, -p[2] / 2400 + 0.5);   // the lawn tile's convention
+            const tip = p === T ? 1.10 : 1;                   // tips catch a little more light
+            col.push(t[0] * dark * tip, t[1] * dark * tip, t[2] * dark * tip);
+            nrm.push(0, 1, 0);                                // lit like the turf it grows from
+          }
         }
       }
     }
@@ -867,6 +1020,7 @@ function makeLawnEdgeAO(lawnGeos, bedGeos, extraGeo) {
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     return g;
   };
   return ao;
@@ -886,20 +1040,32 @@ function lawnTint(x, z) {
   // so the variation now lives only in two LARGE, gradual octaves (90 / 40 ft)
   // and the mowing stripes carry the close-range texture.
   const broad = (worldNoise(x, z, 90) - 0.5) * 0.65 + (worldNoise(x + 313, z + 129, 40) - 0.5) * 0.35;
-  let f = 1 + broad * 0.45;   // round 5: gentle -- every darker setting read as dirt
-  f = Math.max(0.85, f);   // vertex colour multiplies LINEAR light: +-x here is ~+-x/2.2 on screen
-  // Sunlit patches warm toward the Sims sunlit sample (~[120,165,45], R/G
-  // 0.73 -- yellower AND less chromatic than our acid lime); dim ones deepen.
-  const warm = Math.max(-1, Math.min(1, (worldNoise(x - 211, z + 77, 70) - 0.5) * 1.2 + broad * 2.2));
+  // round 6: soft tonal patches every 10-20 ft back in, gently (floor 0.9)
+  // round 7: the variation goes UP, not down. Soft 15-40 ft patches of
+  // lighter, sun-bleached yellow-green (smoothstepped so most of the lawn is
+  // untouched base and the patches fade in over many feet), with only a
+  // slight deepening term. Every darker version read as dirt.
+  // round 8: the round-7 sun-bleached patches went near-white mid-distance
+  // and were cut; the large-scale term is halved again. What variation
+  // remains is INTENTIONAL: regular mowing stripes, front and back.
+  let f = 1 + broad * 0.18 + (worldNoise(x - 57, z + 233, 24) - 0.5) * 0.08;
+  f = Math.max(0.94, f);   // vertex colour multiplies LINEAR light: +-x here is ~+-x/2.2 on screen
+  let warm = Math.max(-1, Math.min(1, (worldNoise(x - 211, z + 77, 70) - 0.5) * 0.8 + broad * 1.2));
   if (roofRect) {
     const dx = Math.max(roofRect.x0 - x, 0, x - roofRect.x1);
     const dz = Math.max(roofRect.z0 - z, 0, z - roofRect.z1);
-    f *= 1 - 0.06 * Math.exp(-Math.hypot(dx, dz) / 6);   // broad; the tight band is makeLawnEdgeAO
-    // faint wide mowing stripes on the front lawn (5 ft passes running
-    // street-ward), soft-edged so they read as mown nap, not paint
-    if (z > roofRect.z1 - 2) f *= 1 + 0.12 * Math.tanh(2.2 * Math.sin(x * Math.PI / 6));
+    const dHouse = Math.hypot(dx, dz);
+    f *= 1 - 0.05 * Math.exp(-dHouse / 6);   // broad; the tight band is makeLawnEdgeAO
+    // (round 9: the mowing stripes moved to makeLawnEdgeAO's ao.rgb, where
+    // they can fade out near beds, paving, walls and the deck)
+    // Round 11: one large soft LIGHT-WARM -> FAR-COOL gradient across the
+    // lot: the lawn round the house is sunnier and yellower, easing to a
+    // slightly deeper, cooler green toward the lot edges (~20 -> ~110 ft).
+    const far = THREE.MathUtils.smoothstep(dHouse, 18, 110);
+    f *= 1 + 0.16 * (1 - far) - 0.08 * far;
+    warm += 0.55 * (1 - far) - 0.45 * far;
   }
-  return [f * (1 + 0.15 * warm), f, f * (1 + 0.10 * warm)];
+  return [f * (1 + 0.12 * warm), f, f * (1 - 0.10 * warm)];
 }
 export function setGroundSnow(f) {
   if (Math.abs(f - snowF) < 1e-3) return;
@@ -1728,24 +1894,27 @@ function simsStoneColor(lr) {
   return srgb(0.58, 0.06, 0.58 + lr() * 0.20);
 }
 // One chunky river stone lying at grade.
-function simsStone(lr, x, z, y, r) {
+function simsStone(lr, x, z, y, r, dark = false) {
   const s = new THREE.IcosahedronGeometry(r, 0);
   s.scale(1.15 + lr() * 0.3, 0.55 + lr() * 0.15, 1.0 + lr() * 0.3);
   s.rotateY(lr() * 6.283);
   s.translate(x, y + r * 0.12, z);
-  paint(s, simsStoneColor(lr));
+  paint(s, dark ? srgb(lr() < 0.6 ? 0.58 : 0.08, 0.06, 0.34 + lr() * 0.2) : simsStoneColor(lr));
   return s;
 }
+// front beds (round 4): natural mid-grey river rock, so the bed reads by its
+// planting rather than as a pale gravel plate
+const ROCK_FRONT = () => srgb(0.08, 0.05, 0.40);
 // Rebuild a bed's stone field from the legacy stones' positions: every third
 // one survives, half again as big, recoloured pale -- chunky stones on a clean
 // pale bed instead of a dense field of dark grit.
-function simsStoneField(ctx, lr, from, to, y, out, sizeK = 1) {
+function simsStoneField(ctx, lr, from, to, y, out, sizeK = 1, dark = false) {
   const c = new THREE.Vector3();
   for (let j = from; j < to; j++) {
     const g = ctx.legacy[j].g;
     if (j % 3 === 0) {
       g.computeBoundingBox(); g.boundingBox.getCenter(c);
-      out.push(simsStone(lr, c.x, c.z, y, (0.15 + lr() * lr() * 0.22) * sizeK));
+      out.push(simsStone(lr, c.x, c.z, y, (0.15 + lr() * lr() * 0.22) * sizeK, dark));
     }
     g.dispose();
   }
@@ -1758,14 +1927,18 @@ function simsEdging(lr, pts, y, out, r0 = 0.27) {
     const L = Math.hypot(bx - ax, bz - az);
     if (L < 0.05) continue;
     const ang = Math.atan2(-(bz - az), bx - ax);
-    const n = Math.max(1, Math.round(L / (r0 * 2.05)));
+    // Round 4: the bright white run read as "piped toothpaste, louder than
+    // the plants" -- now a low, narrow course of weathered grey river rock
+    // that sits back and lets the planting carry the bed's shape.
+    const rr0 = r0 * 0.72;
+    const n = Math.max(1, Math.round(L / (rr0 * 2.0)));
     for (let i = 0; i < n; i++) {
-      const t = (i + 0.5) / n, r = r0 * (0.9 + lr() * 0.2);
+      const t = (i + 0.5) / n, r = rr0 * (0.85 + lr() * 0.3);
       const s = new THREE.IcosahedronGeometry(r, 1);
-      s.scale(1.2, 0.56, 1.0);
-      s.rotateY(ang + (lr() - 0.5) * 0.3);
-      s.translate(ax + (bx - ax) * t, y + r * 0.16, az + (bz - az) * t);
-      paint(s, srgb(0.09, 0.06, 0.72 + lr() * 0.12));
+      s.scale(1.15, 0.42, 1.0);
+      s.rotateY(ang + (lr() - 0.5) * 0.4);
+      s.translate(ax + (bx - ax) * t, y + r * 0.05, az + (bz - az) * t);
+      paint(s, srgb(0.08 + lr() * 0.04, 0.06, 0.36 + lr() * 0.12));
       out.push(s);
     }
   }
@@ -1801,6 +1974,12 @@ function simsGrass(ctx, rng, x, z, y, leaves, dormant = false) {
 // Mulch: rich dark-chocolate shredded bark, the Sims bed colour.
 function simsMulch(ctx, rng, x0, z0, x1, z1, y, h, beds) {
   for (const { g } of ctx.legacy) { speckle(g, srgb(0.06, 0.40, 0.21), ctx.local, 0.30); beds.push(g); }
+  // Round 3 (the porch bed "thin and gappy on a dark slab"): plant the slab
+  // full -- the clipped hedge ribbon round its edge and one-colour drifts
+  // behind it, around the hydrangeas/mums/boxwoods the other items stand here.
+  const loop = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+  planBed(ctx.local, beds, loop, (x, z) => x > x0 && x < x1 && z > z0 && z < z1,
+          (x, z) => Math.min(x - x0, x1 - x, z - z0, z1 - z), y + h, null, false, true);
 }
 
 function simsCobbleRun(ctx, rng, pts, y, beds, sc = 1) {
@@ -1849,6 +2028,10 @@ const PLANT_PAL = {     // [shaded, sunlit] sRGB
   yellow: [0x9c7418, 0xffdc48], coral: [0x9c3a2a, 0xff9670], lavender: [0x5b4a8e, 0xc6b4f0],
   maple: [0x4a1730, 0xb8405e],
   hydCream: [0xa8a28a, 0xfffbea], hydLime: [0x8c9a58, 0xe8f4b0], hydPink: [0x9a4670, 0xffb4d4],
+  // round 8, the front: deep varied greens and saturated flower colours
+  deep1: [0x143616, 0x3c6e24], deep2: [0x17392a, 0x427446], deep3: [0x2a4416, 0x5a7a26],
+  sPurple: [0x35196e, 0x8452e0], sMagenta: [0x6e1046, 0xe0388e], sRed: [0x701212, 0xdc3426],
+  sYellow: [0x806000, 0xffcf14], sBlue: [0x1b2a80, 0x5474ec], sOrange: [0x803406, 0xff8414],
 };
 const pal = (k, v = 1) => {
   const [a, b] = PLANT_PAL[k] || PLANT_PAL.leaf;
@@ -1857,14 +2040,19 @@ const pal = (k, v = 1) => {
 function plantClump(st, lr, x, cy, z, rx, ry, rz, p, gy = cy, gr = ry, size = null, dens = 1.35) {
   const s = size ?? Math.min(0.95, Math.min(rx, rz) * 0.40 + 0.14);
   const area = rx * rz + ry * (rx + rz);
-  const cards = Math.min(420, Math.max(6, Math.round(area / (s * s) * dens)));
+  // phone-lite: ~half the leaf cards (same layout, coarser leaf texture)
+  const cards = Math.min(420, Math.max(6, Math.round(area / (s * s) * dens * (YARD_LITE ? 0.5 : 1))));
   simsClump(st, lr, x, cy, z, rx, ry, rz, cards, s, p[0], p[1], gy, gr, Math.min(rx, rz) > 2.8 ? 1 : 0);
 }
-// ONE distinct clipped form, seated on y: small, densely packed leaf cards,
-// so the clipped surface reads full and leafy rather than ragged
+// (Round 7 tried smooth vertex-coloured ellipsoids here; the critics read them
+// as "a toy set" and the back yard lost its streak, so it was reverted.)
+function flushPlants(out, st) {
+  if (st.pos.length) out.push(plantGeo(st));
+}
+// ONE distinct clipped form, seated on y
 function clippedShrub(st, lr, x, z, y, rx, ry, rz, p) {
   const cy = y + ry * 0.92;
-  plantClump(st, lr, x, cy, z, rx, ry, rz, p, cy, ry, Math.min(0.62, Math.min(rx, rz) * 0.28 + 0.12), 3.2);
+  plantClump(st, lr, x, cy, z, rx, ry, rz, p, cy, ry, Math.min(0.62, Math.min(rx, rz) * 0.28 + 0.12), 2.7);
   return cy;
 }
 // a flowering plant: leafy base with a blossom cap of its own species
@@ -1914,7 +2102,114 @@ const RIBBON = ['white', 'pink', 'purple', 'yellow', 'coral', 'lavender'];
 const MIDROW = ['purple', 'pink', 'white', 'lavender', 'yellow'];
 const FILLER = ['boxwood', 'leaf', 'euonymus', 'boxwood', 'yew'];
 // Layered planting for one bed: ribbon + mid drifts + mounded fillers.
-function planBed(lr, beds, loop, inside, edgeDist, y, skip, narrow) {
+// ---- round 6: the FRONT beds get structure ----------------------------------
+// Round-5 critic: "uniform-width stripes of multicolour confetti round lumpy
+// shapeless mounds; no structural shrubs, no focal shrubs, no height
+// layering". The winning recipe it described: each bed has a FRONT (one-colour
+// low edging row), a MIDDLE (fewer, bigger flower clumps, two colours at
+// most) and a BACK (clean clipped globes in a rhythm, with a conical
+// evergreen or a tall grass every few for height). Beds are seen from both
+// sides here, so "back" is the bed's spine: the row furthest from every edge.
+// a clean clipped globe: small, densely packed cards so the outline is round
+function globe(st, lr, x, z, y, r, p) {
+  const cy = y + r * 0.9;
+  plantClump(st, lr, x, cy, z, r, r * 0.92, r, p, cy, r, Math.min(0.26, r * 0.2 + 0.05), 4.2);
+}
+// narrow upright evergreen (round 8: one tall leafy column, not stacked balls)
+function narrowEvergreen(st, lr, x, z, y, h) {
+  const r = h * 0.17;
+  plantClump(st, lr, x, y + h * 0.48, z, r, h * 0.5, r, pal(lr() < 0.5 ? 'deep1' : 'deep2'),
+             y + h * 0.5, h * 0.5, Math.min(0.3, r * 0.4 + 0.05), 3.2);
+}
+// tall ornamental grass: a narrow upright fountain in pale green
+function tallGrass(st, lr, x, z, y) {
+  plantClump(st, lr, x, y + 1.25, z, 0.55, 1.25, 0.55, pal('euonymus', 1.05), y + 1.2, 1.2, 0.3, 2.2);
+}
+// Round 8 (after round 7's smooth "toy set" lost): the leafy card shrubs the
+// back yard won with, plus the three fixes every critic has asked for --
+// (a) deep, varied greens, several per bed; (b) flowers as upright clumps of
+// saturated spikes over their own leaves, gathered in irregular drifts INSIDE
+// the bed rather than piped along its edge; (c) mixed plant types at
+// staggered heights and irregular spacing instead of a grid.
+const DEEP_GREENS = ['deep1', 'deep2', 'deep3', 'boxwood', 'yew'];
+const VIVID = ['sPurple', 'sMagenta', 'sRed', 'sYellow', 'sBlue', 'sOrange'];
+// an upright flower clump: a low leafy base with 3-4 spikes of colour above
+function flowerSpikes(st, lr, x, z, y, bloom, h = 1.2) {
+  plantClump(st, lr, x, y + 0.32, z, 0.46, 0.34, 0.46, pal(DEEP_GREENS[Math.floor(lr() * 3)]), y + 0.4, 0.5, 0.22, 2.0);
+  const n = 3 + (lr() < 0.5 ? 1 : 0);
+  for (let i = 0; i < n; i++) {
+    const a = i * 2.1 + lr(), d = 0.12 + lr() * 0.2, hh = h * (0.75 + lr() * 0.35);
+    plantClump(st, lr, x + Math.cos(a) * d, y + hh * 0.62, z + Math.sin(a) * d, 0.13, hh * 0.3, 0.13,
+               bloom, y + hh * 0.6, hh * 0.4, 0.11, 2.4);
+  }
+}
+function planFront2(lr, beds, loop, inside, edgeDist, y, skip, narrow) {
+  const st = plantStore();
+  const ok = (x, z) => inside(x, z) && !(skip && skip(x, z));
+  // EDGE: a low spreading green hedge band, two deep greens in long runs
+  const g0 = DEEP_GREENS[Math.floor(lr() * 3)], g1 = DEEP_GREENS[3 + Math.floor(lr() * 2)];
+  walkLoop(loop, inside, 0.55, 0.55, (x, z, s) => {
+    if (!ok(x, z) || edgeDist(x, z) < 0.38) return;
+    clippedShrub(st, lr, x, z, y, 0.58, 0.36 + lr() * 0.08, 0.58, pal(Math.floor(s / 11) % 2 ? g1 : g0, 0.95 + lr() * 0.1));
+  });
+  // FLOWERS: irregular single-colour drifts of upright spikes, inside the bed
+  let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+  for (const [x, z] of loop) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+  const area = (x1 - x0) * (z1 - z0);
+  const drifts = Math.max(1, Math.round(area / (narrow ? 14 : 22)));
+  const used = [];
+  for (let d = 0, tries = 0; d < drifts && tries < drifts * 12; tries++) {
+    const cx = x0 + lr() * (x1 - x0), cz = z0 + lr() * (z1 - z0);
+    const ed = edgeDist(cx, cz);
+    if (!ok(cx, cz) || ed < 1.1 || (!narrow && ed > 3.2)) continue;
+    const bloom = pal(VIVID[Math.floor(lr() * VIVID.length)]);
+    const n = 4 + Math.floor(lr() * 4);
+    for (let i = 0; i < n; i++) {
+      const a = lr() * 6.283, rr = Math.sqrt(lr()) * 1.5;
+      const px = cx + Math.cos(a) * rr, pz = cz + Math.sin(a) * rr * 0.8;
+      if (!ok(px, pz) || edgeDist(px, pz) < 0.95) continue;
+      mulchDisc(beds, lr, px, pz, y, 0.75);
+      flowerSpikes(st, lr, px, pz, y, bloom, 1.0 + lr() * 0.5);
+    }
+    used.push([cx, cz]);
+    d++;
+  }
+  if (!narrow) {
+    // SPINE: mixed types, staggered heights, irregular spacing
+    const TYPES = ['globe', 'evergreen', 'grass', 'flowering', 'globe', 'spreader'];
+    let last = '';
+    let next = 0;
+    walkLoop(loop, inside, 2.8, 0.4, (x, z, s) => {
+      if (s < next || !ok(x, z) || edgeDist(x, z) < 2.3) return;
+      let t;
+      do { t = TYPES[Math.floor(lr() * TYPES.length)]; } while (t === last);
+      last = t;
+      mulchDisc(beds, lr, x, z, y, 1.4);
+      const p = pal(DEEP_GREENS[Math.floor(lr() * DEEP_GREENS.length)], 0.95 + lr() * 0.1);
+      if (t === 'globe') globe(st, lr, x, z, y, 0.9 + lr() * 0.45, p);
+      else if (t === 'evergreen') narrowEvergreen(st, lr, x, z, y, 4.6 + lr() * 1.6);
+      else if (t === 'grass') tallGrass(st, lr, x, z, y);
+      else if (t === 'spreader') clippedShrub(st, lr, x, z, y, 1.5, 0.7, 1.2, p);
+      else {
+        const cy = clippedShrub(st, lr, x, z, y, 1.0, 0.95, 1.0, p);
+        plantClump(st, lr, x, cy + 0.62, z, 0.75, 0.32, 0.75, pal(VIVID[Math.floor(lr() * VIVID.length)]), cy, 1, 0.24, 2.0);
+      }
+      next = s + 2.0 + lr() * 1.6;
+    });
+    // anything deeper: low deep-green groundcover so no mulch shows
+    for (let gx = x0 + 0.8; gx < x1; gx += 1.5) {
+      for (let gz = z0 + 0.8; gz < z1; gz += 1.5) {
+        if (!ok(gx, gz) || edgeDist(gx, gz) < 3.9) continue;
+        mulchDisc(beds, lr, gx, gz, y, 1.0);
+        plantClump(st, lr, gx, y + 0.3, gz, 0.85, 0.32, 0.85, pal(DEEP_GREENS[Math.floor(lr() * 3)]), y + 0.3, 0.4, 0.3, 2.0);
+      }
+    }
+  }
+  flushPlants(beds, st);
+}
+
+function planBed(lr, beds, loop, inside, edgeDist, y, skip, narrow, dense = false) {
+  if (dense) return planFront2(lr, beds, loop, inside, edgeDist, y, skip, narrow);
   const st = plantStore();
   const ok = (x, z) => inside(x, z) && !(skip && skip(x, z));
   const r0 = Math.floor(lr() * RIBBON.length), m0 = Math.floor(lr() * MIDROW.length);
@@ -1944,20 +2239,74 @@ function planBed(lr, beds, loop, inside, edgeDist, y, skip, narrow) {
         const cy = clippedShrub(st, lr, x, z, y, r, r * (0.72 + lr() * 0.15), r * 0.95,
                                 pal(FILLER[Math.floor(lr() * FILLER.length)], 0.95 + lr() * 0.1));
         if (lr() < 0.25) {
-          plantClump(st, lr, x, cy + r * 0.55, z, r * 0.7, r * 0.3, r * 0.7, pal(lr() < 0.5 ? 'white' : 'pink'),
-                     cy, r, 0.3);
+          const bp = pal(lr() < 0.5 ? 'white' : 'pink');
+          plantClump(st, lr, x, cy + r * 0.55, z, r * 0.7, r * 0.3, r * 0.7, bp, cy, r, 0.3);
         }
       }
     }
   }
-  if (st.pos.length) beds.push(plantGeo(st));
+  flushPlants(beds, st);
+}
+
+// ---- the FRONT: island beds and lawn shrubs --------------------------------
+// Rounds 3-5 of the blind critic: the front lost every time bare mulch or a
+// bright stone ring showed, and the back yard -- densely filled beds -- won
+// three times running. So front beds now use planBed with `dense` (see
+// above), the west shrubs stand in island beds joined to the porch bed and
+// planted the same way, and single shrubs on the lawn get only a soft mulch
+// circle.
+// An island bed round shrubs standing on open lawn: the hull of their discs
+// plus `margin`, dark mulch, white stone edging and a ring of one-colour
+// drifts. Everything goes into `out` (the item's own bucket).
+const LAWN_Y = 0.19;   // landmarks().lo, probed: the open lawn is at 0.19-0.22
+function islandBed(lr, out, discs, margin = 1.1) {
+  let cx = 0, cz = 0;
+  for (const [x, z] of discs) { cx += x; cz += z; }
+  cx /= discs.length; cz /= discs.length;
+  const loop = [];
+  for (let k = 0; k < 30; k++) {
+    const th = (k / 30) * Math.PI * 2, ux = Math.cos(th), uz = Math.sin(th);
+    let s = -Infinity;
+    for (const [x, z, r] of discs) s = Math.max(s, x * ux + z * uz + r + margin);
+    const d = s - (cx * ux + cz * uz);
+    loop.push([cx + ux * d, cz + uz * d]);
+  }
+  const shape = new THREE.Shape();
+  loop.forEach(([x, z], i) => (i ? shape.lineTo(x, -z) : shape.moveTo(x, -z)));
+  shape.closePath();
+  const g = new THREE.ShapeGeometry(shape);
+  g.rotateX(-Math.PI / 2);
+  g.translate(0, LAWN_Y + 0.05, 0);
+  speckle(g, srgb(0.065, 0.36, 0.16), lr, 0.25);
+  out.push(g);
+  simsEdging(lr, [...loop, loop[0]], LAWN_Y + 0.02, out, 0.24);
+  const inside = inPoly(loop), edgeDist = polyEdgeDist(loop);
+  // round 5: planted dense with the back-yard recipe round the shrubs, so no
+  // mulch shows ("a pebble outline round a near-empty brown hole")
+  planBed(lr, out, loop, inside, edgeDist, LAWN_Y + 0.05,
+          (x, z) => discs.some(([dx, dz, r]) => Math.hypot(x - dx, z - dz) < r * 0.9), false, true);
+  islandsNote(inside);
+  return inside;
+}
+// islands drawn so far in THIS build (keyed by the build's items array), so a
+// shrub already standing inside one does not get a second ring
+let _islands = [], _islandsFor = null;
+function islandsNote(inside) {
+  if (_islandsFor !== items) { _islands = []; _islandsFor = items; }
+  _islands.push(inside);
+}
+function inIsland(x, z) {
+  return _islandsFor === items && _islands.some((f) => f(x, z));
 }
 
 function simsBush2(ctx, rng, x, z, leaves) {
   const lr = ctx.local, r = 1.1 + rng() * 1.2;
   const st = plantStore();
-  clippedShrub(st, lr, x, z, -0.1, r, r * 0.8, r * 0.95, pal(lr() < 0.5 ? 'boxwood' : 'leaf'));
-  leaves.push(plantGeo(st));
+  clippedShrub(st, lr, x, z, -0.1, r, r * 0.92, r, pal('boxwood', 0.95 + lr() * 0.1));
+  flushPlants(leaves, st);
+  // round 5: no stone ring ("scattered tokens") -- the east-lawn ones stand in
+  // a small soft mulch circle, the three by the lamp-post bed on the lawn
+  if (z < 30) mulchDisc(leaves, lr, x, z, LAWN_Y + 0.02, r * 1.3);
   for (const { g } of ctx.legacy) g.dispose();
 }
 function simsBoxwood2(ctx, rng, x, z, r, y, leaves, sp = 'boxwood', lumpy = false) {
@@ -1966,16 +2315,24 @@ function simsBoxwood2(ctx, rng, x, z, r, y, leaves, sp = 'boxwood', lumpy = fals
   r *= 1.12;
   const st = plantStore();
   // juniper no longer squashes to a flat teal pad ("lily pads")
-  if (sp === 'juniper') clippedShrub(st, lr, x, z, y, r * 1.2, r * 0.72, r * 1.1, pal('juniper'));
+  if (z > 30 && y >= 0.2) {
+    // front beds (round 4, "all shrubs the same lumpy blob"): one repeated
+    // clipped globe -- the rhythm, not the variety, is what reads as designed
+    clippedShrub(st, lr, x, z, y, 1.15, 1.05, 1.15, pal('boxwood'));
+  } else if (sp === 'juniper') clippedShrub(st, lr, x, z, y, r * 1.2, r * 0.72, r * 1.1, pal('juniper'));
   else clippedShrub(st, lr, x, z, y, r * sd, r * Math.max(0.8, sq) * 0.95, r * sd * 0.95,
                     pal(sp, 0.95 + lr() * 0.1));
-  leaves.push(plantGeo(st));
+  flushPlants(leaves, st);
+  // planted straight on the lawn (y = lawn level, not a bed's) and not already
+  // inside an island: give it its own
+  if (y < 0.2 && !inIsland(x, z)) mulchDisc(leaves, lr, x, z, LAWN_Y + 0.02, r * 1.5);
   for (const { g } of ctx.legacy) g.dispose();
 }
 function simsPerennial2(ctx, rng, x, z, y, leaves, n = 3, spread = 1.6) {
   const lr = ctx.local, t = ctx.tape;
   const u = lr();
-  const kind = u < 0.40 ? 'purple' : u < 0.60 ? 'pink' : u < 0.78 ? 'white' : 'yellow';
+  // the driveway bed is white-on-green (round 4: one colour per run)
+  const kind = z > 30 ? 'purple' : u < 0.40 ? 'purple' : u < 0.60 ? 'pink' : u < 0.78 ? 'white' : 'yellow';
   const st = plantStore();
   for (let i = 0; i < n; i++) {
     const o = i * 245;
@@ -1983,7 +2340,7 @@ function simsPerennial2(ctx, rng, x, z, y, leaves, n = 3, spread = 1.6) {
     const px = x + ((t[o + 1] ?? lr()) - 0.5) * spread, pz = z + ((t[o + 2] ?? lr()) - 0.5) * spread * 0.82;
     bloomPlant(st, lr, px, pz, y, r * 1.35, 1.1 + lr() * 0.35, pal(kind));
   }
-  leaves.push(plantGeo(st));
+  flushPlants(leaves, st);
   for (const { g } of ctx.legacy) g.dispose();
 }
 function simsMum2(ctx, rng, x, z, r, y, leaves, hue = 0.07, sat = 0.60, light = 0.40) {
@@ -1991,7 +2348,7 @@ function simsMum2(ctx, rng, x, z, r, y, leaves, hue = 0.07, sat = 0.60, light = 
   const bloom = [srgb(hue, sat, light * 0.55).clone(), srgb(hue + 0.015, Math.min(0.9, sat + 0.22), Math.min(0.68, light + 0.24)).clone()];
   plantClump(st, lr, x, y + r * 0.35, z, r, r * 0.38, r, pal('leaf'), y + r * 0.4, r * 0.5);
   plantClump(st, lr, x, y + r * 0.58, z, r * 0.95, r * 0.42, r * 0.95, bloom, y + r * 0.5, r * 0.5, Math.min(0.4, r * 0.4));
-  leaves.push(plantGeo(st));
+  flushPlants(leaves, st);
   for (const { g } of ctx.legacy) g.dispose();
 }
 const HYD = { cream: 'hydCream', straw: 'hydLime', rust: 'hydPink' };
@@ -2006,7 +2363,7 @@ function simsDried2(ctx, rng, x, z, r, y, leaves, kind = 'straw') {
     plantClump(st, lr, x + Math.cos(a) * rad * r, cy + hh * r * 0.66, z + Math.sin(a) * rad * r,
                s, s * 0.85, s, head, cy, r * 0.8, Math.min(0.3, s * 0.6));
   }
-  leaves.push(plantGeo(st));
+  flushPlants(leaves, st);
   for (const { g } of ctx.legacy) g.dispose();
 }
 function simsGroundCover2(ctx, rng, x, z, rx, rz, y, leaves) {
@@ -2019,57 +2376,74 @@ function simsGroundCover2(ctx, rng, x, z, rx, rz, y, leaves) {
     if (lr() < 0.5) bloomPlant(st, lr, px, pz, y, r, 0.7, bloom);
     else clippedShrub(st, lr, px, pz, y, r, r * 0.5, r, pal('leaf'));
   }
-  leaves.push(plantGeo(st));
+  flushPlants(leaves, st);
   for (const { g } of ctx.legacy) g.dispose();
 }
 // Hedge: a row of DISTINCT clipped balls with daylight between them.
 function simsHedge2(ctx, rng, [[ax, az], [bx, bz]], h, leaves) {
   const lr = ctx.local, st = plantStore();
-  const L = Math.hypot(bx - ax, bz - az), n = Math.max(2, Math.round(L / (h * 0.6)));
-  const r = Math.min(h / 2 * 0.8, (L / n) * 0.56);
+  // Round 4: a STRAIGHT clipped hedge run (equal 3 ft balls every 0.8 ft fuse
+  // into one band), in a linear bed reaching back toward the house so it
+  // reads as part of the foundation border, not an island.
+  const L = Math.hypot(bx - ax, bz - az), n = Math.max(2, Math.round(L / 0.8));
+  const discs = [];
   for (let i = 0; i <= n; i++) {
-    const t = i / n, rr = r * (0.9 + lr() * 0.18);
-    clippedShrub(st, lr, ax + (bx - ax) * t, az + (bz - az) * t, 0, rr, rr * 1.05, rr,
-                 pal(i % 2 ? 'hedge' : 'boxwood', 0.95 + lr() * 0.1));
+    const t = i / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+    clippedShrub(st, lr, x, z, LAWN_Y, 1.3, 1.5, 1.3, pal('hedge', 0.98 + lr() * 0.04));
+    discs.push([x, z, 1.3]);
   }
-  leaves.push(plantGeo(st));
+  flushPlants(leaves, st);
+  const ux = (bx - ax) / L, uz = (bz - az) / L;
+  discs.push([ax - ux * 3, az - uz * 3, 1.0]);   // the run's bed starts at the house end
+  islandBed(lr, leaves, discs, 1.0);
   for (const { g } of ctx.legacy) g.dispose();
 }
 function simsUndergrowth2(ctx, rng, pts, leaves) {
   const lr = ctx.local, st = plantStore();
-  for (const [x, z, r] of pts) {
-    const rr = r * 0.6;
-    clippedShrub(st, lr, x, z, -0.1, rr, rr * 0.85, rr * 0.95, pal(lr() < 0.5 ? 'yew' : 'boxwood'));
+  // Round 4: uniform clipped globes (one repeated form), and the bed is
+  // stretched to meet the porch bed's west end -- one continuous foundation
+  // border wrapping the corner instead of a separate island. The call's first
+  // point is (houseW - 15, houseF + 1.5); the porch bed starts at houseW - 1.4.
+  const discs = [];
+  for (const [x, z] of pts) {
+    clippedShrub(st, lr, x, z, LAWN_Y, 1.7, 1.55, 1.7, pal('yew', 0.97 + lr() * 0.06));
+    discs.push([x, z, 1.7]);
   }
-  leaves.push(plantGeo(st));
+  flushPlants(leaves, st);
+  const houseW = pts[0][0] + 15, houseF = pts[0][1] - 1.5;
+  discs.push([houseW - 1.6, houseF + 16.0, 1.6]);
+  islandBed(lr, leaves, discs, 1.1);
   for (const { g } of ctx.legacy) g.dispose();
 }
 function simsBed2(ctx, rng, x0, z0, x1, z1, y, beds, dens = BED_DENSITY, edge = true, rmax = 0.40) {
   const lr = ctx.local;
+  const front = z0 + z1 > 0;   // front yard (+z): round-3/4 hedge-and-band style
   const slabG = ctx.legacy[0].g;
-  speckle(slabG, ROCK_SIMS(), lr, 0.22);
+  speckle(slabG, front ? ROCK_FRONT() : ROCK_SIMS(), lr, 0.22);
   beds.push(slabG);
   const n = Math.round((x1 - x0) * (z1 - z0) * dens);
-  simsStoneField(ctx, lr, 1, Math.min(ctx.legacy.length, n + 1), y, beds);
+  simsStoneField(ctx, lr, 1, Math.min(ctx.legacy.length, n + 1), y, beds, 1, front);
   for (let j = n + 1; j < ctx.legacy.length; j++) ctx.legacy[j].g.dispose();
   const loop = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
-  if (edge) simsEdging(lr, [...loop, loop[0]], y, beds);
+  if (edge || front) simsEdging(lr, [...loop, loop[0]], y, beds);
+  // round 5: the front gets the back yard's winning recipe, packed dense
   planBed(lr, beds, loop, (x, z) => x > x0 && x < x1 && z > z0 && z < z1,
-          (x, z) => Math.min(x - x0, x1 - x, z - z0, z1 - z), y, null, Math.min(x1 - x0, z1 - z0) < 4.5);
+          (x, z) => Math.min(x - x0, x1 - x, z - z0, z1 - z), y, null, Math.min(x1 - x0, z1 - z0) < 4.5, front);
 }
 function simsBedPoly2(ctx, rng, pts, y, beds, dens = BED_DENSITY, avoid = [], rmax = 0.22, pale = false) {
   const lr = ctx.local;
+  const front = pts.reduce((s, p) => s + p[1], 0) > 0;
   const base = ctx.legacy[0].g;
-  speckle(base, ROCK_SIMS(), lr, 0.22);
+  speckle(base, front ? ROCK_FRONT() : ROCK_SIMS(), lr, 0.22);
   beds.push(base);
-  simsStoneField(ctx, lr, 1, ctx.legacy.length, y, beds, 0.85);
+  simsStoneField(ctx, lr, 1, ctx.legacy.length, y, beds, 0.85, front);
   let area = 0;
   for (let i = 0; i < pts.length; i++) {
     const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % pts.length];
     area += ax * bz - bx * az;
   }
   const skip = (x, z) => avoid.some(([ax, az, ar]) => Math.hypot(x - ax, z - az) < ar + 0.45);
-  planBed(lr, beds, pts, inPoly(pts), polyEdgeDist(pts), y, skip, Math.abs(area) / 2 < 60);
+  planBed(lr, beds, pts, inPoly(pts), polyEdgeDist(pts), y, skip, Math.abs(area) / 2 < 60, front);
 }
 
 addBush = restyle(addBush, simsBush2);
@@ -2477,6 +2851,7 @@ let carModelId = null;
 let carSpot = null;       // { x, y, z, ry } — set while the front yard is built
 let carGroup = null;      // whichever of the two is in the yard right now
 let carPending = null;    // the in-flight library-car load, if any (syncCar)
+let yardModelsPending = null;   // the in-flight library models standing in the yard (addYardModels)
 
 // main.js hands the model library over once at boot. Fire-and-forget: until it
 // lands (or if it never does) the primitive stands on the drive.
@@ -2486,6 +2861,9 @@ export function setYardModels(models) {
   const id = hit ? hit.id : null;
   if (id === carModelId) return;
   carModelId = id;
+  // Fetch and parse the car's .glb now, during the boot's furniture stage
+  // (models.js caches the parse), not inside the yard build's swap.
+  if (id != null) getModelSize(id).catch(() => {});
   syncCar();
 }
 
@@ -3185,10 +3563,24 @@ function seatCar(g, wheels) {
   const down = new THREE.Vector3(0, -1, 0);
   const isCar = (o) => { for (let p = o; p; p = p.parent) if (p === g) return true; return false; };
   let top = -Infinity;
-  for (const [lx, lz] of wheels) {
-    const w = g.localToWorld(new THREE.Vector3(lx, 0, lz));
+  // Only meshes whose world box is under the car: a recursive ray through the
+  // whole scene tested every triangle of the yard's lot-sized pieces and cost
+  // ~2 s of the boot (measured, CPU profile) for four downward rays.
+  const pts = wheels.map(([lx, lz]) => g.localToWorld(new THREE.Vector3(lx, 0, lz)));
+  const under = new THREE.Box3();
+  for (const p of pts) under.expandByPoint(p);
+  under.min.y -= 50; under.max.y += 8;
+  const candidates = [], wb = new THREE.Box3();
+  scene.updateMatrixWorld();   // behind the boot curtain nothing has drawn the new yard yet
+  scene.traverse((o) => {
+    if (!o.isMesh || isCar(o) || !o.geometry?.attributes?.position) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    wb.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+    if (wb.intersectsBox(under)) candidates.push(o);
+  });
+  for (const w of pts) {
     ray.set(new THREE.Vector3(w.x, w.y + 8, w.z), down);
-    for (const hit of ray.intersectObjects(scene.children, true)) {
+    for (const hit of ray.intersectObjects(candidates, false)) {
       if (!hit.object.isMesh || isCar(hit.object)) continue;
       const mats = Array.isArray(hit.object.material) ? hit.object.material : [hit.object.material];
       if (mats.some((m) => m && m.transparent)) continue;   // fog, glass, blobs
@@ -3996,6 +4388,8 @@ async function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) 
       + 'vec3 reflectedTrees=texture2D(rearLakeReflection,reflectedUV).rgb*.40;\n'
       + 'reflectedTrees+=(texture2D(rearLakeReflection,reflectedUV+vec2(roughFootprint.x,0.0)).rgb+texture2D(rearLakeReflection,reflectedUV-vec2(roughFootprint.x,0.0)).rgb)*.20;\n'
       + 'reflectedTrees+=(texture2D(rearLakeReflection,reflectedUV+roughFootprint).rgb+texture2D(rearLakeReflection,reflectedUV-roughFootprint).rgb)*.10;\n'
+      // the target holds display-encoded colour (shareScreenPrograms): back to linear
+      + 'reflectedTrees=pow(max(reflectedTrees,vec3(0.0)),vec3(2.2));\n'
       + 'float reflectedLuma=dot(reflectedTrees,vec3(.2126,.7152,.0722));\n'
       + 'reflectedTrees=mix(reflectedTrees,vec3(reflectedLuma)*vec3(.62,.86,1.25),.55+lakeRoughness*.2);\n'
       + 'float reflectAmount=(.20+lakeFresnel*.32)*(1.0-lakeRoughness*.25);\n'
@@ -4012,7 +4406,7 @@ async function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) 
   // A local planar reflection renders the real scene from a mirrored camera.
   // Oblique clipping keeps submerged terrain out. It owns its render target and
   // updates only when this mesh renders; there is no global frame subscription.
-  const reflectionTarget=new THREE.WebGLRenderTarget(1024,768,{type:THREE.HalfFloatType});
+  const reflectionTarget=shareScreenPrograms(new THREE.WebGLRenderTarget(1024,768,{type:THREE.HalfFloatType}));
   waterUniforms.rearLakeReflection.value=reflectionTarget.texture;
   const mirrorCamera=new THREE.PerspectiveCamera(),plane=new THREE.Plane(),clip=new THREE.Vector4(),q=new THREE.Vector4();
   const bias=new THREE.Matrix4().set(.5,0,0,.5,0,.5,0,.5,0,0,.5,.5,0,0,0,1);
@@ -4058,8 +4452,14 @@ async function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) 
   // One physical tile is 1 x 2 metres; circumference and length are in feet.
   const branch = (points, r0, r1, bucket, tint = 0xffffff) => {
     const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));
-    const length=curve.getLength(), rings=Math.max(5,Math.ceil(length*2.6));
-    const sides=r0>.3?28:10,frames=curve.computeFrenetFrames(rings,false),p=[],uv=[],idx=[];
+    // PHONE-LITE: the bark was ~126 MB of lite's ~300 MB vertex budget; at
+    // phone resolution half the rings and sides read identically (the rng
+    // draw below is unchanged, so every later lake item keys the same)
+    // (woodland bark only -- `masses`; a prop's thin limb keeps its measured
+    // bounds, and so its key, exactly as on desktop)
+    const lite=YARD_LITE&&bucket===masses;
+    const length=curve.getLength(), rings=Math.max(lite?3:5,Math.ceil(length*(lite?1.3:2.6)));
+    const sides=lite?(r0>.3?14:5):(r0>.3?28:10),frames=curve.computeFrenetFrames(rings,false),p=[],uv=[],idx=[];
     const phase=rng()*6.28;
     for(let i=0;i<=rings;i++) {
       const t=i/rings,c=curve.getPointAt(t),base=r0*Math.pow(1-t,.88)+r1*t;
@@ -4096,10 +4496,35 @@ async function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) 
   const _lcVX=new Float64Array(6),_lcVY=new Float64Array(6),_lcVZ=new Float64Array(6);
   const _lcNX=new Float64Array(6),_lcNY=new Float64Array(6),_lcNZ=new Float64Array(6);
   let leafCloudMs = 0, leafCloudLeaves = 0;   // reported into yardTimings below
+  // PHONE-LITE (YARD_LITE): the scanned-oak leaf clouds -- 2.2 M leaves, ~29 M
+  // verts, nearly all of the yard's ~1.4 GB of vertex buffers -- become one
+  // stylised simsClump crown per cloud, the backdrop trees' language, drawn
+  // from their OWN rng. The lake rng is still advanced exactly as the full
+  // cloud would advance it (23 draws a leaf, the rejection loop per cluster),
+  // so every later lake item lands, and keys, where it does on desktop.
+  const liteRng = mulberry32(0x4c495445);
+  const liteStores = new Map();
+  const liteOf = (store) => { let s = liteStores.get(store); if (!s) liteStores.set(store, s = leafStore()); return s; };
+  const liteLo = new THREE.Color(0x173628), liteHi = new THREE.Color(0x5f9446);
+  const leafCloudLite = (cx, cy, cz, rx, ry, rz, count, store) => {
+    const clusterCount = Math.ceil(count / 28);
+    for (let cl = 0; cl < clusterCount; cl++) {
+      let dx, dy, dz; do { dx = rng() * 2 - 1; dy = rng() * 2 - 1; dz = rng() * 2 - 1; } while (dx * dx + dy * dy + dz * dz > 1);
+      for (let k = 0; k < 4; k++) rng();                       // shade + axis
+      const leaves = Math.min(28, count - cl * 28);
+      for (let n = 0; n < leaves * 23; n++) rng();             // 9 placement + 2 tone + 12 colour
+    }
+    const size = Math.min(rx, rz) * 0.24 + 0.55;
+    const area = rx * rz + ry * (rx + rz);
+    const cards = Math.max(6, Math.min(40, Math.round(area / (size * size) * 0.4)));
+    simsClump(liteOf(store), liteRng, cx, cy, cz, rx * 0.85, ry * 0.85, rz * 0.85, cards, size,
+      liteLo, liteHi, cy, ry, Math.min(rx, rz) > 3 ? 1 : 0);
+  };
   const leafCloud = (cx, cy, cz, rx, ry, rz, count, store, scale = 1) => {
     const lcT0 = performance.now();
     if(scale<=1)count=Math.ceil(count*1.45);
     leafCloudLeaves += count;
+    if (YARD_LITE) { leafCloudLite(cx, cy, cz, rx, ry, rz, count, store); leafCloudMs += performance.now() - lcT0; return; }
     const clusterCount=Math.ceil(count/28);
     const positions=store.pos, colors=store.col, normals=store.nrm, uvs=store.uv;
     const VX=_lcVX,VY=_lcVY,VZ=_lcVZ,NX=_lcNX,NY=_lcNY,NZ=_lcNZ;
@@ -4221,6 +4646,7 @@ async function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) 
       branch([[x,y+height*.27,z],[x-1,y+7,z-3],end],radius*.16,.012,masses);
       leafCloud(...end,3.7,2.6,3,1000,store,.8);
     }
+    if (YARD_LITE) { props.push(plantGeo(liteOf(store))); return; }   // stylised crown, same item/pivot
     const g=new THREE.BufferGeometry();
     g.setAttribute('position',store.pos.attr(3));
     g.setAttribute('color',store.col.attr(3));
@@ -4349,6 +4775,8 @@ async function addRearLakeDetail(L, leaves, beds, props, lawns, trunks, masses) 
       }
     }
     flushFarLeaves();
+    // phone-lite: the whole far bank's crowns as one stylised mesh
+    if (YARD_LITE && liteStores.has(farStore)) props.push(plantGeo(liteOf(farStore)));
     yardLap('    lake: far ranks');
     yardTimings.push([`    (of which leafCloud, ${leafCloudLeaves} leaves)`, +leafCloudMs.toFixed(1)]);
   });
@@ -4685,6 +5113,7 @@ function yardYield() {
   const gen = yardGen;
   if (yardSyncBuild) return Promise.resolve();
   yardChunks.push(+(performance.now() - yardChunkT).toFixed(1));
+  yardProgress?.(Math.min(1, yardChunks.length / 28));   // ~28 chunks a build
   return new Promise((resolve, reject) => {
     const ch = new MessageChannel();
     ch.port1.onmessage = () => {
@@ -4694,6 +5123,84 @@ function yardYield() {
     };
     ch.port2.postMessage(0);
   });
+}
+
+let yardProgress = null;   // boot.js progress hook while the curtain waits on the build
+
+// main.js, BEHIND the boot curtain (2026-10-11, "no pop-in"): build the yard,
+// swap it in and switch the grade on, then wait for the async pieces (the
+// library car, library models standing in the yard) so the one compileAsync
+// main.js runs next sees -- and compiles -- everything the first revealed
+// frame draws, through the tone curve the grade actually picked. No serial
+// warm here: under the curtain the batch compile is what we want.
+export async function prepareYardForBoot({ onProgress } = {}) {
+  yardProgress = onProgress || null;
+  yardWarm = true;
+  yardWanted = true;
+  // Overlap: issue the HOUSE's programs for the curve the grade is about to
+  // pick right now, so the GPU process compiles them while the main thread
+  // builds the yard (the build makes no GL calls). renderer.compile only
+  // issues the work -- nothing polls readiness until main.js's compileAsync,
+  // so this cannot block the build on the driver.
+  const prevTm = renderer.toneMapping;
+  try {
+    renderer.toneMapping = predictGradeCurve();
+    renderer.compile(scene, camera);
+  } finally {
+    renderer.toneMapping = prevTm;
+  }
+  try {
+    refreshYard();
+    settleShellAnchors();
+    await whenYardReady();
+    const pending = [carPending, yardModelsPending].filter(Boolean);
+    if (pending.length) await Promise.race([Promise.all(pending), macrotask(15000)]);
+  } finally {
+    yardProgress = null;
+  }
+}
+
+// After the reveal, one program at a time so it can never stall a frame:
+// first what a single floor / room focus draws (every material through plain
+// ACES with floorview.js's fog-less studio backdrop -- the grade is off and
+// the optics stack never runs there), then what the House level needs at the
+// OTHER end of the day: by day that is the night composer's render-target
+// variant, at night the grade's daytime curve. Dusk and dawn are then program
+// switches too.
+function warmAfterReveal() {
+  const other = isNightNow()
+    ? { tm: THREE.CustomToneMapping, fog: true }
+    : { rt: true, fog: true };
+  return warmYardPrograms([{ tm: THREE.ACESFilmicToneMapping, fog: false }], true)
+    .then(() => warmYardPrograms([other]))
+    .catch(() => {});
+}
+
+export function warmOtherCurveLater() {
+  setTimeout(warmAfterReveal, 1000);
+}
+
+// After dark scene.js draws the House level through its optics composer, i.e.
+// into a render target -- and three keys a render-target pass as its own
+// program variant (no tone mapping, linear output). Measured: a night boot
+// compiled those 62 programs synchronously in its first frame, a 15.9 s
+// block. So main.js compiles through this: the render-target variant first
+// when it is night (by daylight's TARGET, the eased value is still moving at
+// boot), then the screen variant, both with KHR_parallel_shader_compile.
+let warmRT = null;
+function warmTarget() {
+  return warmRT || (warmRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType }));
+}
+function isNightNow() { return (getDaylight()?.nightFactor ?? 0) > 0.05; }
+export async function compileForBoot() {
+  if (isNightNow()) {
+    const prev = renderer.getRenderTarget();
+    let p;
+    renderer.setRenderTarget(warmTarget());
+    try { p = renderer.compileAsync(scene, camera); } finally { renderer.setRenderTarget(prev); }
+    await p;
+  }
+  await renderer.compileAsync(scene, camera);
 }
 
 // main.js: the boot curtain is up and the app is interactive -- build the yard.
@@ -4761,14 +5268,14 @@ function refreshYard(force = false) {
     yardChunks.push(+(performance.now() - yardChunkT).toFixed(1));
     // The first yard is swapped in hidden; it is shown once its programs are
     // compiled (see warmYardPrograms). Later rebuilds reuse those programs.
-    let warmOther = null;
+    let warmLater = false;
     if (!yardWarm) {
-      const curve = predictGradeCurve();
-      await warmYardPrograms([curve], true);
+      // no render-target pass: the reflections share the screen's programs
+      // at night the House level draws through the optics composer (an RT)
+      await warmYardPrograms([isNightNow() ? { rt: true, fog: true } : { tm: predictGradeCurve(), fog: true }]);
       if (gen !== yardGen) return;   // overtaken: the newer build warms instead
       yardWarm = true;
-      warmOther = curve === THREE.CustomToneMapping
-        ? THREE.ACESFilmicToneMapping : THREE.CustomToneMapping;
+      warmLater = true;
     }
     yardBuild = null;
     applyYardVisibility();
@@ -4777,10 +5284,8 @@ function refreshYard(force = false) {
     // yard.js holds references into the groups this build just replaced, and
     // undo/redo and a house reload both land here without going through it.
     window.dispatchEvent(new CustomEvent('yardRebuilt'));
-    // the other curve, in the background, so dawn/dusk is a switch too
-    if (warmOther != null) {
-      setTimeout(() => warmYardPrograms([warmOther], false).catch(() => {}), 1500);
-    }
+    // floor views and the other curve, in the background
+    if (warmLater) setTimeout(warmAfterReveal, 1500);
   }, (err) => {
     if (err instanceof YardBuildAborted) return;   // a newer build owns the yard now
     if (gen === yardGen) { yardBuild = null; yardBuiltSig = null; yard = shownYard; }
@@ -5178,11 +5683,12 @@ async function buildYard() {
   await yardYield();
   const rearTurf = yard.getObjectByName('rear-mown-turf');
   const edgeAO = makeLawnEdgeAO(lawns.geos, beds.geos, rearTurf?.geometry);
+  const edgeRGB = edgeAO.rgb || ((x, z) => { const k = edgeAO(x, z); return [k, k, k]; });
   if (rearTurf) {   // the rear turf painted its own mottle; add the edge band
     const p = rearTurf.geometry.attributes.position, c = rearTurf.geometry.attributes.color;
     for (let i = 0; i < p.count; i++) {
-      const k = edgeAO(p.getX(i), p.getZ(i));
-      c.setXYZ(i, c.getX(i) * k, c.getY(i) * k, c.getZ(i) * k);
+      const m = edgeRGB(p.getX(i), p.getZ(i));
+      c.setXYZ(i, c.getX(i) * m[0], c.getY(i) * m[1], c.getZ(i) * m[2]);
     }
     c.needsUpdate = true;
   }
@@ -5192,8 +5698,8 @@ async function buildYard() {
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
       uv.setXY(i, x / 2400 + 0.5, -z / 2400 + 0.5);
-      const t = lawnTint(x, z), k = edgeAO(x, z);
-      col[i * 3] = t[0] * k; col[i * 3 + 1] = t[1] * k; col[i * 3 + 2] = t[2] * k;
+      const t = lawnTint(x, z), m = edgeRGB(x, z);
+      col[i * 3] = t[0] * m[0]; col[i * 3 + 1] = t[1] * m[1]; col[i * 3 + 2] = t[2] * m[2];
     }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
     uv.needsUpdate = true;
@@ -5219,16 +5725,17 @@ async function buildYard() {
   // Turf-side edge fringe (see makeLawnEdgeAO). Not a bucket geometry, so it
   // is no editor piece and never takes a click; tinted with the lawn for
   // weather, disposed with the yard like the rear turf.
-  const fringeGeo = edgeAO.buildFringe?.();
+  // skipped on phone-lite: sub-pixel at phone size, ~140 k verts saved
+  const fringeGeo = YARD_LITE ? null : edgeAO.buildFringe?.();
   if (fringeGeo) {
-    const fringeMat = new THREE.MeshStandardMaterial({
-      color: grassMat.color.clone(), roughness: 1, vertexColors: true, side: THREE.DoubleSide });
-    yardGrassMats.push(fringeMat);
-    const fringe = new THREE.Mesh(fringeGeo, fringeMat);
+    // the lawn's own material: same program (no extra boot compile), same
+    // weather tint, and it is disposed with the lawn
+    const fringe = new THREE.Mesh(fringeGeo, lawnMat);
     fringe.name = 'lawn-edge-fringe';
     fringe.userData.ownGeometry = true;
-    // no shadow receive: near-vertical slivers self-shadow into black stubble
-    fringe.receiveShadow = false;
+    // receives shadow like the turf (the old black-stubble look was the
+    // DoubleSide normal flip, not shadowing)
+    fringe.receiveShadow = true;
     yard.add(fringe);
   }
   const MATS = {
@@ -5261,6 +5768,9 @@ async function buildYard() {
   // mergeGeometries refuses to mix indexed (cylinder/cone) with non-indexed
   // (icosahedron) geometry — normalize everything to non-indexed first
   const flat = (geos) => geos.map((g) => (g.index ? g.toNonIndexed() : g));
+  // A lone geometry is drawn as itself: "merging" one copies it, and for the
+  // lake's 20 M-vertex woodland that copy was most of a second of the build.
+  const mergeAll = (geos) => (geos.length === 1 ? geos[0] : BufferGeometryUtils.mergeGeometries(geos, false));
   let rearFoliageMat = null, rearBarkMat = null, rearOakLeafMat = null, rearFarOakMat = null, rearConiferSprayMat = null;
   // SIMS ROUND (trees): the scanned oak leaves rendered as a noisy, murky
   // photo-card mass beside the stylised backdrop. Their normals now carry
@@ -5279,7 +5789,7 @@ async function buildYard() {
     shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>',
       '#if defined( USE_COLOR )\ndiffuseColor.rgb *= mix(vColor, vec3(0.74), 0.65);\n#endif\n'
       + 'float simsLeafL = dot(diffuseColor.rgb, vec3(.2126,.7152,.0722));\n'
-      + 'diffuseColor.rgb = max(mix(vec3(simsLeafL), diffuseColor.rgb, 1.15), 0.0) * vec3(1.18, 1.22, 0.78);');
+      + 'diffuseColor.rgb = max(mix(vec3(simsLeafL), diffuseColor.rgb, 1.15), 0.0) * vec3(1.34, 1.38, 0.86);');
     simsLeafShader(shader);
   };
 
@@ -5292,7 +5802,7 @@ async function buildYard() {
       const group = new THREE.Group(), ordinary = geos.filter(g => !g.userData?.simsFoliage);
       if (ordinary.length) group.add(bucketMesh(name, ordinary));
       if (!simsFoliageMat) simsFoliageMat = simsLeafMaterial();
-      const m = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(flat(geos.filter(g => g.userData?.simsFoliage)), false), simsFoliageMat);
+      const m = new THREE.Mesh(mergeAll(flat(geos.filter(g => g.userData?.simsFoliage))), simsFoliageMat);
       m.castShadow = m.receiveShadow = true; m.userData.ownGeometry = true;
       group.add(m);
       return group;
@@ -5310,7 +5820,7 @@ async function buildYard() {
         rearBarkMat=new THREE.MeshStandardMaterial({map:albedo,normalMap:normal,normalScale:new THREE.Vector2(.85,.85),vertexColors:true,roughness:.97});
         rearBarkMat.addEventListener('dispose',()=>{albedo.dispose();normal.dispose();});
       }
-      const barkMesh=new THREE.Mesh(BufferGeometryUtils.mergeGeometries(flat(geos.filter(g=>g.userData?.rearBark)),false),rearBarkMat);
+      const barkMesh=new THREE.Mesh(mergeAll(flat(geos.filter(g=>g.userData?.rearBark))),rearBarkMat);
       barkMesh.name='rear-lake-bark';barkMesh.castShadow=barkMesh.receiveShadow=true;
       barkMesh.userData.ownGeometry=true;group.add(barkMesh);return group;
     }
@@ -5324,10 +5834,10 @@ async function buildYard() {
         const normal=loader.load('/textures/backyard/oak-leaf-normal-dx.webp');
         map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=8;normal.anisotropy=8;
         rearOakLeafMat=new THREE.MeshStandardMaterial({map,normalMap:normal,normalScale:new THREE.Vector2(.08,-.08),
-          vertexColors:true,alphaTest:.45,side:THREE.DoubleSide,roughness:.91,metalness:0});
+          vertexColors:true,alphaTest:.45,side:THREE.DoubleSide,roughness:.91,metalness:0,alphaToCoverage:true});
         rearOakLeafMat.addEventListener('dispose',()=>{map.dispose();normal.dispose();});
         rearOakLeafMat.onBeforeCompile=simsOakLeaf;
-        rearOakLeafMat.customProgramCacheKey=()=> 'rear-oak-sims-v3';
+        rearOakLeafMat.customProgramCacheKey=()=> 'rear-oak-sims-v6';
       }
       for(const distant of [false,true]) {
         const selected=geos.filter(g=>g.userData?.rearOakLeaf&&!!g.userData?.rearFarLeaf===distant);
@@ -5344,11 +5854,13 @@ async function buildYard() {
             // r3: the far bank read as one flat pale band of copy-paste
             // trees. Stands ~20-40 ft wide now differ in value and hue (cool
             // blue-green / dark / warm), hashed from world x.
-            shader.vertexShader='varying float vFarStand;\n'+shader.vertexShader.replace('#include <begin_vertex>',
-              '#include <begin_vertex>\nvec3 farW=(modelMatrix*vec4(transformed,1.0)).xyz;\nvFarStand=farW.x/27.0+sin(farW.x*.05)*1.3;');
-            shader.fragmentShader='varying float vFarStand;\n'+shader.fragmentShader.replace('#include <color_fragment>',
+            shader.vertexShader='varying float vFarStand;\nvarying float vFarY;\n'+shader.vertexShader.replace('#include <begin_vertex>',
+              '#include <begin_vertex>\nvec3 farW=(modelMatrix*vec4(transformed,1.0)).xyz;\nvFarStand=farW.x/27.0+sin(farW.x*.05)*1.3;\nvFarY=farW.y;');
+            shader.fragmentShader='varying float vFarStand;\nvarying float vFarY;\n'+shader.fragmentShader.replace('#include <color_fragment>',
               '#include <color_fragment>\nfloat farId=floor(vFarStand);\nfloat farH=fract(sin(farId*12.9898)*43758.5453),farH2=fract(sin(farId*78.233)*12345.678);\n'
-              +'diffuseColor.rgb*=(0.62+0.5*farH)*mix(vec3(0.78,0.95,1.12),vec3(1.1,1.02,0.7),farH2);');
+              +'diffuseColor.rgb*=(0.5+0.75*farH)*mix(vec3(0.78,0.95,1.12),vec3(1.1,1.02,0.7),farH2);\n'
+              // r4: dark at the base and in the gaps between crowns, lit at the tops
+              +'diffuseColor.rgb*=mix(0.42,1.22,smoothstep(2.0,30.0+12.0*farH,vFarY));');
             simsOakLeaf(shader);   // after: it re-emits color_fragment, keeping the line above
             shader.fragmentShader='uniform vec3 rearFarSky;\nuniform float rearFarDay;\n'+shader.fragmentShader;
             shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',
@@ -5358,10 +5870,10 @@ async function buildYard() {
               'vec3 farAirColor=mix(rearFarSky,vec3(dot(rearFarSky,vec3(.2126,.7152,.0722))),.36);\n'+
               'outgoingLight=mix(outgoingLight,farAirColor*(1.0+rearFarDay*.08),farAir);\n#include <opaque_fragment>');
           };
-          rearFarOakMat.customProgramCacheKey=()=> 'rear-distant-oak-atmosphere-v5';
+          rearFarOakMat.customProgramCacheKey=()=> 'rear-distant-oak-atmosphere-v8';
         }
         const mat=distant?rearFarOakMat:rearOakLeafMat;
-        const leafMesh=new THREE.Mesh(BufferGeometryUtils.mergeGeometries(flat(selected),false),mat);
+        const leafMesh=new THREE.Mesh(mergeAll(flat(selected)),mat);
         leafMesh.name=distant?'rear-distant-oak-leaves':'rear-scanned-oak-leaves';
         leafMesh.castShadow=leafMesh.receiveShadow=true;leafMesh.userData.ownGeometry=true;
         if(distant)leafMesh.onBeforeRender=()=>{
@@ -5389,7 +5901,7 @@ async function buildYard() {
           alphaTest:.38,roughness:.98,side:THREE.DoubleSide});
         rearConiferSprayMat.addEventListener('dispose',()=>map.dispose());
       }
-      const mesh=new THREE.Mesh(BufferGeometryUtils.mergeGeometries(flat(sprays),false),rearConiferSprayMat);
+      const mesh=new THREE.Mesh(mergeAll(flat(sprays)),rearConiferSprayMat);
       // Three's shadow depth pass inherits map + alphaTest from this material,
       // so only the needle mask casts; the transparent corners never cast quads.
       mesh.castShadow=mesh.receiveShadow=true;mesh.userData.ownGeometry=true;group.add(mesh);
@@ -5422,14 +5934,14 @@ async function buildYard() {
         };
         rearFoliageMat.customProgramCacheKey=()=> 'rear-thin-leaf-v1';
       }
-      const leafMesh = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(flat(foliage), false), rearFoliageMat);
+      const leafMesh = new THREE.Mesh(mergeAll(flat(foliage)), rearFoliageMat);
       leafMesh.castShadow = leafMesh.receiveShadow = true;
       leafMesh.userData.ownGeometry = true;
       group.add(leafMesh);
       return group;
     }
     const m = new THREE.Mesh(
-      BufferGeometryUtils.mergeGeometries(flat(geos), false), MATS[name]);
+      mergeAll(flat(geos)), MATS[name]);
     m.castShadow = !!CASTS[name];
     m.receiveShadow = !!RECEIVES[name];
     m.userData.ownGeometry = true;   // merged here, so ours to dispose
@@ -5459,7 +5971,12 @@ async function buildYard() {
       const byBucket = new Map();
       for (const { bucket, i } of item.geos) {
         if (!byBucket.has(bucket)) byBucket.set(bucket, []);
-        byBucket.get(bucket).push(buckets[bucket].geos[i].clone());
+        // Cloned so the bucket keeps the builder's world-space copy (clone
+        // rows and addRearLightDetail read it afterwards) -- except the
+        // multi-million-vertex leaf masses, which nothing re-reads and whose
+        // copy alone cost ~1 s: those are re-centred in place.
+        const src = buckets[bucket].geos[i];
+        byBucket.get(bucket).push(src.attributes.position.count > 250000 ? src : src.clone());
       }
       const [px, py, pz] = item.pivot;
       const group = new THREE.Group();
@@ -5603,39 +6120,62 @@ function addBackdrop(L) {
   // blue-green interiors and undersides everywhere, lime only as the sunlit
   // highlight (simsClump biases the ramp toward the shade colour), a deep
   // blue-green for the big shade trees, darker evergreens, blossom accents.
-  const MAPLE = [[0x1d3b22, 0x7fae3c], [0x1a3826, 0x72a83e], [0x223f20, 0x8ab441]];
-  const OAK = [[0x173628, 0x5f9446], [0x1a3a2a, 0x699a48]];
-  const HERO = [[0x132f25, 0x5a9044]];
-  const WILLOW = [[0x2d4a25, 0x9fc055]];
-  const POPLAR = [[0x183a22, 0x6a9e3a]];
-  const FIR = [[0x0d2a20, 0x386c44], [0x10301f, 0x427649]];
+  const MAPLE = [[0x24452a, 0x6f9f3a], [0x21422e, 0x64983c], [0x2a4b27, 0x7aa63e]];
+  const OAK = [[0x1d4034, 0x5a8c44], [0x214437, 0x638f45]];
+  const HERO = [[0x1f4436, 0x5e9146]];
+  const WILLOW = [[0x34502a, 0x93b452]];
+  const POPLAR = [[0x183a22, 0x5a8a36]];
+  const FIR = [[0x0c2820, 0x2f5e3c], [0x0f2c1f, 0x386a41]];
   const BLOOM = [[0x7a3f68, 0xf0b7d4], [0x4c3d80, 0xbfa8ea], [0x84506e, 0xf3c4da]];
   const pick = (a) => a[Math.floor(rng() * a.length)];
   const setPal = ([d, l], v = 1) => { lo.setHex(d).multiplyScalar(v); hi.setHex(l).multiplyScalar(v); };
   // Phone budget (<= 1 M verts for the whole backdrop): FEW, BIG, overlapping
   // masses per tree -- a connected canopy, not floating balls -- each a
   // heart plus a handful of large rim cards for the ragged edge.
-  let lod = 1;   // 1 near, 0 far
-  const clump = (x, y, z, rx, ry, rz, gy, gr, detail = lod) => {
+  let lod = 2;   // 2 close (lot edges, heroes), 1 mid, 0 far
+  const one = (x, y, z, rx, ry, rz, gy, gr, detail, cardK) => {
     // cards about a quarter of the clump across: big enough to break the
     // silhouette, small enough not to read as paper flaps (r3a's did)
-    const size = Math.min(rx, rz) * 0.24 + 0.55;
+    const size = Math.min(rx, rz) * 0.3 + 0.55;   // r9: mid-size leaf clusters
     const area = rx * rz + ry * (rx + rz);
-    const cards = Math.max(5, Math.min(lod ? 70 : 18, Math.round(area / (size * size) * (lod ? 0.55 : 0.2))));
+    const cards = Math.max(3, Math.min(lod ? 24 : 9, Math.round(area / (size * size) * cardK)));
     simsClump(leaves, rng, x, y, z, rx, ry, rz, cards, size, lo, hi, gy, gr, detail);
   };
-  const limb = (a, b, r0, r1) => simsLimb(leaves, a, b, r0, r1, bark);
+  // r5: a near canopy mass is a smaller core plus 4-8 small sub-clumps on its
+  // skin (upper half favoured) -- MANY overlapping leaf clumps with their own
+  // lit tops, dark bellies and gaps between them, not one melted lump.
+  const clump = (x, y, z, rx, ry, rz, gy, gr, detail = lod) => {
+    // small masses are ONE leafy clump (splitting them made bubble-stacks)
+    if (!lod || Math.max(rx, rz) < 5) { one(x, y, z, rx, ry, rz, gy, gr, lod ? 1 : 0, lod ? 0.45 : 0.14); return; }
+    one(x, y, z, rx * 0.7, ry * 0.7, rz * 0.7, gy, gr, detail > 1 ? 2 : 1, 0.2);
+    // sub-clumps: smooth (detail 1) only close in; at mid range a 12-vertex
+    // heart is a few pixels and its cards carry the outline
+    const sd = lod > 1 ? 1 : 0;
+    const n = Math.min(lod > 1 && !YARD_LITE ? 7 : 4, 3 + Math.round(Math.sqrt(rx * rz) / 2.6));
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rng() * 0.8, up = -0.35 + rng() * 1.15;
+      const hz = Math.sqrt(Math.max(0.05, 1 - up * up));
+      const sr = 0.36 + rng() * 0.14;
+      one(x + Math.cos(a) * hz * rx * 0.62, y + up * ry * 0.62, z + Math.sin(a) * hz * rz * 0.62,
+          rx * sr, ry * sr * 0.9, rz * sr, gy, gr, sd, sd ? 0.22 : 0.3);
+    }
+  };
+  // far trunks are drawn heavier: at 300+ ft through the haze a true-scale
+  // trunk vanishes and the crown reads as a balloon floating over the grass
+  const limb = (a, b, r0, r1) => simsLimb(leaves, a, b, lod ? r0 : r0 * 1.9, lod ? r1 : r1 * 1.9, bark);
   // round maple: 3-4 big overlapping masses on a visible trunk
   const maple = (x, z, s, pal = pick(MAPLE)) => {
     setPal(pal, 0.9 + rng() * 0.2);
     const th = (6 + rng() * 3) * s, R = (7.5 + rng() * 2.5) * s, cy = th + R * 0.8;
-    limb([x, 0, z], [x, cy - R * 0.2, z], 0.95 * s, 0.6 * s);
-    clump(x, cy, z, R * 0.78, R * 0.66, R * 0.78, cy, R);
-    const n = 2 + Math.floor(rng() * 2);
-    for (let i = 0; i < n; i++) {
-      const a = rng() * Math.PI * 2, d = R * (0.3 + rng() * 0.15);
-      const r = R * (0.5 + rng() * 0.12);
-      clump(x + Math.cos(a) * d, cy + (rng() - 0.3) * R * 0.4, z + Math.sin(a) * d, r, r * 0.82, r, cy, R);
+    const tw = (0.42 + rng() * 0.3) * s;   // r4: thinner, varied trunks
+    limb([x, 0, z], [x, cy - R * 0.2, z], tw, tw * 0.6);
+    // r7: one cohesive, open leafy crown (r6's core + sub-clumps read as a
+    // bubble-stack on a stick), with a couple of shoulder lobes so the
+    // outline is not an ellipse
+    one(x, cy, z, R * 0.86, R * 0.74, R * 0.86, cy, R, lod ? 1 : 0, lod ? 0.6 : 0.2);
+    for (let i = 0; i < 2; i++) {
+      const a = rng() * Math.PI * 2, r = R * (0.42 + rng() * 0.1);
+      one(x + Math.cos(a) * R * 0.5, cy + R * (0.05 + rng() * 0.2), z + Math.sin(a) * R * 0.5, r, r * 0.85, r, cy, R, lod ? 1 : 0, lod ? 0.5 : 0.18);
     }
   };
   // broad spreading oak: a short thick bole, wide limbs, a flat wide crown of
@@ -5643,13 +6183,14 @@ function addBackdrop(L) {
   const oak = (x, z, s, pal = pick(OAK), detail = lod) => {
     setPal(pal, 0.9 + rng() * 0.2);
     const th = (5 + rng() * 2) * s, R = (12 + rng() * 3) * s, cy = th + 7.5 * s;
-    limb([x, 0, z], [x, th, z], 1.15 * s, 0.85 * s);
+    const tw = (0.6 + rng() * 0.3) * s;
+    limb([x, 0, z], [x, th, z], tw, tw * 0.72);
     clump(x, cy + 1.5 * s, z, R * 0.55, 5.5 * s, R * 0.55, cy, 7 * s, detail);
     const n = 4 + Math.floor(rng() * 2);
     for (let i = 0; i < n; i++) {
       const a = i / n * Math.PI * 2 + (rng() - 0.5) * 0.7, d = R * (0.42 + rng() * 0.18);
       const px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d, py = cy - d * 0.08 + (rng() - 0.5) * 2 * s;
-      limb([x, th * 0.92, z], [x + (px - x) * 0.7, py - 2.5 * s, z + (pz - z) * 0.7], 0.75 * s, 0.3 * s);
+      limb([x, th * 0.92, z], [x + (px - x) * 0.7, py - 2.5 * s, z + (pz - z) * 0.7], tw * 0.42, tw * 0.16);
       const r = (5.2 + rng() * 1.8) * s;
       clump(px, py, pz, r, r * 0.62, r, cy, 7 * s, detail);
     }
@@ -5658,7 +6199,7 @@ function addBackdrop(L) {
   const willow = (x, z, s) => {
     setPal(WILLOW[0], 0.9 + rng() * 0.16);
     const th = (8 + rng() * 2) * s, R = (10 + rng() * 2) * s, cy = th + 6 * s;
-    limb([x, 0, z], [x, th + 4 * s, z], 1.1 * s, 0.6 * s);
+    limb([x, 0, z], [x, th + 4 * s, z], 0.6 * s, 0.35 * s);
     clump(x, cy + 2 * s, z, R * 0.7, 5 * s, R * 0.7, cy, R);
     const n = 9 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) {
@@ -5671,23 +6212,59 @@ function addBackdrop(L) {
   const poplar = (x, z, s) => {
     setPal(pick(POPLAR), 0.9 + rng() * 0.2);
     const H = (30 + rng() * 12) * s;
-    limb([x, 0, z], [x, H * 0.5, z], 0.7 * s, 0.4 * s);
-    clump(x, H * 0.45, z, 4.4 * s, H * 0.3, 4.4 * s, H * 0.55, H * 0.4);
-    clump(x + (rng() - 0.5) * s, H * 0.72, z + (rng() - 0.5) * s, 3.3 * s, H * 0.2, 3.3 * s, H * 0.55, H * 0.4);
+    limb([x, 0, z], [x, H * 0.5, z], 0.4 * s, 0.25 * s);
+    // r4: one continuous column (two stacked masses read as a topiary)
+    clump(x, H * 0.52, z, 4.2 * s, H * 0.4, 4.2 * s, H * 0.55, H * 0.4);
   };
   // fir: four stacked, flattened tiers
   const fir = (x, z, s) => {
     setPal(pick(FIR), 0.9 + rng() * 0.2);
     const H = (28 + rng() * 16) * s, R = H * (0.21 + rng() * 0.05);
-    limb([x, 0, z], [x, H * 0.4, z], 0.6 * s, 0.35 * s);
-    for (let i = 0; i < 4; i++) {
-      const f = i / 3, y = H * (0.22 + f * 0.62), r = R * (1.0 - f * 0.72) + 0.8 * s;
-      clump(x, y, z, r, H * 0.13, r, H * 0.55, H * 0.45);
+    limb([x, 0, z], [x, H * 0.4, z], 0.38 * s, 0.22 * s);
+    // r4: three tall OVERLAPPING masses tapering to the tip -- a cone, not
+    // a stack of discs (that read as a topiary above the roofline)
+    if (!lod) { clump(x, H * 0.5, z, R, H * 0.42, R, H * 0.55, H * 0.45, 1); return; }   // far: one mass (detail 1: a detail-0 spindle reads as a crystal)
+    for (let i = 0; i < 3; i++) {
+      const y = H * (0.34 + i * 0.22), r = R * (1.0 - i * 0.3);
+      clump(x, y, z, r, H * (0.24 - i * 0.04), r, H * 0.55, H * 0.45);
     }
   };
   const flowering = (x, z, s) => maple(x, z, s * 0.75, pick(BLOOM));
   // the 2-3x hero shade tree: a big oak in the deep blue-green
-  const hero = (x, z, s) => oak(x, z, s, HERO[0], 1);
+  // r6: the hero shade tree, rebuilt. r5's was a flat umbrella of a few big
+  // smooth lumps on a bare forked skeleton ("broccoli", "lumpy clay"). Now: a
+  // broad DOME of ~30 small overlapping leaf clusters (card-heavy, so their
+  // edges are ragged and see-through), with a skirt of clusters hanging low
+  // enough to swallow the fork -- the trunk disappears into the foliage, the
+  // way the shade tree in refs/frontyard_0/1 does. Limbs stay inside.
+  const hero = (x, z, s) => {
+    setPal(HERO[0], 0.95 + rng() * 0.1);
+    const R = (11.5 + rng() * 2) * s, H = (9 + rng() * 2) * s;   // crown half-width / half-height
+    const th = 4.2 * s, cy = th + H * 0.95;                       // short visible bole
+    const tw = (0.55 + rng() * 0.15) * s;
+    limb([x, 0, z], [x, cy - H * 0.2, z], tw, tw * 0.6);
+    for (let i = 0; i < 4; i++) {                                 // limbs end INSIDE the crown
+      const a = i * 1.57 + rng() * 0.8;
+      limb([x, th + H * 0.3, z], [x + Math.cos(a) * R * 0.45, cy + (rng() - 0.3) * H * 0.4, z + Math.sin(a) * R * 0.45], tw * 0.4, tw * 0.15);
+    }
+    // the dome: golden-angle points over an upper-biased ellipsoid shell
+    const n = 30;
+    for (let i = 0; i < n; i++) {
+      const f = (i + 0.5) / n, up = 1 - 1.45 * f;                // +1 top .. -0.45 lower skirt
+      const hz = Math.sqrt(Math.max(0.06, 1 - up * up)), a = i * 2.39996 + rng() * 0.4;
+      const shell = 0.62 + rng() * 0.22;
+      const cr = R * (0.2 + rng() * 0.08);
+      const px = x + Math.cos(a) * hz * R * shell, pz = z + Math.sin(a) * hz * R * shell;
+      const py = cy + up * H * shell - (up < 0 ? H * 0.12 : 0);  // the skirt droops
+      one(px, py, pz, cr, cr * 0.82, cr, cy, H * 1.1, 1, 0.65);
+    }
+    // a few inner fillers so the dome reads full, not as a hollow shell
+    for (let i = 0; i < 5; i++) {
+      const a = rng() * 6.283, d = R * 0.3 * rng();
+      const cr = R * 0.3;
+      one(x + Math.cos(a) * d, cy + (rng() - 0.3) * H * 0.4, z + Math.sin(a) * d, cr, cr * 0.8, cr, cy, H * 1.1, 1, 0.25);
+    }
+  };
   const SPECIES = { maple, oak, willow, poplar, fir, flowering, hero };
   const MIX = ['maple', 'maple', 'maple', 'oak', 'oak', 'fir', 'fir', 'poplar', 'willow', 'flowering'];
 
@@ -5706,11 +6283,14 @@ function addBackdrop(L) {
     && !CAMS.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 42);
   const pts = [];   // planted trunks, for spacing
   const reach = { oak: 13, hero: 13, willow: 11, poplar: 5, fir: 7, maple: 8, flowering: 6 };
-  const roomFor = (x, z, r) => !pts.some(([px, pz, pr]) => Math.hypot(x - px, z - pz) < (r + pr) * 0.55);
+  const roomFor = (x, z, r) => !pts.some(([px, pz, pr]) => Math.hypot(x - px, z - pz) < (r + pr) * 0.38);
   let planted = 0;
   const plant = (kind, x, z, s) => {
     const r = reach[kind] * s;
     if (!free(x, z, 4) || !roomFor(x, z, r)) return false;
+    // far away a fir/poplar spindle reads as a dark spike or topiary on the
+    // skyline (the r4 critics' 'floating balloons'): rounded crowns only
+    if (!lod && kind === 'fir') kind = 'oak';
     pts.push([x, z, r]); SPECIES[kind](x, z, s); planted++; return true;
   };
   // varied scale: mostly modest, a long tail of big ones
@@ -5718,13 +6298,24 @@ function addBackdrop(L) {
 
   if (BACKDROP_TREES) {
     const cz0 = (L.yardN + L.street) / 2;
-    lod = 1;
+    lod = 2;
     // Three hero shade trees on the neighbours' side of our lot lines --
     // trunks outside the lot, canopies overhanging its edges, the way the big
     // front shade tree in frontyard_1/2 overhangs this lawn.
-    plant('hero', L.padW - 47, L.houseF + 18, 2.6);
-    plant('hero', L.padE + 58, L.yardN + 16, 2.3);
-    plant('hero', L.padW - 50, L.yardN + 6, 2.1);
+    // r5: trunks JUST outside the lot lines (the owner's note forbids trees
+    // on the lot), canopies big enough to overhang the yard beside the house
+    // and the deck. Planted past free()'s margin on purpose.
+    const heroAt = (x, z, sc) => { pts.push([x, z, reach.hero * sc]); SPECIES.hero(x, z, sc); planted++; };
+    heroAt(L.padW - 32, L.houseF + 16, 2.5);    // front-west, over the front lawn
+    heroAt(L.padE + 40, L.blockN + 14, 2.4);    // east, beside the deck side (r9: pulled back out of aback's foreground)
+    heroAt(L.padW - 32, L.yardN + 22, 2.6);     // west, over the back lawn
+    // r9: silhouettes the street view must show beside the house
+    plant('fir', L.padW - 42, L.houseF - 44, 1.25);
+    plant('poplar', L.padE + 46, L.houseF - 36, 1.15);
+    plant('willow', L.padE + 58, L.houseF - 4, 0.95);
+    // blossom accents the street view actually sees
+    plant('flowering', L.padE + 44, L.houseF - 6, 1.15);
+    plant('flowering', L.padW - 42, L.houseF - 30, 1.05);
     // then irregular mixed clusters around them, not a row
     for (const [gx, gz, sp] of [[L.padW - 58, L.houseF - 28, 24], [L.padE + 60, L.houseF - 18, 26],
                                 [L.padE + 52, L.houseF + 14, 16]]) {
@@ -5732,31 +6323,71 @@ function addBackdrop(L) {
     }
     // groves through the ring
     let groves = 0;
-    for (let i = 0; i < 8000 && groves < 210; i++) {
-      const u = rng(), r = 130 + 520 * Math.pow(u, 1.4), a = rng() * Math.PI * 2;
+    // phone-lite stays under its ~300 MB vertex budget with fewer stands
+    for (let i = 0; i < 8000 && groves < (YARD_LITE ? 42 : 72); i++) {
+      const u = rng(), r = 130 + 430 * Math.pow(u, 1.4), a = rng() * Math.PI * 2;
       const gx = mid + Math.cos(a) * r * 1.15, gz = cz0 + Math.sin(a) * r;
       if (!free(gx, gz, 10)) continue;
       groves++;
-      lod = r < 300 ? 1 : 0;
+      lod = r < 190 ? 2 : r < 300 ? 1 : 0;
       const dom = MIX[Math.floor(rng() * MIX.length)];
-      const n = 2 + Math.floor(rng() * 6), spread = 14 + rng() * 26;
+      const n = 4 + Math.floor(rng() * 6), spread = 12 + rng() * 16;   // r5: tight, overlapping stands
+      // a low canopy skirt at the grove's heart: the stand reads as one mass
+      // standing ON the ground, never crowns floating over open grass
+      setPal(pick(MAPLE), 0.75 + rng() * 0.15);
+      if (lod && free(gx, gz, 4)) one(gx, 5 + spread * 0.12, gz, spread * 0.85, 5 + spread * 0.12, spread * 0.75, 6, 6, 1, 0.2);
       for (let t = 0; t < n; t++) {
         const kind = rng() < 0.65 ? dom : MIX[Math.floor(rng() * MIX.length)];
-        const s = scale() * (1 + Math.max(0, r - 300) / 900);
+        const s = Math.min(1.9, scale() * (1 + Math.max(0, r - 300) / 900));
         plant(kind, gx + (rng() - 0.5) * 2 * spread, gz + (rng() - 0.5) * 2 * spread, s);
       }
       // now and then a big one standing over the grove
       if (rng() < 0.18) plant('oak', gx + (rng() - 0.5) * spread, gz + (rng() - 0.5) * spread, 1.7 + rng() * 0.7);
     }
-    // the lake's far side, behind the scanned woodland: uneven stands with a
-    // broken skyline (big oaks and firs among small trees), not a band
+    // (r5: the stand behind the lake's far woodland is gone -- its crowns
+    // showed above the woodland with their trunks hidden and read as
+    // balloons floating over the treeline; the hills close that horizon.)
+  }
+
+  // r4: the lakeside mature trees (items at authored pivots, which cannot
+  // move) read as a picket fence of evenly spaced trunks. Understory masses in
+  // uneven GROUPS at their feet -- a woodland edge, as in backyard_3 -- break
+  // the row up without touching an item. Kept clear of the path lights and
+  // the feeder (mid-8, mid-7, mid+13).
+  if (BACKDROP_TREES) {
+    lod = 2;
+    const shoreZ = L.yardN - 16;   // the trunk line (authored pivots z -91..-98)
+    for (const [ox, n] of [[-46, 4], [-34, 2], [-19, 3], [2, 2], [24, 4], [40, 3], [52, 2]]) {
+      setPal(pick(MAPLE), 0.82 + rng() * 0.15);
+      for (let i = 0; i < n; i++) {
+        const x = mid + ox + (rng() - 0.5) * 9, z = shoreZ - 2 + (rng() - 0.5) * 7;
+        if (Math.abs(x - (mid - 8)) < 3 || Math.abs(x - (mid + 13)) < 3) continue;
+        const r = 2.2 + rng() * 2.6, h = r * (0.7 + rng() * 0.6);
+        clump(x, L.lo + h, z, r, h, r * (0.8 + rng() * 0.4), L.lo + h, h + 1);
+      }
+    }
+  }
+
+  // r6: a darker, defined BACK TREELINE in front of the hills, so the house
+  // stands against woodland rather than a hazy washed-out hillside (afront).
+  // One ring of big low-detail canopy masses at ~400 ft, in a deep palette;
+  // gaps where the street runs out and over the lake's own woodland. Cheap:
+  // detail-0 hearts and a few cards, ~15 k verts in all.
+  if (BACKDROP_TREES) {
     lod = 0;
-    for (let x = lakeX0 - 40; x < lakeX1 + 40; x += 26 + rng() * 50) {
-      const z = L.yardN - 350 - rng() * 50;
-      const big = rng() < 0.35;
-      plant(big ? (rng() < 0.5 ? 'oak' : 'fir') : MIX[Math.floor(rng() * MIX.length)],
-            x, z, big ? 1.8 + rng() * 0.8 : 0.8 + rng() * 0.6);
-      if (rng() < 0.6) plant(MIX[Math.floor(rng() * MIX.length)], x + (rng() - 0.5) * 30, z - rng() * 30, 0.9 + rng() * 0.7);
+    const cz0 = (L.yardN + L.street) / 2;
+    const TL = [[0x16301e, 0x3a6430], [0x14321f, 0x34602f], [0x1a3520, 0x416b34]];
+    for (let a = 0; a < Math.PI * 2; a += 0.03 + rng() * 0.03) {
+      const r = 395 + rng() * 45;
+      const x = mid + Math.cos(a) * r * 1.15, z = cz0 + Math.sin(a) * r;
+      if (Math.abs(z - (L.street + 14)) < 40) continue;                    // the road runs out
+      if (x > lakeX0 - 20 && x < lakeX1 + 20 && z < L.yardN - 300) continue;  // the lake's woodland
+      if (CAMS.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 60)) continue;
+      // r9: a real far tree at each stop (crown masses, a trunk, a lit top),
+      // mixed species and sizes -- r8's single flat dark mass per stop read
+      // as a cardboard cutout
+      const k = rng();
+      SPECIES[k < 0.45 ? 'maple' : k < 0.75 ? 'oak' : k < 0.9 ? 'poplar' : 'willow'](x, z, 1.2 + rng() * 0.9);
     }
   }
 
@@ -5778,10 +6409,15 @@ function addBackdrop(L) {
   // side of each boundary.
   const picket = (x, z0, z1) => {
     const len = z1 - z0;
-    solid(box(0.18, 0.28, len, x, 1.0, (z0 + z1) / 2), 0xf3f3ee);
-    solid(box(0.18, 0.28, len, x, 2.6, (z0 + z1) / 2), 0xf3f3ee);
+    // r5 (phone-lite budget): rails and pickets are single double-sided
+    // quads (the material is DoubleSide) -- 6 verts a picket, not a 36-vert box
+    const board = (w, h, y, z, k = 1) => {
+      const g = new THREE.PlaneGeometry(w, h); g.rotateY(Math.PI / 2); g.translate(x + 0.15, y + h / 2, z);
+      solid(g, 0xf6f6f2, k);
+    };
+    board(len, 0.28, 1.0, (z0 + z1) / 2); board(len, 0.28, 2.6, (z0 + z1) / 2);
     for (let z = z0; z <= z1; z += 8) solid(box(0.45, 4.0, 0.45, x, 0, z), 0xf6f6f2);
-    for (let z = z0 + 0.3; z < z1; z += 0.62) solid(box(0.12, 3.5, 0.34, x + 0.15, 0, z), 0xf6f6f2, 0.97);
+    for (let z = z0 + 0.3; z < z1; z += 0.62) board(0.34, 3.5, 0, z, 0.97);
   };
   // r3: the lines adjacent to ours read as fencing OUR lot (no photograph
   // shows a fence), so the nearest fenced line is one lot-width further out,
@@ -5864,9 +6500,10 @@ function addYardModels(list) {
     if (forYard !== yard || --pending > 0 || !landed) return;
     window.dispatchEvent(new CustomEvent('yardRebuilt'));
   };
+  const loads = [];   // -> yardModelsPending: prepareYardForBoot holds the curtain on them
   for (const item of list) {
     const e = item.edit || {};
-    getInstance(item.modelId, 'bottom').then((pivot) => {
+    loads.push(getInstance(item.modelId, 'bottom').then((pivot) => {
       if (forYard !== yard) return;
       const g = new THREE.Group();
       g.position.set(e.dx || 0, e.dy || 0, e.dz || 0);
@@ -5888,8 +6525,9 @@ function addYardModels(list) {
       landed += 1;
     }).catch((err) => {
       console.warn('yard model %s failed to load:', item.modelId, err);
-    }).then(done, done);
+    }).then(done, done));
   }
+  yardModelsPending = Promise.all(loads);
 }
 
 // Rear porch finish, measured in the live shell (porch_probe.json, 2026-09-12).
@@ -5955,7 +6593,7 @@ function addRearPorchDetail(L, props, masses) {
   const glassGroup=new THREE.Group();glassGroup.name='rear-porch-glazing';
   yard.add(glassGroup);
   const glassMaterial=new THREE.MeshStandardMaterial({color:0x19201e,roughness:.13,metalness:0});
-  const reflectionTarget=new THREE.WebGLRenderTarget(1024,1024,{type:THREE.HalfFloatType});
+  const reflectionTarget=shareScreenPrograms(new THREE.WebGLRenderTarget(1024,1024,{type:THREE.HalfFloatType}));
   const uniforms={porchReflection:{value:reflectionTarget.texture},porchProjection:{value:new THREE.Matrix4()}};
   glassMaterial.onBeforeCompile=shader=>{
     Object.assign(shader.uniforms,uniforms);
@@ -5965,7 +6603,8 @@ function addRearPorchDetail(L, props, masses) {
     shader.fragmentShader='uniform sampler2D porchReflection;\nvarying vec4 porchReflect;\n'+shader.fragmentShader;
     shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>',
       'float porchFresnel=pow(1.0-abs(dot(normalize(vViewPosition),normal)),5.0);\n'
-      +'vec3 porchReflected=texture2D(porchReflection,porchReflect.xy/porchReflect.w).rgb;\n'
+      // display-encoded target (shareScreenPrograms): decode back to linear
+      +'vec3 porchReflected=pow(texture2D(porchReflection,porchReflect.xy/porchReflect.w).rgb,vec3(2.2));\n'
       +'outgoingLight=mix(outgoingLight,porchReflected,0.10+0.72*porchFresnel);\n#include <opaque_fragment>');
   };
   glassMaterial.customProgramCacheKey=()=> 'rear-porch-scene-glass-v1';
@@ -6114,8 +6753,15 @@ function addRearPorchDetail(L, props, masses) {
   // A local cube probe gives the steel outdoor reflections rather than the
   // renderer's generic indoor IBL. Capture only the real scene from in front
   // of this cabinet; its target is released by the owning material.
-  const cabinetTarget=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType,generateMipmaps:true,minFilter:THREE.LinearMipmapLinearFilter});
+  const cabinetTarget=shareScreenPrograms(new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType,generateMipmaps:true,minFilter:THREE.LinearMipmapLinearFilter}));
   steel.envMap=cabinetTarget.texture;dark.envMap=cabinetTarget.texture;
+  // the probe holds display-encoded colour (shareScreenPrograms): decode the
+  // IBL samples back to linear in the two materials that read it
+  for(const m of [steel,dark]){
+    m.onBeforeCompile=(shader)=>{shader.fragmentShader=shader.fragmentShader.replace('#include <envmap_physical_pars_fragment>',
+      THREE.ShaderChunk.envmap_physical_pars_fragment.replaceAll('envMapColor.rgb','pow( envMapColor.rgb, vec3( 2.2 ) )'));};
+    m.customProgramCacheKey=()=> 'cabinet-probe-decode-v1';
+  }
   const cabinetProbe=new THREE.CubeCamera(.15,300,cabinetTarget);
   for(const camera of cabinetProbe.children){camera.userData.rearLakeMirror=true;camera.userData.rearPorchMirror=true;}
   let probing=false,probeDisposed=false,lastProbe=-Infinity,lastProbeState='';
@@ -6741,7 +7387,7 @@ function addRearPlantingDetail(L, leaves, beds, props) {
       } else {
         clippedShrub(st,lr,x,z,y,rx*0.9,ry,rz*0.9,pal('leaf'));
       }
-      props.push(plantGeo(st));
+      flushPlants(props, st);
       return;
     }
     if(form==='spreading'){

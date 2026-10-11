@@ -73,6 +73,7 @@ function stamp() { return Math.round(performance.now() - startedAt); }
 /** Enter a stage: label it and reserve the band the bar may move within. */
 export function bootStage(label, floor, ceiling) {
   if (done) return;
+  markProgress();   // a new stage is movement too (the yard stages have no loader callbacks)
   band = [floor, ceiling];
   paint(floor);
   const status = $('boot-status');
@@ -86,6 +87,7 @@ export function bootStage(label, floor, ceiling) {
 /** Move within the current stage. `t` is 0..1 across the band. */
 export function bootProgress(t) {
   if (done) return;
+  markProgress();
   const [floor, ceiling] = band;
   paint(floor + (ceiling - floor) * Math.max(0, Math.min(1, t)));
 }
@@ -108,6 +110,18 @@ let progressAt = 0;
 let lastPending = 0;
 
 function markProgress() { progressAt = performance.now(); }
+
+// Known-long work with no loader callbacks (the yard build, the shader
+// compile): while a held promise is pending the watchdog treats the app as
+// making progress -- a main-thread block can outlast STALL_MS, and the
+// watchdog's own timer would otherwise run first when it ends and reveal a
+// half-built stage. HARD_CAP_MS still bounds it.
+let held = 0;
+export function bootHold(promise) {
+  held++;
+  markProgress();
+  return Promise.resolve(promise).finally(() => { held--; markProgress(); });
+}
 
 // modelsPending() has no callback to hook, so movement in it is sampled. Called
 // from both the watchdog tick and the settle loop, which between them run far
@@ -242,7 +256,7 @@ function armFailsafe(ms) {
         armFailsafe(HOUSE_POLL_MS);
         return;
       }
-      if (sinceProgress < STALL_MS) {
+      if (sinceProgress < STALL_MS || held > 0) {
         // Assets are still landing. This is the whole point of the curtain:
         // keep waiting, however long it takes.
         armFailsafe(HOUSE_POLL_MS);

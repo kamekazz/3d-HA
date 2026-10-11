@@ -54,6 +54,10 @@ def area_picture(area_id):
         return jsonify({"error": "HA is not configured (.env)"}), 503
     try:
         content, ctype = rest.get_image(path)
+    except requests.HTTPError:
+        # HA answered with an error for this picture: no photo, not an outage.
+        # 204 lets the card's <img> fail quietly instead of a console error.
+        return Response(status=204)
     except requests.RequestException as exc:
         return jsonify({"error": "Home Assistant unreachable",
                         "detail": str(exc)}), 502

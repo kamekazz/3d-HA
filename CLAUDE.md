@@ -182,25 +182,72 @@ levels they connect (`userData.levels`). In the planner they appear on both floo
 "▼ down"), drawn with "+ Stairs" (they connect the active floor down to the one below), moved/
 resized as rects, direction set in the side panel. Endpoints: `POST/PATCH/DELETE /api/house/stairs*`.
 
-**The viewer shows the generated yard, built after boot.** The user's decision of 2026-10-11
-(overriding 2026-09-21's "viewer renders nothing outside the house"): the Sims-style outside — the
-generated yard (below), the backdrop trees, and `yardgrade.js`'s "Sims day" grade — shows in the
-main view on the House level, in view **and** edit mode, not only while the Outside editor is open.
-It stays **off the boot path**: the house appears exactly as fast as before; `main.js` calls
-`startYard()` once the curtain has lifted (`boot.js bootRevealed()`), and `buildYard` runs in chunks
-that yield to the event loop between phases (`yardYield`, a `MessageChannel` macrotask — not rAF,
-which a background tab pauses, and not `setTimeout`, which it throttles). The yields sit only at
-phase boundaries outside any item factory, so rng order, keys and geometry are the synchronous
-build's (verified in one page: same 141 keys, same 30,985,551 verts and position hash —
-`__environment.buildSync(true)` turns the yields off to compare). Longest main-thread block is the
-lake's far-bank woodland item (~1.4 s here), which cannot be split without touching the factory.
-The first yard is swapped in hidden and shown only once `warmYardPrograms` has compiled the shader
-programs its first frame needs — the yard's own, the grade's `CustomToneMapping` variant, and the
-render-target variant the lake/porch reflections draw the whole scene with — **one new program at a
-time** with frames in between. That frame used to be a 23 s main-thread block on this desktop
-(ANGLE/D3D11 compiles serially in the GPU process, so `compileAsync` just moves the freeze to the
-first sync GL query); warmed, it is ~0.85 s (the ~1.4 GB vertex upload). The cost is latency: the
-yard appears ~45 s after boot here (≈5 s build + ≈40 s compile), with no freeze.
+**The viewer shows the generated yard, and the curtain waits for it.** The user's decisions of
+2026-10-11 (overriding 2026-09-21's "viewer renders nothing outside the house"): the Sims-style
+outside — the generated yard (below), the backdrop trees, and `yardgrade.js`'s "Sims day" grade —
+shows in the main view on the House level, in view **and** edit mode; and there is **no pop-in**:
+the boot curtain lifts only once the house, the yard and the grade are built, every first-frame
+shader program is compiled and one graded frame has been drawn. `main.js` slots the yard in as a
+boot stage after `settleLoaders()` — "Planting the yard…" (`environment.js prepareYardForBoot`:
+build, swap in, grade on, wait for the library car / yard models) then "Preparing the view…" (the one
+`compileAsync`, now covering the yard through the curve the grade picked) — with `boot.js bootHold()`
+telling the stall watchdog that a long, callback-less stage is not a stall. A route that opens off
+the House level does not wait: it builds the yard after the reveal (`startYard`, warmed one program
+at a time by `warmYardPrograms` before it is shown).
+
+What made that affordable (measured on this desktop, ANGLE/D3D11, cold profile; `__boot.timeline()`,
+`__environment.timings()/chunks()/warm()`): curtain-to-complete went from 9 s + ~46 s of yard pop-in
+to **~14 s**, programs at reveal from 174 to **~85**, and nothing after the reveal blocks over ~150 ms.
+- **Reflections reuse the screen's programs** (`shareScreenPrograms`): the lake/porch mirrors and the
+  cabinet cube probe draw the whole scene into render targets, which three keys as their own variant
+  (no tone mapping, linear output) — 60 extra programs. Flagged `isXRRenderTarget` with the
+  output colour space, the pass gets the screen's keys; the consumers decode the display-encoded
+  samples (`pow 2.2`). Three r160 reads that flag only for those two parameters and the multisample
+  format.
+- **Draws are paused from `buildHouse`** (not from the furniture stage), so the shell is never
+  compiled through plain ACES first; the house's programs are issued (`renderer.compile`, no
+  readiness polling) at the start of the yard stage so the GPU compiles them while the main thread
+  builds the yard.
+- **Room-card captures keep a Fog** (pushed out to 1e7 ft) instead of `null`: fog is a program
+  define, and the fog-less capture compiled a second variant of every interior material.
+- **`seatCar` raycasts only meshes under the car** (it tested every yard triangle: ~2 s), the car's
+  `.glb` is fetched and parsed during the furniture stage (`setYardModels` → `getModelSize`), a lone
+  geometry is drawn as itself instead of "merged" (copied), and the multi-million-vertex leaf masses
+  are re-centred in place instead of cloned. Keys, vertex count and position hash are unchanged
+  (141 / 30,985,551 / same hash as before these changes).
+- **At night the House level draws through `scene.js`'s optics composer**, i.e. into a render target,
+  so `compileForBoot` also compiles the render-target variant when daylight's *target* says night
+  (a night boot otherwise compiled 62 programs synchronously in its first frame: a 15.9 s block;
+  now a 16.5 s boot with no block over ~1.4 s).
+- After the reveal `warmOtherCurveLater` compiles, one program at a time, the floor-view variant
+  (every material, plain ACES, no fog — `floorview.js` nulls it) and what the House level needs at
+  the other end of the day (by day the night composer's render-target variant, at night the grade's
+  daytime curve). A floor opened in the first ~50 s still compiles its programs on the
+  spot (~5.8 s here — the same freeze every first floor switch had before); after that it is ~0.1 s.
+
+The build itself is chunked (`yardYield`, a `MessageChannel` macrotask — not rAF, which a background
+tab pauses, and not `setTimeout`, which it throttles), so the curtain keeps animating and the bar
+moves; yields sit only at phase boundaries outside any item factory, so rng order, keys and geometry
+are the synchronous build's (`__environment.buildSync(true)` turns the yields off to compare).
+Longest block: the lake's far-bank woodland item, ~1.4 s here.
+
+**Phone-lite** (user's choice, 2026-10-11; `YARD_LITE` in `environment.js`: coarse pointer and a
+screen under 1024 px, or `?yard=lite|full`): the same yard, but the lake's scanned-oak leaf clouds —
+~29 M verts, nearly all of the desktop yard's ~1.36 GB of vertex buffers — become one stylised
+`simsClump` crown per cloud, drawn from their own rng while the lake rng is advanced exactly as the
+full cloud would (`leafCloudLite`). Measured in the mobile preset: **5.2 M verts, ~227 MB**, reveal
+~9.7 s (on this desktop's CPU/GPU; a real phone is slower). Key diff vs desktop: only the far-bank
+woodland item (`shore:182:-4014` → `shore:189:-4016`, its crowns changed shape); every other key is
+identical, and the mature trees keep theirs (authored pivots).
+
+**A clean console** (same day): a page load logs nothing at error level on desktop or in the mobile
+preset. `/api/camera/<id>/snapshot` and `/api/ha/area-picture/<id>` answer an upstream HA *HTTP*
+error (22 of the 28 cameras here are sleeping battery cams whose `camera_proxy` returns 500) with
+**204**, not 502: an `<img>` still fires `onerror`, but Chrome logs no "Failed to load resource";
+a real outage (connection error) is still a 502. Needs a server restart to take effect. socket.io's
+"Invalid frame header" is the client dropping the websocket after its main thread stalled past the
+ping timeout (reproduced with a 50 s busy loop) — i.e. a symptom of the old 23 s freeze, not a
+server bug.
 
 A built yard stands for the life of the page: the Outside editor reuses it (one group per piece,
 always) and closing the editor no longer tears it down. A rebuild happens only when its inputs

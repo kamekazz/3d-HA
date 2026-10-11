@@ -40,6 +40,7 @@ snapCanvas.width = SNAP_W;
 snapCanvas.height = SNAP_H;
 const snapCtx = snapCanvas.getContext('2d');
 let backdropTex = null;
+const noFog = new THREE.Fog(0x000000, 1e7, 2e7);   // see captureRoom: same define, no visible fog
 
 export function onSnapshotReady(fn) { readyListeners.add(fn); }
 
@@ -133,7 +134,15 @@ function captureRoom(roomId) {
   const savedBg = scene.background, savedFog = scene.fog;
   backdropTex = backdropTex || makeBackdrop();
   scene.background = backdropTex;
-  scene.fog = null;
+  // No visible fog -- but not `null`: fog is a program define, so a fog-less
+  // capture compiled a second variant of every material in the room (seconds
+  // per card on a cold start, all behind the curtain). The same Fog type
+  // pushed out past anything the card camera sees renders identically and
+  // reuses the live programs.
+  if (savedFog?.isFog) {
+    noFog.color.copy(savedFog.color);
+    scene.fog = noFog;
+  } else scene.fog = null;
 
   // consistent "studio" lighting so cards match regardless of time of day
   const savedHemi = hemiLight.intensity, savedSun = sunLight.intensity;
