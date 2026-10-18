@@ -24,7 +24,7 @@
 // a rainy evening in the editor is still a rainy evening, only a clear day is
 // pushed all the way to the bright, saturated build-mode midday.
 import * as THREE from 'three';
-import { scene, renderer, onFrame, setExposureBase, camera, sunLight } from './scene.js';
+import { scene, renderer, onFrame, setExposureBase, camera, sunLight, setOpticsMoon } from './scene.js';
 import { setDaylightGrade, getGradeWeight } from './daylight.js';
 import { getShellRoot } from './house.js';
 
@@ -39,13 +39,13 @@ const G = {
   // ~5200 K: warm enough for yellow-green sunlit canopies, not so warm the
   // siding turns tan.
   sunColor: new THREE.Color(0xffd7a6),   // the warmth lives in the light, below the shoulder
-  sunIntensity: 2.9,   // stronger key, lower fill ratio (~0.25): sun vs shade must differ
+  sunIntensity: 3.3,   // stronger key, lower fill ratio (~0.25): sun vs shade must differ
   // Blue-violet sky fill at ~0.35-0.4 of the key: shade must stay a coloured
   // mid-tone (shaded hedges and the car's shadow were crushing to black at
   // 0.8). Shadow SHAPES stay crisp -- they come from the map, not the fill.
-  hemiSky: new THREE.Color(0xb2c6e4),   // cyan-leaning blue: shade keeps chroma (blue-green on grass, light blue on walls), not grey-green or lilac   // blue-violet: cast shadows read cool, not neutral grey
-  hemiGround: new THREE.Color(0x6a6250),   // dim bounce: walls get their brightness from the sun, not from every side // brighter warm bounce: shaded siding/roof keep colour instead of going muddy
-  hemiIntensity: 1.05,   // shadow floor: lawn cast shadow ~60% of adjacent sun (measured)
+  hemiSky: new THREE.Color(0xa2d0de),   // cyan-leaning blue: shade keeps chroma (blue-green on grass, light blue on walls), not grey-green or lilac   // blue-violet: cast shadows read cool, not neutral grey
+  hemiGround: new THREE.Color(0x45402f),   // dim bounce: walls get their brightness from the sun, not from every side // brighter warm bounce: shaded siding/roof keep colour instead of going muddy
+  hemiIntensity: 1.6,   // shadow floor: lawn cast shadow ~60% of adjacent sun (measured)
   // Light sky-blue horizon = fog = background (warm pale/white read as milky
   // overcast). The fog is the distance haze: clear across the lot and its tree
   // ring, then the far ground melts into the horizon by the 1200 ft disc edge,
@@ -93,8 +93,8 @@ const CONTRAST = 0.38;                 // 0 = plain ACES, 1 = full smoothstep S-
 // Warm by pulling green/blue DOWN, never pushing red past 1: a red gain clipped
 // first on lit siding and the warmth vanished into neutral grey-white.
 const WB = [1.0, 0.975, 0.905];        // display-linear white balance multiplier
-const SATURATION = 1.12;
-const TOE_LIFT = 0.007;   // linear; round 6: 0.003 let lawn shadows go near-black
+const SATURATION = 1.22;   // round 11: the lawn measured S 0.76 vs Sims 0.85-0.92 with its blue already at ~0
+const TOE_LIFT = 0.0035;   // linear; round 11: 0.007 floored every blue at sRGB 20, capping lawn S at ~0.8 (Sims 0.85-0.92); shade lift is the light builder's fill now
 {
   const stock = 'vec3 CustomToneMapping( vec3 color ) { return color; }';
   const chunk = THREE.ShaderChunk.tonemapping_pars_fragment;
@@ -180,7 +180,7 @@ const SHELL_ROUGHNESS = 0.85;
 // ...and their albedo scaled down a little: white siding at full albedo hit the
 // tone curve's shoulder in sun AND in the fill alone, so lit and shaded faces
 // both clipped to the same flat white. Headroom is what lets the sun model it.
-const SHELL_ALBEDO = 0.72;
+const SHELL_ALBEDO = 0.6;
 const shellOrig = new Map();   // material -> [metalness, roughness]
 let shellRootSeen = null;
 function setShellDielectric(on) {
@@ -226,12 +226,63 @@ function setShadowFrustum(on) {
   cam.updateProjectionMatrix();
 }
 
+// "Sims night": the same yard under a full moon (2026-10-18; bar: EA's own
+// lunar-cycle screenshot, scratchpad/moon/ref). The iPhone-photo night in
+// daylight.js's ramp (black sky, the house lit only by its own LEDs) stays the
+// night everywhere the yard is not shown; while it is, the exterior gets a
+// cool key from a fixed moon, a blue sky fill, a navy horizon the fog melts
+// into, and the dome below draws the moon, stars and moonlit cloud. The moon
+// is scene-fixed (HA knows the sun, not the moon) and hangs ~30 deg up in the
+// north-east, so it is in frame from the street side (the view looks north)
+// and the roof planes and east faces take the key.
+const N = {
+  // The KEY and the DISC are two directions on purpose, as in the Sims itself:
+  // a key in frame lights the faces turned away from you, and the view that
+  // matters looks north from the street. The key comes from the south-east,
+  // ~40 deg up, so the street-facing pitches and the east faces take it and
+  // the west faces fall to the fill; the disc hangs low (~16 deg) in the
+  // north-east, inside what the orbit's polar clamp (controls.maxPolarAngle,
+  // ~2 deg above level, 55 deg fov) can ever frame.
+  moonDir: new THREE.Vector3(0.68, 0.60, 0.42).normalize(),   // ESE, ~36 deg: the shadow falls WNW, beside the house from the street
+  moonSkyDir: new THREE.Vector3(0.60, 0.36, -0.72).normalize(),   // ~21 deg up, az ~40: clear of the gable ridge and the east oak from the front lawn
+  moonColor: new THREE.Color(0xb9c7e6),   // cool, low chroma: a bluer counterpoint to the amber bulbs, short of round-1's gel
+  moonIntensity: 0.8,                     // the Sims' moonlit white siding is L~71 sRGB; lit:shaded must model the pitches (1.0 read near-white, round 2)
+  hemiSky: new THREE.Color(0x3f5490),     // blue sky fill: shade stays a navy mid-tone, not black
+  hemiGround: new THREE.Color(0x0e1018),
+  hemiIntensity: 0.28,                    // ~1/3 of the key: at 0.55 the fill flattened every pitch to one grey (round-3 critic)
+  bg: new THREE.Color(0x2a3560),          // horizon/fog: the reference's cloud band is (40,47,78)
+  zenith: new THREE.Color(0x121a3a),      // (21,25,45) in the reference, read through ACES
+  fogNear: 220,
+  fogFar: 900,
+  envIntensity: 0.06,                     // the day sky IBL, dimmed: a touch of blue on every face
+  cloud: 0.85,                            // moonlit cumulus coverage, weather or not (the Sims night is never a bare sky)
+};
+let nightW = 0;   // how much of N is applied right now (0 by day; the dome reads it)
+export function getMoonWeight() { return nightW; }
+
 function grade(t, { elevation, sunX }) {
   const day = THREE.MathUtils.smoothstep(elevation, 3, 22);
   const clear = THREE.MathUtils.clamp((sunX - 0.3) / 0.7, 0, 1);
   const k = day * clear;
-  if (k <= 0) return 0;
   const L = THREE.MathUtils.lerp;
+  // Night: the moon takes over once the sun is well down (-4..-12 deg), so
+  // dusk still runs the ramp's own colours. Cloud (sunX) dims the moon's key
+  // but not the sky fill: an overcast night is flatter, not blacker.
+  nightW = THREE.MathUtils.smoothstep(-elevation, 4, 12);
+  if (nightW > 0) {
+    const n = nightW, moonK = n * L(0.35, 1, clear);
+    t.sunDir.lerp(N.moonDir, n).normalize();
+    t.sunColor.lerp(N.moonColor, n);
+    t.sunIntensity = L(t.sunIntensity, N.moonIntensity, moonK);
+    t.hemiSky.lerp(N.hemiSky, n);
+    t.hemiGround.lerp(N.hemiGround, n);
+    t.hemiIntensity = L(t.hemiIntensity, N.hemiIntensity, n);
+    t.bg.lerp(N.bg, n);
+    t.fogNear = L(t.fogNear, N.fogNear, n);
+    t.fogFar = L(t.fogFar, N.fogFar, n);
+    t.envIntensity = L(t.envIntensity, N.envIntensity, n);
+  }
+  if (k <= 0) return 0;
   const d = t.sunDir, h = Math.hypot(d.x, d.z);
   if (h > 1e-4) {
     const el = Math.asin(THREE.MathUtils.clamp(d.y, -1, 1));
@@ -280,13 +331,100 @@ const fragmentShader = `
   }
   float fbm(vec2 p) {
     float s = 0.0, a = 0.5;
-    for (int i = 0; i < 4; i++) { s += a * n2(p); p = p * 2.03 + vec2(7.1, 3.3); a *= 0.5; }
+    for (int i = 0; i < 5; i++) { s += a * n2(p); p = p * 2.03 + vec2(7.1, 3.3); a *= 0.5; }
     return s;
+  }
+  // --- night: moon, stars, moonlit cloud ---
+  uniform float night;
+  uniform vec3 moonDir;
+  uniform vec3 nightZenith;
+  uniform float cloudNight;
+  vec3 nightSky(vec3 d, vec3 hor) {
+    float h = max(d.y, 0.0);
+    // steeper than the day dome: the reference's zenith is half the value of
+    // its horizon band, and a flat navy read as a void (round-3 critic)
+    vec3 col = mix(hor, nightZenith, pow(smoothstep(0.0, 0.6, h), 0.7));   // near-black by ~35 deg, lighter slate at the horizon
+    // stars: one per cell of a lat/long grid, a few percent of cells lit,
+    // point-sized, fading out in the haze near the horizon
+    if (d.y > 0.02) {
+      vec2 sc = vec2(atan(d.z, d.x) * 28.0, asin(clamp(d.y, -1.0, 1.0)) * 28.0);
+      vec2 cell = floor(sc);
+      float r = h21(cell);
+      if (r > 0.9) {
+        vec2 off = vec2(h21(cell + 3.7), h21(cell + 9.1)) * 0.6 + 0.2;
+        float dist = length(fract(sc) - off);
+        float s = smoothstep(0.045, 0.0, dist) * (0.35 + 0.65 * h21(cell + 1.3));
+        col += vec3(0.85, 0.9, 1.0) * s * smoothstep(0.03, 0.2, d.y) * 1.2;
+      }
+    }
+    // the moon: a full disc ~5 deg across (the reference's is big) with limb
+    // darkening and faint maria, held UNDER the night composer's bloom
+    // threshold so its edge stays crisp (round 3: a blown disc read as an
+    // edgeless bloom), and a wide faint halo the cloud edges catch
+    float m = dot(d, moonDir);
+    vec3 mu = normalize(cross(moonDir, vec3(0.0, 1.0, 0.0)));
+    vec3 mv = cross(mu, moonDir);
+    vec2 q = vec2(dot(d, mu), dot(d, mv)) / 0.0454;   // disc-local, radius 1 (~2.6 deg: round 12 read twice the reference's size)
+    float qr = length(q);
+    float disc = 1.0 - smoothstep(0.975, 1.015, qr);
+    float limb = 0.45 + 0.55 * sqrt(max(0.0, 1.0 - qr * qr));
+    float maria = 1.0 - 0.5 * smoothstep(0.46, 0.62, fbm(q * 1.9 + vec2(4.2, 1.7)));
+    // a touch past full (waxing gibbous, ~90% lit): a soft terminator down the
+    // west limb is what makes a disc read as a sphere at thumbnail size
+    float term = 1.0 - 0.88 * smoothstep(0.05, 0.55, -q.x);   // a decisive gibbous terminator: the reference's moon is half-lit
+    vec3 moonCol = vec3(0.88, 0.89, 0.92) * limb * maria * term;   // off ACES's shoulder, so maria and limb keep their contrast (round 8: a pasted white disc)
+    float halo = pow(max(m, 0.0), 1400.0) * 0.10 + pow(max(m, 0.0), 80.0) * 0.012;   // barely there: the limb must sit on clean navy (round 12)
+    col += vec3(0.55, 0.6, 0.72) * halo;
+    // moonlit cumulus in two layers (near big masses, far small ones), lit
+    // where the density falls off toward the moon and shadowed where it
+    // thickens away from it: lit tops and dark bellies, not flat streaks
+    if (cloudNight > 0.001 && d.y > 0.0) {
+      vec3 belly = nightZenith * 0.42;                 // bellies darker than the sky behind them
+      vec3 litC = vec3(0.30, 0.33, 0.47);   // lilac-grey tops at the reference's cloud-band value (L~48), well under the moon
+      float rim = pow(max(m, 0.0), 5.0);
+      // Mercator: locally isotropic, so a mass is the same round shape at
+      // the zenith as near the horizon (the planar map stretched the low sky
+      // into streaks and smeared the high sky into one blob -- round 4)
+      float elev = asin(clamp(d.y, 0.0, 0.985));
+      vec2 merc = vec2(atan(d.z, d.x), log(tan(elev * 0.5 + 0.7854)));
+      for (int k = 0; k < 2; k++) {
+        float sc = k == 0 ? 3.2 : 7.0;   // finest octave ~0.5 deg: edges resolve at ~5 px, not 20
+        vec2 p = merc * sc + (k == 0 ? vec2(3.0, 11.0) : vec2(27.0, 5.0));
+        float n = fbm(p);
+        n += 0.04 * (abs(n2(p * 7.0 + vec2(1.3, 8.8)) - 0.5) * 2.0 - 0.5);   // cauliflower edge detail: value noise alone is airbrushed
+        n += 0.07 * (n2(p * 3.3 + vec2(5.5, 2.1)) - 0.5);                      // lobes: a mass breaks into puffs instead of one smudge
+        float lo = k == 0 ? 0.46 : 0.51;   // a deck with gaps, not blobs on a void (round 8)
+        float c = smoothstep(lo, lo + 0.05, n) * smoothstep(0.0, 0.14, d.y) * cloudNight * (k == 0 ? 1.0 : 0.75);   // feathered rims (round 9: hard edges read as cardboard); thins toward the horizon
+        c *= 1.0 - 0.97 * pow(max(m, 0.0), 12.0);   // a wide clearing round the moon: the disc must not touch lit cloud (round 7)
+        // Shaded like a surface: the density gradient is a pseudo-normal
+        // (normal = toward thinner air), lit from above and the moon's side,
+        // so every mass gets a lit rim on top and a dark underside, whatever
+        // its shape (rounds 8-10: a one-sided density step lit only one edge)
+        vec2 e = vec2(0.035, 0.0);
+        vec2 g = vec2(fbm(p + e.xy) - fbm(p - e.xy), fbm(p + e.yx) - fbm(p - e.yx)) / (2.0 * e.x);
+        vec2 L2 = normalize(vec2(0.45, 1.0));
+        float shade = smoothstep(-0.9, 1.1, dot(-g, L2));
+        float thick = smoothstep(lo, lo + 0.20, n);             // deep in the mass = dark belly
+        vec3 cc = mix(belly, litC + vec3(0.22, 0.22, 0.24) * rim, clamp(shade * (1.0 - 0.7 * thick) + 0.04, 0.0, 1.0));
+        float edge = smoothstep(0.0, 0.45, c) * (1.0 - smoothstep(0.45, 1.0, c));
+        cc += vec3(0.14, 0.15, 0.18) * edge * shade * (0.3 + 0.7 * rim);   // the lit edge is nearest the moon, faint elsewhere
+        col = mix(col, cc, c);
+        disc *= 1.0 - c * 0.85;   // cloud in front of the moon
+      }
+    }
+    col = mix(col, moonCol, disc);
+    return col;
   }
   void main() {
     vec3 d = normalize(vDir);
     float h = max(d.y, 0.0);
     vec3 col = mix(horizon, zenith, pow(smoothstep(0.0, 0.16, h), 0.6));
+    if (night > 0.001) {
+      gl_FragColor = vec4(mix(col, nightSky(d, horizon), night), 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+      return;
+    }
     if (cloudAmt > 0.001 && d.y > 0.0) {
       vec2 p = d.xz / (d.y + 0.25) * 4.5;
       float n = fbm(p + vec2(3.0, 11.0));
@@ -306,6 +444,10 @@ function makeDome() {
     zenith: { value: new THREE.Color() },
     horizon: { value: new THREE.Color() },
     cloudAmt: { value: 0 },
+    night: { value: 0 },
+    moonDir: { value: N.moonSkyDir.clone() },
+    nightZenith: { value: N.zenith.clone() },
+    cloudNight: { value: 0 },
   };
   const mat = new THREE.ShaderMaterial({
     uniforms, vertexShader, fragmentShader,
@@ -330,9 +472,10 @@ function tick() {
     setExposureBase(THREE.MathUtils.lerp(BASE_EXPOSURE, G.exposure, w));
     setCurve(w > 0.01);
   }
+  setOpticsMoon(nightW);
   if (!dome) return;
   const bg = scene.background?.isColor ? scene.background : null;
-  dome.visible = !!bg && w > 0.01;
+  dome.visible = !!bg && (w > 0.01 || nightW > 0.01);
   if (!dome.visible) return;
   const u = dome.material.uniforms;
   u.horizon.value.copy(bg);
@@ -340,6 +483,10 @@ function tick() {
   _z.copy(bg).multiplyScalar(0.7);
   u.zenith.value.copy(_z).lerp(ZENITH, w);
   u.cloudAmt.value = w;
+  u.night.value = nightW;
+  u.moonDir.value.copy(N.moonSkyDir);
+  u.nightZenith.value.copy(N.zenith);
+  u.cloudNight.value = N.cloud;
 }
 
 function setCurve(graded) {
@@ -422,4 +569,4 @@ export function suspendYardGrade() {
 }
 
 // console tuning: __yardgrade.G.sunIntensity = 4; __yardgrade.refresh()
-window.__yardgrade = { G, refresh() { if (active) setDaylightGrade(grade); } };
+window.__yardgrade = { G, N, refresh() { if (active) setDaylightGrade(grade); } };

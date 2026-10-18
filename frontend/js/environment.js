@@ -65,7 +65,7 @@ const YARD_LITE = (() => {
 // yellow emerald (~#4caf3a-#5cbf3f on screen). The base is now authored for
 // that read; the yard only exists while the Outside editor is open, so the
 // viewer is unaffected.
-const GRASS_BASE = new THREE.Color(0x3c7406);
+const GRASS_BASE = new THREE.Color(0x3a7205);
 const GRASS_SNOW = new THREE.Color(0xe9edf2);
 let snowF = 0, wetF = 0; // weather.js drives these (eased on its side)
 
@@ -1048,7 +1048,7 @@ function lawnTint(x, z) {
   // round 8: the round-7 sun-bleached patches went near-white mid-distance
   // and were cut; the large-scale term is halved again. What variation
   // remains is INTENTIONAL: regular mowing stripes, front and back.
-  let f = 1 + broad * 0.18 + (worldNoise(x - 57, z + 233, 24) - 0.5) * 0.08;
+  let f = 1 + broad * 0.24 + (worldNoise(x - 57, z + 233, 24) - 0.5) * 0.08;
   f = Math.max(0.94, f);   // vertex colour multiplies LINEAR light: +-x here is ~+-x/2.2 on screen
   let warm = Math.max(-1, Math.min(1, (worldNoise(x - 211, z + 77, 70) - 0.5) * 0.8 + broad * 1.2));
   if (roofRect) {
@@ -1062,7 +1062,7 @@ function lawnTint(x, z) {
     // lot: the lawn round the house is sunnier and yellower, easing to a
     // slightly deeper, cooler green toward the lot edges (~20 -> ~110 ft).
     const far = THREE.MathUtils.smoothstep(dHouse, 18, 110);
-    f *= 1 + 0.16 * (1 - far) - 0.08 * far;
+    f *= 1 + 0.45 * (1 - far) - 0.22 * far;
     warm += 0.55 * (1 - far) - 0.45 * far;
   }
   return [f * (1 + 0.12 * warm), f, f * (1 - 0.10 * warm)];
@@ -6310,9 +6310,11 @@ function addBackdrop(L) {
     heroAt(L.padE + 40, L.blockN + 14, 2.4);    // east, beside the deck side (r9: pulled back out of aback's foreground)
     heroAt(L.padW - 32, L.yardN + 22, 2.6);     // west, over the back lawn
     // r9: silhouettes the street view must show beside the house
-    plant('fir', L.padW - 42, L.houseF - 44, 1.25);
-    plant('poplar', L.padE + 46, L.houseF - 36, 1.15);
-    plant('willow', L.padE + 58, L.houseF - 4, 0.95);
+    // (tall, set back toward the lake, so they rise just past the house's
+    // eaves between it and the two front heroes)
+    plant('fir', L.padW - 40, L.yardN + 10, 1.45);
+    plant('poplar', L.padE + 44, L.yardN + 8, 1.4);
+    plant('willow', L.padW - 44, L.houseF - 18, 1.0);
     // blossom accents the street view actually sees
     plant('flowering', L.padE + 44, L.houseF - 6, 1.15);
     plant('flowering', L.padW - 42, L.houseF - 30, 1.05);

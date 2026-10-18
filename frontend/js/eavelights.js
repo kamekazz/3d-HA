@@ -33,6 +33,7 @@ import * as THREE from 'three';
 import { scene, camera, renderer, onFrame } from './scene.js';
 import { getShellRoot } from './house.js';
 import { getNightFactor } from './daylight.js';
+import { isYardGraded } from './yardgrade.js';
 
 // The shell config the numbers below were read under (GET /api/house
 // house_shell, 2026-09-02). Only x is non-identity here.
@@ -671,7 +672,8 @@ function tick() {
   }
 
   if (sky) {
-    sky.visible = night > 0.01;
+    // the photo's black sky, unless yardgrade.js's moonlit dome is up
+    sky.visible = night > 0.01 && !isYardGraded();
     if (sky.visible) sky.position.copy(camera.position);
   }
 

@@ -1,0 +1,191 @@
+[
+ {
+  "piece": "Baseline (before)",
+  "round": 0,
+  "shot": "shots/baseline_night.png",
+  "pose": "default House view",
+  "verdict": "bar",
+  "notes": "The night as it was: black sky, no moon, the house lit only by its own eave LEDs and porch/garage lights, the yard invisible.",
+  "gap": "No moon, no moonlight, no sky; the lot is a void.",
+  "meter": {
+   "frame mean L": 30.1,
+   "centre L": 60.2
+  }
+ },
+ {
+  "piece": "Sky & moon + moonlight on the house",
+  "round": 1,
+  "shot": "shots/r1_default.png",
+  "pose": "default House view",
+  "notes": "Night branch in the yard grade: moon key light (cool blue-white, 30 deg up in the north-east, casts shadows), blue sky fill, navy horizon the fog melts into; sky dome draws a navy gradient, stars, a full moon with halo and moonlit cumulus; the photo's black-noise sky dome is hidden while the moon dome is up; the night optics' light-pollution haze turns sky-blue under the moon.",
+  "meter": {
+   "sky L": 30.4,
+   "roof L": 111.8,
+   "siding L": 60.7,
+   "lawn L": 19.6,
+   "drive L": 67.8
+  },
+  "verdict": "bar",
+  "gap": "Sky critic: no visible moon from the default view and the sky strip reads as a flat grey wash with smeared clouds. House critic: the key reads as a saturated cobalt gel on one gable (that is the pre-existing blue floodlight on the west treeline), the roofs stay uniform dark, and no moon-cast shadows on the lot."
+ },
+ {
+  "piece": "Moonlight on the house (round 2)",
+  "round": 2,
+  "shot": "shots/r2_default.png",
+  "pose": "default House view",
+  "notes": "Key and disc decoupled as the Sims does: a low-chroma key from the south-east ~40 deg up (intensity 0.55 -> 1.0) models the street-facing pitches and east faces; the disc hangs ~16 deg up in the north-east, inside what the orbit's polar clamp can frame. Sky fill up (0.42 -> 0.55), horizon lifted toward the reference's cloud band, cloud edges tightened and tops brightened, more stars, bigger halo; the night optics' shadow smear/soften/grain back off while the moon is up so cloud shapes are not blurred into haze.",
+  "meter": {
+   "sky L": 50.4,
+   "roof L": 133.2,
+   "siding L": 75.0,
+   "lawn L": 23.4,
+   "drive L": 79.6
+  },
+  "verdict": "ours",
+  "gap": "Critic picked ours; residual: walls approach white as if floodlit, and no crisp house shadow on the lawn (only a vague darkening)."
+ },
+ {
+  "piece": "Sky & moon (round 3)",
+  "round": 3,
+  "shot": "shots/r3_moonview.png",
+  "pose": "front lawn, looking north-east (the orbit tilted up)",
+  "notes": "The disc raised to ~19 deg and swung to azimuth ~32 so it clears the east oak from the front lawn; a clearing carved in the cumulus round the moon (the reference's moon sits in a gap); key eased 1.0 -> 0.85 after the house critic read the walls as near-white.",
+  "meter": {
+   "sky L": 36.7,
+   "moon disc L": 211.2,
+   "lawn L": 26.7,
+   "default view roof L": 130.5,
+   "default view siding L": 73.1
+  },
+  "verdict": "bar",
+  "gap": "Sky critic: clouds read as flat smeared streaks with no lit tops/dark bellies, the moon is an edgeless bloom with no disc, the gradient too shallow. House critic (a different one from round 2): the lot reads dusk-bright, roofs flat grey, no house shadow, and the warm bulbs outshine the moon."
+ },
+ {
+  "piece": "Sky & moon + moonlight (round 4)",
+  "round": 4,
+  "shot": "shots/r4_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Sky shader rewritten: two cloud layers shaded by the density gradient toward the moon (lit faces, dark bellies), a limb-darkened disc with faint maria held under the bloom threshold so its edge stays crisp, a steeper zenith-to-horizon gradient. Lighting: fill cut 0.55 -> 0.28 (about a third of the key), key 0.8 from the east-south-east so the shadow lands beside the house, a bluer key, and a 30% desaturation under the moon in the night optics (highlights spared).",
+  "meter": {
+   "moon view mean L": 46.0,
+   "default view centre L": 79.4
+  },
+  "verdict": "ours",
+  "gap": "House critic picked ours (lit/shaded pitches, hard shadow mass on the left lawn, warm bulbs against cool wall tone). Sky critic picked the bar: the moon reads washed and soft against halo-brightened cloud; the clouds bunch into one bright streaky band under a near-black top."
+ },
+ {
+  "piece": "Sky & moon (round 5)",
+  "round": 5,
+  "shot": "shots/r5_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Cloud mapping switched from planar to Mercator so masses are the same round shape at the zenith as near the horizon (the planar map stretched the low sky into streaks and smeared the high sky into one blob); lit tops toned down to lilac-grey; zenith lifted off black; the disc enlarged to ~3.2 deg with stronger limb darkening and maria, and the halo made tight and dim so the disc separates from it.",
+  "meter": {
+   "sky L": 28.2,
+   "moon disc L": 188.8,
+   "lawn L": 23.1
+  },
+  "verdict": "bar",
+  "gap": "Sky critic: clouds still read as two or three blurred lavender patches with no lit-top/shadowed-belly structure, and the moon as a clipped flat disc with a hard edge and no surface."
+ },
+ {
+  "piece": "Sky & moon (round 6)",
+  "round": 6,
+  "shot": "shots/r6_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Cloud bank fuller (0.7 -> 0.85) with a fifth fbm octave for edge detail, tighter density edge, bellies darker than the sky behind them and lit tops lifted; the disc gets a waxing-gibbous terminator and deeper maria so it reads as a sphere at thumbnail size; the sky gradient keeps changing through the 5-30 degree band a street view sees.",
+  "meter": {},
+  "verdict": "skipped",
+  "gap": "Not sent to a critic: the capture showed the cloud edges still ~20 px soft, because the finest noise octave was ~2 degrees across. Rolled straight into round 7."
+ },
+ {
+  "piece": "Sky & moon (round 7)",
+  "round": 7,
+  "shot": "shots/r7_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Cloud frequencies raised (finest octave ~0.6 deg, so an edge resolves in ~6 px) and the density edge tightened.",
+  "meter": {
+   "sky L": 46.1,
+   "moon disc L": 184.1
+  },
+  "verdict": "bar",
+  "gap": "Sky critic: the moon reads as a bloomed blob merging with the lit cloud beside it, and the clouds as large soft airbrushed masses without lit rims over darker bodies."
+ },
+ {
+  "piece": "Sky & moon (round 8)",
+  "round": 8,
+  "shot": "shots/r8_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Disc enlarged to ~4 deg (the reference's is ~1/18 of the frame width) and brightened just under the bloom threshold; the cloud clearing round it widened so no lit cloud touches the disc; cauliflower edge detail added to the cloud masks and a lit rim along each mass's moon-side edge over a darker body.",
+  "meter": {
+   "sky L": 44.4,
+   "moon disc L": 180.0
+  },
+  "verdict": "bar",
+  "gap": "Sky critic: uniform pale blobs at one depth over a single-value void (no dark undersides under lit tops), and the moon oversized, over-bright and crater-less, sitting on top of the sky rather than in it."
+ },
+ {
+  "piece": "Sky & moon (round 9)",
+  "round": 9,
+  "shot": "shots/r9_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Found the bug behind every 'no lit tops' verdict: the shading sample looked a step BELOW each pixel, so every underside was lit and every top dark. Now samples above. Deck densified (threshold 0.49 -> 0.44), bellies darker, cloud thins toward the horizon; the disc shrunk to ~3.3 deg and brought off the tone curve's shoulder (1.16 -> 0.88 linear) so maria, limb and terminator keep their contrast; halo tighter.",
+  "meter": {
+   "sky L": 68.6,
+   "moon disc L": 174.7
+  },
+  "verdict": "bar",
+  "gap": "Sky critic: the clouds are now too big, too bright (nearly the moon's value) and hard-edged, pressed flat against the roof; the moon loses contrast against them."
+ },
+ {
+  "piece": "Sky & moon (round 10)",
+  "round": 10,
+  "shot": "shots/r10_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Cloud tops brought down to the reference's cloud-band value (about L 48, ours metered 68), rims feathered, edge detail and the lit-rim term halved, coverage trimmed; the disc gets a deeper terminator, stronger maria and more limb darkening so it still reads as a sphere at 800 px.",
+  "meter": {
+   "sky L": 50.1,
+   "moon disc L": 169.4
+  },
+  "verdict": "bar",
+  "gap": "Sky critic: clouds reduced to soft low-contrast smudges with no edges or modelled masses; a wisp still crosses the moon; too few stars; sky wants a steeper tonal gradient toward the horizon."
+ },
+ {
+  "piece": "Sky & moon (round 11)",
+  "round": 11,
+  "shot": "shots/r11_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Clouds shaded like a surface: a pseudo-normal from the density gradient, lit from above and the moon's side, so every mass gets a lit rim on top and a dark underside whatever its shape; the clearing round the disc widened; stars denser; the zenith darker with a steeper gradient to a lighter slate horizon.",
+  "meter": {
+   "sky L": 40.2,
+   "moon disc L": 168.4
+  },
+  "verdict": "bar",
+  "gap": "Sky critic: the moon sits tangent to the roof ridge from this pose; the top-left quarter is a near-black void; the clouds read as evenly-lit chalky lumps without enough value range between lit crowns and undersides."
+ },
+ {
+  "piece": "Sky & moon (round 12)",
+  "round": 12,
+  "shot": "shots/r12_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Disc swung a few degrees east and up so it clears the gable ridge from the front lawn; zenith lifted slightly so the high sky is not a void; cloud modelling contrast raised (darker bellies, brighter crowns, tighter shading band).",
+  "meter": {
+   "sky L": 40.3,
+   "moon disc L": 150.6
+  },
+  "verdict": "bar",
+  "gap": "Sky critic: the moon reads as a blown-out edgeless blob about twice the size it should be; clouds as formless smudges without lit edges. Checked at the critic's 800 px size: our disc is indeed larger than the bar's, flatter, with a haze fringe, where the bar's is a sharp half-lit moon on clean navy."
+ },
+ {
+  "piece": "Sky & moon (round 13)",
+  "round": 13,
+  "shot": "shots/r13_moonview.png",
+  "pose": "front lawn, looking north-east",
+  "notes": "Disc shrunk to ~2.6 deg with stronger limb darkening and a decisive gibbous terminator (the reference's moon is half-lit); the halo cut to a quarter so the limb sits on clean navy; cloud frequencies raised again and a lobe term added so a mass breaks into puffs instead of one smudge.",
+  "meter": {
+   "sky L": 41.6,
+   "moon disc L": 115.7
+  },
+  "verdict": "ours",
+  "gap": "Critic picked ours blind. Its one note on ours: the halo could brighten the cloud wisps round the disc a little more."
+ }
+]

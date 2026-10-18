@@ -488,6 +488,32 @@ negative past the pivot, while **rotation must be read off the quaternion, never
 XYZ Euler decomposition expresses a 180° yaw as `(π, 0, π)`, so `rotation.y` reads exactly 0 and
 every half-turn-or-more was silently thrown away on save.
 
+**The Sims night** (2026-10-18; `yardgrade.js` `N`, the night half of the same grade). The user's
+ask: a moon and moonlight at night so the house reads, without touching the design art. The
+iPhone-photo night in `daylight.js`'s ramp (black sky, the house lit only by its own LEDs) is still
+the night everywhere the yard is not shown — single floors, room focus, the room cards. While the
+yard is shown, `grade()` applies `N` by `nightW` (sun below −4°, full at −12°, so dusk runs the
+ramp's own colours): the **key and the disc are two directions on purpose**, as in the Sims itself —
+a key in frame lights the faces turned away from you, and the street view looks north — so
+`moonDir` (the key, reusing `sunLight`: no new light, no program recompile) comes from the
+east-south-east ~36° up and lights the street-facing pitches and east faces with the shadow beside
+the house, while `moonSkyDir` (the disc) hangs ~21° up in the north-east, inside what the orbit's
+polar clamp (`controls.maxPolarAngle`, ~2° above level, 55° fov) can ever frame — so the default
+overhead House view shows moonlight and a strip of sky, and the moon itself appears when the
+user tilts up from the street. Fill is ~⅓ of the key (0.28 vs 0.8): at 0.55 every pitch flattened to
+one grey. The dome's `nightSky()` draws the gradient, stars, a ~2.6° waxing-gibbous disc (limb
+darkening, maria, a decisive terminator; held at 0.88 linear, off ACES's shoulder and under the
+night composer's bloom threshold, so it keeps a crisp limb) and two **Mercator-mapped** cumulus
+layers shaded like a surface — a pseudo-normal from the density gradient lit from above and the
+moon's side, so every mass gets a lit crown and a dark belly whatever its shape (the planar map
+stretched the low sky into streaks; a one-sided density step lit only one edge). `eavelights.js`
+hides its black-noise sky while `isYardGraded()`, and `scene.js`'s night optics lerp by
+`setOpticsMoon(w)`: the warm light-pollution haze turns sky-blue, the shadow smear/soften/grain
+back off (they blurred cloud shapes into haze), and a 30% desaturation spares the highlights (a
+pure-green lawn under a blue sky is not a Sims night). Judged blind against EA's own lunar-cycle
+screenshot (`scratchpad/moon/ref`, progress in `scratchpad/moon/rounds.json`): the moonlight piece
+won in rounds 2 and 4, the sky in round 13; `scratchpad/moon/shot.py` is the capture rig.
+
 **Outdoor environment & weather** (frontend-only). **The viewer shows the yard** (2026-10-11,
 reversing 2026-09-21's "no yard in the viewer"): `environment.js`'s `root` (grass disc + yard +
 the grade's sky dome) is visible on the House level in view and edit mode once a yard is standing

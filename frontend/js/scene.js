@@ -291,6 +291,11 @@ const OPTICS = {
                     // warm glow the tree-line silhouettes cut against, falling back off
                     // toward the bottom of frame so the driveway keeps its own level
   haze: [1.0, 0.93, 0.84], // warm grey — light pollution, R ≥ B (not the cold haze of r1)
+  hazeMoon: [0.72, 0.80, 1.0], // ...and under the moon (yardgrade.js's Sims night) the lift is the sky's own blue
+  // Under the moon the camera's noise reduction backs off: the sky is no
+  // longer black, so its cloud shapes are "dark pixels" the shadow smear would
+  // otherwise blur into haze (round-1 critic). Lerped by yardgrade's weight.
+  moon: { smear: 0.3, soften: 0.08, grain: 0.03, desat: 0.3 },   // desat: the Sims night is muted; a pure-green lawn under a blue sky is not
   smear: 0.85,      // how far dark pixels are pulled toward a 1.5px blur (noise reduction)
   soften: 0.2,      // ...and how far EVERY non-highlight pixel is: a night-mode frame is never crisp
   vignette: 0.40,
@@ -306,6 +311,7 @@ const OpticsShader = {
     uTexel: { value: new THREE.Vector2(1 / 1920, 1 / 1080) },
     uAspect: { value: 16 / 9 },
     uGrain: { value: OPTICS.grain },
+    uDesat: { value: 0 },
     uGrainPx: { value: OPTICS.grainPx },
     uChroma: { value: OPTICS.chroma },
     uLift: { value: OPTICS.lift },
@@ -324,7 +330,7 @@ const OpticsShader = {
     }`,
   fragmentShader: /* glsl */`
     uniform sampler2D tDiffuse;
-    uniform float uMix, uTime, uAspect, uGrain, uGrainMid, uGrainPx, uChroma, uLift, uHorizon, uSmear, uSoften, uVignette;
+    uniform float uMix, uTime, uAspect, uGrain, uGrainMid, uGrainPx, uChroma, uLift, uHorizon, uSmear, uSoften, uVignette, uDesat;
     uniform vec2 uTexel;
     uniform vec3 uHaze;
     varying vec2 vUv;
@@ -380,6 +386,9 @@ const OpticsShader = {
       // it shows where the signal is low), a colour component on R/B,
       // animated per frame, on cells slightly coarser than a device px
       vec2 g = floor(gl_FragCoord.xy / uGrainPx) + vec2(fract(uTime * 7.31) * 913.0, fract(uTime * 3.17) * 571.0);
+      // moonlit nights are muted (yardgrade.js drives uDesat); the brightest
+      // highlights (bulbs, the moon) keep their colour
+      c = mix(vec3(luma(c)), c, 1.0 - uDesat * (1.0 - smoothstep(0.6, 0.95, L)));
       float darkW = 1.0 - smoothstep(0.0, 0.25, L);
       float n = hash(g) - 0.5;                       // luminance grain
       vec3 cn = vec3(hash(g + 17.3), hash(g + 29.1), hash(g + 41.7)) - 0.5; // per-channel, independent
@@ -470,12 +479,25 @@ function applyOpticsParams() {
   u.uVignette.value = OPTICS.vignette;
 }
 
+// yardgrade.js: how much of the moonlit night is applied (0..1). Only the
+// haze colour follows it -- grain, bloom, smear and vignette are the camera.
+let moonW = 0;
+export function setOpticsMoon(w) { moonW = w; }
+const _haze = new THREE.Vector3(), _hazeMoon = new THREE.Vector3();
+
 // Paint the main view: plain render by day, composed at night.
 export function renderView() {
   if (opticsMix < 0.005) { rawRender(scene, camera); return; }
   ensureComposer();
   bloomPass.strength = OPTICS.bloomStrength * opticsMix;
   opticsPass.uniforms.uMix.value = opticsMix;
+  _haze.set(...OPTICS.haze).lerp(_hazeMoon.set(...OPTICS.hazeMoon), moonW);
+  opticsPass.uniforms.uHaze.value.copy(_haze);
+  const L = THREE.MathUtils.lerp, M = OPTICS.moon;
+  opticsPass.uniforms.uSmear.value = L(OPTICS.smear, M.smear, moonW);
+  opticsPass.uniforms.uSoften.value = L(OPTICS.soften, M.soften, moonW);
+  opticsPass.uniforms.uGrain.value = L(OPTICS.grain, M.grain, moonW);
+  opticsPass.uniforms.uDesat.value = M.desat * moonW;
   opticsPass.uniforms.uTime.value = (performance.now() / 1000) % 1000;
   compositing = true;
   try { composer.render(); } finally { compositing = false; }
