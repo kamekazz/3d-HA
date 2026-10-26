@@ -27,6 +27,7 @@ import * as THREE from 'three';
 import { scene, renderer, onFrame, setExposureBase, camera, sunLight, setOpticsMoon } from './scene.js';
 import { setDaylightGrade, getGradeWeight } from './daylight.js';
 import { getShellRoot } from './house.js';
+import { ISLAND } from './island.js';
 
 // Target values at full weight. Picked against the Sims 4 bar shots through
 // this renderer's ACES + exposure, not by eye on the hex.
@@ -260,7 +261,35 @@ const N = {
 let nightW = 0;   // how much of N is applied right now (0 by day; the dome reads it)
 export function getMoonWeight() { return nightW; }
 
-function grade(t, { elevation, sunX }) {
+// The island's void (island.js): no horizon, no haze -- the lot floats in a
+// deep navy that glows faintly behind it and falls away to near-black at the
+// frame's edges, as in the diorama references. Fog is pushed past anything
+// the camera can frame (it stays a Fog, not null: fog is a program define).
+const VOID = {
+  // r4: measured against reference 1's void through the tone curve -- its
+  // corners are sRGB ~(5,19,45) and behind the island ~(12,36,70); r3's
+  // corners came out (2,4,12), "a flat blue-black the soil melts into"
+  // r5: more vignette (r4: "flat, no vignette"); r6: darker and gentler
+  // again (r5: "a saturated mid-blue radial blob")
+  centre: new THREE.Color(0.0085, 0.028, 0.080),   // linear, before the tone curve
+  edge: new THREE.Color(0.0032, 0.013, 0.040),
+  fogNear: 2400, fogFar: 4000,
+};
+function grade(t, sun) {
+  const k = gradeSky(t, sun);
+  if (ISLAND && nightW > 0) {
+    // the island's night is reference 1's dusk: a brighter blue fill so the
+    // lawn and the tree ring stay readable (r4: "the island reads as a dark mass")
+    t.hemiIntensity = THREE.MathUtils.lerp(t.hemiIntensity, 0.5, nightW);
+  }
+  if (ISLAND) {
+    t.bg.copy(VOID.edge);
+    t.fogNear = VOID.fogNear;
+    t.fogFar = VOID.fogFar;
+  }
+  return k;
+}
+function gradeSky(t, { elevation, sunX }) {
   const day = THREE.MathUtils.smoothstep(elevation, 3, 22);
   const clear = THREE.MathUtils.clamp((sunX - 0.3) / 0.7, 0, 1);
   const k = day * clear;
@@ -322,6 +351,10 @@ const fragmentShader = `
   uniform vec3 zenith;
   uniform vec3 horizon;
   uniform float cloudAmt;
+  uniform float voidAmt;
+  uniform vec3 voidCentre;
+  uniform vec3 voidEdge;
+  uniform vec3 camFwd;
   varying vec3 vDir;
   float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float n2(vec2 p) {
@@ -417,6 +450,17 @@ const fragmentShader = `
   }
   void main() {
     vec3 d = normalize(vDir);
+    if (voidAmt > 0.5) {
+      // radial, about the view axis: a soft glow behind the island
+      float c = smoothstep(0.30, 1.0, dot(d, camFwd));
+      vec3 col = mix(voidEdge, voidCentre, c * c);
+      // a whisper of grain so the gradient never bands on an 8-bit panel
+      col *= 1.0 + (h21(gl_FragCoord.xy) - 0.5) * 0.10;   // dither: r5 saw banding
+      gl_FragColor = vec4(col, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+      return;
+    }
     float h = max(d.y, 0.0);
     vec3 col = mix(horizon, zenith, pow(smoothstep(0.0, 0.16, h), 0.6));
     if (night > 0.001) {
@@ -448,6 +492,10 @@ function makeDome() {
     moonDir: { value: N.moonSkyDir.clone() },
     nightZenith: { value: N.zenith.clone() },
     cloudNight: { value: 0 },
+    voidAmt: { value: ISLAND ? 1 : 0 },
+    voidCentre: { value: VOID.centre.clone() },
+    voidEdge: { value: VOID.edge.clone() },
+    camFwd: { value: new THREE.Vector3(0, 0, -1) },
   };
   const mat = new THREE.ShaderMaterial({
     uniforms, vertexShader, fragmentShader,
@@ -475,9 +523,15 @@ function tick() {
   setOpticsMoon(nightW);
   if (!dome) return;
   const bg = scene.background?.isColor ? scene.background : null;
-  dome.visible = !!bg && (w > 0.01 || nightW > 0.01);
+  dome.visible = !!bg && (ISLAND || w > 0.01 || nightW > 0.01);
   if (!dome.visible) return;
   const u = dome.material.uniforms;
+  camera.getWorldDirection(u.camFwd.value);
+  // the day curve (contrast + saturation, exposure 1.0) lifts the void far more
+  // than night's plain ACES through the composer: r4's day void read royal blue
+  const vk = 1 - 0.5 * w;
+  u.voidCentre.value.copy(VOID.centre).multiplyScalar(vk);
+  u.voidEdge.value.copy(VOID.edge).multiplyScalar(vk);
   u.horizon.value.copy(bg);
   // without the grade the zenith is just a deeper take on HA's own sky colour
   _z.copy(bg).multiplyScalar(0.7);
@@ -569,4 +623,4 @@ export function suspendYardGrade() {
 }
 
 // console tuning: __yardgrade.G.sunIntensity = 4; __yardgrade.refresh()
-window.__yardgrade = { G, N, refresh() { if (active) setDaylightGrade(grade); } };
+window.__yardgrade = { G, N, VOID, refresh() { if (active) setDaylightGrade(grade); } };

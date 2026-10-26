@@ -20,6 +20,8 @@ import { renderer, getEnvIntensity, onFrame, camera } from './scene.js';   // on
 import { getNightFactor, getDaylight, getGradeWeight } from './daylight.js';   // car sky and rear atmosphere
 import { setYardGrade, predictGradeCurve } from './yardgrade.js';   // the "Sims day" look whenever the yard is shown
 import { objects3d } from './objects.js'; // locate the deferred rear deck instance
+import { ISLAND, setIslandFrom, applyIsland, buildIslandEdge, clipMaterial, islandBox, islandSdf, islandRim, buildLightPools, buildHedge } from './island.js';   // the lot as a floating island
+import { setHouseFrame } from './scene.js';
 
 let root = null;     // whole environment (grass + yard)
 let yard = null;     // the group the builders write into (the in-flight build's, else the standing one)
@@ -540,6 +542,8 @@ export function initEnvironment() {
   const grass = new THREE.Mesh(makeGrassDisc(1200), grassMat);
   grass.position.y = -0.05; // below edit ground (-0.02); the two never co-show
   grass.receiveShadow = true; // the lawn catches the house-shell's sun shadow
+  grass.name = 'grass-disc';
+  if (ISLAND) clipMaterial(grassMat, { lawn: true });   // the disc ends at the island's rim, mown
   root.add(grass);
 
   // debug handle (console): where the last yard build spent its time
@@ -5349,7 +5353,62 @@ const SURFACE_KINDS = new Set(['lawn']);
 // the item table already belongs to the build, not to the groups on screen.
 export function getYardPickables() {
   if (!yardEditing || !shownYard || yardBuild) return [];
-  return shownYard.children.filter((o) => o.userData?.kind === 'yard');
+  return shownYard.children.filter((o) => o.userData?.kind === 'yard' && !o.userData.offIsland);
+}
+
+// The lot as a floating island (island.js): hide the world beyond it, clip the
+// ground that crosses the rim, and stand the soil edge on the rim. Runs on the
+// detached yard, just before the swap, so the first frame it is shown in is
+// already an island and its programs are the ones the boot compile warms.
+function makeIsland(L) {
+  setIslandFrom(L);
+  const grounds = [];
+  for (const o of yard.children) {
+    const kind = o.userData?.yardKind;
+    const cls = kind === 'paving' ? 'paving' : (kind === 'lawn' || /turf|gravel/.test(o.name)) ? 'lawn' : null;
+    if (!cls) continue;
+    o.traverse((m) => { if (m.isMesh) grounds.push({ mesh: m, cls }); });
+  }
+  // the lawn look (mowing bands, less lime) goes on every lawn material first,
+  // so applyIsland's plain clip never claims one of them
+  for (const m of yardGrassMats) clipMaterial(m, { lawn: true });
+  const stats = applyIsland(yard);
+  const base = grassMat.color;
+  const edge = buildIslandEdge(grounds, (x, z) => {
+    const t = lawnTint(x, z);
+    return [base.r * t[0], base.g * t[1], base.b * t[2]];   // lip material is white: the base colour rides in here
+  });
+  yard.add(edge);
+  // path lights and their pools: the three the front yard already stands on
+  // the drive's east edge and by the steps, plus a run down the walk, the
+  // drive's west edge and the front beds (all on the lot's ground, L.lo)
+  const y = L.lo;
+  const fx = [
+    [L.driveR + 1.4, L.houseF + 9, 0], [L.driveR + 2.0, L.houseF + 19, 0], [L.driveR + 1.8, L.apronF + 6, 0],
+    [L.driveL - 1.6, L.houseF + 12, 1], [L.driveL - 1.6, L.houseF + 24, 1], [L.driveL - 1.4, L.apronF + 8, 1],
+    [L.stepW - 2.0, L.stepF + 6, 1], [L.porchW + 3, L.porchF + 4.5, 1], [L.porchW - 6, L.porchF + 1.5, 1],
+    [L.padW - 1, L.houseF - 6, 1], [L.padE + 3, L.houseF - 4, 1],
+    [L.porchW + 12, L.porchF + 10, 1], [L.padW - 12, L.porchF + 6, 1], [L.driveR + 2, L.apronF + 18, 1],
+    [L.driveL - 1.5, L.apronF + 20, 1], [L.padE + 14, L.houseF + 12, 1],
+    // (r9: r8's pools out on the open lawn went -- "identical discs on the
+    // grass, unrelated to paths"; the light stays on the walk, the drive and
+    // the beds)
+  ];
+  // facade washers: the garage front's piers and the west wall, where the
+  // bed uplights would stand
+  const gz = L.houseF + 0.3, wx = L.houseW;
+  const washes = [
+    { x: L.driveL - 0.2, y: L.lo, z: gz, nx: 0, nz: 1, w: 3.2, h: 10 },
+    { x: (L.driveL + L.driveR) / 2, y: L.lo, z: gz, nx: 0, nz: 1, w: 3.0, h: 9 },
+    { x: L.driveR - 0.6, y: L.lo, z: gz, nx: 0, nz: 1, w: 3.2, h: 10 },
+    { x: wx, y: L.hi, z: L.houseF - 4, nx: -1, nz: 0, w: 3.6, h: 14 },
+    { x: wx, y: L.hi, z: L.houseF - 18, nx: -1, nz: 0, w: 3.6, h: 14 },
+    { x: wx, y: L.hi, z: L.blockN + 6, nx: -1, nz: 0, w: 3.6, h: 14 },
+  ];
+  yard.add(buildLightPools(fx.filter(([x, z]) => islandSdf(x, z) < -4)
+    .map(([x, z, post]) => ({ x, y, z, r: 15, post: !!post })), washes));
+  setHouseFrame({ box: islandBox(18) });   // r7: the plate, not the rim trees' tops, fills the frame
+  yardTimings.push(['island', stats]);
 }
 
 // What a CLICK may land on: the pickables minus the ground.
@@ -6045,12 +6104,16 @@ async function buildYard() {
   addRearAtmosphereDetail();
   yardLap('rear light/atmosphere');
   await yardYield();
-  if (roofRect) addBackdrop(landmarks(roofRect));
+  if (roofRect) {
+    if (ISLAND) setIslandFrom(landmarks(roofRect));   // addBackdrop plants only on the island
+    addBackdrop(landmarks(roofRect));
+  }
   await yardYield();
 
   // ---- the swap: one synchronous block from here, no yields. The car and
   // the deck re-parenting hand over from the old yard themselves (syncCar and
   // configureRearDeckInstances each undo their predecessor first).
+  if (ISLAND && roofRect) makeIsland(landmarks(roofRect));
   const old = shownYard;
   configureRearDeckInstances();
   syncCar();
@@ -6217,8 +6280,8 @@ function addBackdrop(L) {
     clump(x, H * 0.52, z, 4.2 * s, H * 0.4, 4.2 * s, H * 0.55, H * 0.4);
   };
   // fir: four stacked, flattened tiers
-  const fir = (x, z, s) => {
-    setPal(pick(FIR), 0.9 + rng() * 0.2);
+  const fir = (x, z, s, pal = pick(FIR)) => {
+    setPal(pal, 0.9 + rng() * 0.2);
     const H = (28 + rng() * 16) * s, R = H * (0.21 + rng() * 0.05);
     limb([x, 0, z], [x, H * 0.4, z], 0.38 * s, 0.22 * s);
     // r4: three tall OVERLAPPING masses tapering to the tip -- a cone, not
@@ -6285,8 +6348,12 @@ function addBackdrop(L) {
   const reach = { oak: 13, hero: 13, willow: 11, poplar: 5, fir: 7, maple: 8, flowering: 6 };
   const roomFor = (x, z, r) => !pts.some(([px, pz, pr]) => Math.hypot(x - px, z - pz) < (r + pr) * 0.38);
   let planted = 0;
+  // On the island only trees whose trunk stands on it are grown: the rest
+  // would float over the void (backdrop rng is its own, so no item key moves)
+  const offIsland = (x, z) => ISLAND && islandSdf(x, z) > -3;
   const plant = (kind, x, z, s) => {
     const r = reach[kind] * s;
+    if (offIsland(x, z)) return false;
     if (!free(x, z, 4) || !roomFor(x, z, r)) return false;
     // far away a fir/poplar spindle reads as a dark spike or topiary on the
     // skyline (the r4 critics' 'floating balloons'): rounded crowns only
@@ -6305,19 +6372,27 @@ function addBackdrop(L) {
     // r5: trunks JUST outside the lot lines (the owner's note forbids trees
     // on the lot), canopies big enough to overhang the yard beside the house
     // and the deck. Planted past free()'s margin on purpose.
-    const heroAt = (x, z, sc) => { pts.push([x, z, reach.hero * sc]); SPECIES.hero(x, z, sc); planted++; };
-    heroAt(L.padW - 32, L.houseF + 16, 2.5);    // front-west, over the front lawn
-    heroAt(L.padE + 40, L.blockN + 14, 2.4);    // east, beside the deck side (r9: pulled back out of aback's foreground)
-    heroAt(L.padW - 32, L.yardN + 22, 2.6);     // west, over the back lawn
+    const heroAt = (x, z, sc) => { if (offIsland(x, z)) return; pts.push([x, z, reach.hero * sc]); SPECIES.hero(x, z, sc); planted++; };
+    // On the island the front-west hero goes: at 2.5x it buried the house's
+    // west half from the diorama camera (r1 critic), and the plate is framed by
+    // the rim planting below instead.
+    if (!ISLAND) heroAt(L.padW - 32, L.houseF + 16, 2.5);    // front-west, over the front lawn
+    if (!ISLAND) heroAt(L.padE + 40, L.blockN + 14, 2.4);    // east, beside the deck side (r9: pulled back out of aback's foreground)
+    // r3: and the back-west one, which piled up behind the house (r2 critics)
+    if (!ISLAND) heroAt(L.padW - 32, L.yardN + 22, 2.6);     // west, over the back lawn
     // r9: silhouettes the street view must show beside the house
     // (tall, set back toward the lake, so they rise just past the house's
     // eaves between it and the two front heroes)
+    // (on the island the rim planting replaces these specimens: at these
+    // scales they stood 40-50 ft and broke the top of the frame, r4)
+    if (!ISLAND) {
     plant('fir', L.padW - 40, L.yardN + 10, 1.45);
     plant('poplar', L.padE + 44, L.yardN + 8, 1.4);
     plant('willow', L.padW - 44, L.houseF - 18, 1.0);
     // blossom accents the street view actually sees
     plant('flowering', L.padE + 44, L.houseF - 6, 1.15);
     plant('flowering', L.padW - 42, L.houseF - 30, 1.05);
+    }
     // then irregular mixed clusters around them, not a row
     for (const [gx, gz, sp] of [[L.padW - 58, L.houseF - 28, 24], [L.padE + 60, L.houseF - 18, 26],
                                 [L.padE + 52, L.houseF + 14, 16]]) {
@@ -6326,7 +6401,7 @@ function addBackdrop(L) {
     // groves through the ring
     let groves = 0;
     // phone-lite stays under its ~300 MB vertex budget with fewer stands
-    for (let i = 0; i < 8000 && groves < (YARD_LITE ? 42 : 72); i++) {
+    for (let i = 0; i < (ISLAND ? 0 : 8000) && groves < (YARD_LITE ? 42 : 72); i++) {
       const u = rng(), r = 130 + 430 * Math.pow(u, 1.4), a = rng() * Math.PI * 2;
       const gx = mid + Math.cos(a) * r * 1.15, gz = cz0 + Math.sin(a) * r;
       if (!free(gx, gz, 10)) continue;
@@ -6356,6 +6431,85 @@ function addBackdrop(L) {
   // uneven GROUPS at their feet -- a woodland edge, as in backyard_3 -- break
   // the row up without touching an item. Kept clear of the path lights and
   // the feeder (mid-8, mid-7, mid+13).
+  // The island's rim planting (round 2; bar: reference 2's lot, ringed by a
+  // continuous, layered border of trees and clipped hedge): mixed trees on a
+  // ring ~8 ft inside the rim round the back and both sides, a hedge of small
+  // overlapping clumps ~3 ft inside it, and the front left open so the house,
+  // its lawn and the drive face the camera. Nothing is planted on the house,
+  // the deck, the drive or a bed (onLot).
+  if (ISLAND && BACKDROP_TREES) {
+    lod = 2;
+    const frontZ = L.houseF - 4;                  // the sides are planted up to the house front
+    const onLot = (x, z, m) => x > L.padW - 3 - m && x < L.padE + 2 + m && z > L.padN - m && z < L.apronF + m;
+    const drive = (x, z) => x > L.driveL - 6 && x < L.driveR + 6 && z > L.houseF - 10;
+    // r4: one consistent language -- conifers alternating with round
+    // deciduous crowns at ~house-eave height, close enough to read as a
+    // continuous border (r3: "sparse and scattered, lollipops, inconsistent")
+    const RING = ['fir', 'maple', 'fir', 'oak', 'fir', 'maple', 'fir', 'flowering'];
+    const RING_FIR = [[0x1a4428, 0x5a9446], [0x1f4a2c, 0x67a04c], [0x183f26, 0x528a40]];
+    const BACK = ['maple', 'fir', 'maple', 'oak', 'fir'];   // a little lower behind the roof
+    let n = 0;
+    // r9: further in (r8: "trees spill off the plate edge") and sparser
+    // (r8 framing: "a woodland that buries the house"), with two specimen
+    // trees anchoring the back corners
+    const anchors = [[L.padW - 24, L.padN - 18], [L.padE + 26, L.padN - 14]];
+    for (const [ax, az] of anchors) {
+      if (offIsland(ax, az)) continue;
+      pts.push([ax, az, reach.oak * 1.25]); SPECIES.oak(ax, az, 1.25); planted++;
+    }
+    for (const p of islandRim(12, 14)) {
+      const front = p.z > frontZ;
+      // the front is open lawn, hedged low, with one tree at each corner
+      // (r5 with none: "left, right and front edges bare")
+      if (front && Math.abs(p.x - (L.padW + L.padE) / 2) < 46) continue;
+      if (onLot(p.x, p.z, 4) || drive(p.x, p.z)) continue;
+      const behind = p.z < L.blockN - 10 && p.x > L.padW - 14 && p.x < L.padE + 14;
+      const kind = behind ? BACK[n++ % BACK.length] : RING[n++ % RING.length];
+      // r7: house scale (r6: "lollipops, too small against the two-storey house")
+      const s = behind ? 0.62 + rng() * 0.12 : front ? 0.7 + rng() * 0.15 : 0.75 + rng() * 0.2;
+      const x = p.x + (rng() - 0.5) * 3, z = p.z + (rng() - 0.5) * 3;
+      if (!roomFor(x, z, reach[kind] * s * 0.6)) continue;
+      pts.push([x, z, reach[kind] * s]);
+      // the ring's conifers in a lighter, warmer green than the far backdrop's
+      // (r5: "small, sparse, DARK low-poly blobs")
+      if (kind === 'fir') SPECIES.fir(x, z, s * 0.95, RING_FIR[n % RING_FIR.length]); else SPECIES[kind](x, z, s);
+      planted++;
+    }
+    const HEDGE = [[0x1f3d22, 0x5f8f3a], [0x22422a, 0x6a9a40]];
+    // the clipped band (island.js buildHedge) replaces the round clumps: runs
+    // of rim points on the back and sides, broken at the drive and the lot
+    {
+      const runs = []; let run = [];
+      for (const p of islandRim(3.6, 1.6)) {
+        const ok = p.z <= frontZ + 4 && !onLot(p.x, p.z, 1) && !drive(p.x, p.z);
+        if (ok) run.push(p); else if (run.length) { runs.push(run); run = []; }
+      }
+      if (run.length) runs.push(run);
+      // the rim is a loop: join the last run onto the first if they meet
+      if (runs.length > 1) {
+        const a = runs[0][0], b = runs[runs.length - 1].at(-1);
+        if (Math.hypot(a.x - b.x, a.z - b.z) < 2.5) runs[0] = runs.pop().concat(runs[0]);
+      }
+      yard.add(buildHedge(runs, L.lo));
+    }
+    for (const p of (ISLAND ? [] : islandRim(3.2, 2.6))) {
+      if (onLot(p.x, p.z, 1) || drive(p.x, p.z)) continue;
+      const front = p.z > frontZ + 6;
+      if (front) continue;   // r7: it hid the lip and the slab from the camera
+      // along the front the hedge runs low and unbroken (r3: "loose lollipops")
+      setPal(HEDGE[Math.floor(rng() * HEDGE.length)], 0.92 + rng() * 0.14);
+      const r = (front ? 1.9 : 2.4) + rng() * 0.5, h = (front ? 1.8 : 3.0) + rng() * 0.7;
+      one(p.x, L.lo + h * 0.8, p.z, r, h, r, L.lo + h * 0.6, h + 0.5, 1, 0.35);
+    }
+    // layered: mid-height shrub masses between the hedge and the trees
+    for (const p of (ISLAND ? [] : islandRim(6.5, 6.0))) {
+      if (p.z > frontZ || onLot(p.x, p.z, 2) || drive(p.x, p.z) || rng() < 0.35) continue;
+      setPal(HEDGE[Math.floor(rng() * HEDGE.length)], 0.95 + rng() * 0.15);
+      const r = 3.0 + rng() * 1.2, h = 4.0 + rng() * 1.5;
+      one(p.x, L.lo + h * 0.75, p.z, r, h, r, L.lo + h * 0.6, h + 0.5, 1, 0.35);
+    }
+  }
+
   if (BACKDROP_TREES) {
     lod = 2;
     const shoreZ = L.yardN - 16;   // the trunk line (authored pivots z -91..-98)
@@ -6363,6 +6517,7 @@ function addBackdrop(L) {
       setPal(pick(MAPLE), 0.82 + rng() * 0.15);
       for (let i = 0; i < n; i++) {
         const x = mid + ox + (rng() - 0.5) * 9, z = shoreZ - 2 + (rng() - 0.5) * 7;
+        if (offIsland(x, z)) continue;
         if (Math.abs(x - (mid - 8)) < 3 || Math.abs(x - (mid + 13)) < 3) continue;
         const r = 2.2 + rng() * 2.6, h = r * (0.7 + rng() * 0.6);
         clump(x, L.lo + h, z, r, h, r * (0.8 + rng() * 0.4), L.lo + h, h + 1);
@@ -6379,7 +6534,7 @@ function addBackdrop(L) {
     lod = 0;
     const cz0 = (L.yardN + L.street) / 2;
     const TL = [[0x16301e, 0x3a6430], [0x14321f, 0x34602f], [0x1a3520, 0x416b34]];
-    for (let a = 0; a < Math.PI * 2; a += 0.03 + rng() * 0.03) {
+    for (let a = 0; a < (ISLAND ? 0 : Math.PI * 2); a += 0.03 + rng() * 0.03) {
       const r = 395 + rng() * 45;
       const x = mid + Math.cos(a) * r * 1.15, z = cz0 + Math.sin(a) * r;
       if (Math.abs(z - (L.street + 14)) < 40) continue;                    // the road runs out

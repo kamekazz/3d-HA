@@ -640,6 +640,21 @@ const HOUSE_MAX = 300;
 
 let houseBox = null;        // THREE.Box3 of the building — set by house.js
 let userTookCamera = false;
+// The island (island.js) frames the whole lot instead of the building: a box
+// and a steeper elevation, so the plate reads as a diorama. null = the house.
+let frameOverride = null;
+const frameBox = () => frameOverride?.box || houseBox;
+const houseElev = () => frameOverride?.elev ?? HOUSE_ELEV;
+const ISLAND_ELEV = THREE.MathUtils.degToRad(31);   // r5's 27 showed the back ring hidden and a wall of soil
+// r3: swung further round to the west so the long plate lies across the frame
+// diagonally instead of running away from the camera (r2: "fills half the frame")
+// r4: back to -24 -- at -38 the facade turned away (r3: "house turned from the camera")
+const ISLAND_AZ = THREE.MathUtils.degToRad(-17);
+const houseAz = () => frameOverride?.az ?? HOUSE_AZ;
+export function setHouseFrame(f) {
+  frameOverride = f ? { elev: ISLAND_ELEV, az: ISLAND_AZ, ...f } : null;
+  if (houseBox && !userTookCamera) frameAll();
+}
 
 /** house.js hands us the measured bounds of the building after every build. */
 export function setHouseBounds(box) {
@@ -647,7 +662,7 @@ export function setHouseBounds(box) {
 }
 
 function applyHouseZoomCap(frameDist) {
-  setMaxZoom(Math.min(HOUSE_MAX, Math.max(frameDist * 1.8, 120)));
+  setMaxZoom(Math.min(frameOverride ? frameDist * 1.25 : HOUSE_MAX, Math.max(frameDist * 1.8, 120)));
 }
 
 // Screen-space bounding rect of a Box3's eight corners, in CSS px. Uses the
@@ -669,10 +684,10 @@ function projectBox(box) {
 }
 
 function placeCamera(center, dist, target = controls.target) {
-  const h = dist * Math.cos(HOUSE_ELEV);
-  camera.position.set(center.x + Math.sin(HOUSE_AZ) * h,
-                      center.y + dist * Math.sin(HOUSE_ELEV),
-                      center.z + Math.cos(HOUSE_AZ) * h);
+  const h = dist * Math.cos(houseElev());
+  camera.position.set(center.x + Math.sin(houseAz()) * h,
+                      center.y + dist * Math.sin(houseElev()),
+                      center.z + Math.cos(houseAz()) * h);
   target.copy(center);
   camera.lookAt(target);
   camera.updateMatrixWorld(true);
@@ -714,13 +729,13 @@ const _probe = new THREE.Vector3();
 // Where to aim, at a fixed distance, so the house's outline lands on the
 // centre of the stage. Leaves the camera placed at that pose.
 function aimFor(dist, sx, sy) {
-  houseBox.getCenter(_aim);
+  frameBox().getCenter(_aim);
   // Six passes, not two: translating the aim point translates the camera with
   // it, but the box has depth, so the projection does not slide by exactly the
   // requested amount and the residual only decays a few percent per pass.
   for (let pass = 0; pass < 6; pass++) {
     placeCamera(_aim, dist, _probe);
-    const r = projectBox(houseBox);
+    const r = projectBox(frameBox());
     camera.matrixWorld.extractBasis(_right, _up, _fwd);
     // aim further right and the house slides left; aim lower and it rides up.
     // stagePx is tan-per-pixel, so a screen miss becomes world units at dist.
@@ -728,7 +743,7 @@ function aimFor(dist, sx, sy) {
         .addScaledVector(_up, -(r.y + r.h / 2 - sy) * stagePx * dist);
   }
   placeCamera(_aim, dist, _probe);
-  return projectBox(houseBox);
+  return projectBox(frameBox());
 }
 
 function solveHousePose() {
@@ -740,7 +755,7 @@ function solveHousePose() {
   const savedPos = camera.position.clone();
   const savedTarget = controls.target.clone();
 
-  let lo = MIN_ZOOM, hi = HOUSE_MAX;
+  let lo = MIN_ZOOM, hi = frameOverride ? 900 : HOUSE_MAX;
   for (let i = 0; i < 14; i++) {
     const mid = (lo + hi) / 2;
     const r = aimFor(mid, sx, sy);
@@ -765,11 +780,11 @@ export function frameAll({ animate = false } = {}) {
   if (!houseBox) return;
   const { center, dist } = solveHousePose();
   applyHouseZoomCap(dist);
-  const h = dist * Math.cos(HOUSE_ELEV);
+  const h = dist * Math.cos(houseElev());
   const pos = new THREE.Vector3(
-    center.x + Math.sin(HOUSE_AZ) * h,
-    center.y + dist * Math.sin(HOUSE_ELEV),
-    center.z + Math.cos(HOUSE_AZ) * h,
+    center.x + Math.sin(houseAz()) * h,
+    center.y + dist * Math.sin(houseElev()),
+    center.z + Math.cos(houseAz()) * h,
   );
   userTookCamera = false;
   if (animate) { flyTo(pos, center); return; }

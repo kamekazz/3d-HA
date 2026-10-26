@@ -34,6 +34,7 @@ import { scene, camera, renderer, onFrame } from './scene.js';
 import { getShellRoot } from './house.js';
 import { getNightFactor } from './daylight.js';
 import { isYardGraded } from './yardgrade.js';
+import { ISLAND } from './island.js';
 
 // The shell config the numbers below were read under (GET /api/house
 // house_shell, 2026-09-02). Only x is non-identity here.
@@ -42,7 +43,8 @@ const MEASURED_SHELL = { x: 20.96, y: 0, z: 0, rot_y: 0, scale: 1 };
 const LED_SPACING = 1.75;     // ft between LEDs -- counted off the photo's porch run
 const LED_DROP = 0.3;         // LEDs hang this far below the roof edge
 const LED_OUT = 0.25;         // and this far proud of the fascia face
-const LED_COLOR = new THREE.Color(0xffc58f);   // ~2700K amber-white, like the photo's bulbs
+// (island: amber -- r6 read the roofline as "a hard white string")
+const LED_COLOR = new THREE.Color(ISLAND ? 0xffa458 : 0xffc58f);   // ~2700K amber-white, like the photo's bulbs
 const AMBER = new THREE.Color(0xffa040);
 const HALO_SIZE = 0.8;        // ft; the SPRITE -- the hot core is ~1/5 of it
 const BLEED_SIZE = 7.0;       // ft; the faint atmospheric bleed round every bulb
@@ -133,12 +135,16 @@ const PORCH_RANGE = 16;
 // yet, PLANT_TREES), with only a tinge reaching the porch's west column. From
 // the street it shows as the blue pool on the lawn and that tinge -- it must
 // NOT wash the facade, which reads purple the moment it does.
-const BLUE_SPOT = { pos: [-34, 1, 52], target: [-10, 6, 34], intensity: 4500,
-                    angle: 0.6, penumbra: 0.5, range: 80, color: 0x2040ff };
+// On the island it is a warm wall-washer instead: reference 1 is lit amber
+// against a cool dusk, and r2/r3's night critics read the blue as a stray
+// cyan blob. Colour and intensity only, so no program changes.
+// r6: off on the island -- even warm, its cone drew a hard wedge on the lawn
+const BLUE_SPOT = { pos: [-34, 1, 52], target: [-10, 6, 34], intensity: ISLAND ? 0 : 4500,
+                    angle: 0.6, penumbra: 0.5, range: 80, color: ISLAND ? 0xffa860 : 0x2040ff };
 // amber bed uplights: two in the walkway bed, one at the driveway's east edge
 const AMBER_POINTS = [[5.3, 0.3, 49.0], [8.6, 0.3, 48.8], [48.5, 0.3, 37.5]];
-const AMBER_INTENSITY = 2.5;
-const AMBER_RANGE = 5;
+const AMBER_INTENSITY = ISLAND ? 12 : 2.5;   // island: the bed uplights wash the facade
+const AMBER_RANGE = ISLAND ? 13 : 5;
 // a tight warm pool over the walk and the bottom porch step (the photo's walk
 // is lit to ~40% grey right at the steps and black ten feet out)
 // Sits over the rock strip so the cobbles and steppers beside the walk read
@@ -169,10 +175,11 @@ const DRIVE_SPOTS = [
   // the garage string's throw down the drive: the door apron is the sconces'
   // (roomlights), this carries z 40..60 and the cone/range end at the car's
   // rear, so nothing lights the car's rear face, plate or tyres
-  { pos: [33, 13, 30], target: [29, 0, 62], intensity: 950, angle: 0.9, penumbra: 1.0, range: 50, color: 0xfff2e4, shadow: true },
+  { pos: [33, 13, 30], target: [29, 0, 62], intensity: 950, angle: 0.9, penumbra: 1.0, range: 50, color: ISLAND ? 0xffd7a8 : 0xfff2e4, shadow: true },
   // the garage door face itself, from the eave (the photo has it as the
   // brightest surface on that wall; the sconces alone leave it at ~70)
-  { pos: [33, 12.6, 34], target: [34, 5, 29.8], intensity: 1500, angle: 0.85, penumbra: 0.6, range: 22, color: 0xffe6c8 },
+  // (island: half as strong and warmer -- r5 read the door as a blown white hotspot)
+  { pos: [33, 12.6, 34], target: [34, 5, 29.8], intensity: ISLAND ? 650 : 1500, angle: 0.85, penumbra: 0.6, range: 22, color: ISLAND ? 0xffc890 : 0xffe6c8 },
 ];
 
 // the lit upstairs window (glass at z 26.50 in a recess of the z 26.74 wall)

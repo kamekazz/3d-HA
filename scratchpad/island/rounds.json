@@ -1,0 +1,416 @@
+{
+ "goal": "Make the outside of the house read as a floating island diorama like the two reference renders, touching only the exterior. Each piece is judged blind against the reference by a fresh critic, and the loop runs until the critic picks ours.",
+ "status": "Paused after round 9. With two critics per piece and the sides balanced, the bar won every piece 2-0. Every earlier single-critic 'win' (lawn r2/r7, edge r3, planting r4, void r6) had ours in position B, and round 8 showed critics pick B 9 times in 12, so those wins were most likely position bias. Honest standing: the realtime island has not yet beaten either reference blind on any piece. The critics now agree on our gaps: low-poly spindly trees, a murky soil band with pasted-on stones, mowing bands that vanish at frame scale, a night that is too dark and cold, and trees hemming the house in.",
+ "rounds": [
+  {
+   "piece": "Island edge",
+   "round": 1,
+   "shot": "shots/r2_day.png",
+   "verdict": "bar",
+   "notes": "First island: rounded-rect outline with a slow wobble, ground clipped in the fragment shader, soil wall plus turf lip built on the rim, lake/street/neighbours hidden.",
+   "gap": "Earth band only a few pixels thick, flat brown, no strata/roots/stones, no turf lip; outline a soft blobby rounded rectangle; paving just stops at the rim.",
+   "metrics": {
+    "reveal s": 18.2,
+    "verts": "10.2 M (was 32.3 M)",
+    "programs": 275
+   }
+  },
+  {
+   "piece": "Void and float",
+   "round": 1,
+   "shot": "shots/r2_night.png",
+   "verdict": "bar",
+   "notes": "Sky dome replaced by a radial navy void on the House level; fog pushed past the lot.",
+   "gap": "Void too bright a blue and patchy behind foliage; no shadow or darkening beneath the island, so it reads as a tile on a blue surface."
+  },
+  {
+   "piece": "Planting",
+   "round": 1,
+   "shot": "shots/r2_day.png",
+   "verdict": "bar",
+   "notes": "Backdrop trees grown only where the trunk stands on the island.",
+   "gap": "Giant front-west tree out of scale and burying the house; noisy 'cabbage' leaf clumps; rear and side edges are bare grass. Wants a continuous hedge/tree line round the rear and sides."
+  },
+  {
+   "piece": "Lawn and ground",
+   "round": 1,
+   "shot": "shots/r2_day.png",
+   "verdict": "bar",
+   "notes": "Existing Sims lawn.",
+   "gap": "Flat neon green with no mowing stripes or value variation; driveway a hard-edged paver slab with no transition."
+  },
+  {
+   "piece": "Night lighting",
+   "round": 1,
+   "shot": "shots/r2_night.png",
+   "verdict": "bar",
+   "notes": "Existing night grade and eave lights.",
+   "gap": "Almost no ground-level landscape lighting; trees bury the island; blown garage floodlight; lights read cool white."
+  },
+  {
+   "piece": "Composition",
+   "round": 1,
+   "shot": "shots/r2_day.png",
+   "verdict": "bar",
+   "notes": "House shot reframed onto the island at 31 degrees.",
+   "gap": "Oversized trees bury the house; house too small in frame; plate reads as a lumpy blob; frame left-heavy."
+  },
+  {
+   "piece": "Island edge",
+   "round": 2,
+   "shot": "shots/keep_r2_day.png",
+   "verdict": "bar",
+   "notes": "11 ft crumbly slab with strata, roots and buried stones; turf lip that rolls over; tighter, rounder plate.",
+   "gap": "Still reads as a thin, clean band at frame scale; outline a smooth symmetric blob. Wants a thicker, darker, chunkier slab and bays and bulges in the outline.",
+   "metrics": {
+    "reveal s": 17.3,
+    "verts": "10.3 M",
+    "programs": 284
+   }
+  },
+  {
+   "piece": "Void and float",
+   "round": 2,
+   "shot": "shots/keep_r2_night.png",
+   "verdict": "bar",
+   "notes": "Darker radial navy; soft shadow under the plate.",
+   "gap": "At night the void is a flat murky indigo that merges with the soil underside and the dark trees. Wants a lighter glow behind the island and a faint rim light on the soil."
+  },
+  {
+   "piece": "Planting",
+   "round": 2,
+   "shot": "shots/keep_r2_day.png",
+   "verdict": "bar",
+   "notes": "Giant front tree removed; mixed trees and a clipped hedge round the back and sides of the rim.",
+   "gap": "Lopsided: a blobby back-left cluster dwarfs the house, and the front and side edges are bare. Continue the ring round the front, keep trees at house scale."
+  },
+  {
+   "piece": "Lawn and ground",
+   "round": 2,
+   "shot": "shots/keep_r2_day.png",
+   "verdict": "ours",
+   "notes": "Diagonal mowing bands, broad patchiness and less lime on every lawn surface.",
+   "gap": "Won. The critic still wants softer, less uniform banding and visible driveway joints."
+  },
+  {
+   "piece": "Night lighting",
+   "round": 2,
+   "shot": "shots/keep_r2_night.png",
+   "verdict": "bar",
+   "notes": "No change yet.",
+   "gap": "Harsh, cold LEDs and a blown garage flood; no warm path lights or pools; the lawn and edges sink into murk."
+  },
+  {
+   "piece": "Composition",
+   "round": 2,
+   "shot": "shots/keep_r2_day.png",
+   "verdict": "bar",
+   "notes": "Tighter plate.",
+   "gap": "Trees behind the house cover the roofline and back half; the island fills half the frame with dead space at the sides. Move in, centre the house, lower the back trees."
+  },
+  {
+   "piece": "Island edge",
+   "round": 3,
+   "shot": "shots/keep_r3_day.png",
+   "verdict": "ours",
+   "notes": "16 ft slab, chunkier lumps, ragged underside, bays and bulges in the outline.",
+   "gap": "Won. The critic would still like stronger strata banding and a plumper turf roll."
+  },
+  {
+   "piece": "Void and float",
+   "round": 3,
+   "shot": "shots/keep_r3_night.png",
+   "verdict": "bar",
+   "notes": "Faint cool rim on the slab; lighter centre.",
+   "gap": "Corners near-black (2,4,12) against the reference's (5,19,45); the soil underside melts into it; trees cropped by the frame."
+  },
+  {
+   "piece": "Planting",
+   "round": 3,
+   "shot": "shots/keep_r3_day.png",
+   "verdict": "bar",
+   "notes": "Ring round all four sides, smaller trees behind the house, shrubs along the front.",
+   "gap": "Sparse and scattered, mixed styles and lollipops; the back-left canopy is one oversized noisy blob (it turned out to be the lake's nine scanned oaks)."
+  },
+  {
+   "piece": "Night lighting",
+   "round": 3,
+   "shot": "shots/keep_r3_night.png",
+   "verdict": "bar",
+   "notes": "Warm path-light decals and bollards, lawn lift at night.",
+   "gap": "Cold blue house wash and a cyan spot; pools too faint; no warm facade uplighting."
+  },
+  {
+   "piece": "Composition",
+   "round": 3,
+   "shot": "shots/keep_r3_day.png",
+   "verdict": "bar",
+   "notes": "Camera swung to -38 degrees, 33 degrees up.",
+   "gap": "House turned away and pushed upper-left; a lumpy potato plate with dead void at right and bottom."
+  },
+  {
+   "piece": "Planting",
+   "round": 4,
+   "shot": "shots/keep_r4_day.png",
+   "verdict": "ours",
+   "notes": "Lake oaks culled by trunk position; conifers alternating with round crowns every ~10 ft round the rim; a continuous low hedge across the front.",
+   "gap": "Won. The critic would like fuller, overlapping crowns and a few larger anchor trees."
+  },
+  {
+   "piece": "Void and float",
+   "round": 4,
+   "shot": "shots/keep_r4_night.png",
+   "verdict": "bar",
+   "notes": "Void colours measured off reference 1 and matched through the tone curve.",
+   "gap": "Flat mid-navy with no vignette; the slab was also cropped off by the blind rig's auto-crop (fixed for r5)."
+  },
+  {
+   "piece": "Night lighting",
+   "round": 4,
+   "shot": "shots/keep_r4_night.png",
+   "verdict": "bar",
+   "notes": "Warm west uplight (was blue), stronger bed uplights, more pools.",
+   "gap": "The island reads as a dark mass; no facade uplight rhythm; pools too sparse."
+  },
+  {
+   "piece": "Composition",
+   "round": 4,
+   "shot": "shots/keep_r4_day.png",
+   "verdict": "bar",
+   "notes": "Wider, shallower plate; camera at -24 degrees, 36 degrees up.",
+   "gap": "Lumpy, lopsided outline with a pinched notch; the dense ring hides the plate edge; too top-down, the house reads as a roof."
+  },
+  {
+   "piece": "Void and float",
+   "round": 5,
+   "shot": "shots/keep_r5_night.png",
+   "verdict": "bar",
+   "notes": "Stronger vignette; shadow tucked under the slab.",
+   "gap": "Now 'a saturated mid-blue radial blob' with banding; no visible shadow beneath."
+  },
+  {
+   "piece": "Planting",
+   "round": 5,
+   "shot": "shots/keep_r5_day.png",
+   "verdict": "bar",
+   "notes": "Regression check after the camera moved.",
+   "gap": "Regressed: at the lower camera the ring reads as small dark blobs at the back corners and the sides and front look bare."
+  },
+  {
+   "piece": "Night lighting",
+   "round": 5,
+   "shot": "shots/keep_r5_night.png",
+   "verdict": "bar",
+   "notes": "Brighter dusk fill, facade washers, 12 ft pools.",
+   "gap": "Cold white garage and roofline hotspots; pools read as discs; a hard wedge from the west spot; no facade washes."
+  },
+  {
+   "piece": "Composition",
+   "round": 5,
+   "shot": "shots/keep_r5_day.png",
+   "verdict": "bar",
+   "notes": "Camera lowered to 27 degrees and swung to -17; front outline smoothed.",
+   "gap": "Island small in the frame; house half-buried behind the dark conifer ring; a lumpy plate."
+  },
+  {
+   "piece": "Island edge",
+   "round": 5,
+   "shot": "shots/keep_r5_day.png",
+   "verdict": "bar",
+   "notes": "Regression check.",
+   "gap": "Regressed: 'a mechanical rounded rectangle' and a uniform orange-brown wall with repeating bands; the lip stops abruptly."
+  },
+  {
+   "piece": "Void and float",
+   "round": 6,
+   "shot": "shots/keep_r6_night.png",
+   "verdict": "ours",
+   "notes": "Darker, gentler vignette, dithered; a shadow far enough below the slab to show.",
+   "gap": "Won. The critic would lift the gradient slightly behind the island and add a faint rim on the soil."
+  },
+  {
+   "piece": "Composition",
+   "round": 6,
+   "shot": "shots/keep_r6_day.png",
+   "verdict": "bar",
+   "notes": "Kidney outline with broad lobes; camera back up to 31 degrees.",
+   "gap": "Island too small in the frame with dead margins (partly the blind crop's 10-12% margin; matched to the reference's for r7); the tree wall crowds the house."
+  },
+  {
+   "piece": "Island edge",
+   "round": 6,
+   "shot": "shots/keep_r6_day.png",
+   "verdict": "bar",
+   "notes": "Darker, patch-varied soil; overhanging lip with an undercut.",
+   "gap": "The slab shows only along the front, and the front hedge hides the turf lip."
+  },
+  {
+   "piece": "Planting",
+   "round": 6,
+   "shot": "shots/keep_r6_day.png",
+   "verdict": "bar",
+   "notes": "Lighter ring conifers, corner trees back.",
+   "gap": "Thin, spindly 'lollipop' trees, too small against the two-storey house; wants taller, fuller, layered masses."
+  },
+  {
+   "piece": "Lawn and ground",
+   "round": 6,
+   "shot": "shots/keep_r6_day.png",
+   "verdict": "bar",
+   "notes": "Regression check.",
+   "gap": "Oversaturated lime with a mechanical diagonal stripe."
+  },
+  {
+   "piece": "Night lighting",
+   "round": 6,
+   "shot": "shots/keep_r6_night.png",
+   "verdict": "bar",
+   "notes": "West spot off, garage door spot halved and warmed, softer pools.",
+   "gap": "Cool-white roofline; bollards are dots that throw almost no light."
+  },
+  {
+   "piece": "Lawn and ground",
+   "round": 7,
+   "shot": "shots/keep_r7_day.png",
+   "verdict": "ours",
+   "notes": "Wandering, fading mowing bands; deeper, less lime green.",
+   "gap": "Won. Wants fine blade-scale grain and paving joints."
+  },
+  {
+   "piece": "Void and float",
+   "round": 7,
+   "shot": "shots/keep_r7_night.png",
+   "verdict": "bar",
+   "notes": "Unchanged since r6's win.",
+   "gap": "Critic noise: the same void that won r6 lost r7 ('flat washed-out navy, the underside merges')."
+  },
+  {
+   "piece": "Composition",
+   "round": 7,
+   "shot": "shots/keep_r7_day.png",
+   "verdict": "bar",
+   "notes": "Tighter fit box; blind crop margin matched to the reference.",
+   "gap": "The tree ring wraps the perimeter and hides the plate outline; the house is crowded; ~25% dead void (the crop mask was counting the day void as island; fixed for r8)."
+  },
+  {
+   "piece": "Island edge",
+   "round": 7,
+   "shot": "shots/keep_r7_day.png",
+   "verdict": "bar",
+   "notes": "Front hedge removed so the lip and slab show.",
+   "gap": "Blurry, low-contrast band; no crisp turf roll; stones read as noise."
+  },
+  {
+   "piece": "Planting",
+   "round": 7,
+   "shot": "shots/keep_r7_day.png",
+   "verdict": "bar",
+   "notes": "Larger, fuller trees; inner shrub layer.",
+   "gap": "Sparse single-file rows; trees spill off the plate edge; no hedge structure or specimen tree."
+  },
+  {
+   "piece": "Night lighting",
+   "round": 7,
+   "shot": "shots/keep_r7_night.png",
+   "verdict": "bar",
+   "notes": "2x pools at 15 ft; amber roofline.",
+   "gap": "Pools too few; lawn and edge dark."
+  },
+  {
+   "piece": "Island edge",
+   "round": 8,
+   "shot": "shots/keep_r8_day.png",
+   "verdict": "bar",
+   "notes": "Crisp dark turf roll with a shadow line; bigger stones; stronger rim. Two critics: 1-1 (a tie under the B bias).",
+   "gap": "Wants visible strata colour and a rimlit lower edge; the drive's kerb sits on the lip."
+  },
+  {
+   "piece": "Lawn and ground",
+   "round": 8,
+   "shot": "shots/keep_r8_day.png",
+   "verdict": "bar",
+   "notes": "Two critics: 1-1.",
+   "gap": "Wants blade-scale grain; driveway gravel reads noisy."
+  },
+  {
+   "piece": "Void and float",
+   "round": 8,
+   "shot": "shots/keep_r8_night.png",
+   "verdict": "bar",
+   "notes": "Faint reflected glow under the near rim. Two critics: 1-1.",
+   "gap": "Wants a clearer radial gradient and an underside rim light."
+  },
+  {
+   "piece": "Composition",
+   "round": 8,
+   "shot": "shots/keep_r8_day.png",
+   "verdict": "bar",
+   "notes": "Two critics: 0-2.",
+   "gap": "Both: the tree ring masks the outline and buries the house; plate reads as a rounded rectangle."
+  },
+  {
+   "piece": "Planting",
+   "round": 8,
+   "shot": "shots/keep_r8_day.png",
+   "verdict": "bar",
+   "notes": "Two critics: 0-2.",
+   "gap": "Both: a loose band of same-size blobs spilling off the edge, no clipped hedge, no specimen tree."
+  },
+  {
+   "piece": "Night lighting",
+   "round": 8,
+   "shot": "shots/keep_r8_night.png",
+   "verdict": "bar",
+   "notes": "Pools out across the lawns. Two critics: 0-2.",
+   "gap": "Both: identical discs on the grass unrelated to paths; no facade uplighting; rim dark."
+  },
+  {
+   "piece": "Planting",
+   "round": 9,
+   "shot": "shots/keep_r9_day.png",
+   "verdict": "bar",
+   "notes": "Clipped hedge band on the back and sides, two specimen oaks, trees set 12 ft in. 0-2.",
+   "gap": "Both: sparse, uneven, low-poly faceted blobs beside spindly trees; a noisy cluster crowds the house."
+  },
+  {
+   "piece": "Composition",
+   "round": 9,
+   "shot": "shots/keep_r9_day.png",
+   "verdict": "bar",
+   "notes": "0-2.",
+   "gap": "Both: camera high and tight; trees flank and hem in the house; a plain oval plate whose thick rocky underside competes with the subject."
+  },
+  {
+   "piece": "Island edge",
+   "round": 9,
+   "shot": "shots/keep_r9_day.png",
+   "verdict": "bar",
+   "notes": "Rim catch-light on the turf at night. 0-2.",
+   "gap": "Both: a uniform murky strip, stones look pasted on, the turf fades rather than rolls, a near-perfect ellipse, kerb slabs at the drive end."
+  },
+  {
+   "piece": "Lawn and ground",
+   "round": 9,
+   "shot": "shots/keep_r9_day.png",
+   "verdict": "bar",
+   "notes": "0-2.",
+   "gap": "Both: at frame scale the bands vanish; reads as one saturated green with a vignette."
+  },
+  {
+   "piece": "Void and float",
+   "round": 9,
+   "shot": "shots/keep_r9_night.png",
+   "verdict": "bar",
+   "notes": "0-2.",
+   "gap": "Flat navy without depth; the underside reads as a pasted rock chunk (and the crop clipped it again at night)."
+  },
+  {
+   "piece": "Night lighting",
+   "round": 9,
+   "shot": "shots/keep_r9_night.png",
+   "verdict": "bar",
+   "notes": "Pools only on paths; stronger bed uplights. 0-2.",
+   "gap": "Both: the lawn and trees are muddy and near-black; the facade reads cold white; the pools are hot spots."
+  }
+ ]
+}

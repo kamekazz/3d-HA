@@ -587,6 +587,36 @@ hidden tabs, so nothing eases while the tab is backgrounded). Weather hides in e
 modes; the dark ground and, in edit mode, the grid are what the house stands on wherever the yard is
 not shown (and are what the grade hides where it is).
 
+**The floating island** (2026-10-25, `frontend/js/island.js`; `?island=0` turns it off). The House
+level shows the lot as a diorama plate floating in a navy void, after the two renders in
+`scratchpad/island/ref`. It is laid on top of the finished yard build (`makeIsland`, just before the
+swap), so **no factory, key or saved edit changes**. The outline is one signed distance
+(`islandSdf`, a rounded box from `landmarks()` plus slow sines and broad gaussian lobes), written
+once in JS and once in GLSL. Off-plate pieces are hidden: `HIDE_NAMES` (lake, street, atmosphere),
+yard items whose *pivot* is off the plate (a tree's pivot is its trunk; the lake's nine scanned oaks
+go this way), and small things standing off it. Hidden means neither drawn nor compiled: ~32 M verts
+became ~3 M. Ground that crosses the rim is clipped in its fragment shader (`clipMaterial`) only
+below `CLIP_TOP`, so a canopy may overhang. Every lawn material also gets `LAWN_GLSL` (wandering
+mowing bands, less lime). Patched materials re-key as `prev key + '|island-vN'`, so bump the suffix
+when you change the injected GLSL.
+
+`buildIslandEdge` probes the ground height along the rim (a 2 ft vertex grid, not a raycast) and
+builds three things there: a ~16 ft soil slab (canvas strata texture, buried stones, a cool
+night rim term), a turf/concrete lip that rolls over it, and an under-shadow plus a faint reflected
+glow in the void. `addBackdrop` grows only trees whose trunk is on the plate, plus the rim planting:
+a clipped `buildHedge` band on the back and sides, trees ~12 ft in, two specimen oaks, and an open
+front. `buildLightPools` fakes path lights with additive decals, bollards and halos, plus facade
+wash scallops. A real point light per fixture would join every program key. The decals fade with
+`getNightFactor` through one `onNight` ticker.
+
+Outside island.js: `yardgrade.js` paints the void through the sky dome (`VOID`, radial about the view
+axis, dimmed by day) and pushes the fog to 2400 ft. On the island, `eavelights.js` switches off the
+blue west spot, warms the LEDs and the garage spot, and strengthens the bed uplights; all of these
+are uniforms only. `scene.js setHouseFrame` frames `islandBox()` at 31° / −17° in place of the
+house box. The blind-critic gauntlet lives in `scratchpad/island` (`shot.py`, `blind.py`,
+`rounds.json`). Judged fairly (two critics per piece, sides swapped), both references still beat it
+on every piece; critics favour image B, so a single-critic win means nothing.
+
 **The dollhouse cutaway** (`frontend/js/cutaway.js`): the walls between you and a room fade out, so
 every room reads like a Sims-4 build-mode shot — two far walls, no near walls, no ceiling. This used
 to be free: walls were zero-thickness `ShapeGeometry` fins wound with inward normals and drawn
