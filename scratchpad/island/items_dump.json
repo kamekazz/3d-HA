@@ -1,0 +1,1589 @@
+{
+ "file": "shots/r0_top.png",
+ "reveal_s": 17.3,
+ "pose": {
+  "pos": [
+   20,
+   500,
+   31
+  ],
+  "target": [
+   20,
+   0,
+   30
+  ],
+  "js": [
+   {
+    "key": "shrub:695:-442",
+    "kind": "shrub",
+    "label": "Bush",
+    "pivot": [
+     69.45344543457031,
+     -0.3210718333721161,
+     -44.21070861816406
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:771:-71",
+    "kind": "shrub",
+    "label": "Bush",
+    "pivot": [
+     77.0840072631836,
+     -0.3522096574306488,
+     -7.092069149017334
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:726:-156",
+    "kind": "shrub",
+    "label": "Bush",
+    "pivot": [
+     72.620849609375,
+     -0.3155045509338379,
+     -15.583034038543701
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:716:-298",
+    "kind": "shrub",
+    "label": "Bush",
+    "pivot": [
+     71.55620193481445,
+     -0.44609305262565613,
+     -29.760952949523926
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:486:870",
+    "kind": "shrub",
+    "label": "Bush",
+    "pivot": [
+     48.643638610839844,
+     -0.4591895639896393,
+     86.96432876586914
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:447:881",
+    "kind": "shrub",
+    "label": "Bush",
+    "pivot": [
+     44.71051788330078,
+     -0.29490652680397034,
+     88.053955078125
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:446:899",
+    "kind": "shrub",
+    "label": "Bush",
+    "pivot": [
+     44.62708854675293,
+     -0.3265019357204437,
+     89.89412689208984
+    ],
+    "deleted": false
+   },
+   {
+    "key": "lawn:203:-113",
+    "kind": "lawn",
+    "label": "Lawn",
+    "pivot": [
+     20.287879943847656,
+     0.1899999976158142,
+     -11.33349609375
+    ],
+    "deleted": false
+   },
+   {
+    "key": "paving:341:627",
+    "kind": "paving",
+    "label": "Concrete",
+    "pivot": [
+     34.07061576843262,
+     0.23999999463558197,
+     62.749600410461426
+    ],
+    "deleted": false
+   },
+   {
+    "key": "paving:162:558",
+    "kind": "paving",
+    "label": "Concrete pour",
+    "pivot": [
+     16.22061586380005,
+     0.23999999463558197,
+     55.80760192871094
+    ],
+    "deleted": false
+   },
+   {
+    "key": "paving:209:558",
+    "kind": "paving",
+    "label": "Control joint",
+    "pivot": [
+     20.920615196228027,
+     0.2540000081062317,
+     55.80760192871094
+    ],
+    "deleted": false
+   },
+   {
+    "key": "piece:154:444",
+    "kind": "piece",
+    "label": "Yard piece",
+    "pivot": [
+     15.37061595916748,
+     0.18999998271465302,
+     44.41960144042969
+    ],
+    "deleted": false
+   },
+   {
+    "key": "paving:170:497",
+    "kind": "paving",
+    "label": "Control joint",
+    "pivot": [
+     17.04788827896118,
+     0.2540000081062317,
+     49.67960166931152
+    ],
+    "deleted": false
+   },
+   {
+    "key": "paving:181:552",
+    "kind": "paving",
+    "label": "Control joint",
+    "pivot": [
+     18.089555263519287,
+     0.2540000081062317,
+     55.17960166931152
+    ],
+    "deleted": false
+   },
+   {
+    "key": "paving:191:607",
+    "kind": "paving",
+    "label": "Control joint",
+    "pivot": [
+     19.131221771240234,
+     0.2540000081062317,
+     60.67960166931152
+    ],
+    "deleted": false
+   },
+   {
+    "key": "paving:202:662",
+    "kind": "paving",
+    "label": "Control joint",
+    "pivot": [
+     20.17288875579834,
+     0.2540000081062317,
+     66.17959976196289
+    ],
+    "deleted": false
+   },
+   {
+    "key": "street:141:1035",
+    "kind": "street",
+    "label": "Street",
+    "pivot": [
+     14.070610046386719,
+     -1.7881393032936899e-09,
+     103.52460098266602
+    ],
+    "deleted": false
+   },
+   {
+    "key": "edge:4:414",
+    "kind": "edge",
+    "label": "Retaining slate",
+    "pivot": [
+     0.3878803253173828,
+     0.1899999976158142,
+     41.39960289001465
+    ],
+    "deleted": false
+   },
+   {
+    "key": "edge:-101:180",
+    "kind": "edge",
+    "label": "Retaining slate",
+    "pivot": [
+     -10.144855499267578,
+     0.1899999976158142,
+     18.01650071144104
+    ],
+    "deleted": false
+   },
+   {
+    "key": "bed:3:448",
+    "kind": "bed",
+    "label": "Mulch bed",
+    "pivot": [
+     0.33788013458251953,
+     0.1899999976158142,
+     44.84960174560547
+    ],
+    "deleted": false
+   },
+   {
+    "key": "paving:130:532",
+    "kind": "paving",
+    "label": "Stepping stones",
+    "pivot": [
+     13.03279733657837,
+     0.2549999952316284,
+     53.23723602294922
+    ],
+    "deleted": false
+   },
+   {
+    "key": "bed:130:533",
+    "kind": "bed",
+    "label": "Rock bed",
+    "pivot": [
+     13.015604496002197,
+     0.15793359279632568,
+     53.280941009521484
+    ],
+    "deleted": false
+   },
+   {
+    "key": "piece:116:538",
+    "kind": "piece",
+    "label": "Yard piece",
+    "pivot": [
+     11.612864971160889,
+     0.22499999403953552,
+     53.81228256225586
+    ],
+    "deleted": false
+   },
+   {
+    "key": "edge:116:539",
+    "kind": "edge",
+    "label": "Cobble run",
+    "pivot": [
+     11.637339115142822,
+     0.16501951217651367,
+     53.86608695983887
+    ],
+    "deleted": false
+   },
+   {
+    "key": "prop:115:573",
+    "kind": "prop",
+    "label": "Uplight",
+    "pivot": [
+     11.520615577697754,
+     0.23499999940395355,
+     57.29960060119629
+    ],
+    "deleted": false
+   },
+   {
+    "key": "edge:-13:448",
+    "kind": "edge",
+    "label": "Stone edge",
+    "pivot": [
+     -1.2916488647460938,
+     0.1899999976158142,
+     44.77723693847656
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:-92:438",
+    "kind": "plant",
+    "label": "Dried clump",
+    "pivot": [
+     -9.236093282699585,
+     0.6026116013526917,
+     43.79849815368652
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:-78:427",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     -7.782896518707275,
+     -0.013812105171382427,
+     42.67420196533203
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:-58:448",
+    "kind": "plant",
+    "label": "Dried clump",
+    "pivot": [
+     -5.785729169845581,
+     0.7326653599739075,
+     44.795040130615234
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:-45:434",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     -4.501419186592102,
+     -0.06015367805957794,
+     43.41531944274902
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:-24:434",
+    "kind": "plant",
+    "label": "Dried clump",
+    "pivot": [
+     -2.4117162823677063,
+     0.6292390823364258,
+     43.437255859375
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:10:445",
+    "kind": "plant",
+    "label": "Dried clump",
+    "pivot": [
+     1.0144724994897842,
+     0.7233604788780212,
+     44.48382377624512
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:22:439",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     2.1685946583747864,
+     -0.10357405990362167,
+     43.88344955444336
+    ],
+    "deleted": false
+   },
+   {
+    "key": "piece:0:473",
+    "kind": "piece",
+    "label": "Yard piece",
+    "pivot": [
+     -0.03944873809814453,
+     0.30807846784591675,
+     47.27874946594238
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:27:445",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     2.7486019134521484,
+     0.8464049100875854,
+     44.52526664733887
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:57:452",
+    "kind": "plant",
+    "label": "Mum",
+    "pivot": [
+     5.724912643432617,
+     0.6526806354522705,
+     45.179542541503906
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:77:444",
+    "kind": "plant",
+    "label": "Mum",
+    "pivot": [
+     7.720034599304199,
+     0.6105303764343262,
+     44.389150619506836
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:-58:454",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     -5.842325925827026,
+     0.610158383846283,
+     45.399526596069336
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:-8:434",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     -0.7506727278232574,
+     0.6473068594932556,
+     43.429561614990234
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:95:452",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     9.454934120178223,
+     0.6127774119377136,
+     45.20021057128906
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:106:436",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     10.62837028503418,
+     0.05189820006489754,
+     43.57229423522949
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:44:433",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     4.368114590644836,
+     -0.07223790884017944,
+     43.34985542297363
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:63:430",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     6.311723947525024,
+     -0.20698972046375275,
+     43.028066635131836
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:86:433",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     8.582620620727539,
+     -0.18480779230594635,
+     43.338552474975586
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:67:461",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     6.667192459106445,
+     -0.1381690800189972,
+     46.056175231933594
+    ],
+    "deleted": false
+   },
+   {
+    "key": "piece:116:476",
+    "kind": "piece",
+    "label": "Yard piece",
+    "pivot": [
+     11.567585468292236,
+     0.20999999344348907,
+     47.59960174560547
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:116:476",
+    "kind": "plant",
+    "label": "Mum",
+    "pivot": [
+     11.580220699310303,
+     0.7758018970489502,
+     47.5501708984375
+    ],
+    "deleted": false
+   },
+   {
+    "key": "bed:-5:542",
+    "kind": "bed",
+    "label": "Leaf litter",
+    "pivot": [
+     -0.4836921691894531,
+     -0.38999998569488525,
+     54.15777778625488
+    ],
+    "deleted": false
+   },
+   {
+    "key": "bed:527:546",
+    "kind": "bed",
+    "label": "Planting bed",
+    "pivot": [
+     52.74917411804199,
+     0.08963420987129211,
+     54.64569282531738
+    ],
+    "deleted": false
+   },
+   {
+    "key": "edge:579:548",
+    "kind": "edge",
+    "label": "Stone edge",
+    "pivot": [
+     57.92064094543457,
+     0.1899999976158142,
+     54.75114631652832
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:490:341",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     48.99924278259277,
+     0.4817560017108917,
+     34.1033821105957
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:506:376",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     50.58584785461426,
+     0.5406554937362671,
+     37.58834266662598
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:490:403",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     48.96098518371582,
+     0.4931311011314392,
+     40.32149696350098
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:531:360",
+    "kind": "plant",
+    "label": "Perennials",
+    "pivot": [
+     53.05566596984863,
+     0.08409860730171204,
+     36.04755210876465
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:558:389",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     55.76554298400879,
+     0.0905492901802063,
+     38.91822624206543
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:509:431",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     50.875083923339844,
+     0.06601833552122116,
+     43.126691818237305
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:555:473",
+    "kind": "plant",
+    "label": "Perennials",
+    "pivot": [
+     55.4599666595459,
+     0.09272994101047516,
+     47.26420783996582
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:539:513",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     53.86970901489258,
+     -0.03732612729072571,
+     51.333242416381836
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:535:558",
+    "kind": "plant",
+    "label": "Perennials",
+    "pivot": [
+     53.476444244384766,
+     0.07603728771209717,
+     55.77183532714844
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:527:602",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     52.68192100524902,
+     0.10072629153728485,
+     60.23666000366211
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:544:642",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     54.413265228271484,
+     0.047813817858695984,
+     64.17656707763672
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:540:677",
+    "kind": "plant",
+    "label": "Perennials",
+    "pivot": [
+     53.965097427368164,
+     0.07381821423768997,
+     67.67944717407227
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:523:713",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     52.29638481140137,
+     0.09284041076898575,
+     71.28559112548828
+    ],
+    "deleted": false
+   },
+   {
+    "key": "prop:486:388",
+    "kind": "prop",
+    "label": "Path light",
+    "pivot": [
+     48.620615005493164,
+     0.23000000417232513,
+     38.79960060119629
+    ],
+    "deleted": false
+   },
+   {
+    "key": "prop:492:488",
+    "kind": "prop",
+    "label": "Path light",
+    "pivot": [
+     49.22061729431152,
+     0.23000000417232513,
+     48.79960060119629
+    ],
+    "deleted": false
+   },
+   {
+    "key": "prop:490:567",
+    "kind": "prop",
+    "label": "Path light",
+    "pivot": [
+     49.02061653137207,
+     0.23000000417232513,
+     56.699602127075195
+    ],
+    "deleted": false
+   },
+   {
+    "key": "prop:119:480",
+    "kind": "prop",
+    "label": "Path light",
+    "pivot": [
+     11.919100761413574,
+     0.23499999940395355,
+     47.99960136413574
+    ],
+    "deleted": false
+   },
+   {
+    "key": "bed:541:801",
+    "kind": "bed",
+    "label": "Planting bed",
+    "pivot": [
+     54.1220760345459,
+     1.2581769624375738e-05,
+     80.07475662231445
+    ],
+    "deleted": false
+   },
+   {
+    "key": "edge:595:800",
+    "kind": "edge",
+    "label": "Stone edge",
+    "pivot": [
+     59.48599815368652,
+     0.1899999976158142,
+     79.9672966003418
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:544:835",
+    "kind": "plant",
+    "label": "Ground cover",
+    "pivot": [
+     54.444623947143555,
+     0.048763878643512726,
+     83.48417282104492
+    ],
+    "deleted": false
+   },
+   {
+    "key": "piece:522:835",
+    "kind": "piece",
+    "label": "Yard piece",
+    "pivot": [
+     52.22061538696289,
+     0.19000010192394257,
+     83.49959945678711
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:545:780",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     54.51723861694336,
+     -0.3723718523979187,
+     78.02388763427734
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:527:796",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     52.739858627319336,
+     0.003916096407920122,
+     79.6446418762207
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:566:785",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     56.58907699584961,
+     -0.08023232221603394,
+     78.53820419311523
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:567:789",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     56.67215156555176,
+     -0.3718680441379547,
+     78.93536376953125
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:519:804",
+    "kind": "plant",
+    "label": "Grass clump",
+    "pivot": [
+     51.92801856994629,
+     -0.1617889702320099,
+     80.42729568481445
+    ],
+    "deleted": false
+   },
+   {
+    "key": "prop:481:307",
+    "kind": "prop",
+    "label": "Wheelie bin",
+    "pivot": [
+     48.1206169128418,
+     0.017130231484770775,
+     30.712100982666016
+    ],
+    "deleted": false
+   },
+   {
+    "key": "piece:341:316",
+    "kind": "piece",
+    "label": "Yard piece",
+    "pivot": [
+     34.12061595916748,
+     0.1899999976158142,
+     31.649601936340332
+    ],
+    "deleted": false
+   },
+   {
+    "key": "plant:219:319",
+    "kind": "plant",
+    "label": "Mum",
+    "pivot": [
+     21.893264770507812,
+     1.4505831003189087,
+     31.913987159729004
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:-230:280",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     -22.962777853012085,
+     -0.03613525629043579,
+     28.00581645965576
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:-154:358",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     -15.415536403656006,
+     -0.007861392572522163,
+     35.79414653778076
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:-199:455",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     -19.899491786956787,
+     -0.011903506703674793,
+     45.47405815124512
+    ],
+    "deleted": true
+   },
+   {
+    "key": "shrub:-199:384",
+    "kind": "shrub",
+    "label": "Undergrowth",
+    "pivot": [
+     -19.90240716934204,
+     -0.7049370408058167,
+     38.4081916809082
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:503:332",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     50.312461853027344,
+     -0.005404840689152479,
+     33.20184803009033
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:619:406",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     61.9149284362793,
+     -0.020716171711683273,
+     40.63534927368164
+    ],
+    "deleted": true
+   },
+   {
+    "key": "shrub:-171:437",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     -17.147371292114258,
+     0.6056126356124878,
+     43.710819244384766
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:-140:456",
+    "kind": "shrub",
+    "label": "Shrub",
+    "pivot": [
+     -14.046643733978271,
+     0.5140755772590637,
+     45.61672592163086
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:-348:-246",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     -34.82200241088867,
+     -0.02983325719833374,
+     -24.551565647125244
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:-227:-200",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     -22.715590000152588,
+     -0.008894793689250946,
+     -19.993258953094482
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:-102:-386",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     -10.23781156539917,
+     -0.03089006617665291,
+     -38.63096618652344
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:-33:-388",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     -3.3067500591278076,
+     -0.017259906977415085,
+     -38.804893493652344
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:128:-403",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     12.788369059562683,
+     -0.019655069336295128,
+     -40.28778648376465
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:248:-345",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     24.845930099487305,
+     -0.025331558659672737,
+     -34.45153999328613
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:340:-235",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     33.96888828277588,
+     -0.03498505428433418,
+     -23.49340534210205
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:360:-194",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     36.01407241821289,
+     -0.031357541680336,
+     -19.439797788858414
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:600:-214",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     59.96462440490723,
+     -0.025115350261330605,
+     -21.4326331615448
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:667:-171",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     66.74221992492676,
+     -0.019947292283177376,
+     -17.12773609161377
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:677:389",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     67.68157768249512,
+     -0.038225024938583374,
+     38.896087646484375
+    ],
+    "deleted": true
+   },
+   {
+    "key": "tree:683:213",
+    "kind": "tree",
+    "label": "Bare tree",
+    "pivot": [
+     68.30766105651855,
+     -0.008769926615059376,
+     21.332033157348633
+    ],
+    "deleted": true
+   },
+   {
+    "key": "shrub:-178:576",
+    "kind": "shrub",
+    "label": "Hedge",
+    "pivot": [
+     -17.78917121887207,
+     -0.34863054752349854,
+     57.64111518859863
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:532:262",
+    "kind": "shrub",
+    "label": "Hedge",
+    "pivot": [
+     53.163352966308594,
+     -0.4013423025608063,
+     26.19725513458252
+    ],
+    "deleted": true
+   },
+   {
+    "key": "bed:-53:-316",
+    "kind": "bed",
+    "label": "Planting bed",
+    "pivot": [
+     -5.298295021057129,
+     0.018895717337727547,
+     -31.619452476501465
+    ],
+    "deleted": true
+   },
+   {
+    "key": "bed:438:-375",
+    "kind": "bed",
+    "label": "Planting bed",
+    "pivot": [
+     43.80817794799805,
+     0.019384732469916344,
+     -37.45594501495361
+    ],
+    "deleted": false
+   },
+   {
+    "key": "paving:417:-378",
+    "kind": "paving",
+    "label": "Flagstones",
+    "pivot": [
+     41.738365173339844,
+     0.25,
+     -37.83903884887695
+    ],
+    "deleted": false
+   },
+   {
+    "key": "bed:354:-302",
+    "kind": "bed",
+    "label": "Rock bed",
+    "pivot": [
+     35.3551387787,
+     0.1835728735,
+     -30.1528596878
+    ],
+    "deleted": false
+   },
+   {
+    "key": "edge:353:-301",
+    "kind": "edge",
+    "label": "Cobble run",
+    "pivot": [
+     35.3296627998,
+     0.188433826,
+     -30.1425476074
+    ],
+    "deleted": false
+   },
+   {
+    "key": "bed:-20:-361",
+    "kind": "bed",
+    "label": "Rock bed",
+    "pivot": [
+     -1.9727630615,
+     0.1842523515,
+     -36.0511617661
+    ],
+    "deleted": false
+   },
+   {
+    "key": "edge:-20:-361",
+    "kind": "edge",
+    "label": "Cobble run",
+    "pivot": [
+     -2.0201001167,
+     0.1884332448,
+     -36.0553941727
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:475:-412",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     47.4973239899,
+     0.1344256699,
+     -41.2042770386
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:-21:-385",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     -2.0937818289,
+     0.1358322799,
+     -38.4869632721
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:461:-302",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     46.1022090912,
+     0.1651925743,
+     -30.2025556564
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:475:-232",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     47.513999939,
+     0.1673579514,
+     -23.1960716248
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:510:-160",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     51.0037460327,
+     0.1411488354,
+     -15.9901437759
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:190:-454",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     19.0027084351,
+     0.1222221926,
+     -45.3964042664
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:220:-452",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     21.9888420105,
+     0.1311081797,
+     -45.213760376
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:250:-449",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     24.9989175797,
+     0.1228073686,
+     -44.909954071
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:280:-435",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     28.0164308548,
+     0.1339447647,
+     -43.4938659668
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:-47:-460",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     -4.6885583401,
+     0.1226787269,
+     -45.9995193481
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shrub:30:-458",
+    "kind": "shrub",
+    "label": "Clipped evergreen",
+    "pivot": [
+     3.0034079552,
+     0.1160103306,
+     -45.8008804321
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:-205:-295",
+    "kind": "tree",
+    "label": "Rear layered evergreen",
+    "pivot": [
+     -20.5,
+     0.19,
+     -29.5
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shore:203:-926",
+    "kind": "shore",
+    "label": "Rear curved gravel shore",
+    "pivot": [
+     20.287879943847656,
+     0.20200000703334808,
+     -92.59545135498047
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:-281:-926",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     -28.117618560791016,
+     0.6063904166221619,
+     -92.55056381225586
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:-165:-908",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     -16.470466375350952,
+     0.5850999355316162,
+     -90.79825210571289
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:-76:-987",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     -7.611598014831543,
+     0.6067643761634827,
+     -98.65209197998047
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:12:-956",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     1.168381690979004,
+     0.6015253663063049,
+     -95.57381439208984
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:88:-937",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     8.806659936904907,
+     0.6062871217727661,
+     -93.73613739013672
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:139:-962",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     13.858349561691284,
+     0.6075313687324524,
+     -96.21585083007812
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:200:-914",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     20.048478364944458,
+     0.6083599925041199,
+     -91.35988235473633
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:221:-912",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     22.090208530426025,
+     0.6093277931213379,
+     -91.2473030090332
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:293:-924",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     29.252517700195312,
+     0.6072371602058411,
+     -92.38594055175781
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:367:-915",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     36.730207443237305,
+     0.6034967303276062,
+     -91.51291275024414
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:421:-962",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     42.09299659729004,
+     0.6068471074104309,
+     -96.19887924194336
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:499:-931",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     49.8985538482666,
+     0.5973221659660339,
+     -93.12164688110352
+    ],
+    "deleted": false
+   },
+   {
+    "key": "tree:653:-963",
+    "kind": "tree",
+    "label": "Rear mature broadleaf",
+    "pivot": [
+     65.29949378967285,
+     0.6003846526145935,
+     -96.26172256469727
+    ],
+    "deleted": false
+   },
+   {
+    "key": "prop:133:-890",
+    "kind": "prop",
+    "label": "Rear shore path-light housing",
+    "pivot": [
+     13.287880420684814,
+     0.9100000262260437,
+     -89.02796936035156
+    ],
+    "deleted": false
+   },
+   {
+    "key": "prop:333:-866",
+    "kind": "prop",
+    "label": "Rear shore path-light housing",
+    "pivot": [
+     33.287879943847656,
+     0.9100000262260437,
+     -86.59552001953125
+    ],
+    "deleted": false
+   },
+   {
+    "key": "prop:128:-930",
+    "kind": "prop",
+    "label": "Rear hanging bird feeder",
+    "pivot": [
+     12.804259777069092,
+     0.9099994897842407,
+     -92.96144485473633
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shore:217:-906",
+    "kind": "shore",
+    "label": "Rear gravel fallen leaves",
+    "pivot": [
+     21.741575241088867,
+     0.9179999828338623,
+     -90.61069869995117
+    ],
+    "deleted": false
+   },
+   {
+    "key": "shore:182:-4014",
+    "kind": "shore",
+    "label": "Rear far bank and woodland",
+    "pivot": [
+     18.171615600585938,
+     -0.8182796835899353,
+     -401.4264373779297
+    ],
+    "deleted": false
+   },
+   {
+    "key": "building:130:-249",
+    "kind": "building",
+    "label": "Rear porch detail",
+    "pivot": [
+     12.964615821838379,
+     2.296599864959717,
+     -24.888100624084473
+    ],
+    "deleted": false
+   },
+   {
+    "key": "model:60",
+    "kind": "model",
+    "label": "Living TV",
+    "pivot": [
+     0,
+     0,
+     0
+    ],
+    "deleted": false
+   }
+  ]
+ },
+ "verts": 32331273,
+ "programs": 272,
+ "calls": 505,
+ "boot_tail": [
+  {
+   "stage": "Planting the yard\u2026",
+   "startMs": 1077,
+   "ms": 5623
+  },
+  {
+   "stage": "Preparing the view\u2026",
+   "startMs": 6700,
+   "ms": 8696
+  },
+  {
+   "stage": "Rendering room previews\u2026",
+   "startMs": 15396,
+   "ms": 955
+  }
+ ]
+}

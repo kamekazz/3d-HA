@@ -1,0 +1,3251 @@
+{
+ "file": "shots/tmp.png",
+ "reveal_s": 17.8,
+ "pose": {
+  "pos": [
+   -68.8,
+   77,
+   129.4
+  ],
+  "target": [
+   18.3,
+   -14.8,
+   18
+  ],
+  "js": [
+   {
+    "name": "grass-disc",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 1345,
+    "meshes": 1,
+    "box": [
+     -1200,
+     -0.0,
+     -1200,
+     1200,
+     -0.0,
+     1200
+    ],
+    "mats": [
+     "MeshStandardMaterial::282f"
+    ]
+   },
+   {
+    "name": "rear-shore-fine-gravel",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 1080,
+    "meshes": 1,
+    "box": [
+     -37,
+     1,
+     -97,
+     78,
+     1,
+     -85
+    ],
+    "mats": [
+     "MeshStandardMaterial::a3f5"
+    ]
+   },
+   {
+    "name": "rear-lake-surface",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": false,
+    "verts": 1200,
+    "meshes": 1,
+    "box": [
+     -225,
+     0,
+     -371,
+     265,
+     0,
+     -92
+    ],
+    "mats": [
+     "MeshStandardMaterial::7e94"
+    ]
+   },
+   {
+    "name": "rear-mown-turf",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 126990,
+    "meshes": 1,
+    "box": [
+     -35,
+     0,
+     -92,
+     76,
+     1,
+     -11
+    ],
+    "mats": [
+     "MeshStandardMaterial::a488"
+    ]
+   },
+   {
+    "name": "rear-fallen-leaves",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 5760,
+    "meshes": 1,
+    "box": [
+     -35,
+     0,
+     -91,
+     76,
+     1,
+     -77
+    ],
+    "mats": [
+     "MeshStandardMaterial::0a67"
+    ]
+   },
+   {
+    "name": "rear-siding-detail",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 46287,
+    "meshes": 4,
+    "box": [
+     -8,
+     2,
+     -26,
+     48,
+     41,
+     9
+    ],
+    "mats": [
+     "MeshStandardMaterial::a379",
+     "MeshStandardMaterial::3cca",
+     "MeshStandardMaterial::f085",
+     "MeshStandardMaterial::662d"
+    ]
+   },
+   {
+    "name": "lawn-edge-fringe",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 229044,
+    "meshes": 1,
+    "box": [
+     -225,
+     0,
+     -382,
+     265,
+     3,
+     97
+    ],
+    "mats": [
+     "MeshStandardMaterial::0e5c"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:695:-442",
+    "vis": true,
+    "verts": 615,
+    "meshes": 2,
+    "box": [
+     67,
+     -0.0,
+     -46,
+     72,
+     3,
+     -42
+    ],
+    "mats": [
+     "MeshStandardMaterial::1e97",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:771:-71",
+    "vis": true,
+    "verts": 633,
+    "meshes": 2,
+    "box": [
+     75,
+     -1,
+     -9,
+     79,
+     4,
+     -5
+    ],
+    "mats": [
+     "MeshStandardMaterial::1e97",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:726:-156",
+    "vis": true,
+    "verts": 609,
+    "meshes": 2,
+    "box": [
+     70,
+     -0.0,
+     -18,
+     75,
+     3,
+     -14
+    ],
+    "mats": [
+     "MeshStandardMaterial::1e97",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:716:-298",
+    "vis": true,
+    "verts": 951,
+    "meshes": 2,
+    "box": [
+     69,
+     -1,
+     -33,
+     74,
+     4,
+     -27
+    ],
+    "mats": [
+     "MeshStandardMaterial::1e97",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:486:870",
+    "vis": false,
+    "verts": 972,
+    "meshes": 1,
+    "box": [
+     46,
+     -1,
+     84,
+     52,
+     5,
+     90
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:447:881",
+    "vis": false,
+    "verts": 576,
+    "meshes": 1,
+    "box": [
+     43,
+     -1,
+     86,
+     46,
+     3,
+     90
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:446:899",
+    "vis": false,
+    "verts": 588,
+    "meshes": 1,
+    "box": [
+     43,
+     -1,
+     88,
+     47,
+     3,
+     92
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "lawn",
+    "key": "lawn:203:-113",
+    "vis": true,
+    "verts": 92112,
+    "meshes": 1,
+    "box": [
+     -51,
+     0,
+     -119,
+     92,
+     2,
+     97
+    ],
+    "mats": [
+     "MeshStandardMaterial::0e5c"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "paving",
+    "key": "paving:341:627",
+    "vis": true,
+    "verts": 1998,
+    "meshes": 1,
+    "box": [
+     21,
+     0,
+     30,
+     47,
+     0,
+     96
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "paving",
+    "key": "paving:162:558",
+    "vis": true,
+    "verts": 6,
+    "meshes": 1,
+    "box": [
+     12,
+     0,
+     42,
+     21,
+     0,
+     70
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "paving",
+    "key": "paving:209:558",
+    "vis": true,
+    "verts": 18,
+    "meshes": 1,
+    "box": [
+     21,
+     0,
+     42,
+     21,
+     0,
+     70
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "piece",
+    "key": "piece:154:444",
+    "vis": true,
+    "verts": 96,
+    "meshes": 1,
+    "box": [
+     11,
+     0,
+     42,
+     20,
+     2,
+     47
+    ],
+    "mats": [
+     "MeshStandardMaterial::6f16"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "paving",
+    "key": "paving:170:497",
+    "vis": true,
+    "verts": 18,
+    "meshes": 1,
+    "box": [
+     13,
+     0,
+     50,
+     21,
+     0,
+     50
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "paving",
+    "key": "paving:181:552",
+    "vis": true,
+    "verts": 18,
+    "meshes": 1,
+    "box": [
+     15,
+     0,
+     55,
+     21,
+     0,
+     55
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "paving",
+    "key": "paving:191:607",
+    "vis": true,
+    "verts": 18,
+    "meshes": 1,
+    "box": [
+     18,
+     0,
+     61,
+     21,
+     0,
+     61
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "paving",
+    "key": "paving:202:662",
+    "vis": true,
+    "verts": 18,
+    "meshes": 1,
+    "box": [
+     20,
+     0,
+     66,
+     21,
+     0,
+     66
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "street",
+    "key": "street:141:1035",
+    "vis": false,
+    "verts": 2820,
+    "meshes": 2,
+    "box": [
+     -169,
+     -0.0,
+     84,
+     197,
+     4,
+     123
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "edge",
+    "key": "edge:4:414",
+    "vis": true,
+    "verts": 1944,
+    "meshes": 1,
+    "box": [
+     -10,
+     0,
+     41,
+     11,
+     2,
+     42
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "edge",
+    "key": "edge:-101:180",
+    "vis": true,
+    "verts": 4176,
+    "meshes": 1,
+    "box": [
+     -10,
+     0,
+     -5,
+     -10,
+     2,
+     41
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "bed",
+    "key": "bed:3:448",
+    "vis": true,
+    "verts": 81546,
+    "meshes": 2,
+    "box": [
+     -11,
+     -0.0,
+     42,
+     11,
+     6,
+     48
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "paving",
+    "key": "paving:130:532",
+    "vis": true,
+    "verts": 216,
+    "meshes": 1,
+    "box": [
+     12,
+     0,
+     51,
+     14,
+     0,
+     56
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "bed",
+    "key": "bed:130:533",
+    "vis": true,
+    "verts": 16998,
+    "meshes": 2,
+    "box": [
+     9,
+     -0.0,
+     48,
+     16,
+     1,
+     59
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "piece",
+    "key": "piece:116:538",
+    "vis": true,
+    "verts": 36,
+    "meshes": 1,
+    "box": [
+     10,
+     0,
+     49,
+     14,
+     0,
+     59
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "edge",
+    "key": "edge:116:539",
+    "vis": true,
+    "verts": 7200,
+    "meshes": 1,
+    "box": [
+     10,
+     0,
+     49,
+     14,
+     0,
+     59
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "prop",
+    "key": "prop:115:573",
+    "vis": true,
+    "verts": 72,
+    "meshes": 1,
+    "box": [
+     11,
+     0,
+     57,
+     12,
+     1,
+     57
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "edge",
+    "key": "edge:-13:448",
+    "vis": true,
+    "verts": 1584,
+    "meshes": 1,
+    "box": [
+     -11,
+     0,
+     41,
+     8,
+     1,
+     48
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:-92:438",
+    "vis": true,
+    "verts": 1548,
+    "meshes": 1,
+    "box": [
+     -11,
+     -0.0,
+     42,
+     -7,
+     3,
+     45
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:-78:427",
+    "vis": true,
+    "verts": 1056,
+    "meshes": 1,
+    "box": [
+     -9,
+     0,
+     42,
+     -7,
+     3,
+     44
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:-58:448",
+    "vis": true,
+    "verts": 1638,
+    "meshes": 1,
+    "box": [
+     -8,
+     -0.0,
+     43,
+     -4,
+     3,
+     46
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:-45:434",
+    "vis": true,
+    "verts": 1056,
+    "meshes": 1,
+    "box": [
+     -6,
+     0,
+     42,
+     -4,
+     4,
+     44
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:-24:434",
+    "vis": true,
+    "verts": 1344,
+    "meshes": 1,
+    "box": [
+     -4,
+     -0.0,
+     42,
+     -1,
+     2,
+     45
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:10:445",
+    "vis": true,
+    "verts": 1554,
+    "meshes": 1,
+    "box": [
+     -1,
+     -0.0,
+     43,
+     3,
+     3,
+     46
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:22:439",
+    "vis": true,
+    "verts": 1056,
+    "meshes": 1,
+    "box": [
+     1,
+     0,
+     43,
+     3,
+     4,
+     45
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "piece",
+    "key": "piece:0:473",
+    "vis": true,
+    "verts": 1020,
+    "meshes": 1,
+    "box": [
+     -10,
+     0,
+     47,
+     10,
+     1,
+     48
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:27:445",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     1,
+     0,
+     43,
+     4,
+     3,
+     46
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:57:452",
+    "vis": true,
+    "verts": 378,
+    "meshes": 1,
+    "box": [
+     4,
+     -0.0,
+     44,
+     7,
+     2,
+     47
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:77:444",
+    "vis": true,
+    "verts": 348,
+    "meshes": 1,
+    "box": [
+     6,
+     -0.0,
+     43,
+     9,
+     2,
+     46
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:-58:454",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     -7,
+     -0.0,
+     44,
+     -4,
+     3,
+     47
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:-8:434",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     -2,
+     -0.0,
+     42,
+     1,
+     3,
+     45
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:95:452",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     8,
+     -0.0,
+     44,
+     11,
+     3,
+     47
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:106:436",
+    "vis": true,
+    "verts": 1056,
+    "meshes": 1,
+    "box": [
+     10,
+     0,
+     43,
+     12,
+     4,
+     45
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:44:433",
+    "vis": true,
+    "verts": 1056,
+    "meshes": 1,
+    "box": [
+     3,
+     0,
+     42,
+     5,
+     3,
+     44
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:63:430",
+    "vis": true,
+    "verts": 1056,
+    "meshes": 1,
+    "box": [
+     5,
+     0,
+     42,
+     8,
+     4,
+     45
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:86:433",
+    "vis": true,
+    "verts": 1056,
+    "meshes": 1,
+    "box": [
+     7,
+     0,
+     42,
+     9,
+     4,
+     45
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:67:461",
+    "vis": true,
+    "verts": 1056,
+    "meshes": 1,
+    "box": [
+     5,
+     0,
+     45,
+     8,
+     4,
+     47
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "piece",
+    "key": "piece:116:476",
+    "vis": true,
+    "verts": 120,
+    "meshes": 1,
+    "box": [
+     11,
+     0,
+     47,
+     12,
+     1,
+     48
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:116:476",
+    "vis": true,
+    "verts": 294,
+    "meshes": 1,
+    "box": [
+     11,
+     0,
+     47,
+     12,
+     1,
+     48
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "bed",
+    "key": "bed:-5:542",
+    "vis": true,
+    "verts": 576,
+    "meshes": 1,
+    "box": [
+     -12,
+     -0.0,
+     49,
+     11,
+     -0.0,
+     60
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "bed",
+    "key": "bed:527:546",
+    "vis": true,
+    "verts": 350508,
+    "meshes": 2,
+    "box": [
+     47,
+     -0.0,
+     33,
+     58,
+     6,
+     77
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "edge",
+    "key": "edge:579:548",
+    "vis": true,
+    "verts": 2736,
+    "meshes": 1,
+    "box": [
+     57,
+     0,
+     33,
+     58,
+     1,
+     77
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:490:341",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     48,
+     -0.0,
+     33,
+     51,
+     3,
+     36
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:506:376",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     49,
+     -0.0,
+     36,
+     52,
+     3,
+     39
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:490:403",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     47,
+     -0.0,
+     39,
+     50,
+     3,
+     42
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:531:360",
+    "vis": true,
+    "verts": 1188,
+    "meshes": 1,
+    "box": [
+     51,
+     -0.0,
+     35,
+     55,
+     2,
+     38
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:558:389",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     54,
+     -0.0,
+     38,
+     57,
+     2,
+     40
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:509:431",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     49,
+     -0.0,
+     42,
+     53,
+     3,
+     45
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:555:473",
+    "vis": true,
+    "verts": 1710,
+    "meshes": 1,
+    "box": [
+     54,
+     -0.0,
+     46,
+     57,
+     2,
+     49
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:539:513",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     52,
+     -0.0,
+     50,
+     55,
+     3,
+     53
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:535:558",
+    "vis": true,
+    "verts": 1446,
+    "meshes": 1,
+    "box": [
+     52,
+     -0.0,
+     54,
+     55,
+     2,
+     57
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:527:602",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     51,
+     -0.0,
+     59,
+     54,
+     2,
+     62
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:544:642",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     53,
+     -0.0,
+     63,
+     56,
+     3,
+     66
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:540:677",
+    "vis": true,
+    "verts": 1434,
+    "meshes": 1,
+    "box": [
+     53,
+     -0.0,
+     66,
+     55,
+     2,
+     69
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:523:713",
+    "vis": true,
+    "verts": 510,
+    "meshes": 1,
+    "box": [
+     51,
+     -0.0,
+     70,
+     54,
+     3,
+     73
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "prop",
+    "key": "prop:486:388",
+    "vis": true,
+    "verts": 168,
+    "meshes": 1,
+    "box": [
+     48,
+     0,
+     38,
+     49,
+     2,
+     39
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "prop",
+    "key": "prop:492:488",
+    "vis": true,
+    "verts": 168,
+    "meshes": 1,
+    "box": [
+     49,
+     0,
+     48,
+     50,
+     2,
+     49
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "prop",
+    "key": "prop:490:567",
+    "vis": true,
+    "verts": 168,
+    "meshes": 1,
+    "box": [
+     49,
+     0,
+     56,
+     49,
+     2,
+     57
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "prop",
+    "key": "prop:119:480",
+    "vis": true,
+    "verts": 168,
+    "meshes": 1,
+    "box": [
+     11,
+     0,
+     48,
+     12,
+     2,
+     48
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "bed",
+    "key": "bed:541:801",
+    "vis": true,
+    "verts": 71301,
+    "meshes": 2,
+    "box": [
+     48,
+     -0.0,
+     76,
+     60,
+     3,
+     84
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "edge",
+    "key": "edge:595:800",
+    "vis": false,
+    "verts": 360,
+    "meshes": 1,
+    "box": [
+     59,
+     0,
+     77,
+     60,
+     1,
+     83
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:544:835",
+    "vis": false,
+    "verts": 3438,
+    "meshes": 1,
+    "box": [
+     50,
+     -0.0,
+     79,
+     60,
+     2,
+     87
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "piece",
+    "key": "piece:522:835",
+    "vis": false,
+    "verts": 180,
+    "meshes": 1,
+    "box": [
+     52,
+     0,
+     83,
+     53,
+     8,
+     84
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:545:780",
+    "vis": true,
+    "verts": 324,
+    "meshes": 1,
+    "box": [
+     54,
+     0,
+     77,
+     55,
+     3,
+     79
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:527:796",
+    "vis": true,
+    "verts": 324,
+    "meshes": 1,
+    "box": [
+     52,
+     0,
+     79,
+     54,
+     3,
+     81
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:566:785",
+    "vis": true,
+    "verts": 324,
+    "meshes": 1,
+    "box": [
+     55,
+     0,
+     78,
+     58,
+     3,
+     79
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:567:789",
+    "vis": true,
+    "verts": 324,
+    "meshes": 1,
+    "box": [
+     56,
+     0,
+     78,
+     57,
+     3,
+     80
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:519:804",
+    "vis": true,
+    "verts": 324,
+    "meshes": 1,
+    "box": [
+     51,
+     0,
+     79,
+     53,
+     4,
+     81
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "prop",
+    "key": "prop:481:307",
+    "vis": true,
+    "verts": 312,
+    "meshes": 1,
+    "box": [
+     48,
+     0,
+     23,
+     50,
+     3,
+     25
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "piece",
+    "key": "piece:341:316",
+    "vis": true,
+    "verts": 240,
+    "meshes": 1,
+    "box": [
+     21,
+     0,
+     30,
+     47,
+     1,
+     33
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "plant",
+    "key": "plant:219:319",
+    "vis": true,
+    "verts": 312,
+    "meshes": 1,
+    "box": [
+     21,
+     1,
+     31,
+     23,
+     3,
+     33
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-230:280",
+    "vis": false,
+    "verts": 5460,
+    "meshes": 1,
+    "box": [
+     -39,
+     -0.0,
+     20,
+     -7,
+     32,
+     36
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-154:358",
+    "vis": false,
+    "verts": 5580,
+    "meshes": 1,
+    "box": [
+     -25,
+     -0.0,
+     29,
+     -6,
+     27,
+     43
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-199:455",
+    "vis": false,
+    "verts": 5880,
+    "meshes": 1,
+    "box": [
+     -27,
+     2,
+     36,
+     -12,
+     27,
+     55
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:-199:384",
+    "vis": true,
+    "verts": 237207,
+    "meshes": 2,
+    "box": [
+     -29,
+     -1,
+     28,
+     -7,
+     6,
+     51
+    ],
+    "mats": [
+     "MeshStandardMaterial::1e97",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:503:332",
+    "vis": false,
+    "verts": 5400,
+    "meshes": 1,
+    "box": [
+     40,
+     2,
+     21,
+     60,
+     29,
+     45
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:619:406",
+    "vis": false,
+    "verts": 4920,
+    "meshes": 1,
+    "box": [
+     57,
+     -0.0,
+     33,
+     67,
+     24,
+     49
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:-171:437",
+    "vis": true,
+    "verts": 636,
+    "meshes": 1,
+    "box": [
+     -19,
+     -0.0,
+     41,
+     -15,
+     4,
+     46
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:-140:456",
+    "vis": true,
+    "verts": 522,
+    "meshes": 1,
+    "box": [
+     -16,
+     -1,
+     44,
+     -12,
+     3,
+     48
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-348:-246",
+    "vis": false,
+    "verts": 5280,
+    "meshes": 1,
+    "box": [
+     -49,
+     5,
+     -34,
+     -21,
+     42,
+     -16
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-227:-200",
+    "vis": false,
+    "verts": 4980,
+    "meshes": 1,
+    "box": [
+     -31,
+     2,
+     -34,
+     -14,
+     33,
+     -6
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-102:-386",
+    "vis": false,
+    "verts": 6060,
+    "meshes": 1,
+    "box": [
+     -25,
+     -0.0,
+     -49,
+     4,
+     29,
+     -29
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-33:-388",
+    "vis": false,
+    "verts": 5340,
+    "meshes": 1,
+    "box": [
+     -12,
+     -0.0,
+     -46,
+     6,
+     35,
+     -32
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:128:-403",
+    "vis": false,
+    "verts": 5760,
+    "meshes": 1,
+    "box": [
+     1,
+     7,
+     -51,
+     25,
+     39,
+     -29
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:248:-345",
+    "vis": false,
+    "verts": 5820,
+    "meshes": 1,
+    "box": [
+     17,
+     -0.0,
+     -49,
+     33,
+     36,
+     -20
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:340:-235",
+    "vis": false,
+    "verts": 5700,
+    "meshes": 1,
+    "box": [
+     21,
+     3,
+     -31,
+     47,
+     40,
+     -16
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:360:-194",
+    "vis": false,
+    "verts": 5340,
+    "meshes": 1,
+    "box": [
+     25,
+     3,
+     -39,
+     47,
+     47,
+     -0.0
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:600:-214",
+    "vis": false,
+    "verts": 5460,
+    "meshes": 1,
+    "box": [
+     50,
+     4,
+     -37,
+     69,
+     42,
+     -6
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:667:-171",
+    "vis": false,
+    "verts": 5700,
+    "meshes": 1,
+    "box": [
+     56,
+     -0.0,
+     -29,
+     77,
+     29,
+     -5
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:677:389",
+    "vis": false,
+    "verts": 5220,
+    "meshes": 1,
+    "box": [
+     56,
+     -0.0,
+     26,
+     79,
+     39,
+     52
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:683:213",
+    "vis": false,
+    "verts": 5820,
+    "meshes": 1,
+    "box": [
+     58,
+     -0.0,
+     11,
+     79,
+     34,
+     31
+    ],
+    "mats": [
+     "MeshStandardMaterial::a4a6"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:-178:576",
+    "vis": true,
+    "verts": 195186,
+    "meshes": 2,
+    "box": [
+     -26,
+     -0.0,
+     47,
+     -7,
+     6,
+     67
+    ],
+    "mats": [
+     "MeshStandardMaterial::1e97",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:532:262",
+    "vis": false,
+    "verts": 203265,
+    "meshes": 2,
+    "box": [
+     44,
+     -0.0,
+     16,
+     61,
+     6,
+     39
+    ],
+    "mats": [
+     "MeshStandardMaterial::1e97",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "bed",
+    "key": "bed:-53:-316",
+    "vis": false,
+    "verts": 89196,
+    "meshes": 2,
+    "box": [
+     -8,
+     -0.0,
+     -46,
+     -3,
+     2,
+     -17
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "bed",
+    "key": "bed:438:-375",
+    "vis": true,
+    "verts": 85350,
+    "meshes": 2,
+    "box": [
+     39,
+     -0.0,
+     -47,
+     49,
+     2,
+     -28
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "paving",
+    "key": "paving:417:-378",
+    "vis": true,
+    "verts": 180,
+    "meshes": 1,
+    "box": [
+     40,
+     0,
+     -44,
+     44,
+     0,
+     -32
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "bed",
+    "key": "bed:354:-302",
+    "vis": true,
+    "verts": 203067,
+    "meshes": 2,
+    "box": [
+     15,
+     -0.0,
+     -50,
+     59,
+     3,
+     -12
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "edge",
+    "key": "edge:353:-301",
+    "vis": true,
+    "verts": 99360,
+    "meshes": 1,
+    "box": [
+     15,
+     0,
+     -50,
+     60,
+     0,
+     -12
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "bed",
+    "key": "bed:-20:-361",
+    "vis": true,
+    "verts": 104952,
+    "meshes": 2,
+    "box": [
+     -13,
+     -0.0,
+     -48,
+     5,
+     2,
+     -24
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "edge",
+    "key": "edge:-20:-361",
+    "vis": true,
+    "verts": 47280,
+    "meshes": 1,
+    "box": [
+     -13,
+     0,
+     -49,
+     5,
+     0,
+     -24
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:475:-412",
+    "vis": true,
+    "verts": 3114,
+    "meshes": 1,
+    "box": [
+     46,
+     -1,
+     -46,
+     55,
+     7,
+     -37
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:-21:-385",
+    "vis": true,
+    "verts": 2844,
+    "meshes": 1,
+    "box": [
+     -9,
+     -1,
+     -42,
+     0,
+     7,
+     -35
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:461:-302",
+    "vis": true,
+    "verts": 936,
+    "meshes": 1,
+    "box": [
+     44,
+     -0.0,
+     -32,
+     48,
+     6,
+     -28
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:475:-232",
+    "vis": true,
+    "verts": 810,
+    "meshes": 1,
+    "box": [
+     46,
+     -0.0,
+     -25,
+     49,
+     5,
+     -21
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:510:-160",
+    "vis": true,
+    "verts": 1470,
+    "meshes": 1,
+    "box": [
+     47,
+     -0.0,
+     -19,
+     55,
+     6,
+     -13
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:190:-454",
+    "vis": true,
+    "verts": 636,
+    "meshes": 1,
+    "box": [
+     16,
+     -0.0,
+     -47,
+     21,
+     3,
+     -44
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:220:-452",
+    "vis": true,
+    "verts": 1026,
+    "meshes": 1,
+    "box": [
+     20,
+     -0.0,
+     -47,
+     24,
+     3,
+     -43
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:250:-449",
+    "vis": true,
+    "verts": 702,
+    "meshes": 1,
+    "box": [
+     23,
+     -0.0,
+     -47,
+     27,
+     3,
+     -43
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:280:-435",
+    "vis": true,
+    "verts": 792,
+    "meshes": 1,
+    "box": [
+     26,
+     -0.0,
+     -45,
+     30,
+     3,
+     -42
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:-47:-460",
+    "vis": true,
+    "verts": 2874,
+    "meshes": 1,
+    "box": [
+     -13,
+     -0.0,
+     -48,
+     -3,
+     5,
+     -41
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shrub",
+    "key": "shrub:30:-458",
+    "vis": true,
+    "verts": 318,
+    "meshes": 1,
+    "box": [
+     1,
+     -0.0,
+     -47,
+     4,
+     2,
+     -44
+    ],
+    "mats": [
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-205:-295",
+    "vis": true,
+    "verts": 8148,
+    "meshes": 2,
+    "box": [
+     -31,
+     0,
+     -36,
+     -10,
+     14,
+     -23
+    ],
+    "mats": [
+     "MeshStandardMaterial::06ef",
+     "MeshStandardMaterial::74b3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shore",
+    "key": "shore:203:-926",
+    "vis": false,
+    "verts": 173520,
+    "meshes": 2,
+    "box": [
+     -225,
+     0,
+     -103,
+     265,
+     1,
+     -82
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::0e5c"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-281:-926",
+    "vis": true,
+    "verts": 623592,
+    "meshes": 2,
+    "box": [
+     -43,
+     1,
+     -107,
+     -15,
+     34,
+     -78
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-165:-908",
+    "vis": true,
+    "verts": 628524,
+    "meshes": 2,
+    "box": [
+     -28,
+     1,
+     -104,
+     0,
+     34,
+     -78
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:-76:-987",
+    "vis": true,
+    "verts": 559728,
+    "meshes": 2,
+    "box": [
+     -19,
+     1,
+     -114,
+     5,
+     33,
+     -83
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:12:-956",
+    "vis": true,
+    "verts": 630168,
+    "meshes": 2,
+    "box": [
+     -12,
+     1,
+     -108,
+     13,
+     37,
+     -80
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:88:-937",
+    "vis": true,
+    "verts": 621948,
+    "meshes": 2,
+    "box": [
+     -7,
+     1,
+     -108,
+     19,
+     34,
+     -78
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:139:-962",
+    "vis": false,
+    "verts": 501912,
+    "meshes": 2,
+    "box": [
+     1,
+     1,
+     -106,
+     27,
+     36,
+     -82
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:200:-914",
+    "vis": false,
+    "verts": 493020,
+    "meshes": 2,
+    "box": [
+     6,
+     1,
+     -103,
+     31,
+     36,
+     -79
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:221:-912",
+    "vis": true,
+    "verts": 492660,
+    "meshes": 2,
+    "box": [
+     9,
+     1,
+     -104,
+     36,
+     37,
+     -80
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:293:-924",
+    "vis": false,
+    "verts": 501708,
+    "meshes": 2,
+    "box": [
+     17,
+     1,
+     -105,
+     41,
+     37,
+     -81
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:367:-915",
+    "vis": true,
+    "verts": 576636,
+    "meshes": 2,
+    "box": [
+     25,
+     1,
+     -107,
+     50,
+     40,
+     -78
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:421:-962",
+    "vis": true,
+    "verts": 506088,
+    "meshes": 2,
+    "box": [
+     30,
+     1,
+     -110,
+     56,
+     37,
+     -82
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:499:-931",
+    "vis": true,
+    "verts": 576012,
+    "meshes": 2,
+    "box": [
+     37,
+     1,
+     -109,
+     66,
+     38,
+     -81
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "tree",
+    "key": "tree:653:-963",
+    "vis": false,
+    "verts": 575472,
+    "meshes": 2,
+    "box": [
+     52,
+     1,
+     -110,
+     79,
+     35,
+     -83
+    ],
+    "mats": [
+     "MeshStandardMaterial::05b0",
+     "MeshStandardMaterial::a87e"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "prop",
+    "key": "prop:133:-890",
+    "vis": false,
+    "verts": 708,
+    "meshes": 1,
+    "box": [
+     13,
+     1,
+     -89,
+     13,
+     2,
+     -89
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "prop",
+    "key": "prop:333:-866",
+    "vis": false,
+    "verts": 708,
+    "meshes": 1,
+    "box": [
+     33,
+     1,
+     -87,
+     33,
+     2,
+     -86
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "prop",
+    "key": "prop:128:-930",
+    "vis": false,
+    "verts": 1860,
+    "meshes": 1,
+    "box": [
+     12,
+     1,
+     -93,
+     13,
+     6,
+     -93
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shore",
+    "key": "shore:217:-906",
+    "vis": false,
+    "verts": 3000,
+    "meshes": 1,
+    "box": [
+     -34,
+     1,
+     -96,
+     78,
+     1,
+     -85
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "shore",
+    "key": "shore:182:-4014",
+    "vis": false,
+    "verts": 21671796,
+    "meshes": 5,
+    "box": [
+     -247,
+     -1,
+     -466,
+     283,
+     44,
+     -337
+    ],
+    "mats": [
+     "MeshStandardMaterial::6752",
+     "MeshStandardMaterial::0e5c",
+     "MeshStandardMaterial::1e97",
+     "MeshStandardMaterial::05b0"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "building",
+    "key": "building:130:-249",
+    "vis": true,
+    "verts": 4548,
+    "meshes": 52,
+    "box": [
+     3,
+     2,
+     -31,
+     16,
+     11,
+     -25
+    ],
+    "mats": [
+     "MeshStandardMaterial::06c3",
+     "MeshStandardMaterial::6f16",
+     "MeshStandardMaterial::50de",
+     "MeshStandardMaterial::1358"
+    ]
+   },
+   {
+    "name": "",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 4,
+    "meshes": 1,
+    "box": [
+     -30,
+     -0.0,
+     -106,
+     61,
+     -0.0,
+     106
+    ],
+    "mats": [
+     "MeshBasicMaterial::9028"
+    ]
+   },
+   {
+    "name": "rear-atmosphere-detail",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": false,
+    "verts": 1225,
+    "meshes": 1,
+    "box": [
+     -284,
+     -300,
+     -601,
+     316,
+     300,
+     -1
+    ],
+    "mats": [
+     "ShaderMaterial::e4ad"
+    ]
+   },
+   {
+    "name": "backdrop-trees",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 91848,
+    "meshes": 1,
+    "box": [
+     -61,
+     -2,
+     -91,
+     88,
+     46,
+     80
+    ],
+    "mats": [
+     "MeshStandardMaterial::f7e6"
+    ]
+   },
+   {
+    "name": "backdrop-street",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": false,
+    "verts": 30720,
+    "meshes": 1,
+    "box": [
+     -2400,
+     -1,
+     -969,
+     2400,
+     95,
+     991
+    ],
+    "mats": [
+     "MeshStandardMaterial::bda0"
+    ]
+   },
+   {
+    "name": "island-edge",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 15581,
+    "meshes": 4,
+    "box": [
+     -75,
+     -49,
+     -103,
+     113,
+     1,
+     104
+    ],
+    "mats": [
+     "MeshStandardMaterial::9c06",
+     "MeshStandardMaterial::1883",
+     "MeshStandardMaterial::199f",
+     "MeshBasicMaterial::ab51"
+    ]
+   },
+   {
+    "name": "island-light-pools",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 1066,
+    "meshes": 13,
+    "box": [
+     -22,
+     -0.0,
+     15,
+     59,
+     3,
+     68
+    ],
+    "mats": [
+     "MeshBasicMaterial::1789",
+     "MeshStandardMaterial::5a22",
+     "MeshBasicMaterial::229a"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "driveway-car",
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 458937,
+    "meshes": 201,
+    "box": [
+     23,
+     0,
+     56,
+     32,
+     6,
+     74
+    ],
+    "mats": [
+     "MeshStandardMaterial:DefaultShader:a076",
+     "MeshStandardMaterial:DefaultShader:696f",
+     "MeshStandardMaterial:DefaultShader:a835",
+     "MeshStandardMaterial:DefaultShader:6c0f"
+    ]
+   },
+   {
+    "name": "",
+    "kind": "yard",
+    "yk": "model",
+    "key": "model:60",
+    "vis": true,
+    "verts": 180,
+    "meshes": 5,
+    "box": [
+     33,
+     7,
+     -12,
+     39,
+     11,
+     -12
+    ],
+    "mats": [
+     "MeshStandardMaterial:lrbezel:48d6",
+     "MeshStandardMaterial:lrtvscreen:853b",
+     "MeshStandardMaterial:lrtvrefl2:8b5b",
+     "MeshStandardMaterial:lrtvrefl:34dd"
+    ]
+   },
+   {
+    "name": "rear-grill-cloth-cover",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 4268,
+    "meshes": 2,
+    "box": [
+     1,
+     -0.0,
+     9,
+     4,
+     4,
+     14
+    ],
+    "mats": [
+     "MeshStandardMaterial::d0aa",
+     "MeshStandardMaterial::6c4b"
+    ]
+   },
+   {
+    "name": "rear-grill-cloth-cover",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 4268,
+    "meshes": 2,
+    "box": [
+     1,
+     -0.0,
+     9,
+     4,
+     4,
+     14
+    ],
+    "mats": [
+     "MeshStandardMaterial::79bf",
+     "MeshStandardMaterial::5ca0"
+    ]
+   },
+   {
+    "name": "yard-sky-dome",
+    "kind": null,
+    "yk": null,
+    "key": null,
+    "vis": true,
+    "verts": 561,
+    "meshes": 1,
+    "box": [
+     -1069,
+     -923,
+     -871,
+     931,
+     1077,
+     1129
+    ],
+    "mats": [
+     "ShaderMaterial::5fd0"
+    ]
+   }
+  ]
+ },
+ "verts": 8041721,
+ "programs": 297,
+ "calls": 503,
+ "boot_tail": [
+  {
+   "stage": "Planting the yard\u2026",
+   "startMs": 1137,
+   "ms": 5879
+  },
+  {
+   "stage": "Preparing the view\u2026",
+   "startMs": 7016,
+   "ms": 8698
+  },
+  {
+   "stage": "Rendering room previews\u2026",
+   "startMs": 15714,
+   "ms": 716
+  }
+ ]
+}
